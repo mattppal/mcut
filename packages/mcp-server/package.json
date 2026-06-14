@@ -33,7 +33,8 @@
     "directory": "packages/mcp-server"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "dependencies": {
     "@mcut/editor": "workspace:*",
@@ -45,5 +46,23 @@
   },
   "devDependencies": {
     "@types/ws": "8.18.1"
+  },
+  "author": "Matt Palmer",
+  "homepage": "https://github.com/mattppal/mcut/tree/main/packages/mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/mattppal/mcut/issues"
+  },
+  "keywords": [
+    "mcut",
+    "video",
+    "video-editing",
+    "timeline",
+    "typescript",
+    "mcp",
+    "model-context-protocol",
+    "agents"
+  ],
+  "engines": {
+    "node": ">=20.11"
   }
 }

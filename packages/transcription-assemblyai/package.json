@@ -37,6 +37,21 @@
     "@mcut/transcription": "workspace:*"
   },
   "publishConfig": {
-    "access": "public"
-  }
+    "access": "public",
+    "provenance": true
+  },
+  "author": "Matt Palmer",
+  "homepage": "https://github.com/mattppal/mcut/tree/main/packages/transcription-assemblyai#readme",
+  "bugs": {
+    "url": "https://github.com/mattppal/mcut/issues"
+  },
+  "keywords": [
+    "mcut",
+    "video",
+    "video-editing",
+    "timeline",
+    "typescript",
+    "transcription",
+    "assemblyai"
+  ]
 }

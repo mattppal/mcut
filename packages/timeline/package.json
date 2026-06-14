@@ -28,10 +28,25 @@
     "directory": "packages/timeline"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "dependencies": {
     "@tanstack/store": "0.11.0",
     "zod": "4.4.3"
-  }
+  },
+  "author": "Matt Palmer",
+  "homepage": "https://github.com/mattppal/mcut/tree/main/packages/timeline#readme",
+  "bugs": {
+    "url": "https://github.com/mattppal/mcut/issues"
+  },
+  "keywords": [
+    "mcut",
+    "video",
+    "video-editing",
+    "timeline",
+    "typescript",
+    "engine",
+    "commands"
+  ]
 }

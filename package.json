@@ -5,7 +5,8 @@
   "packageManager": "bun@1.3.14",
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "apps/*"
   ],
   "scripts": {
     "build": "turbo run build",
@@ -13,13 +14,47 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "smoke:packages": "bun run scripts/smoke-packages.ts"
+    "smoke:packages": "bun run scripts/smoke-packages.ts",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "bun run release:check && bun run release:publish",
+    "package:metadata": "bun run scripts/validate-package-metadata.ts",
+    "package:json-lint": "npmPkgJsonLint --configFile .npmpackagejsonlintrc.json packages --quiet",
+    "package:lint": "bun run package:metadata && bun run package:json-lint && bun run scripts/package-lint.ts",
+    "release:check": "bun run build && bun run typecheck && bun run test && bun run smoke:packages && bun run package:lint",
+    "release:publish": "changeset publish --tag alpha",
+    "knip": "knip"
   },
   "devDependencies": {
     "@changesets/cli": "2.31.0",
     "@types/bun": "1.3.14",
     "tsdown": "0.22.2",
     "turbo": "2.9.16",
-    "typescript": "6.0.3"
-  }
+    "typescript": "6.0.3",
+    "@arethetypeswrong/cli": "0.18.3",
+    "@changesets/changelog-github": "0.7.0",
+    "@changesets/get-github-info": "0.8.0",
+    "knip": "6.16.1",
+    "npm-package-json-lint": "10.4.0",
+    "pkg-pr-new": "0.0.75",
+    "publint": "0.3.21"
+  },
+  "description": "Open source video editing SDK for TypeScript apps.",
+  "author": "Matt Palmer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattppal/mcut.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mattppal/mcut/issues"
+  },
+  "homepage": "https://github.com/mattppal/mcut#readme",
+  "keywords": [
+    "mcut",
+    "video",
+    "editing",
+    "sdk",
+    "typescript",
+    "bun"
+  ]
 }

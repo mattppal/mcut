@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a reproducible problem in an mcut package.
+title: "bug: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report this. Please include enough detail for someone else to reproduce it.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - "@mcut/timeline"
+        - "@mcut/editor"
+        - "@mcut/compositor"
+        - "@mcut/media"
+        - "@mcut/react"
+        - "@mcut/transcription"
+        - "@mcut/transcription-ai-sdk"
+        - "@mcut/transcription-assemblyai"
+        - "@mcut/transcription-local"
+        - "@mcut/cli"
+        - "@mcut/mcp-server"
+        - examples/docs
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Link to a minimal repo or paste the smallest code sample that demonstrates the issue.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Include mcut package version, Bun version, browser/runtime, and OS where relevant.
+      placeholder: "@mcut/timeline 0.1.0-alpha.0, bun 1.3.14, macOS 15"
+    validations:
+      required: true

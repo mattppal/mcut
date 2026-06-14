@@ -49,7 +49,7 @@ async function publicPackageDirs(): Promise<string[]> {
     const dir = join(packagesDir, entry.name)
     const manifest = await readJson(join(dir, 'package.json'))
     if (manifest.private) continue
-    if (!manifest.name?.startsWith('@mcut/')) continue
+    if (manifest.name !== 'mcut' && !manifest.name?.startsWith('@mcut/')) continue
     dirs.push(dir)
   }
   return dirs.sort()
