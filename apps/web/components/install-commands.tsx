@@ -16,10 +16,6 @@ const COMMANDS = [
       "bun add @mcut/transcription-assemblyai @mcut/transcription-local @mcut/transcription-ai-sdk ai",
   },
   {
-    comment: "editor UI, as source",
-    command: "bunx shadcn@latest add <demo-url>/r/editor-shell.json",
-  },
-  {
     comment: "CLI",
     command: "bunx mcut --help",
   },
@@ -34,10 +30,7 @@ function CopyButton({ command }: { command: string }) {
       className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
       aria-label="Copy command"
       onClick={async () => {
-        // Resolve the placeholder so the copied command works as-is.
-        await navigator.clipboard.writeText(
-          command.replace("<demo-url>", window.location.origin),
-        );
+        await navigator.clipboard.writeText(command);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);
       }}

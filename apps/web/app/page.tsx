@@ -25,8 +25,8 @@ const POINTS: [string, React.ReactNode][] = [
     "@mcut/compositor renders frames with Canvas2D; @mcut/media handles probing, thumbnails, audio extraction, and WebCodecs export to MP4, WebM, or MKV.",
   ],
   [
-    "React UI",
-    "@mcut/react provides the editor provider, hooks, player canvas, playback clock, selection overlay, and audio preview. The full editor UI installs as shadcn source.",
+    "React bindings",
+    "@mcut/react provides the editor provider, hooks, player canvas, playback clock, selection overlay, and audio preview for custom interfaces.",
   ],
   [
     "Captions",
@@ -38,7 +38,7 @@ const POINTS: [string, React.ReactNode][] = [
   ],
   [
     "Apache-2.0",
-    "Core packages, providers, CLI, MCP server, and installable UI ship with an explicit patent grant for commercial adoption.",
+    "Core packages, providers, CLI, and MCP server ship with an explicit patent grant for commercial adoption.",
   ],
 ];
 
