@@ -106,7 +106,7 @@ export default function Home() {
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6">
         <section className="flex flex-col gap-6 pt-24 pb-16">
           <h1 className="text-5xl tracking-tight text-balance">
-            Open source video editing. <Serif>Editor</Serif> coming soon.
+            Open source editing you own. <Serif>Editor</Serif> coming soon.
           </h1>
           <p className="max-w-md leading-relaxed text-muted-foreground">
             mcut is two things: an Apache-2.0 TypeScript video editing SDK you can

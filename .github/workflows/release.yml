@@ -3,6 +3,15 @@ name: Release
 on:
   push:
     branches: [main]
+    paths:
+      - ".changeset/**"
+      - ".github/workflows/release.yml"
+      - ".npmpackagejsonlintrc.json"
+      - "package.json"
+      - "packages/**"
+      - "scripts/**"
+      - "tsconfig*.json"
+      - "turbo.json"
   workflow_dispatch:
 
 concurrency: release
