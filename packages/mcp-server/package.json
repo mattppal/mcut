@@ -1,0 +1,49 @@
+{
+  "name": "@mcut/mcp-server",
+  "version": "0.1.0-alpha.0",
+  "description": "mcut as an MCP server: every editor command and operator becomes a tool any MCP client can call",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "mcut-bridge": "./dist/bridge-cli.js",
+    "mcut-mcp": "./dist/cli.js",
+    "mcut-mcp-live": "./dist/live-cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattppal/mcut.git",
+    "directory": "packages/mcp-server"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@mcut/editor": "workspace:*",
+    "@mcut/timeline": "workspace:*",
+    "@mcut/transcription": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.21.0",
+    "ws": "8.18.3",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/ws": "8.18.1"
+  }
+}

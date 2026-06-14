@@ -1,0 +1,41 @@
+{
+  "name": "@mcut/cli",
+  "version": "0.1.0-alpha.0",
+  "description": "mcut on the command line: scaffold, validate, summarize, and batch-edit project documents headlessly",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "mcut": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattppal/mcut.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@mcut/timeline": "workspace:*",
+    "@mcut/transcription": "workspace:*",
+    "zod": "4.4.3"
+  }
+}

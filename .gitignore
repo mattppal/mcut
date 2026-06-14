@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+.turbo/
+*.log
+.DS_Store
+.env
+.env.local
+coverage/
+playwright-report/
+test-results/
+.mcp.json
+.context/
+release-out/

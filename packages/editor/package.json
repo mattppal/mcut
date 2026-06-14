@@ -1,0 +1,37 @@
+{
+  "name": "@mcut/editor",
+  "version": "0.1.0-alpha.0",
+  "description": "Programmable editor operators for mcut: user-level actions over the timeline engine",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattppal/mcut.git",
+    "directory": "packages/editor"
+  },
+  "dependencies": {
+    "@mcut/timeline": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

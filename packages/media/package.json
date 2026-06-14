@@ -1,0 +1,40 @@
+{
+  "name": "@mcut/media",
+  "version": "0.1.0-alpha.0",
+  "description": "Media I/O for mcut on Mediabunny: probing, thumbnails, audio extraction, frame sources, client-side export with a pluggable container-format registry (MP4/WebM/MKV built in)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattppal/mcut.git",
+    "directory": "packages/media"
+  },
+  "dependencies": {
+    "@mcut/compositor": "workspace:*",
+    "@mcut/timeline": "workspace:*",
+    "@mediabunny/aac-encoder": "1.46.0",
+    "mediabunny": "1.46.0",
+    "signalsmith-stretch": "1.3.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

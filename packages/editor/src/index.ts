@@ -1,0 +1,57 @@
+export {
+  EditorOperatorRegistry,
+  OperatorError,
+  createEditorOperatorRegistry,
+  emptyInputSchema,
+  type EditorOperator,
+  type EditorOperatorContext,
+  type EnabledResult,
+  type ListedEditorOperator,
+  type OperatorCategory,
+} from './operators'
+
+export {
+  addTextAtPlayhead,
+  allElementIds,
+  clipEdges,
+  duplicateElement,
+  duplicateSelection,
+  elementForAsset,
+  elementForTextPreset,
+  insertElementAtPlayhead,
+  insertElementOnNewTrack,
+  insertElementOnTrack,
+  isSoloTrack,
+  keyframeTimes,
+  moveKeyframesAtTime,
+  removeKeyframesAtTime,
+  removeSelection,
+  selectTrackElements,
+  shuttle,
+  splitAllAtPlayhead,
+  splitSelectionAtPlayhead,
+  toggleMasterKeyframe,
+  toggleSoloTrack,
+  trackOfSelection,
+  trimSelectionToPlayhead,
+  unlinkElements,
+  TEXT_PRESETS,
+  type TextPreset,
+} from './timeline-operators'
+
+export {
+  canPlaceIgnoring,
+  collectClipDragBases,
+  computeSlipRange,
+  planAutoCrossfade,
+  planDuplicateClipsToNewTracks,
+  resolveToolMode,
+  type AutoCrossfadePlanInput,
+  type ClipDragBase,
+  type ClipDragMode,
+  type DuplicateClipsToNewTracksOptions,
+  type DuplicateClipsToNewTracksPlan,
+  type ResolvedClipDragMode,
+} from './timeline-gesture'
+
+export { registerCoreOperators } from './core-operators'

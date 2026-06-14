@@ -1,0 +1,46 @@
+{
+  "name": "@mcut/react",
+  "version": "0.1.0-alpha.0",
+  "description": "React bindings for mcut: EditorProvider, hooks, PlayerCanvas with selection overlay, playback clock, audio preview",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattppal/mcut.git",
+    "directory": "packages/react"
+  },
+  "dependencies": {
+    "@mcut/compositor": "workspace:*",
+    "@mcut/media": "workspace:*",
+    "@mcut/timeline": "workspace:*",
+    "@tanstack/react-store": "0.11.0"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3"
+  }
+}

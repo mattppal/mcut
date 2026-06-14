@@ -1,0 +1,42 @@
+{
+  "name": "@mcut/transcription-assemblyai",
+  "version": "0.1.0-alpha.0",
+  "description": "mcut transcription provider backed by AssemblyAI: word timestamps, confidence, and speaker labels",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattppal/mcut.git",
+    "directory": "packages/transcription-assemblyai"
+  },
+  "dependencies": {
+    "assemblyai": "^4.16.1"
+  },
+  "peerDependencies": {
+    "@mcut/transcription": "workspace:*"
+  },
+  "devDependencies": {
+    "@mcut/transcription": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

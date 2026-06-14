@@ -1,0 +1,16 @@
+{
+  "name": "mcp-server-example",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun run index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mcut/mcp-server": "workspace:*",
+    "@mcut/timeline": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.21.0"
+  }
+}
