@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "mcut",
+      "type": "skill-md",
+      "description": "Build a browser-based video editor with the mcut SDK — multi-track timeline, auto-captions, and deterministic client-side MP4/WebM/MKV export. Use when integrating video editing into a React or Next.js app, installing the mcut editor UI from the shadcn registry, scripting edits through serializable commands, or wiring a transcription provider.",
+      "url": "/.well-known/agent-skills/mcut/SKILL.md",
+      "digest": "sha256:6f4aa00e45c0c94fdcc74ecd0c3dcf10a6c00b86e0874d3d1fae5ffafff51f26"
+    }
+  ]
+}

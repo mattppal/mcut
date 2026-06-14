@@ -1,0 +1,4 @@
+# Require changes across the repository to be reviewed by the project owner.
+# If this repo moves under an organization, replace or extend this with the
+# maintainers team, for example: * @mcut/maintainers
+* @mattppal

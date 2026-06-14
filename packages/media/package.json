@@ -35,6 +35,22 @@
     "signalsmith-stretch": "1.3.2"
   },
   "publishConfig": {
-    "access": "public"
-  }
+    "access": "public",
+    "provenance": true
+  },
+  "author": "Matt Palmer",
+  "homepage": "https://github.com/mattppal/mcut/tree/main/packages/media#readme",
+  "bugs": {
+    "url": "https://github.com/mattppal/mcut/issues"
+  },
+  "keywords": [
+    "mcut",
+    "video",
+    "video-editing",
+    "timeline",
+    "typescript",
+    "media",
+    "webcodecs",
+    "export"
+  ]
 }

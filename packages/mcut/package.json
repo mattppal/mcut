@@ -1,0 +1,55 @@
+{
+  "name": "mcut",
+  "version": "0.1.0-alpha.0",
+  "description": "Command-line alias for the mcut video editing SDK",
+  "license": "Apache-2.0",
+  "type": "module",
+  "author": "Matt Palmer",
+  "homepage": "https://github.com/mattppal/mcut#readme",
+  "bugs": {
+    "url": "https://github.com/mattppal/mcut/issues"
+  },
+  "keywords": [
+    "mcut",
+    "video",
+    "video-editing",
+    "timeline",
+    "typescript",
+    "cli"
+  ],
+  "bin": {
+    "mcut": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattppal/mcut.git",
+    "directory": "packages/mcut"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "dependencies": {
+    "@mcut/cli": "workspace:*"
+  }
+}
