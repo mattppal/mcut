@@ -14,6 +14,8 @@ it, keep package dependencies one-way, and verify changes the same way CI does.
 
 Read this first, then use:
 
+- [../mcut/SKILL.md](../mcut/SKILL.md) when the task is to explain what mcut is
+  or help someone get started with the OSS packages rather than change the repo.
 - [references/architecture.md](references/architecture.md) for the package map and
   dependency rules.
 - [references/workflows.md](references/workflows.md) for build, test, CI, and
