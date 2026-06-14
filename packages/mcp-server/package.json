@@ -41,7 +41,7 @@
     "@mcut/timeline": "workspace:*",
     "@mcut/transcription": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.21.0",
-    "ws": "8.18.3",
+    "ws": "8.21.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
