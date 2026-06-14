@@ -52,7 +52,7 @@ export function InstallCommands() {
     <section className="flex flex-col gap-4 border-y py-5 font-mono text-xs leading-relaxed">
       {COMMANDS.map(({ comment, command }) => (
         <div key={comment} className="flex items-center justify-between gap-4">
-          <pre className="overflow-x-auto">
+          <pre className="command-scroll min-w-0 flex-1 overflow-x-auto pb-1 pr-3">
             <span className="text-muted-foreground">
               # {comment}
               {"\n"}
