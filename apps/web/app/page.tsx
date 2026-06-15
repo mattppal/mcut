@@ -1,7 +1,6 @@
 import { BrandMark } from "@/components/brand-mark";
 import { InstallCommands } from "@/components/install-commands";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SignupForm } from "@/components/signup-form";
 
 const POINTS: [string, React.ReactNode][] = [
   [
@@ -52,33 +51,6 @@ function Serif({ children }: { children: React.ReactNode }) {
     >
       {children}
     </em>
-  );
-}
-
-function SignupForm() {
-  return (
-    <form aria-label="Join the mcut editor waitlist" className="max-w-md">
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <label className="sr-only" htmlFor="signup-email">
-          Email address
-        </label>
-        <Input
-          id="signup-email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@example.com"
-          className="h-9 bg-background"
-          required
-        />
-        <Button type="button" size="lg" className="h-9 sm:w-auto">
-          Join editor waitlist
-        </Button>
-      </div>
-      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-        For editor early access only. The OSS SDK is available now on GitHub and npm.
-      </p>
-    </form>
   );
 }
 
