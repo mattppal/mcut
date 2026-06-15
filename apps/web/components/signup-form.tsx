@@ -10,7 +10,7 @@ type SignupState = "idle" | "submitting" | "success" | "error";
 export function SignupForm() {
   const [state, setState] = useState<SignupState>("idle");
   const [message, setMessage] = useState(
-    "For editor early access only. The OSS SDK is available now on GitHub and npm.",
+    "Join the editor waitlist. The open-source SDK is available now on GitHub and npm.",
   );
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {

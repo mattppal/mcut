@@ -24,7 +24,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "mcut — open source video SDK and editor",
   description:
-    "Apache-2.0 video editing SDK for TypeScript apps. A full mcut editor is coming soon; join the editor waitlist for early access.",
+    "Open-source video editing SDK for TypeScript apps. Use the mcut packages today, then join the waitlist for the full editor.",
   icons: {
     icon: [
       {

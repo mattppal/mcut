@@ -35,12 +35,24 @@ bunx @mcut/cli --help
 
 ## Develop
 
+This is a Bun workspace monorepo managed with Turbo:
+
+- `packages/*` contains the publishable `@mcut/*` SDK packages.
+- `examples/*` contains runnable package examples.
+- `apps/*` contains applications, including the web app in `apps/web`.
+
 ```sh
 bun install
 bun run build
 bun run typecheck
 bun run test
 bun run smoke:packages
+```
+
+To run only the web app:
+
+```sh
+bun run dev:web
 ```
 
 ## Contributing
