@@ -8,8 +8,6 @@ export default function Layout({ children }: { children: ReactNode }) {
     <DocsLayout
       {...docsLayoutOptions}
       tree={source.pageTree}
-      sidebar={{ defaultOpenLevel: 1 }}
-      containerProps={{ className: "bg-background" }}
     >
       {children}
     </DocsLayout>
