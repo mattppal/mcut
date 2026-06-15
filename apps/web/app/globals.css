@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -53,6 +55,7 @@
   --radius: 0.5rem;
   --scrollbar-thumb: color-mix(in oklab, var(--foreground) 18%, transparent);
   --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 30%, transparent);
+  --fd-layout-width: 1280px;
 }
 
 @layer base {

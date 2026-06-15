@@ -1,3 +1,6 @@
+import { createElement, type CSSProperties } from "react";
+import { ImageResponse } from "takumi-js/response";
+
 type Env = {
   ASSETS: {
     fetch(request: Request): Promise<Response>;
@@ -10,6 +13,10 @@ const LOOPS_UPDATE_CONTACT_URL = "https://app.loops.so/api/v1/contacts/update";
 const MAX_BODY_BYTES = 2048;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
+const OG_IMAGE_SIZE = { width: 1200, height: 630 };
+const DEFAULT_OG_TITLE = "Open source video editing for agents";
+const DEFAULT_OG_DESCRIPTION =
+  "TypeScript packages for timelines, media, captions, CLI workflows, and MCP tools.";
 
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
 
@@ -26,6 +33,160 @@ function json(data: unknown, init?: ResponseInit) {
 
 function isValidEmail(email: string) {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function clampText(value: string | null, fallback: string, maxLength: number) {
+  const text = value?.trim() || fallback;
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1).trim()}…` : text;
+}
+
+const h = createElement;
+
+function titleParts(title: string) {
+  const match = /\bagents\b/i.exec(title);
+  if (!match) return [title];
+
+  return [
+    title.slice(0, match.index),
+    h(
+      "span",
+      { key: "agents", style: styles.highlight },
+      title.slice(match.index, match.index + match[0].length),
+    ),
+    title.slice(match.index + match[0].length),
+  ];
+}
+
+const styles = {
+  frame: {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    padding: "72px 88px 62px",
+    border: "1px solid #e5e5e5",
+    backgroundColor: "#ffffff",
+    color: "#171717",
+    fontFamily:
+      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  },
+  top: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    fontSize: 25,
+    color: "#737373",
+  },
+  brand: {
+    fontFamily: '"Instrument Serif", Georgia, serif',
+    fontSize: 58,
+    fontStyle: "italic",
+    fontWeight: 700,
+    lineHeight: 0.9,
+    color: "#171717",
+  },
+  tag: {
+    fontFamily: '"Geist Mono", "SFMono-Regular", Consolas, monospace',
+    fontSize: 22,
+    color: "#525252",
+  },
+  main: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 34,
+  },
+  title: {
+    margin: 0,
+    maxWidth: 900,
+    fontSize: 84,
+    fontWeight: 650,
+    lineHeight: 1.08,
+    letterSpacing: 0,
+  },
+  highlight: {
+    display: "inline-block",
+    padding: "0 12px 4px",
+    borderRadius: 7,
+    backgroundColor: "rgba(221, 214, 254, 0.9)",
+    color: "#171717",
+    fontFamily: '"Instrument Serif", Georgia, serif',
+    fontStyle: "italic",
+    fontWeight: 700,
+  },
+  description: {
+    margin: 0,
+    maxWidth: 680,
+    color: "#525252",
+    fontSize: 31,
+    lineHeight: 1.35,
+  },
+  bottom: {
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    paddingTop: 30,
+    borderTop: "1px solid #e5e5e5",
+  },
+  license: {
+    color: "#737373",
+    fontSize: 22,
+  },
+  packages: {
+    fontFamily: '"Geist Mono", "SFMono-Regular", Consolas, monospace',
+    fontSize: 26,
+    color: "#171717",
+  },
+} satisfies Record<string, CSSProperties>;
+
+function ogImage(title: string, description: string) {
+  return h(
+    "div",
+    { style: styles.frame },
+    h(
+      "div",
+      { style: styles.top },
+      h("div", { style: styles.brand }, "mcut"),
+      h("div", { style: styles.tag }, "video SDK + editor"),
+    ),
+    h(
+      "div",
+      { style: styles.main },
+      h("h1", { style: styles.title }, ...titleParts(title)),
+      h("p", { style: styles.description }, description),
+    ),
+    h(
+      "div",
+      { style: styles.bottom },
+      h("div", { style: styles.license }, "Apache-2.0"),
+      h("div", { style: styles.packages }, "@mcut/*"),
+    ),
+  );
+}
+
+function handleOgImage(request: Request) {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method not allowed.", {
+      status: 405,
+      headers: { Allow: "GET, HEAD" },
+    });
+  }
+
+  const url = new URL(request.url);
+  const title = clampText(url.searchParams.get("title"), DEFAULT_OG_TITLE, 92);
+  const description = clampText(
+    url.searchParams.get("description"),
+    DEFAULT_OG_DESCRIPTION,
+    150,
+  );
+
+  return new ImageResponse(ogImage(title, description), {
+    ...OG_IMAGE_SIZE,
+    headers: {
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "Content-Type": "image/png",
+    },
+  });
 }
 
 function tooManyRequests(request: Request, email: string) {
@@ -139,6 +300,10 @@ const worker = {
 
     if (url.pathname === "/api/waitlist") {
       return handleWaitlist(request, env);
+    }
+
+    if (url.pathname === "/og") {
+      return handleOgImage(request);
     }
 
     return env.ASSETS.fetch(request);

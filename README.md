@@ -33,6 +33,14 @@ bun add @mcut/timeline @mcut/editor
 bunx @mcut/cli --help
 ```
 
+## Docs
+
+- Website docs: <https://mcut.com/docs>
+- Quickstart: <https://mcut.com/docs/quickstart>
+- Agent instructions: <https://mcut.com/docs/agent-instructions>
+- Contributor docs: <https://mcut.com/docs/contributing/devenv>
+- Local package READMEs live beside each package in `packages/*/README.md`.
+
 ## Develop
 
 This is a Bun workspace monorepo managed with Turbo:
@@ -46,6 +54,7 @@ bun install
 bun run build
 bun run typecheck
 bun run test
+bun run lint
 bun run smoke:packages
 ```
 
@@ -55,6 +64,15 @@ To run only the web app:
 bun run dev:web
 ```
 
+The full release gate is:
+
+```sh
+bun run release:check
+```
+
+Website docs live in `apps/web/content/docs`. The site build generates Fumadocs
+sources and static `.md` mirrors for docs pages.
+
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Public API
@@ -63,6 +81,10 @@ or package behavior changes should include a Changesets entry:
 ```sh
 bunx changeset
 ```
+
+The contributor workflow is also available in the website docs:
+[development environment](https://mcut.com/docs/contributing/devenv) and
+[contributing guide](https://mcut.com/docs/contributing/contributing).
 
 Security issues should be reported privately through
 [SECURITY.md](SECURITY.md), not through public issues.

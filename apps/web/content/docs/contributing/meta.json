@@ -1,0 +1,8 @@
+{
+  "title": "Contributing",
+  "defaultOpen": true,
+  "pages": [
+    "devenv",
+    "contributing"
+  ]
+}
