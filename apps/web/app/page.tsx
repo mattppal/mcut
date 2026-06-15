@@ -4,40 +4,16 @@ import { SignupForm } from "@/components/signup-form";
 
 const POINTS: [string, React.ReactNode][] = [
   [
-    "Open source",
-    "The Apache-2.0 SDK is available now: timeline engine, editor operators, compositor, media/export, React bindings, transcription, CLI, and MCP server packages.",
+    "SDK available",
+    "Use the TypeScript packages for timelines, previews, media/export, captions, React interfaces, and CLI workflows.",
   ],
   [
-    "Editor, coming soon",
-    "The editor will package the same edit model into a polished app for cutting, captioning, exporting, and agent-assisted video work.",
+    "Built for agents",
+    "Compose edits through serializable commands, editor operators, CLI tools, and MCP server packages.",
   ],
   [
-    "Timeline engine",
-    "Typed project model, serializable commands, multi-track invariants, undo/redo, selectors, and reactive stores in @mcut/timeline.",
-  ],
-  [
-    "Editor operators",
-    "User-level edit behavior lives in @mcut/editor: gesture planning, core operators, and higher-level actions without framework dependencies.",
-  ],
-  [
-    "Preview and export",
-    "@mcut/compositor renders frames with Canvas2D; @mcut/media handles probing, thumbnails, audio extraction, and WebCodecs export to MP4, WebM, or MKV.",
-  ],
-  [
-    "React bindings",
-    "@mcut/react provides the editor provider, hooks, player canvas, playback clock, selection overlay, and audio preview for custom interfaces.",
-  ],
-  [
-    "Captions",
-    "@mcut/transcription normalizes transcripts, captions, SRT, and VTT. Providers ship for AssemblyAI, Vercel AI SDK models, and on-device Whisper.",
-  ],
-  [
-    "Agent tools",
-    "@mcut/cli runs headless edits from the command line. The upcoming editor owns the live MCP tooling, browser-session bridge, and human tool browser.",
-  ],
-  [
-    "Apache-2.0",
-    "Core packages, providers, CLI, and MCP server ship with an explicit patent grant for commercial adoption.",
+    "Editor coming soon",
+    "The full editor will use the same engine for cutting, captioning, exporting, and agent-assisted video work.",
   ],
 ];
 
@@ -77,13 +53,12 @@ export default function Home() {
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6">
         <section className="flex flex-col gap-6 pt-24 pb-16">
-          <h1 className="text-5xl tracking-tight text-balance">
-            Open source editing you own. <Serif>Editor</Serif> coming soon.
+          <h1 className="text-5xl leading-[1.12] tracking-tight text-balance">
+            Open source video editing for <Serif>agents</Serif>
           </h1>
           <p className="max-w-md leading-relaxed text-muted-foreground">
-            mcut is two things: an Apache-2.0 TypeScript video editing SDK you can
-            use today, and a full editor built on the same engine. Join the list for
-            editor early access.
+            The full mcut editor is coming soon. Join the waitlist for early
+            access.
           </p>
           <SignupForm />
         </section>
