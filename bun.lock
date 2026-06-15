@@ -118,16 +118,6 @@
         "@types/ws": "8.18.1",
       },
     },
-    "packages/mcut": {
-      "name": "mcut",
-      "version": "0.1.0-alpha.0",
-      "bin": {
-        "mcut": "./dist/cli.js",
-      },
-      "dependencies": {
-        "@mcut/cli": "workspace:*",
-      },
-    },
     "packages/media": {
       "name": "@mcut/media",
       "version": "0.1.0-alpha.0",
@@ -1355,8 +1345,6 @@
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
 
     "mcp-server-example": ["mcp-server-example@workspace:examples/mcp-server"],
-
-    "mcut": ["mcut@workspace:packages/mcut"],
 
     "mcut-web": ["mcut-web@workspace:apps/web"],
 

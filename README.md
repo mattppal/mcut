@@ -14,7 +14,6 @@ is still hardening.
 
 ## Packages
 
-- `mcut` - unscoped CLI alias for `bunx mcut` / `npx mcut`
 - `@mcut/timeline` - project model, serializable commands, undo/redo, selectors
 - `@mcut/editor` - user-level operators and pure edit/gesture planning
 - `@mcut/compositor` - Canvas2D frame rendering and hit testing
@@ -31,7 +30,7 @@ is still hardening.
 
 ```sh
 bun add @mcut/timeline @mcut/editor
-bunx mcut --help
+bunx @mcut/cli --help
 ```
 
 ## Develop

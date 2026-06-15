@@ -6,7 +6,6 @@ This repository publishes the public SDK packages from `packages/*`.
 
 Publish these packages in the first alpha batch:
 
-- `mcut`
 - `@mcut/timeline`
 - `@mcut/editor`
 - `@mcut/compositor`
@@ -19,9 +18,11 @@ Publish these packages in the first alpha batch:
 - `@mcut/cli`
 - `@mcut/mcp-server`
 
-The scoped packages require the `mcut` npm organization or user scope. npm does
-not provide a separate generic namespace reservation flow; controlling the scope
-and publishing the first real public packages is the reservation step.
+The packages require the `mcut` npm organization or user scope. npm does not
+provide a separate generic namespace reservation flow; controlling the scope and
+publishing the first real public packages is the reservation step. The unscoped
+`mcut` package name is blocked by npm's automated name-similarity protections,
+so the CLI is published and documented as `@mcut/cli`.
 
 ## One-time npm setup
 

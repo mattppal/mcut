@@ -17,7 +17,7 @@ const COMMANDS = [
   },
   {
     comment: "CLI",
-    command: "bunx mcut --help",
+    command: "bunx @mcut/cli --help",
   },
 ] as const;
 
