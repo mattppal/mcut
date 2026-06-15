@@ -16,7 +16,7 @@ is still hardening.
 
 - `@mcut/timeline` - project model, serializable commands, undo/redo, selectors
 - `@mcut/editor` - user-level operators and pure edit/gesture planning
-- `@mcut/compositor` - Canvas2D frame rendering and hit testing
+- `@mcut/compositor` - Canvas2D/WebGPU frame rendering and hit testing
 - `@mcut/media` - probing, thumbnails, preview media, browser WebCodecs export
 - `@mcut/react` - React provider, hooks, and player canvas bindings
 - `@mcut/transcription` - provider interface, normalized transcripts, captions,
