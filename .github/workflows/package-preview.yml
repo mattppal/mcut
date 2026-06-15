@@ -2,6 +2,15 @@ name: Package Preview
 
 on:
   pull_request:
+    paths:
+      - ".changeset/**"
+      - ".github/workflows/package-preview.yml"
+      - ".npmpackagejsonlintrc.json"
+      - "package.json"
+      - "packages/**"
+      - "scripts/**"
+      - "tsconfig*.json"
+      - "turbo.json"
 
 permissions:
   contents: read

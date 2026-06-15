@@ -44,7 +44,9 @@ async function publicPackageDirs(): Promise<string[]> {
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
     const dir = join(packagesDir, entry.name)
-    const manifest = await readJson(join(dir, 'package.json'))
+    const manifestPath = join(dir, 'package.json')
+    if (!existsSync(manifestPath)) continue
+    const manifest = await readJson(manifestPath)
     if (manifest.private) continue
     if (!manifest.name) continue
     dirs.push(dir)

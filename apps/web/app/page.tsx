@@ -25,8 +25,8 @@ const POINTS: [string, React.ReactNode][] = [
     "@mcut/compositor renders frames with Canvas2D; @mcut/media handles probing, thumbnails, audio extraction, and WebCodecs export to MP4, WebM, or MKV.",
   ],
   [
-    "React UI",
-    "@mcut/react provides the editor provider, hooks, player canvas, playback clock, selection overlay, and audio preview. The full editor UI installs as shadcn source.",
+    "React bindings",
+    "@mcut/react provides the editor provider, hooks, player canvas, playback clock, selection overlay, and audio preview for custom interfaces.",
   ],
   [
     "Captions",
@@ -38,7 +38,7 @@ const POINTS: [string, React.ReactNode][] = [
   ],
   [
     "Apache-2.0",
-    "Core packages, providers, CLI, MCP server, and installable UI ship with an explicit patent grant for commercial adoption.",
+    "Core packages, providers, CLI, and MCP server ship with an explicit patent grant for commercial adoption.",
   ],
 ];
 
@@ -106,7 +106,7 @@ export default function Home() {
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6">
         <section className="flex flex-col gap-6 pt-24 pb-16">
           <h1 className="text-5xl tracking-tight text-balance">
-            Open source video editing. <Serif>Editor</Serif> coming soon.
+            Open source editing you own. <Serif>Editor</Serif> coming soon.
           </h1>
           <p className="max-w-md leading-relaxed text-muted-foreground">
             mcut is two things: an Apache-2.0 TypeScript video editing SDK you can
