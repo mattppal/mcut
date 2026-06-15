@@ -8,13 +8,10 @@ on the backend, contributor, and agent-facing surfaces in the OSS repo: project
 documents, serializable commands, editor operators, CLI workflows, MCP tools, and
 the monorepo development environment.
 
-## Start here
+## Intro
 
 - [Quickstart](/docs/quickstart): create a project document, inspect it, and connect an MCP client.
 - [Agent instructions](/docs/agent-instructions): copyable operating rules for AI agents editing with mcut.
-
-## Develop mcut
-
 - [Development environment](/docs/contributing/devenv): install the workspace, run local dev, and validate changes.
 - [Contributing guide](/docs/contributing/contributing): package boundaries, clean-room rules, tests, and pull requests.
 
