@@ -25,6 +25,20 @@ export const metadata: Metadata = {
   title: "mcut — open source video SDK and editor",
   description:
     "Apache-2.0 video editing SDK for TypeScript apps. A full mcut editor is coming soon; join the editor waitlist for early access.",
+  icons: {
+    icon: [
+      {
+        url: "/favicon-light.svg",
+        media: "(prefers-color-scheme: light)",
+        type: "image/svg+xml",
+      },
+      {
+        url: "/favicon-dark.svg",
+        media: "(prefers-color-scheme: dark)",
+        type: "image/svg+xml",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
