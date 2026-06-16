@@ -2,6 +2,7 @@ import { CanvasSink } from 'mediabunny'
 import type { FrameSource } from '@mcut/compositor'
 import { ScrubFrameCache } from './scrub-cache'
 import { inputFor } from './probe'
+import { canUseNativeVideoPreview } from './video-capabilities'
 import {
   getEffectiveVolume,
   getMulticamSourceTimeMs,
@@ -175,36 +176,6 @@ interface DecodedVideoState {
   failed: boolean
   /** performance.now() of the last failed sink init, 0 when none. */
   lastInitFailureAt: number
-}
-
-function matroskaLike(asset: AssetRef): boolean {
-  const name = asset.name?.toLowerCase() ?? ''
-  const mime = asset.mimeType?.toLowerCase() ?? ''
-  return (
-    name.endsWith('.mkv') ||
-    name.endsWith('.mk3d') ||
-    mime.includes('matroska') ||
-    mime === 'video/x-matroska'
-  )
-}
-
-/** canPlayType per mimeType — this runs on every getFrame/sync call. */
-const canPlayTypeCache = new Map<string, boolean>()
-
-function canUseNativeVideoPreview(asset: AssetRef): boolean {
-  if (asset.nativePreview === false || matroskaLike(asset)) return false
-  // Import probes actual decodability (canPlayType answers "" for QuickTime
-  // files Chrome plays fine) — its verdict beats re-deriving from mimeType.
-  if (asset.nativePreview === true) return true
-  if (typeof document === 'undefined') return true
-  const mimeType = asset.mimeType
-  if (!mimeType?.startsWith('video/')) return true
-  let playable = canPlayTypeCache.get(mimeType)
-  if (playable === undefined) {
-    playable = document.createElement('video').canPlayType(mimeType) !== ''
-    canPlayTypeCache.set(mimeType, playable)
-  }
-  return playable
 }
 
 function decodedFrameKey(sourceTimeMs: number): number {

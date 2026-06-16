@@ -44,6 +44,12 @@ export {
 export { getFilmstrip, type Filmstrip, type FilmstripOptions } from './filmstrip'
 
 export {
+  canUseNativeVideoPreview,
+  isMatroskaLike,
+  type VideoPreviewCapability,
+} from './video-capabilities'
+
+export {
   bucketPeaks,
   extractAudioPeaks,
   type AudioPeaks,
