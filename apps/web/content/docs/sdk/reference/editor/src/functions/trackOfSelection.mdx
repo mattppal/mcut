@@ -12,7 +12,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 # Function: trackOfSelection()
 
 ```ts
-function trackOfSelection(engine): 
+function trackOfSelection(engine):
   | {
   elements: TimelineElement[];
   hidden: boolean;
@@ -33,17 +33,76 @@ The track containing the current selection's first element, if any.
 
 ### engine
 
-`EditorEngine`
+[`EditorEngine`](../../../timeline/src/classes/EditorEngine.mdx)
 
 ## Returns
 
-  \| \{
-  `elements`: `TimelineElement`[];
-  `hidden`: `boolean`;
-  `id`: `` `t-${string}` ``;
-  `locked`: `boolean`;
-  `magnetic`: `boolean`;
-  `muted`: `boolean`;
-  `name`: `string`;
-\}
-  \| `undefined`
+### Type Literal
+
+```ts
+{
+  elements: TimelineElement[];
+  hidden: boolean;
+  id: `t-${string}`;
+  locked: boolean;
+  magnetic: boolean;
+  muted: boolean;
+  name: string;
+}
+```
+
+#### elements
+
+```ts
+elements: TimelineElement[];
+```
+
+Sorted by `startMs`; never overlapping in time.
+
+#### hidden
+
+```ts
+hidden: boolean;
+```
+
+Visuals from this track are not rendered.
+
+#### id
+
+```ts
+id: `t-${string}` = trackIdSchema;
+```
+
+#### locked
+
+```ts
+locked: boolean;
+```
+
+UI hint: track rejects edits. The engine does not enforce this.
+
+#### magnetic
+
+```ts
+magnetic: boolean;
+```
+
+When enabled, edits compact this track so clips keep no gaps between them.
+
+#### muted
+
+```ts
+muted: boolean;
+```
+
+Audio from this track is silenced.
+
+#### name
+
+```ts
+name: string;
+```
+
+***
+
+`undefined`

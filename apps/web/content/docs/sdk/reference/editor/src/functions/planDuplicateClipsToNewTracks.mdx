@@ -13,9 +13,9 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 ```ts
 function planDuplicateClipsToNewTracks(
-   project, 
-   ids, 
-   options?): 
+   project,
+   ids,
+   options?):
   | DuplicateClipsToNewTracksPlan
   | null;
 ```
@@ -28,62 +28,69 @@ Defined in: [packages/editor/src/timeline-gesture.ts:165](https://github.com/mat
 
 #### assets
 
-`z.ZodDefault`\<`z.ZodRecord`\<`z.ZodString`, `z.ZodObject`\<\{
-  `durationMs`: `z.ZodOptional`\<`z.ZodNumber`\>;
-  `hash`: `z.ZodOptional`\<`z.ZodString`\>;
-  `height`: `z.ZodOptional`\<`z.ZodNumber`\>;
-  `id`: `z.ZodCustom`\<`` `a-${string}` ``, `` `a-${string}` ``\>;
-  `kind`: `z.ZodEnum`\<\{
-     `audio`: `"audio"`;
-     `image`: `"image"`;
-     `video`: `"video"`;
-  \}\>;
-  `mimeType`: `z.ZodOptional`\<`z.ZodString`\>;
-  `name`: `z.ZodOptional`\<`z.ZodString`\>;
-  `nativePreview`: `z.ZodOptional`\<`z.ZodBoolean`\>;
-  `src`: `z.ZodString`;
-  `width`: `z.ZodOptional`\<`z.ZodNumber`\>;
-\}, `z.core.$strip`\>\>\>
+`Record`\<`string`, \{
+  `durationMs?`: `number`;
+  `hash?`: `string`;
+  `height?`: `number`;
+  `id`: `` `a-${string}` ``;
+  `kind`: `"video"` \| `"audio"` \| `"image"`;
+  `mimeType?`: `string`;
+  `name?`: `string`;
+  `nativePreview?`: `boolean`;
+  `src`: `string`;
+  `width?`: `number`;
+\}\> = `...`
 
 #### fps
 
-`number`
+`number` = `...`
 
 #### height
 
-`number`
+`number` = `...`
 
 #### id
 
-`string`
+`string` = `...`
 
 #### layouts
 
-`object`[]
+`object`[] = `...`
+
+Multicam layout templates this project references. See layouts.ts.
 
 #### markers
 
-`object`[]
+`object`[] = `...`
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
 
 #### name
 
-`string`
+`string` = `...`
 
 #### presets
 
-`object`[]
+`object`[] = `...`
+
+Named inspector value bundles (style presets). See presets.ts.
 
 #### tracks
 
-`object`[]
+`object`[] = `...`
+
+Render order: index 0 is painted first (bottom); last is topmost.
 
 #### version
 
-`1`
+`1` = `...`
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
 
 #### width
 
-`number`
+`number` = `...`
 
 ### ids
 

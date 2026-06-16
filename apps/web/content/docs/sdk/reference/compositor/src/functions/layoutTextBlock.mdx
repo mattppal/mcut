@@ -13,9 +13,9 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 ```ts
 function layoutTextBlock(
-   measure, 
-   text, 
-   style, 
+   measure,
+   text,
+   style,
    options?): TextBlockLayout;
 ```
 
@@ -38,39 +38,43 @@ newlines only unless a text box width is provided.
 
 #### align
 
-`"left"` \| `"center"` \| `"right"`
+`"left"` \| `"center"` \| `"right"` = `...`
 
 #### backgroundColor?
 
-`string`
+`string` = `...`
 
 #### color
 
-`string`
+`string` = `...`
 
 #### fontFamily
 
-`string`
+`string` = `...`
 
 #### fontSize
 
-`number`
+`number` = `...`
 
 #### fontStyle
 
-`"normal"` \| `"italic"`
+`"normal"` \| `"italic"` = `...`
 
 #### fontWeight
 
-`number`
+`number` = `...`
 
 #### letterSpacing
 
-`number`
+`number` = `...`
+
+Extra space between characters in px (tracking).
 
 #### lineHeight
 
-`number`
+`number` = `...`
+
+Line height as a multiple of fontSize.
 
 #### shadow?
 
@@ -79,42 +83,50 @@ newlines only unless a text box width is provided.
   `color`: `string`;
   `offsetX`: `number`;
   `offsetY`: `number`;
-\}
+\} = `...`
 
 #### shadow.blur
 
-`number`
+`number` = `...`
 
 #### shadow.color
 
-`string`
+`string` = `...`
+
+Any CSS color (alpha encodes the strength).
 
 #### shadow.offsetX
 
-`number`
+`number` = `...`
 
 #### shadow.offsetY
 
-`number`
+`number` = `...`
 
 #### stroke?
 
 \{
   `color`: `string`;
   `width`: `number`;
-\}
+\} = `...`
 
 #### stroke.color
 
-`string`
+`string` = `...`
+
+Any CSS color.
 
 #### stroke.width
 
-`number`
+`number` = `...`
+
+Visible width in project px (frames paint it inside the bounds).
 
 #### textTransform
 
-`"none"` \| `"uppercase"` \| `"lowercase"`
+`"lowercase"` \| `"uppercase"` \| `"none"` = `...`
+
+Case applied at render time; the stored text keeps the user's casing.
 
 ### options?
 

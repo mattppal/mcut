@@ -11,7 +11,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 # Interface: ActiveMediaItem
 
-Defined in: [packages/media/src/preview-pool.ts:17](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L17)
+Defined in: [packages/media/src/preview-pool.ts:18](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L18)
 
 ## Properties
 
@@ -21,7 +21,7 @@ Defined in: [packages/media/src/preview-pool.ts:17](https://github.com/mattppal/
 assetId: `a-${string}`;
 ```
 
-Defined in: [packages/media/src/preview-pool.ts:18](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L18)
+Defined in: [packages/media/src/preview-pool.ts:19](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L19)
 
 ***
 
@@ -31,7 +31,7 @@ Defined in: [packages/media/src/preview-pool.ts:18](https://github.com/mattppal/
 kind: "video" | "audio";
 ```
 
-Defined in: [packages/media/src/preview-pool.ts:19](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L19)
+Defined in: [packages/media/src/preview-pool.ts:20](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L20)
 
 ***
 
@@ -41,7 +41,7 @@ Defined in: [packages/media/src/preview-pool.ts:19](https://github.com/mattppal/
 rate: number;
 ```
 
-Defined in: [packages/media/src/preview-pool.ts:23](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L23)
+Defined in: [packages/media/src/preview-pool.ts:24](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L24)
 
 Element playback speed at the playhead (timeMap slope; 1 unmapped, 0 frozen).
 
@@ -53,7 +53,7 @@ Element playback speed at the playhead (timeMap slope; 1 unmapped, 0 frozen).
 optional reversed?: boolean;
 ```
 
-Defined in: [packages/media/src/preview-pool.ts:31](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L31)
+Defined in: [packages/media/src/preview-pool.ts:32](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L32)
 
 The element plays its source backward. Media elements reject negative
 rates, so the pool seek-chases these like a scrub (frames come from the
@@ -67,7 +67,7 @@ scrub cache) and their preview audio is muted; export is exact.
 sourceTimeMs: number;
 ```
 
-Defined in: [packages/media/src/preview-pool.ts:21](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L21)
+Defined in: [packages/media/src/preview-pool.ts:22](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L22)
 
 Media-local time (after trim and time remap).
 
@@ -79,6 +79,6 @@ Media-local time (after trim and time remap).
 volume: number;
 ```
 
-Defined in: [packages/media/src/preview-pool.ts:25](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L25)
+Defined in: [packages/media/src/preview-pool.ts:26](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L26)
 
 Effective volume (element volume × fades; 0 when element/track muted).

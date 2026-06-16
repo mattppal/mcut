@@ -1,6 +1,19 @@
 {
   "extends": "./tsconfig.react.json",
   "compilerOptions": {
+    "paths": {
+      "@mcut/cli": ["./packages/cli/src/index.ts"],
+      "@mcut/compositor": ["./packages/compositor/src/index.ts"],
+      "@mcut/editor": ["./packages/editor/src/index.ts"],
+      "@mcut/media": ["./packages/media/src/index.ts"],
+      "@mcut/mcp-server": ["./packages/mcp-server/src/index.ts"],
+      "@mcut/react": ["./packages/react/src/index.ts"],
+      "@mcut/timeline": ["./packages/timeline/src/index.ts"],
+      "@mcut/transcription": ["./packages/transcription/src/index.ts"],
+      "@mcut/transcription-ai-sdk": ["./packages/transcription-ai-sdk/src/index.ts"],
+      "@mcut/transcription-assemblyai": ["./packages/transcription-assemblyai/src/index.ts"],
+      "@mcut/transcription-local": ["./packages/transcription-local/src/index.ts"]
+    },
     "types": ["bun"],
     "skipLibCheck": true
   },

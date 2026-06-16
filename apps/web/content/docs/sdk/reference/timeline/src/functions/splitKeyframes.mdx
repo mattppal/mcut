@@ -27,15 +27,15 @@ crossed segment is approximated on each side by the segment's own easing.
 ### keyframes
 
   \| `Partial`\<`Record`\<
-  \| `"opacity"`
-  \| `"volume"`
   \| `"blur"`
-  \| `"letterSpacing"`
   \| `"rotation"`
   \| `"position.x"`
   \| `"position.y"`
   \| `"scale.x"`
-  \| `"scale.y"`, `object`[]\>\>
+  \| `"scale.y"`
+  \| `"opacity"`
+  \| `"volume"`
+  \| `"letterSpacing"`, `object`[]\>\>
   \| `undefined`
 
 ### offsetMs
@@ -49,33 +49,33 @@ crossed segment is approximated on each side by the segment's own easing.
 ### left
 
 ```ts
-left: 
+left:
   | Partial<Record<
-  | "opacity"
-  | "volume"
   | "blur"
-  | "letterSpacing"
   | "rotation"
   | "position.x"
   | "position.y"
   | "scale.x"
-  | "scale.y", object[]>>
+  | "scale.y"
+  | "opacity"
+  | "volume"
+  | "letterSpacing", object[]>>
   | undefined;
 ```
 
 ### right
 
 ```ts
-right: 
+right:
   | Partial<Record<
-  | "opacity"
-  | "volume"
   | "blur"
-  | "letterSpacing"
   | "rotation"
   | "position.x"
   | "position.y"
   | "scale.x"
-  | "scale.y", object[]>>
+  | "scale.y"
+  | "opacity"
+  | "volume"
+  | "letterSpacing", object[]>>
   | undefined;
 ```

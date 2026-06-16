@@ -23,50 +23,61 @@ Default timeline element for a media-bin asset.
 
 ### engine
 
-`EditorEngine`
+[`EditorEngine`](../../../timeline/src/classes/EditorEngine.mdx)
 
 ### asset
 
 #### durationMs?
 
-`number`
+`number` = `...`
 
 #### hash?
 
-`string`
+`string` = `...`
+
+Content hash of the media file (stable identity across reloads/moves).
 
 #### height?
 
-`number`
+`number` = `...`
 
 #### id
 
-`` `a-${string}` ``
+`` `a-${string}` `` = `assetIdSchema`
 
 #### kind
 
-`"video"` \| `"audio"` \| `"image"`
+`"video"` \| `"audio"` \| `"image"` = `...`
 
 #### mimeType?
 
-`string`
+`string` = `...`
 
 #### name?
 
-`string`
+`string` = `...`
 
 #### nativePreview?
 
-`boolean`
+`boolean` = `...`
+
+True when the browser's native media elements can preview this asset.
+Containers such as Matroska may import/export through Mediabunny while
+still needing decoded-frame fallback for interactive canvas preview.
 
 #### src
 
-`string`
+`string` = `...`
+
+Object URL, data URL, or remote URL. Projects stay JSON-serializable —
+but treat this as a RUNTIME BINDING, not identity: object URLs are dead
+after a reload, so persistence layers re-resolve `src` on load (e.g. from
+OPFS via `hash`) and relink UIs match on `hash`/`name`.
 
 #### width?
 
-`number`
+`number` = `...`
 
 ## Returns
 
-`TimelineElementInput`
+[`TimelineElementInput`](../../../timeline/src/type-aliases/TimelineElementInput.mdx)
