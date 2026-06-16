@@ -6,7 +6,6 @@
     "timeline-content",
     "react-editor",
     "render-and-export",
-    "captions",
-    "cli-mcp"
+    "captions"
   ]
 }
