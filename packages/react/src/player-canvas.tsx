@@ -1,6 +1,12 @@
 'use client'
 
-import { useEffect, useRef, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import {
   getElementOBB,
   getHandles,
@@ -64,8 +70,8 @@ export interface PlayerCanvasProps {
   quality?: PreviewQuality
   /**
    * Compositor backend. `'webgpu'` renders through the WebGPU pass
-   * pipeline (requires `navigator.gpu`; falls back to canvas2d while the
-   * device initializes or when unavailable). Default `'canvas2d'`.
+   * pipeline (requires `navigator.gpu`; falls back to canvas2d when
+   * unavailable or when device initialization fails). Default `'webgpu'`.
    */
   renderer?: 'canvas2d' | 'webgpu'
 }
@@ -168,7 +174,7 @@ export function PlayerCanvas({
   quality = 'auto',
   hiddenElementIds,
   onElementDoubleClick,
-  renderer = 'canvas2d',
+  renderer = 'webgpu',
 }: PlayerCanvasProps) {
   const { engine, pool } = useEditorContext()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -176,6 +182,7 @@ export function PlayerCanvas({
   const gpuRef = useRef<{ key: string; backend: WebGPUBackend | null; pending: boolean } | null>(
     null,
   )
+  const [webgpuUnavailable, setWebgpuUnavailable] = useState(false)
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const measureCtxRef = useRef<CanvasRenderingContext2D | null>(null)
   const gestureRef = useRef<GestureState | null>(null)
@@ -206,6 +213,12 @@ export function PlayerCanvas({
 
   const obbFor = (project: Project, element: TimelineElement): OBB | null =>
     getElementOBB(project, element, sizeHelpers(project))
+
+  const effectiveRenderer = renderer === 'webgpu' && !webgpuUnavailable ? 'webgpu' : 'canvas2d'
+
+  useEffect(() => {
+    if (renderer === 'canvas2d') setWebgpuUnavailable(false)
+  }, [renderer])
 
   // ---- render loop ---------------------------------------------------------
 
@@ -258,11 +271,11 @@ export function PlayerCanvas({
             ? { skipElementIds: hiddenRef.current }
             : {}),
         }
-        if (renderer === 'webgpu' && isWebGPUSupported()) {
+        if (effectiveRenderer === 'webgpu' && isWebGPUSupported()) {
           // The backend composites at project resolution and its present
           // pass stretches onto the (possibly downscaled) backing store.
-          // Creation is async: frames skip until the device is ready, and
-          // the backend recreates when project dimensions change.
+          // Creation is async: frames skip until the device is ready. If
+          // setup fails, the canvas remounts on the canvas2d backend.
           const key = `${project.width}x${project.height}`
           let gpu = gpuRef.current
           if (gpu && gpu.key !== key && gpu.backend) {
@@ -287,7 +300,11 @@ export function PlayerCanvas({
                 }
               })
               .catch(() => {
-                created.pending = false
+                if (gpuRef.current === created) {
+                  created.pending = false
+                  gpuRef.current = null
+                }
+                setWebgpuUnavailable(true)
               })
           }
           if (gpu.backend) {
@@ -413,7 +430,7 @@ export function PlayerCanvas({
       gpuRef.current = null
     }
     // The loop reads engine/pool state directly each frame.
-  }, [engine, pool, background, interactive, quality, renderer])
+  }, [engine, pool, background, interactive, quality, effectiveRenderer])
 
   // The render loop reads these through refs so toggling them doesn't
   // restart the loop (it depends on engine/pool/quality only).
@@ -646,7 +663,7 @@ export function PlayerCanvas({
     >
       {/* Keyed by renderer: a canvas can only ever hold one context type. */}
       <canvas
-        key={renderer}
+        key={effectiveRenderer}
         ref={renderCanvasRef}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       />
