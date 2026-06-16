@@ -1,6 +1,7 @@
 import { ALL_FORMATS, BlobSource, Input, UrlSource } from 'mediabunny'
 import { createAssetId, type AssetRef } from '@mcut/timeline'
 import { hashBlob } from './media-store'
+import { isMatroskaLike } from './video-capabilities'
 
 export type MediaSourceLike = Blob | string
 
@@ -19,18 +20,6 @@ export interface MediaProbe {
   width?: number
   height?: number
   mimeType?: string
-}
-
-function isMatroskaFile(name: string, mimeType?: string): boolean {
-  const lowerName = name.toLowerCase()
-  const lowerMime = mimeType?.toLowerCase() ?? ''
-  return (
-    lowerName.endsWith('.mkv') ||
-    lowerName.endsWith('.mk3d') ||
-    lowerName.endsWith('.mka') ||
-    lowerMime.includes('matroska') ||
-    lowerMime === 'video/x-matroska'
-  )
 }
 
 interface NativeMediaMetadata {
@@ -149,7 +138,7 @@ function canDecodeNatively(file: File): Promise<boolean> {
 
 /** Whether a video can use native `<video>` preview instead of decoded frames. */
 export async function hasNativeVideoPreview(file: File, mimeType?: string): Promise<boolean> {
-  if (isMatroskaFile(file.name, mimeType || file.type)) return false
+  if (isMatroskaLike({ name: file.name, mimeType: mimeType || file.type })) return false
   if (typeof document === 'undefined') return true
   const type = mimeType || file.type
   if (!type) return true

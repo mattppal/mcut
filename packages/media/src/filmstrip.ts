@@ -1,4 +1,5 @@
 import { CanvasSink } from 'mediabunny'
+import { getNativeVideoFilmstrip } from './native-video'
 import { inputFor, type MediaSourceLike } from './probe'
 
 export interface FilmstripOptions {
@@ -36,7 +37,7 @@ function createCanvas(width: number, height: number): HTMLCanvasElement | Offscr
  * filmstrip background of timeline video clips. Returns `null` for files
  * without a video track.
  */
-export async function getFilmstrip(
+async function getCanvasSinkFilmstrip(
   src: MediaSourceLike,
   options: FilmstripOptions,
 ): Promise<Filmstrip | null> {
@@ -76,4 +77,34 @@ export async function getFilmstrip(
   } finally {
     input.dispose()
   }
+}
+
+async function getNativeFilmstrip(
+  src: MediaSourceLike,
+  frameWidth: number,
+  frameCount: number,
+  options: FilmstripOptions,
+): Promise<Filmstrip | null> {
+  return getNativeVideoFilmstrip(src, {
+    frameWidth,
+    frameCount,
+    startMs: options.startMs,
+    endMs: options.endMs,
+  })
+}
+
+export async function getFilmstrip(
+  src: MediaSourceLike,
+  options: FilmstripOptions,
+): Promise<Filmstrip | null> {
+  const frameWidth = options.frameWidth ?? 80
+  const frameCount = Math.max(1, Math.round(options.frameCount))
+
+  try {
+    const native = await getNativeFilmstrip(src, frameWidth, frameCount, options)
+    if (native) return native
+  } catch {
+    // Fall through: browser-native capture is unavailable or cannot decode this source.
+  }
+  return getCanvasSinkFilmstrip(src, { ...options, frameWidth, frameCount })
 }

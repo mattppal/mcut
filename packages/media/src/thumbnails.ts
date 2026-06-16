@@ -1,4 +1,5 @@
 import { CanvasSink } from 'mediabunny'
+import { getNativeVideoFrame } from './native-video'
 import { inputFor, type MediaSourceLike } from './probe'
 
 export interface ThumbnailOptions {
@@ -8,8 +9,7 @@ export interface ThumbnailOptions {
   timeMs?: number
 }
 
-/** Extract a single poster frame from a video. Returns `null` for audio-only files. */
-export async function getVideoThumbnail(
+async function getCanvasSinkThumbnail(
   src: MediaSourceLike,
   options: ThumbnailOptions = {},
 ): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
@@ -23,6 +23,31 @@ export async function getVideoThumbnail(
   } finally {
     input.dispose()
   }
+}
+
+async function getNativeThumbnail(
+  src: MediaSourceLike,
+  options: ThumbnailOptions = {},
+): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
+  const frame = await getNativeVideoFrame(src, {
+    width: options.width ?? 160,
+    timeMs: options.timeMs ?? 0,
+  })
+  return frame?.canvas ?? null
+}
+
+/** Extract a single poster frame from a video. Returns `null` for audio-only files. */
+export async function getVideoThumbnail(
+  src: MediaSourceLike,
+  options: ThumbnailOptions = {},
+): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
+  try {
+    const native = await getNativeThumbnail(src, options)
+    if (native) return native
+  } catch {
+    // Fall through: browser-native capture is unavailable or cannot decode this source.
+  }
+  return getCanvasSinkThumbnail(src, options)
 }
 
 /** A poster frame as a data URL (handy for `<img>` in media bins). */
