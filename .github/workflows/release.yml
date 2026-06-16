@@ -19,6 +19,7 @@ concurrency: release
 permissions:
   contents: write
   id-token: write
+  packages: write
   pull-requests: write
 
 jobs:
@@ -38,6 +39,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run release:check
       - uses: changesets/action@v1
+        id: changesets
         with:
           version: bunx changeset version
           publish: bun run release:publish
@@ -48,3 +50,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
+      - name: Mirror published packages to GitHub Packages
+        if: steps.changesets.outputs.published == 'true'
+        run: bun run release:github-packages
+        env:
+          GITHUB_PACKAGES_TOKEN: ${{ github.token }}
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}

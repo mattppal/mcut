@@ -21,6 +21,7 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "bun run release:check && bun run release:publish",
+    "release:github-packages": "bun run scripts/publish-github-packages.ts",
     "package:metadata": "bun run scripts/validate-package-metadata.ts",
     "package:json-lint": "npmPkgJsonLint --configFile .npmpackagejsonlintrc.json packages --quiet",
     "package:lint": "bun run package:metadata && bun run package:json-lint && bun run scripts/package-lint.ts",

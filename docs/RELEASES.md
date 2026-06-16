@@ -24,3 +24,8 @@ to npm.
 Packages are configured for public access and npm provenance. npm trusted
 publishing should be configured for `.github/workflows/release.yml` before the
 first public release.
+
+After npmjs publishing succeeds, the release workflow mirrors the same package
+versions to GitHub Packages. npmjs remains the canonical public install registry;
+GitHub Packages exists so the packages are visible and linked from the GitHub
+repository. See [GitHub Packages](github-packages.md).
