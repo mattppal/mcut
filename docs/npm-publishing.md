@@ -1,6 +1,8 @@
 # npm publishing
 
 This repository publishes the public SDK packages from `packages/*`.
+npmjs is the canonical public registry. GitHub Packages is maintained as a
+repository-visible mirror; see [GitHub Packages](github-packages.md).
 
 ## Package names
 
@@ -33,6 +35,16 @@ so the CLI is published and documented as `@mcut/cli`.
    this repository and `.github/workflows/release.yml`.
 5. Keep long-lived npm automation tokens out of GitHub secrets. The release
    workflow uses GitHub OIDC plus npm provenance.
+
+## GitHub Packages mirror
+
+The release workflow mirrors successfully published npmjs versions to
+GitHub Packages. This is a separate registry, not a link to npmjs. Keep the same
+package names and versions in both registries.
+
+The `@mcut/*` GitHub Packages mirror should run from a repository owned by the
+`mcut` GitHub account or organization, because GitHub Packages routes scoped npm
+packages by GitHub namespace.
 
 If npm requires a package to exist before trusted publishing can be configured,
 do the first publish manually with:

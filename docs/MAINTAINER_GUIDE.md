@@ -41,6 +41,26 @@ Use npm trusted publishing for the `Release` GitHub Actions workflow:
 If a token fallback is needed, create an npm automation token with the narrowest
 scope available and save it as the repository secret `NPM_TOKEN`.
 
+## GitHub Packages
+
+Mirror npmjs releases to GitHub Packages so the packages appear on the GitHub
+repository homepage:
+
+- Prefer hosting the repository under the `mcut` GitHub organization so the
+  `@mcut/*` package scope and GitHub owner match.
+- Keep npmjs as the canonical public package registry.
+- Use GitHub Packages only as the GitHub-visible mirror.
+- Confirm each package is linked to the repository and public after the first
+  mirror publish.
+
+The release workflow uses the generated workflow token for the mirror. For local
+backfills, use a classic GitHub personal access token with package publishing
+permission:
+
+```sh
+GITHUB_PACKAGES_TOKEN=<token> bun run release:github-packages -- --all
+```
+
 ## Release process
 
 1. Include a changeset in any pull request that changes public package behavior.
@@ -49,6 +69,7 @@ scope available and save it as the repository secret `NPM_TOKEN`.
 4. Review and merge the version pull request.
 5. The release workflow publishes changed packages to npm and creates GitHub
    release notes through Changesets.
+6. The release workflow mirrors those package versions to GitHub Packages.
 
 ## Repository settings checklist
 
