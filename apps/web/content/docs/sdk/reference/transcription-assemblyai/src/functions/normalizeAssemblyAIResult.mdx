@@ -1,0 +1,33 @@
+---
+title: "normalizeAssemblyAIResult"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-assemblyai/src](../index.mdx) / normalizeAssemblyAIResult
+
+# Function: normalizeAssemblyAIResult()
+
+```ts
+function normalizeAssemblyAIResult(transcript): TranscriptResult;
+```
+
+Defined in: [packages/transcription-assemblyai/src/index.ts:35](https://github.com/mattppal/mcut/blob/main/packages/transcription-assemblyai/src/index.ts#L35)
+
+Normalize an AssemblyAI transcript to mcut's `TranscriptResult`.
+AssemblyAI timestamps are already integer milliseconds; words carry
+confidence and (with `speaker_labels`) speaker tags, and utterances map
+to sentence-level segments.
+
+## Parameters
+
+### transcript
+
+[`AssemblyAITranscriptLike`](../interfaces/AssemblyAITranscriptLike.mdx)
+
+## Returns
+
+`TranscriptResult`

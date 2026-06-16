@@ -1,0 +1,67 @@
+---
+title: "applyBoxResize"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [react/src](../index.mdx) / applyBoxResize
+
+# Function: applyBoxResize()
+
+```ts
+function applyBoxResize(
+   base, 
+   obb, 
+   handle, 
+   current, 
+   minSize?): BoxResizeResult;
+```
+
+Defined in: [packages/react/src/gestures.ts:97](https://github.com/mattppal/mcut/blob/main/packages/react/src/gestures.ts#L97)
+
+## Parameters
+
+### base
+
+#### rotation
+
+`number`
+
+#### scaleX
+
+`number`
+
+#### scaleY
+
+`number`
+
+#### x
+
+`number`
+
+#### y
+
+`number`
+
+### obb
+
+`OBB`
+
+### handle
+
+`"w"` \| `"nw"` \| `"n"` \| `"ne"` \| `"e"` \| `"se"` \| `"s"` \| `"sw"`
+
+### current
+
+[`GesturePoint`](../interfaces/GesturePoint.mdx)
+
+### minSize?
+
+`number` = `MIN_BOX_SIZE`
+
+## Returns
+
+[`BoxResizeResult`](../interfaces/BoxResizeResult.mdx)

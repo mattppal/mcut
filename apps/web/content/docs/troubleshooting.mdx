@@ -1,0 +1,41 @@
+---
+title: Troubleshooting
+description: Common limits in the current packages.
+---
+
+Most mcut failures come from using the right package in the wrong runtime or
+from bypassing the command layer.
+
+## Package imports resolve to dist
+
+Published package exports point at `dist`. In the monorepo, rebuild packages
+when tests or examples read stale output:
+
+```sh
+bun run build
+```
+
+## Project edits fail validation
+
+Commands validate ids, timing, element shape, and track overlaps. Inspect the
+command schema instead of retrying guessed payloads:
+
+```sh
+bunx @mcut/cli commands --name addElement
+```
+
+## Browser export fails
+
+Export depends on browser media APIs, supported codecs, and worker startup. Use
+`getExportSupport` before exposing an export option, and keep progress/error
+handling visible in your app.
+
+## WebGPU is unavailable
+
+The compositor can use Canvas2D. Local Whisper transcription requires WebGPU and
+enough memory; keep a server-side transcription provider as the default path.
+
+## Agents make wrong edits
+
+Have the agent read `get_summary` first, inspect command or operator schemas,
+and prefer operators when selection or playhead state matters.

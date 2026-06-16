@@ -1,0 +1,40 @@
+---
+title: "AngleCut"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / AngleCut
+
+# Interface: AngleCut
+
+Defined in: [packages/timeline/src/multicam.ts:14](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L14)
+
+Multicam helpers: a multicam element is N synced sources + an `angles`
+switch list (\{ atMs, layoutId \} from each cut until the next). What
+switches is the LAYOUT — "screen + me" vs "just me" are compositions of
+the same sources — which keeps cuts as plain data an agent can read and
+write. See .context/plans/mcut-multicam-zooms-thumbnails.md.
+
+## Properties
+
+### atMs
+
+```ts
+atMs: number;
+```
+
+Defined in: [packages/timeline/src/multicam.ts:15](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L15)
+
+***
+
+### layoutId
+
+```ts
+layoutId: string;
+```
+
+Defined in: [packages/timeline/src/multicam.ts:16](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L16)

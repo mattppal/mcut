@@ -16,3 +16,7 @@ test-results/
 .context/
 release-out/
 *.env
+
+# Generated docs
+apps/web/public/docs/
+apps/web/public/docs.md

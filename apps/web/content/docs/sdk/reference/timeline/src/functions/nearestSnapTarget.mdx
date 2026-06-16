@@ -1,0 +1,41 @@
+---
+title: "nearestSnapTarget"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / nearestSnapTarget
+
+# Function: nearestSnapTarget()
+
+```ts
+function nearestSnapTarget(
+   timeMs, 
+   targets, 
+   thresholdMs): SnapTarget | null;
+```
+
+Defined in: [packages/timeline/src/snap.ts:80](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/snap.ts#L80)
+
+Nearest target to `timeMs` within `thresholdMs` (ties: the earlier one).
+
+## Parameters
+
+### timeMs
+
+`number`
+
+### targets
+
+readonly [`SnapTarget`](../interfaces/SnapTarget.mdx)[]
+
+### thresholdMs
+
+`number`
+
+## Returns
+
+[`SnapTarget`](../interfaces/SnapTarget.mdx) \| `null`

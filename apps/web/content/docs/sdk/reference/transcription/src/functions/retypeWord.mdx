@@ -1,0 +1,41 @@
+---
+title: "retypeWord"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / retypeWord
+
+# Function: retypeWord()
+
+```ts
+function retypeWord(
+   caption, 
+   wordIndex, 
+   newText): CaptionContentPatch | null;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:227](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L227)
+
+Repair: retype one word in place (fixes caption text + timing together).
+
+## Parameters
+
+### caption
+
+[`TranscriptCaption`](../interfaces/TranscriptCaption.mdx)
+
+### wordIndex
+
+`number`
+
+### newText
+
+`string`
+
+## Returns
+
+[`CaptionContentPatch`](../interfaces/CaptionContentPatch.mdx) \| `null`

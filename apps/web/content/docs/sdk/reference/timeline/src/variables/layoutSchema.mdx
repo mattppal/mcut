@@ -1,0 +1,44 @@
+---
+title: "layoutSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / layoutSchema
+
+# Variable: layoutSchema
+
+```ts
+const layoutSchema: ZodObject<{
+  id: ZodString;
+  name: ZodString;
+  slots: ZodArray<ZodObject<{
+     cornerRadius: ZodDefault<ZodNumber>;
+     fit: ZodDefault<ZodEnum<{
+        contain: "contain";
+        cover: "cover";
+     }>>;
+     focus: ZodDefault<ZodObject<{
+        x: ZodNumber;
+        y: ZodNumber;
+     }, $strip>>;
+     rect: ZodObject<{
+        h: ZodNumber;
+        w: ZodNumber;
+        x: ZodNumber;
+        y: ZodNumber;
+     }, $strip>;
+     shadow: ZodDefault<ZodBoolean>;
+     source: ZodString;
+     stroke: ZodOptional<ZodObject<{
+        color: ZodDefault<ZodString>;
+        width: ZodNumber;
+     }, $strip>>;
+  }, $strip>>;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/layouts.ts:39](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/layouts.ts#L39)

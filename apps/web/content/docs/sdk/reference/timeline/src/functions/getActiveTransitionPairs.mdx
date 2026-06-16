@@ -1,0 +1,70 @@
+---
+title: "getActiveTransitionPairs"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getActiveTransitionPairs
+
+# Function: getActiveTransitionPairs()
+
+```ts
+function getActiveTransitionPairs(track, timeMs): TransitionPair[];
+```
+
+Defined in: [packages/timeline/src/transitions.ts:95](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L95)
+
+Transition pairs on `track` whose blend window contains `timeMs`.
+
+## Parameters
+
+### track
+
+#### elements
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)[] = `...`
+
+Sorted by `startMs`; never overlapping in time.
+
+#### hidden
+
+`boolean` = `...`
+
+Visuals from this track are not rendered.
+
+#### id
+
+`` `t-${string}` `` = `trackIdSchema`
+
+#### locked
+
+`boolean` = `...`
+
+UI hint: track rejects edits. The engine does not enforce this.
+
+#### magnetic
+
+`boolean` = `...`
+
+When enabled, edits compact this track so clips keep no gaps between them.
+
+#### muted
+
+`boolean` = `...`
+
+Audio from this track is silenced.
+
+#### name
+
+`string` = `...`
+
+### timeMs
+
+`number`
+
+## Returns
+
+[`TransitionPair`](../interfaces/TransitionPair.mdx)[]

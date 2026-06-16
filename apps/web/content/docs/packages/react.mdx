@@ -1,0 +1,30 @@
+---
+title: React
+description: React provider, hooks, and canvas preview bindings.
+---
+
+`@mcut/react` is a thin React layer over the engine and media preview pool. It
+does not own project behavior.
+
+Use it when building an editor UI in React.
+
+```sh
+bun add @mcut/react react react-dom
+```
+
+```tsx
+import { EditorProvider, PlayerCanvas } from "@mcut/react"
+
+export function Editor() {
+  return (
+    <EditorProvider>
+      <PlayerCanvas />
+    </EditorProvider>
+  )
+}
+```
+
+Read next:
+
+- [Build a React editor](/docs/recipes/react-editor)
+- [SDK reference](/docs/sdk/reference/react/src)

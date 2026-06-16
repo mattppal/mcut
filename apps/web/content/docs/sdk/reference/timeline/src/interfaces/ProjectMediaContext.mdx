@@ -1,0 +1,200 @@
+---
+title: "ProjectMediaContext"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / ProjectMediaContext
+
+# Interface: ProjectMediaContext
+
+Defined in: [packages/timeline/src/project-context.ts:62](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L62)
+
+## Properties
+
+### assets
+
+```ts
+assets: ProjectMediaAssetContext[];
+```
+
+Defined in: [packages/timeline/src/project-context.ts:76](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L76)
+
+***
+
+### markers
+
+```ts
+markers: object[];
+```
+
+Defined in: [packages/timeline/src/project-context.ts:78](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L78)
+
+#### color?
+
+```ts
+optional color?: string;
+```
+
+Any CSS color; UIs fall back to their accent color when absent.
+
+#### id
+
+```ts
+id: `m-${string}` = markerIdSchema;
+```
+
+#### label?
+
+```ts
+optional label?: string;
+```
+
+#### timeMs
+
+```ts
+timeMs: number;
+```
+
+***
+
+### playback?
+
+```ts
+optional playback?: PlaybackState;
+```
+
+Defined in: [packages/timeline/src/project-context.ts:74](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L74)
+
+***
+
+### project
+
+```ts
+project: object;
+```
+
+Defined in: [packages/timeline/src/project-context.ts:63](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L63)
+
+#### assetCount
+
+```ts
+assetCount: number;
+```
+
+#### durationMs
+
+```ts
+durationMs: number;
+```
+
+#### fps
+
+```ts
+fps: number;
+```
+
+#### height
+
+```ts
+height: number;
+```
+
+#### id
+
+```ts
+id: string;
+```
+
+#### markerCount
+
+```ts
+markerCount: number;
+```
+
+#### name
+
+```ts
+name: string;
+```
+
+#### trackCount
+
+```ts
+trackCount: number;
+```
+
+#### width
+
+```ts
+width: number;
+```
+
+***
+
+### selection
+
+```ts
+selection: object;
+```
+
+Defined in: [packages/timeline/src/project-context.ts:75](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L75)
+
+#### elementIds
+
+```ts
+elementIds: string[];
+```
+
+***
+
+### tracks
+
+```ts
+tracks: ProjectMediaTrackContext[];
+```
+
+Defined in: [packages/timeline/src/project-context.ts:77](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L77)
+
+***
+
+### transcript
+
+```ts
+transcript: object;
+```
+
+Defined in: [packages/timeline/src/project-context.ts:79](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L79)
+
+#### captionCount
+
+```ts
+captionCount: number;
+```
+
+#### endMs?
+
+```ts
+optional endMs?: number;
+```
+
+#### hasTranscript
+
+```ts
+hasTranscript: boolean;
+```
+
+#### startMs?
+
+```ts
+optional startMs?: number;
+```
+
+#### wordCount
+
+```ts
+wordCount: number;
+```

@@ -1,0 +1,59 @@
+---
+title: "audioElementSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / audioElementSchema
+
+# Variable: audioElementSchema
+
+```ts
+const audioElementSchema: ZodObject<{
+  assetId: ZodCustom<`a-${string}`, `a-${string}`>;
+  durationMs: ZodNumber;
+  fadeInMs: ZodOptional<ZodNumber>;
+  fadeOutMs: ZodOptional<ZodNumber>;
+  id: ZodCustom<`e-${string}`, `e-${string}`>;
+  keyframes: ZodOptional<ZodRecord<ZodEnum<{
+     blur: "blur";
+     letterSpacing: "letterSpacing";
+     opacity: "opacity";
+     position.x: "position.x";
+     position.y: "position.y";
+     rotation: "rotation";
+     scale.x: "scale.x";
+     scale.y: "scale.y";
+     volume: "volume";
+   }> & $partial, ZodArray<ZodObject<{
+     easing: ZodOptional<ZodUnion<readonly [ZodEnum<...>, ZodObject<..., ...>]>>;
+     timeMs: ZodNumber;
+     value: ZodNumber;
+  }, $strip>>>>;
+  linkId: ZodOptional<ZodString>;
+  muted: ZodDefault<ZodBoolean>;
+  reversed: ZodOptional<ZodBoolean>;
+  startMs: ZodNumber;
+  timeMap: ZodOptional<ZodArray<ZodObject<{
+     easing: ZodOptional<ZodUnion<readonly [ZodEnum<{
+        easeIn: ...;
+        easeInOut: ...;
+        easeOut: ...;
+        hold: ...;
+        linear: ...;
+      }>, ZodObject<{
+        cubicBezier: ...;
+     }, $strip>]>>;
+     timeMs: ZodNumber;
+     value: ZodNumber;
+  }, $strip>>>;
+  trimStartMs: ZodDefault<ZodNumber>;
+  type: ZodLiteral<"audio">;
+  volume: ZodDefault<ZodNumber>;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/model.ts:340](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L340)

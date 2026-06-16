@@ -1,0 +1,780 @@
+---
+title: "EditorEngine"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / EditorEngine
+
+# Class: EditorEngine
+
+Defined in: [packages/timeline/src/engine.ts:70](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L70)
+
+The headless editor: one validated, undoable command stream over a project,
+plus a playback store for transport state.
+
+This facade is the only public surface over the underlying reactive stores,
+which keeps the (alpha) `@tanstack/store` dependency contained to this
+package. UIs read via `engine.store`/`engine.playback` subscriptions; all
+writes go through [dispatch](#dispatch) (or the transport setters).
+
+## Constructors
+
+### Constructor
+
+```ts
+new EditorEngine(options?): EditorEngine;
+```
+
+Defined in: [packages/timeline/src/engine.ts:81](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L81)
+
+#### Parameters
+
+##### options?
+
+[`EditorEngineOptions`](../interfaces/EditorEngineOptions.mdx) = `{}`
+
+#### Returns
+
+`EditorEngine`
+
+## Properties
+
+### playback
+
+```ts
+readonly playback: Store<PlaybackState>;
+```
+
+Defined in: [packages/timeline/src/engine.ts:72](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L72)
+
+***
+
+### store
+
+```ts
+readonly store: Store<EditorState>;
+```
+
+Defined in: [packages/timeline/src/engine.ts:71](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L71)
+
+## Accessors
+
+### project
+
+#### Get Signature
+
+```ts
+get project(): object;
+```
+
+Defined in: [packages/timeline/src/engine.ts:98](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L98)
+
+##### Returns
+
+###### assets
+
+```ts
+assets: Record<string, {
+  durationMs?: number;
+  hash?: string;
+  height?: number;
+  id: `a-${string}`;
+  kind: "video" | "audio" | "image";
+  mimeType?: string;
+  name?: string;
+  nativePreview?: boolean;
+  src: string;
+  width?: number;
+}>;
+```
+
+###### fps
+
+```ts
+fps: number;
+```
+
+###### height
+
+```ts
+height: number;
+```
+
+###### id
+
+```ts
+id: string;
+```
+
+###### layouts
+
+```ts
+layouts: object[];
+```
+
+Multicam layout templates this project references. See layouts.ts.
+
+###### markers
+
+```ts
+markers: object[];
+```
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+###### name
+
+```ts
+name: string;
+```
+
+###### presets
+
+```ts
+presets: object[];
+```
+
+Named inspector value bundles (style presets). See presets.ts.
+
+###### tracks
+
+```ts
+tracks: object[];
+```
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+###### version
+
+```ts
+version: 1;
+```
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+###### width
+
+```ts
+width: number;
+```
+
+***
+
+### selection
+
+#### Get Signature
+
+```ts
+get selection(): SelectionState;
+```
+
+Defined in: [packages/timeline/src/engine.ts:102](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L102)
+
+##### Returns
+
+[`SelectionState`](../interfaces/SelectionState.mdx)
+
+## Methods
+
+### beginTransaction()
+
+```ts
+beginTransaction(): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:158](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L158)
+
+Open a transaction that spans multiple event-loop turns (e.g. a pointer
+drag): dispatches in between record no history; `endTransaction` pushes
+one entry for the whole gesture. Prefer [transact](#transact) for synchronous
+batches.
+
+#### Returns
+
+`void`
+
+***
+
+### cancelTransaction()
+
+```ts
+cancelTransaction(): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:189](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L189)
+
+Abort the open transaction (the whole stack, if nested): restore the
+project and selection from when it began, recording no history. Used by
+escape-to-cancel on drag gestures. No-op without an open transaction.
+
+#### Returns
+
+`void`
+
+***
+
+### canRedo()
+
+```ts
+canRedo(): boolean;
+```
+
+Defined in: [packages/timeline/src/engine.ts:204](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L204)
+
+#### Returns
+
+`boolean`
+
+***
+
+### canUndo()
+
+```ts
+canUndo(): boolean;
+```
+
+Defined in: [packages/timeline/src/engine.ts:200](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L200)
+
+#### Returns
+
+`boolean`
+
+***
+
+### clearSelection()
+
+```ts
+clearSelection(): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:236](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L236)
+
+#### Returns
+
+`void`
+
+***
+
+### dispatch()
+
+```ts
+dispatch(command, options?): object;
+```
+
+Defined in: [packages/timeline/src/engine.ts:107](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L107)
+
+Apply a command. Returns the resulting project.
+
+#### Parameters
+
+##### command
+
+[`AnyCommand`](../type-aliases/AnyCommand.mdx)
+
+##### options?
+
+[`DispatchOptions`](../interfaces/DispatchOptions.mdx) = `{}`
+
+#### Returns
+
+##### assets
+
+```ts
+assets: Record<string, {
+  durationMs?: number;
+  hash?: string;
+  height?: number;
+  id: `a-${string}`;
+  kind: "video" | "audio" | "image";
+  mimeType?: string;
+  name?: string;
+  nativePreview?: boolean;
+  src: string;
+  width?: number;
+}>;
+```
+
+##### fps
+
+```ts
+fps: number;
+```
+
+##### height
+
+```ts
+height: number;
+```
+
+##### id
+
+```ts
+id: string;
+```
+
+##### layouts
+
+```ts
+layouts: object[];
+```
+
+Multicam layout templates this project references. See layouts.ts.
+
+##### markers
+
+```ts
+markers: object[];
+```
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+##### name
+
+```ts
+name: string;
+```
+
+##### presets
+
+```ts
+presets: object[];
+```
+
+Named inspector value bundles (style presets). See presets.ts.
+
+##### tracks
+
+```ts
+tracks: object[];
+```
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+##### version
+
+```ts
+version: 1;
+```
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+##### width
+
+```ts
+width: number;
+```
+
+***
+
+### endTransaction()
+
+```ts
+endTransaction(): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:170](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L170)
+
+#### Returns
+
+`void`
+
+***
+
+### loadProject()
+
+```ts
+loadProject(project): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:241](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L241)
+
+Replace the project (e.g. loading a saved file). Resets history.
+
+#### Parameters
+
+##### project
+
+###### assets
+
+`Record`\<`string`, \{
+  `durationMs?`: `number`;
+  `hash?`: `string`;
+  `height?`: `number`;
+  `id`: `` `a-${string}` ``;
+  `kind`: `"video"` \| `"audio"` \| `"image"`;
+  `mimeType?`: `string`;
+  `name?`: `string`;
+  `nativePreview?`: `boolean`;
+  `src`: `string`;
+  `width?`: `number`;
+\}\> = `...`
+
+###### fps
+
+`number` = `...`
+
+###### height
+
+`number` = `...`
+
+###### id
+
+`string` = `...`
+
+###### layouts
+
+`object`[] = `...`
+
+Multicam layout templates this project references. See layouts.ts.
+
+###### markers
+
+`object`[] = `...`
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+###### name
+
+`string` = `...`
+
+###### presets
+
+`object`[] = `...`
+
+Named inspector value bundles (style presets). See presets.ts.
+
+###### tracks
+
+`object`[] = `...`
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+###### version
+
+`1` = `...`
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+###### width
+
+`number` = `...`
+
+#### Returns
+
+`void`
+
+***
+
+### pause()
+
+```ts
+pause(): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:275](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L275)
+
+#### Returns
+
+`void`
+
+***
+
+### play()
+
+```ts
+play(): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:271](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L271)
+
+#### Returns
+
+`void`
+
+***
+
+### redo()
+
+```ts
+redo(): boolean;
+```
+
+Defined in: [packages/timeline/src/engine.ts:220](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L220)
+
+#### Returns
+
+`boolean`
+
+***
+
+### seek()
+
+```ts
+seek(timeMs): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:266](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L266)
+
+#### Parameters
+
+##### timeMs
+
+`number`
+
+#### Returns
+
+`void`
+
+***
+
+### select()
+
+```ts
+select(elementIds): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:232](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L232)
+
+#### Parameters
+
+##### elementIds
+
+`` `e-${string}` ``[]
+
+#### Returns
+
+`void`
+
+***
+
+### setMuted()
+
+```ts
+setMuted(muted): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:283](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L283)
+
+#### Parameters
+
+##### muted
+
+`boolean`
+
+#### Returns
+
+`void`
+
+***
+
+### setPlaybackRate()
+
+```ts
+setPlaybackRate(playbackRate): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:287](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L287)
+
+#### Parameters
+
+##### playbackRate
+
+`number`
+
+#### Returns
+
+`void`
+
+***
+
+### setVolume()
+
+```ts
+setVolume(volume): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:279](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L279)
+
+#### Parameters
+
+##### volume
+
+`number`
+
+#### Returns
+
+`void`
+
+***
+
+### toJSON()
+
+```ts
+toJSON(): object;
+```
+
+Defined in: [packages/timeline/src/engine.ts:256](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L256)
+
+The project as a JSON-serializable value.
+
+#### Returns
+
+##### assets
+
+```ts
+assets: Record<string, {
+  durationMs?: number;
+  hash?: string;
+  height?: number;
+  id: `a-${string}`;
+  kind: "video" | "audio" | "image";
+  mimeType?: string;
+  name?: string;
+  nativePreview?: boolean;
+  src: string;
+  width?: number;
+}>;
+```
+
+##### fps
+
+```ts
+fps: number;
+```
+
+##### height
+
+```ts
+height: number;
+```
+
+##### id
+
+```ts
+id: string;
+```
+
+##### layouts
+
+```ts
+layouts: object[];
+```
+
+Multicam layout templates this project references. See layouts.ts.
+
+##### markers
+
+```ts
+markers: object[];
+```
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+##### name
+
+```ts
+name: string;
+```
+
+##### presets
+
+```ts
+presets: object[];
+```
+
+Named inspector value bundles (style presets). See presets.ts.
+
+##### tracks
+
+```ts
+tracks: object[];
+```
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+##### version
+
+```ts
+version: 1;
+```
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+##### width
+
+```ts
+width: number;
+```
+
+***
+
+### transact()
+
+```ts
+transact(fn, options?): void;
+```
+
+Defined in: [packages/timeline/src/engine.ts:139](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L139)
+
+Group multiple dispatches into a single undo entry (and a single store
+notification). Used for drag gestures and multi-step operations.
+
+#### Parameters
+
+##### fn
+
+() => `void`
+
+##### options?
+
+[`TransactionOptions`](../interfaces/TransactionOptions.mdx) = `{}`
+
+#### Returns
+
+`void`
+
+***
+
+### undo()
+
+```ts
+undo(): boolean;
+```
+
+Defined in: [packages/timeline/src/engine.ts:208](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L208)
+
+#### Returns
+
+`boolean`
+
+***
+
+### fromJSON()
+
+```ts
+static fromJSON(data, options?): EditorEngine;
+```
+
+Defined in: [packages/timeline/src/engine.ts:260](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L260)
+
+#### Parameters
+
+##### data
+
+`unknown`
+
+##### options?
+
+`Omit`\<[`EditorEngineOptions`](../interfaces/EditorEngineOptions.mdx), `"project"`\> = `{}`
+
+#### Returns
+
+`EditorEngine`

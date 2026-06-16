@@ -1,0 +1,109 @@
+---
+title: "renderFrameWith"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / renderFrameWith
+
+# Function: renderFrameWith()
+
+```ts
+function renderFrameWith(
+   backend, 
+   project, 
+   timeMs, 
+   options?): void;
+```
+
+Defined in: [packages/compositor/src/render-frame.ts:44](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/render-frame.ts#L44)
+
+Render one frame through an explicit [RenderBackend](../interfaces/RenderBackend.mdx). The
+track/element walk, transition pairing, and animation resolution here are
+backend-agnostic; only the draws differ.
+
+Tracks render bottom-up (index 0 first), elements in start order. Clips
+joined by a transition render through the blend instead of the normal
+pass while the window (centered on their cut) is active.
+
+## Parameters
+
+### backend
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx)
+
+### project
+
+#### assets
+
+`z.ZodDefault`\<`z.ZodRecord`\<`z.ZodString`, `z.ZodObject`\<\{
+  `durationMs`: `z.ZodOptional`\<`z.ZodNumber`\>;
+  `hash`: `z.ZodOptional`\<`z.ZodString`\>;
+  `height`: `z.ZodOptional`\<`z.ZodNumber`\>;
+  `id`: `z.ZodCustom`\<`` `a-${string}` ``, `` `a-${string}` ``\>;
+  `kind`: `z.ZodEnum`\<\{
+     `audio`: `"audio"`;
+     `image`: `"image"`;
+     `video`: `"video"`;
+  \}\>;
+  `mimeType`: `z.ZodOptional`\<`z.ZodString`\>;
+  `name`: `z.ZodOptional`\<`z.ZodString`\>;
+  `nativePreview`: `z.ZodOptional`\<`z.ZodBoolean`\>;
+  `src`: `z.ZodString`;
+  `width`: `z.ZodOptional`\<`z.ZodNumber`\>;
+\}, `z.core.$strip`\>\>\>
+
+#### fps
+
+`number`
+
+#### height
+
+`number`
+
+#### id
+
+`string`
+
+#### layouts
+
+`object`[]
+
+#### markers
+
+`object`[]
+
+#### name
+
+`string`
+
+#### presets
+
+`object`[]
+
+#### tracks
+
+`object`[]
+
+#### version
+
+`1`
+
+#### width
+
+`number`
+
+### timeMs
+
+`number`
+
+### options?
+
+[`RenderFrameOptions`](../interfaces/RenderFrameOptions.mdx) = `{}`
+
+## Returns
+
+`void`

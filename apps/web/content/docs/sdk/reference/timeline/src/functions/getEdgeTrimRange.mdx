@@ -1,0 +1,108 @@
+---
+title: "getEdgeTrimRange"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getEdgeTrimRange
+
+# Function: getEdgeTrimRange()
+
+```ts
+function getEdgeTrimRange(
+   project, 
+   element, 
+   edge): EdgeTrimRange;
+```
+
+Defined in: [packages/timeline/src/edge-trim.ts:214](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/edge-trim.ts#L214)
+
+The `deltaMs` range [applyEdgeTrim](applyEdgeTrim.mdx) accepts for this element and
+edge, from minimum duration, timeline zero, and available media. UIs clamp
+drags with this; ±Infinity where media is unbounded (stills, freezes,
+unknown asset durations).
+
+## Parameters
+
+### project
+
+#### assets
+
+`Record`\<`string`, \{
+  `durationMs?`: `number`;
+  `hash?`: `string`;
+  `height?`: `number`;
+  `id`: `` `a-${string}` ``;
+  `kind`: `"video"` \| `"audio"` \| `"image"`;
+  `mimeType?`: `string`;
+  `name?`: `string`;
+  `nativePreview?`: `boolean`;
+  `src`: `string`;
+  `width?`: `number`;
+\}\> = `...`
+
+#### fps
+
+`number` = `...`
+
+#### height
+
+`number` = `...`
+
+#### id
+
+`string` = `...`
+
+#### layouts
+
+`object`[] = `...`
+
+Multicam layout templates this project references. See layouts.ts.
+
+#### markers
+
+`object`[] = `...`
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+#### name
+
+`string` = `...`
+
+#### presets
+
+`object`[] = `...`
+
+Named inspector value bundles (style presets). See presets.ts.
+
+#### tracks
+
+`object`[] = `...`
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+#### version
+
+`1` = `...`
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+#### width
+
+`number` = `...`
+
+### element
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)
+
+### edge
+
+[`TrimEdge`](../type-aliases/TrimEdge.mdx)
+
+## Returns
+
+[`EdgeTrimRange`](../interfaces/EdgeTrimRange.mdx)

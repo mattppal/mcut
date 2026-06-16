@@ -1,0 +1,42 @@
+---
+title: "RepetitionOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / RepetitionOptions
+
+# Interface: RepetitionOptions
+
+Defined in: [packages/transcription-local/src/repetition.ts:7](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/repetition.ts#L7)
+
+Whisper's classic failure mode on silence/noise: the decoder locks into a
+loop and emits the same phrase over and over. Detect n-gram repetition so
+the worker can drop the chunk and retry with a temperature bump.
+
+## Properties
+
+### maxNgram?
+
+```ts
+optional maxNgram?: number;
+```
+
+Defined in: [packages/transcription-local/src/repetition.ts:9](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/repetition.ts#L9)
+
+Longest phrase length (in tokens) checked for looping. Default 4.
+
+***
+
+### minRepeats?
+
+```ts
+optional minRepeats?: number;
+```
+
+Defined in: [packages/transcription-local/src/repetition.ts:11](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/repetition.ts#L11)
+
+Consecutive repeats that count as a loop. Default 4 (3 for bigrams+).

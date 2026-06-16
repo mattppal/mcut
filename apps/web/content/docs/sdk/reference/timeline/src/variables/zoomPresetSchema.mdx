@@ -1,0 +1,39 @@
+---
+title: "zoomPresetSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / zoomPresetSchema
+
+# Variable: zoomPresetSchema
+
+```ts
+const zoomPresetSchema: ZodObject<{
+  durationMs: ZodDefault<ZodNumber>;
+  name: ZodString;
+  tracks: ZodRecord<ZodEnum<{
+     position.x: "position.x";
+     position.y: "position.y";
+     scale.x: "scale.x";
+     scale.y: "scale.y";
+   }> & $partial, ZodArray<ZodObject<{
+     easing: ZodOptional<ZodUnion<readonly [ZodEnum<{
+        easeIn: ...;
+        easeInOut: ...;
+        easeOut: ...;
+        hold: ...;
+        linear: ...;
+      }>, ZodObject<{
+        cubicBezier: ...;
+     }, $strip>]>>;
+     t: ZodNumber;
+     value: ZodNumber;
+  }, $strip>>>;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/zoom-presets.ts:32](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/zoom-presets.ts#L32)

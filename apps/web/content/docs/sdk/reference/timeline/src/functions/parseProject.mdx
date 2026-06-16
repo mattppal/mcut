@@ -1,0 +1,118 @@
+---
+title: "parseProject"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / parseProject
+
+# Function: parseProject()
+
+```ts
+function parseProject(data): object;
+```
+
+Defined in: [packages/timeline/src/model.ts:715](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L715)
+
+Parse and validate an untrusted project payload (e.g. persisted JSON),
+migrating documents written by older releases up to the current format.
+Throws `ProjectFormatError` for documents from a newer mcut.
+
+## Parameters
+
+### data
+
+`unknown`
+
+## Returns
+
+### assets
+
+```ts
+assets: Record<string, {
+  durationMs?: number;
+  hash?: string;
+  height?: number;
+  id: `a-${string}`;
+  kind: "video" | "audio" | "image";
+  mimeType?: string;
+  name?: string;
+  nativePreview?: boolean;
+  src: string;
+  width?: number;
+}>;
+```
+
+### fps
+
+```ts
+fps: number;
+```
+
+### height
+
+```ts
+height: number;
+```
+
+### id
+
+```ts
+id: string;
+```
+
+### layouts
+
+```ts
+layouts: object[];
+```
+
+Multicam layout templates this project references. See layouts.ts.
+
+### markers
+
+```ts
+markers: object[];
+```
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+### name
+
+```ts
+name: string;
+```
+
+### presets
+
+```ts
+presets: object[];
+```
+
+Named inspector value bundles (style presets). See presets.ts.
+
+### tracks
+
+```ts
+tracks: object[];
+```
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+### version
+
+```ts
+version: 1;
+```
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+### width
+
+```ts
+width: number;
+```

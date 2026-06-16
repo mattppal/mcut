@@ -4,11 +4,11 @@
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "bun run sync:docs-md && bun run source:docs && next build",
+    "dev": "bun run --cwd ../.. docs:sdk && bun run sync:docs-md && next dev",
+    "build": "bun run --cwd ../.. docs:sdk && bun run sync:docs-md && bun run source:docs && next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "bun run source:docs && tsc --noEmit",
+    "typecheck": "bun run --cwd ../.. docs:sdk && bun run source:docs && tsc --noEmit",
     "source:docs": "fumadocs-mdx",
     "sync:docs-md": "bun run scripts/sync-docs-markdown.ts"
   },

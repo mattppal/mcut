@@ -1,0 +1,42 @@
+---
+title: "evaluateEasing"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / evaluateEasing
+
+# Function: evaluateEasing()
+
+```ts
+function evaluateEasing(easing, t): number;
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:111](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L111)
+
+Eased progress (0–1) for linear progress `t` (0–1).
+
+## Parameters
+
+### easing
+
+  \| `"linear"`
+  \| `"hold"`
+  \| `"easeIn"`
+  \| `"easeOut"`
+  \| `"easeInOut"`
+  \| \{
+  `cubicBezier`: \[`number`, `number`, `number`, `number`\];
+\}
+  \| `undefined`
+
+### t
+
+`number`
+
+## Returns
+
+`number`

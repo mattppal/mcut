@@ -1,0 +1,6 @@
+{
+  "title": "@mcut/editor",
+  "pages": [
+    "...src"
+  ]
+}

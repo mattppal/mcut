@@ -1,0 +1,106 @@
+---
+title: "ElementLocation"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / ElementLocation
+
+# Interface: ElementLocation
+
+Defined in: [packages/timeline/src/selectors.ts:4](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L4)
+
+## Properties
+
+### element
+
+```ts
+element: TimelineElement;
+```
+
+Defined in: [packages/timeline/src/selectors.ts:7](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L7)
+
+***
+
+### elementIndex
+
+```ts
+elementIndex: number;
+```
+
+Defined in: [packages/timeline/src/selectors.ts:8](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L8)
+
+***
+
+### track
+
+```ts
+track: object;
+```
+
+Defined in: [packages/timeline/src/selectors.ts:5](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L5)
+
+#### elements
+
+```ts
+elements: TimelineElement[];
+```
+
+Sorted by `startMs`; never overlapping in time.
+
+#### hidden
+
+```ts
+hidden: boolean;
+```
+
+Visuals from this track are not rendered.
+
+#### id
+
+```ts
+id: `t-${string}` = trackIdSchema;
+```
+
+#### locked
+
+```ts
+locked: boolean;
+```
+
+UI hint: track rejects edits. The engine does not enforce this.
+
+#### magnetic
+
+```ts
+magnetic: boolean;
+```
+
+When enabled, edits compact this track so clips keep no gaps between them.
+
+#### muted
+
+```ts
+muted: boolean;
+```
+
+Audio from this track is silenced.
+
+#### name
+
+```ts
+name: string;
+```
+
+***
+
+### trackIndex
+
+```ts
+trackIndex: number;
+```
+
+Defined in: [packages/timeline/src/selectors.ts:6](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L6)

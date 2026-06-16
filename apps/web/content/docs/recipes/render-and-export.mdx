@@ -1,0 +1,31 @@
+---
+title: Render and export
+description: Render a frame with the compositor or export a browser video file.
+---
+
+Use `@mcut/compositor` when you need one frame. The caller owns the canvas
+context and frame source.
+
+```ts
+import { renderFrame } from "@mcut/compositor"
+
+renderFrame(ctx, project, 1000, {
+  backgroundColor: "#000000",
+})
+```
+
+Use `@mcut/media` for browser export.
+
+```ts
+import { exportProject } from "@mcut/media"
+
+const result = await exportProject(project, {
+  format: "mp4",
+  onProgress: (event) => console.log(event.phase, event.progress),
+})
+
+const url = URL.createObjectURL(result.blob)
+```
+
+Export is browser-oriented. It uses browser media APIs and may fall back from a
+worker to in-context execution when worker startup is unavailable.

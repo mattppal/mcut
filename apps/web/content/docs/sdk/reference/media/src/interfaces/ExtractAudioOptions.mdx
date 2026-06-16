@@ -1,0 +1,58 @@
+---
+title: "ExtractAudioOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / ExtractAudioOptions
+
+# Interface: ExtractAudioOptions
+
+Defined in: [packages/media/src/extract-audio.ts:10](https://github.com/mattppal/mcut/blob/main/packages/media/src/extract-audio.ts#L10)
+
+## Properties
+
+### numberOfChannels?
+
+```ts
+optional numberOfChannels?: number;
+```
+
+Defined in: [packages/media/src/extract-audio.ts:14](https://github.com/mattppal/mcut/blob/main/packages/media/src/extract-audio.ts#L14)
+
+Default 1 (mono).
+
+***
+
+### onProgress?
+
+```ts
+optional onProgress?: (progress) => void;
+```
+
+Defined in: [packages/media/src/extract-audio.ts:15](https://github.com/mattppal/mcut/blob/main/packages/media/src/extract-audio.ts#L15)
+
+#### Parameters
+
+##### progress
+
+`number`
+
+#### Returns
+
+`void`
+
+***
+
+### sampleRate?
+
+```ts
+optional sampleRate?: number;
+```
+
+Defined in: [packages/media/src/extract-audio.ts:12](https://github.com/mattppal/mcut/blob/main/packages/media/src/extract-audio.ts#L12)
+
+Default 16000 — small uploads, ideal for speech-to-text APIs.

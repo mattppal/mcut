@@ -1,0 +1,84 @@
+---
+title: "ActiveMediaItem"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / ActiveMediaItem
+
+# Interface: ActiveMediaItem
+
+Defined in: [packages/media/src/preview-pool.ts:17](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L17)
+
+## Properties
+
+### assetId
+
+```ts
+assetId: `a-${string}`;
+```
+
+Defined in: [packages/media/src/preview-pool.ts:18](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L18)
+
+***
+
+### kind
+
+```ts
+kind: "video" | "audio";
+```
+
+Defined in: [packages/media/src/preview-pool.ts:19](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L19)
+
+***
+
+### rate
+
+```ts
+rate: number;
+```
+
+Defined in: [packages/media/src/preview-pool.ts:23](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L23)
+
+Element playback speed at the playhead (timeMap slope; 1 unmapped, 0 frozen).
+
+***
+
+### reversed?
+
+```ts
+optional reversed?: boolean;
+```
+
+Defined in: [packages/media/src/preview-pool.ts:31](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L31)
+
+The element plays its source backward. Media elements reject negative
+rates, so the pool seek-chases these like a scrub (frames come from the
+scrub cache) and their preview audio is muted; export is exact.
+
+***
+
+### sourceTimeMs
+
+```ts
+sourceTimeMs: number;
+```
+
+Defined in: [packages/media/src/preview-pool.ts:21](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L21)
+
+Media-local time (after trim and time remap).
+
+***
+
+### volume
+
+```ts
+volume: number;
+```
+
+Defined in: [packages/media/src/preview-pool.ts:25](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L25)
+
+Effective volume (element volume × fades; 0 when element/track muted).

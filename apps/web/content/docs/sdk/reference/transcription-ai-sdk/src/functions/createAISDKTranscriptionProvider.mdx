@@ -1,0 +1,42 @@
+---
+title: "createAISDKTranscriptionProvider"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-ai-sdk/src](../index.mdx) / createAISDKTranscriptionProvider
+
+# Function: createAISDKTranscriptionProvider()
+
+```ts
+function createAISDKTranscriptionProvider(options): TranscriptionProvider;
+```
+
+Defined in: [packages/transcription-ai-sdk/src/index.ts:77](https://github.com/mattppal/mcut/blob/main/packages/transcription-ai-sdk/src/index.ts#L77)
+
+An mcut transcription provider backed by the Vercel AI SDK — one adapter
+unlocks every AI SDK transcription model (OpenAI, Deepgram, Groq,
+ElevenLabs, AssemblyAI, ...). Runs wherever the AI SDK runs; keep API
+keys server-side.
+
+```ts
+import { openai } from '@ai-sdk/openai'
+const provider = createAISDKTranscriptionProvider({
+  model: openai.transcription('whisper-1'),
+  providerOptions: { openai: { timestampGranularities: ['word'] } },
+})
+const transcript = await provider.transcribe({ audio: wavBlob })
+```
+
+## Parameters
+
+### options
+
+[`AISDKTranscriptionProviderOptions`](../interfaces/AISDKTranscriptionProviderOptions.mdx)
+
+## Returns
+
+`TranscriptionProvider`

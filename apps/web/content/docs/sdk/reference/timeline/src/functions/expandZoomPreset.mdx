@@ -1,0 +1,62 @@
+---
+title: "expandZoomPreset"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / expandZoomPreset
+
+# Function: expandZoomPreset()
+
+```ts
+function expandZoomPreset(
+   element, 
+   preset, 
+   atLocalMs, 
+   durationMs?): KeyframeMap;
+```
+
+Defined in: [packages/timeline/src/zoom-presets.ts:115](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/zoom-presets.ts#L115)
+
+Expand a zoom preset into ABSOLUTE keyframes on `element` starting at
+element-local `atLocalMs`: relative values are resolved against the clip's
+animated value at that instant; existing keyframes inside the applied
+window are replaced (predictable when chaining punch-ins). Returns the new
+keyframe map for the element.
+
+## Parameters
+
+### element
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)
+
+### preset
+
+#### durationMs
+
+`number` = `...`
+
+Default length; override at apply time.
+
+#### name
+
+`string` = `...`
+
+#### tracks
+
+`Partial`\<`Record`\<`"position.x"` \| `"position.y"` \| `"scale.x"` \| `"scale.y"`, `object`[]\>\> = `...`
+
+### atLocalMs
+
+`number`
+
+### durationMs?
+
+`number`
+
+## Returns
+
+[`KeyframeMap`](../type-aliases/KeyframeMap.mdx)

@@ -1,0 +1,33 @@
+---
+title: "splitSelectionAtPlayhead"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / splitSelectionAtPlayhead
+
+# Function: splitSelectionAtPlayhead()
+
+```ts
+function splitSelectionAtPlayhead(engine): void;
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:114](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L114)
+
+Split every selected element at the playhead, when it crosses one. Linked
+partners (shared `linkId`, e.g. detached audio) split along with their
+selected element, and the right halves are re-paired under a fresh linkId
+so each side stays a coherent pair.
+
+## Parameters
+
+### engine
+
+`EditorEngine`
+
+## Returns
+
+`void`

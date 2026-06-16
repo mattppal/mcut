@@ -1,0 +1,178 @@
+---
+title: "ProjectMediaAssetContext"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / ProjectMediaAssetContext
+
+# Interface: ProjectMediaAssetContext
+
+Defined in: [packages/timeline/src/project-context.ts:88](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L88)
+
+## Extends
+
+- `Omit`\<[`AssetRef`](../type-aliases/AssetRef.mdx), `"src"`\>
+
+## Properties
+
+### durationMs?
+
+```ts
+optional durationMs?: number;
+```
+
+Defined in: [packages/timeline/src/model.ts:376](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L376)
+
+#### Inherited from
+
+```ts
+Omit.durationMs
+```
+
+***
+
+### hash?
+
+```ts
+optional hash?: string;
+```
+
+Defined in: [packages/timeline/src/model.ts:367](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L367)
+
+Content hash of the media file (stable identity across reloads/moves).
+
+#### Inherited from
+
+```ts
+Omit.hash
+```
+
+***
+
+### height?
+
+```ts
+optional height?: number;
+```
+
+Defined in: [packages/timeline/src/model.ts:378](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L378)
+
+#### Inherited from
+
+```ts
+Omit.height
+```
+
+***
+
+### id
+
+```ts
+id: `a-${string}` = assetIdSchema;
+```
+
+Defined in: [packages/timeline/src/model.ts:357](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L357)
+
+#### Inherited from
+
+```ts
+Omit.id
+```
+
+***
+
+### kind
+
+```ts
+kind: "video" | "audio" | "image";
+```
+
+Defined in: [packages/timeline/src/model.ts:358](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L358)
+
+#### Inherited from
+
+```ts
+Omit.kind
+```
+
+***
+
+### mimeType?
+
+```ts
+optional mimeType?: string;
+```
+
+Defined in: [packages/timeline/src/model.ts:369](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L369)
+
+#### Inherited from
+
+```ts
+Omit.mimeType
+```
+
+***
+
+### name?
+
+```ts
+optional name?: string;
+```
+
+Defined in: [packages/timeline/src/model.ts:368](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L368)
+
+#### Inherited from
+
+```ts
+Omit.name
+```
+
+***
+
+### nativePreview?
+
+```ts
+optional nativePreview?: boolean;
+```
+
+Defined in: [packages/timeline/src/model.ts:375](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L375)
+
+True when the browser's native media elements can preview this asset.
+Containers such as Matroska may import/export through Mediabunny while
+still needing decoded-frame fallback for interactive canvas preview.
+
+#### Inherited from
+
+```ts
+Omit.nativePreview
+```
+
+***
+
+### usedBy
+
+```ts
+usedBy: string[];
+```
+
+Defined in: [packages/timeline/src/project-context.ts:90](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L90)
+
+***
+
+### width?
+
+```ts
+optional width?: number;
+```
+
+Defined in: [packages/timeline/src/model.ts:377](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L377)
+
+#### Inherited from
+
+```ts
+Omit.width
+```

@@ -1,0 +1,23 @@
+---
+title: "PreviewQuality"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [react/src](../index.mdx) / PreviewQuality
+
+# Type Alias: PreviewQuality
+
+```ts
+type PreviewQuality = "auto" | "full" | number;
+```
+
+Defined in: [packages/react/src/player-canvas.tsx:49](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L49)
+
+Preview raster resolution. `'auto'` renders at the displayed size,
+a number caps the project's short side (720 ≈ 720p), `'full'` always
+rasters at full project resolution. Every mode is capped at project
+resolution — CSS scales the canvas to fit either way.

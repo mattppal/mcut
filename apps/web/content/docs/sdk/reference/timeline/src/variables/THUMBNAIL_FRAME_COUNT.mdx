@@ -1,0 +1,27 @@
+---
+title: "THUMBNAIL\\_FRAME\\_COUNT"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / THUMBNAIL\_FRAME\_COUNT
+
+# Variable: THUMBNAIL\_FRAME\_COUNT
+
+```ts
+const THUMBNAIL_FRAME_COUNT: 5 = 5;
+```
+
+Defined in: [packages/timeline/src/thumbnails.ts:24](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/thumbnails.ts#L24)
+
+Thumbnails: a composition recipe for the video's FIRST FIVE FRAMES — real
+elements on a dedicated topmost "Thumbnail" track, so unlike CapCut's
+cover (project metadata that vanishes on export) the cover is baked into
+the exported video by construction, remains hand-editable on the canvas,
+and can be re-captured as a reusable template.
+
+Template geometry is normalized (0..1 rects, font sizes relative to 1080p)
+so one template fits any project size — louisville's draft pattern.

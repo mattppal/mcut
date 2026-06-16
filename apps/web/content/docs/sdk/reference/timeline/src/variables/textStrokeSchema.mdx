@@ -1,0 +1,25 @@
+---
+title: "textStrokeSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / textStrokeSchema
+
+# Variable: textStrokeSchema
+
+```ts
+const textStrokeSchema: ZodObject<{
+  color: ZodDefault<ZodString>;
+  width: ZodNumber;
+}, $strip> = strokeSchema;
+```
+
+Defined in: [packages/timeline/src/model.ts:86](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L86)
+
+Text outline/shadow are the SHARED appearance primitives (style.ts) —
+media frames and layout slots carry the same shapes, which is what lets
+style presets travel between text, clips, and slots.

@@ -5,6 +5,7 @@ import {
   DocsDescription,
   DocsPage,
   DocsTitle,
+  MarkdownCopyButton,
 } from "fumadocs-ui/layouts/docs/page";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -17,6 +18,10 @@ type PageProps = {
 
 export function generateStaticParams() {
   return source.generateParams();
+}
+
+function getMarkdownUrl(path: string) {
+  return `/docs/${path.replace(/\.mdx$/, ".md")}`;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -41,8 +46,16 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <DocsPage toc={page.data.toc}>
-      <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <DocsTitle>{page.data.title}</DocsTitle>
+          <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
+        </div>
+        <MarkdownCopyButton
+          markdownUrl={getMarkdownUrl(page.path)}
+          className="self-start"
+        />
+      </div>
       <DocsBody>
         <MDX components={getMDXComponents()} />
       </DocsBody>

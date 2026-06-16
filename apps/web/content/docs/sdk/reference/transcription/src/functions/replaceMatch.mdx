@@ -1,0 +1,44 @@
+---
+title: "replaceMatch"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / replaceMatch
+
+# Function: replaceMatch()
+
+```ts
+function replaceMatch(
+   caption, 
+   match, 
+   replacement): CaptionContentPatch;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:186](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L186)
+
+Replace one match, preserving word timings: the replacement's tokens map
+onto the matched word span, with multi-word replacements distributing the
+span's time proportionally to token length. Partial-word matches keep the
+untouched prefix/suffix of the boundary words.
+
+## Parameters
+
+### caption
+
+[`TranscriptCaption`](../interfaces/TranscriptCaption.mdx)
+
+### match
+
+[`TranscriptMatch`](../interfaces/TranscriptMatch.mdx)
+
+### replacement
+
+`string`
+
+## Returns
+
+[`CaptionContentPatch`](../interfaces/CaptionContentPatch.mdx)

@@ -1,0 +1,45 @@
+---
+title: "shiftRunsForEdit"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / shiftRunsForEdit
+
+# Function: shiftRunsForEdit()
+
+```ts
+function shiftRunsForEdit(
+   runs, 
+   oldText, 
+   newText): object[];
+```
+
+Defined in: [packages/timeline/src/rich-text.ts:133](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/rich-text.ts#L133)
+
+Remap runs across a text edit, given the before/after strings. The edit
+region is recovered by common prefix/suffix; offsets after it shift,
+offsets inside clamp to its bounds. Typing INSIDE a styled run grows the
+run (the new characters inherit its style), which is what every rich
+editor does.
+
+## Parameters
+
+### runs
+
+readonly `object`[]
+
+### oldText
+
+`string`
+
+### newText
+
+`string`
+
+## Returns
+
+`object`[]

@@ -1,0 +1,60 @@
+---
+title: "AudioSyncOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / AudioSyncOptions
+
+# Interface: AudioSyncOptions
+
+Defined in: [packages/media/src/audio-sync.ts:19](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L19)
+
+## Properties
+
+### maxLagS?
+
+```ts
+optional maxLagS?: number;
+```
+
+Defined in: [packages/media/src/audio-sync.ts:23](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L23)
+
+Largest |offset| considered, in seconds. Default 30.
+
+***
+
+### rateHz?
+
+```ts
+optional rateHz?: number;
+```
+
+Defined in: [packages/media/src/audio-sync.ts:25](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L25)
+
+Envelope rate (buckets per second). Default 100 (10ms resolution).
+
+***
+
+### signal?
+
+```ts
+optional signal?: AbortSignal;
+```
+
+Defined in: [packages/media/src/audio-sync.ts:26](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L26)
+
+***
+
+### windowS?
+
+```ts
+optional windowS?: number;
+```
+
+Defined in: [packages/media/src/audio-sync.ts:21](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L21)
+
+Seconds of audio analyzed from each source. Default 60.

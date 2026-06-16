@@ -1,0 +1,36 @@
+---
+title: "splitCaptionAtWord"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / splitCaptionAtWord
+
+# Function: splitCaptionAtWord()
+
+```ts
+function splitCaptionAtWord(caption, wordIndex): CaptionSplitResult | null;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:283](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L283)
+
+Split a caption immediately BEFORE `wordIndex`. Returns null when the
+boundary doesn't yield two valid captions (no word mapping, index at the
+edges, or either half shorter than the minimum element duration).
+
+## Parameters
+
+### caption
+
+[`TranscriptCaption`](../interfaces/TranscriptCaption.mdx)
+
+### wordIndex
+
+`number`
+
+## Returns
+
+[`CaptionSplitResult`](../interfaces/CaptionSplitResult.mdx) \| `null`

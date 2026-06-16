@@ -1,0 +1,43 @@
+---
+title: "FrameRequest"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / FrameRequest
+
+# Interface: FrameRequest
+
+Defined in: [packages/timeline/src/frame-requests.ts:12](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/frame-requests.ts#L12)
+
+The exact (asset, source-time) pairs an element needs to paint at a given
+timeline time. THE seam between render and decode: the compositor's
+renderers, the export frame source, and the preview pool all enumerate
+through this so a frame prepared by one is the frame requested by the
+others (cache keys must match to the millisecond). Declared per element
+type via its registry entry.
+
+## Properties
+
+### assetId
+
+```ts
+assetId: string;
+```
+
+Defined in: [packages/timeline/src/frame-requests.ts:13](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/frame-requests.ts#L13)
+
+***
+
+### sourceTimeMs
+
+```ts
+sourceTimeMs: number;
+```
+
+Defined in: [packages/timeline/src/frame-requests.ts:15](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/frame-requests.ts#L15)
+
+Source media time in ms, clamped ≥ 0 (matches renderer clamping).

@@ -1,0 +1,100 @@
+---
+title: "RenderableElement"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / RenderableElement
+
+# Interface: RenderableElement
+
+Defined in: [packages/timeline/src/transitions.ts:115](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L115)
+
+## Properties
+
+### element
+
+```ts
+element: TimelineElement;
+```
+
+Defined in: [packages/timeline/src/transitions.ts:117](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L117)
+
+***
+
+### reason
+
+```ts
+reason: "active" | "transition-tail" | "transition-head";
+```
+
+Defined in: [packages/timeline/src/transitions.ts:123](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L123)
+
+Why this element renders at this time: normally active, extended past its
+out point (left of a transition), or pre-rolling before its in point
+(right of a transition).
+
+***
+
+### track
+
+```ts
+track: object;
+```
+
+Defined in: [packages/timeline/src/transitions.ts:116](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L116)
+
+#### elements
+
+```ts
+elements: TimelineElement[];
+```
+
+Sorted by `startMs`; never overlapping in time.
+
+#### hidden
+
+```ts
+hidden: boolean;
+```
+
+Visuals from this track are not rendered.
+
+#### id
+
+```ts
+id: `t-${string}` = trackIdSchema;
+```
+
+#### locked
+
+```ts
+locked: boolean;
+```
+
+UI hint: track rejects edits. The engine does not enforce this.
+
+#### magnetic
+
+```ts
+magnetic: boolean;
+```
+
+When enabled, edits compact this track so clips keep no gaps between them.
+
+#### muted
+
+```ts
+muted: boolean;
+```
+
+Audio from this track is silenced.
+
+#### name
+
+```ts
+name: string;
+```

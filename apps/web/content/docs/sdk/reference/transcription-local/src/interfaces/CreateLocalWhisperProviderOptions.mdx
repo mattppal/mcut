@@ -1,0 +1,98 @@
+---
+title: "CreateLocalWhisperProviderOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / CreateLocalWhisperProviderOptions
+
+# Interface: CreateLocalWhisperProviderOptions
+
+Defined in: [packages/transcription-local/src/index.ts:83](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L83)
+
+## Properties
+
+### createWorker?
+
+```ts
+optional createWorker?: () => Worker;
+```
+
+Defined in: [packages/transcription-local/src/index.ts:93](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L93)
+
+Override worker creation (custom bundling setups).
+
+#### Returns
+
+`Worker`
+
+***
+
+### device?
+
+```ts
+optional device?: "webgpu" | "wasm";
+```
+
+Defined in: [packages/transcription-local/src/index.ts:87](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L87)
+
+Inference device. Default 'webgpu'.
+
+***
+
+### dtype?
+
+```ts
+optional dtype?: WhisperDtype;
+```
+
+Defined in: [packages/transcription-local/src/index.ts:89](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L89)
+
+Quantization. Default 'q8'.
+
+***
+
+### id?
+
+```ts
+optional id?: string;
+```
+
+Defined in: [packages/transcription-local/src/index.ts:94](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L94)
+
+***
+
+### model?
+
+```ts
+optional model?: string & object | "base" | "tiny.en";
+```
+
+Defined in: [packages/transcription-local/src/index.ts:85](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L85)
+
+A [WHISPER\_MODELS](../variables/WHISPER_MODELS.mdx) key or any HF ASR model id. Default [pickDefaultModel](../functions/pickDefaultModel.mdx).
+
+***
+
+### onProgress?
+
+```ts
+optional onProgress?: (progress) => void;
+```
+
+Defined in: [packages/transcription-local/src/index.ts:91](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L91)
+
+Model download + transcription progress.
+
+#### Parameters
+
+##### progress
+
+[`LocalWhisperProgress`](LocalWhisperProgress.mdx)
+
+#### Returns
+
+`void`

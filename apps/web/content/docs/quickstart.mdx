@@ -1,16 +1,20 @@
 ---
 title: Quickstart
-description: Create a project document and expose it to an MCP client.
+description: Create and inspect a project document with the current CLI.
 ---
 
-## Install and inspect the CLI
+mcut project files are JSON documents. The fastest way to see the current shape
+is to create one with the CLI, summarize it, then apply edits through commands or
+operators.
+
+## Inspect the CLI
 
 ```sh
 bunx @mcut/cli --help
 ```
 
-The CLI works on mcut project JSON files. It can scaffold, validate, summarize,
-lint, and batch-edit those files without a browser.
+The CLI runs outside the browser. It can scaffold, validate, summarize, lint,
+and batch-edit project files.
 
 ## Create a project
 
@@ -19,8 +23,8 @@ bunx @mcut/cli new project.mcut.json
 bunx @mcut/cli summarize project.mcut.json
 ```
 
-Use `summarize` before and after edits. The summary is the compact text view that
-agents also receive from the MCP `get_summary` tool.
+Use `summarize` before and after edits. It gives the same compact view that MCP
+agents receive from `get_summary`.
 
 ## Connect an MCP client to a project file
 
@@ -58,6 +62,7 @@ bunx -p @mcut/mcp-server mcut-bridge mcp
 
 ## Next steps
 
-- Use [agent instructions](/docs/agent-instructions) as the system prompt or project note for agents.
-- Use [commands](/docs/reference/commands) when you need exact project mutations.
-- Use [operators](/docs/reference/operators) when you want UI-parity actions.
+- Read [Project model](/docs/concepts/project-model) before editing JSON directly.
+- Use [commands](/docs/reference/commands) for exact project mutations.
+- Use [operators](/docs/reference/operators) for UI-like editing actions.
+- Use [SDK Reference](/docs/sdk) for exact TypeScript exports.

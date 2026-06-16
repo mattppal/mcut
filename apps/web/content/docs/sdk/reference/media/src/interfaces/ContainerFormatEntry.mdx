@@ -1,0 +1,90 @@
+---
+title: "ContainerFormatEntry"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / ContainerFormatEntry
+
+# Interface: ContainerFormatEntry
+
+Defined in: [packages/media/src/container-formats.ts:17](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L17)
+
+The container-format registry — export's counterpart to the timeline's
+element-type registry. A container format is an output vocabulary entry:
+its id (also the default file extension), a UI label, and a factory for
+the Mediabunny [OutputFormat](https://mediabunny.dev/) that muxes it.
+
+The built-in formats (mp4, webm, mkv) register through this exact API, so
+community formats are first-class: they show up in `listContainerFormats`
+(which the export dialog renders), pass WebCodecs support probing via
+`getExportSupport`, and export via `exportProject({ format: id })`.
+
+Register custom formats at module load, before the export UI mounts.
+
+## Properties
+
+### createOutputFormat
+
+```ts
+createOutputFormat: () => OutputFormat;
+```
+
+Defined in: [packages/media/src/container-formats.ts:27](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L27)
+
+Build a fresh Mediabunny output format for one export.
+
+#### Returns
+
+[`OutputFormat`](https://mediabunny.dev/)
+
+***
+
+### extension
+
+```ts
+extension: string;
+```
+
+Defined in: [packages/media/src/container-formats.ts:23](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L23)
+
+Suggested file extension, without the dot.
+
+***
+
+### id
+
+```ts
+id: string;
+```
+
+Defined in: [packages/media/src/container-formats.ts:19](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L19)
+
+Registry key, accepted as `ExportProjectOptions.format`.
+
+***
+
+### label
+
+```ts
+label: string;
+```
+
+Defined in: [packages/media/src/container-formats.ts:21](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L21)
+
+UI label (e.g. `'MP4'`).
+
+***
+
+### mimeType
+
+```ts
+mimeType: string;
+```
+
+Defined in: [packages/media/src/container-formats.ts:25](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L25)
+
+Output MIME type (e.g. `'video/mp4'`).

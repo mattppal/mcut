@@ -1,0 +1,33 @@
+---
+title: "animatablePropertySchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / animatablePropertySchema
+
+# Variable: animatablePropertySchema
+
+```ts
+const animatablePropertySchema: ZodEnum<{
+  blur: "blur";
+  letterSpacing: "letterSpacing";
+  opacity: "opacity";
+  position.x: "position.x";
+  position.y: "position.y";
+  rotation: "rotation";
+  scale.x: "scale.x";
+  scale.y: "scale.y";
+  volume: "volume";
+}>;
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:24](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L24)
+
+Premiere fixed-effect naming: Motion (position/scale/rotation), Opacity,
+Volume — plus `blur`, a uniform gaussian blur in project px that powers
+blur-in/out reveals. Its static value is always 0; the resolved value
+composes ON TOP of any static blur in the element's effect stack.

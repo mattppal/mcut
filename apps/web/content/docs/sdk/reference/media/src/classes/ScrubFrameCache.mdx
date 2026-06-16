@@ -1,0 +1,118 @@
+---
+title: "ScrubFrameCache"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / ScrubFrameCache
+
+# Class: ScrubFrameCache
+
+Defined in: [packages/media/src/scrub-cache.ts:17](https://github.com/mattppal/mcut/blob/main/packages/media/src/scrub-cache.ts#L17)
+
+## Constructors
+
+### Constructor
+
+```ts
+new ScrubFrameCache(maxFrames?, minGapMs?): ScrubFrameCache;
+```
+
+Defined in: [packages/media/src/scrub-cache.ts:23](https://github.com/mattppal/mcut/blob/main/packages/media/src/scrub-cache.ts#L23)
+
+#### Parameters
+
+##### maxFrames?
+
+`number` = `150`
+
+##### minGapMs?
+
+`number` = `90`
+
+Frames closer together than this are considered duplicates.
+
+#### Returns
+
+`ScrubFrameCache`
+
+## Accessors
+
+### size
+
+#### Get Signature
+
+```ts
+get size(): number;
+```
+
+Defined in: [packages/media/src/scrub-cache.ts:74](https://github.com/mattppal/mcut/blob/main/packages/media/src/scrub-cache.ts#L74)
+
+##### Returns
+
+`number`
+
+## Methods
+
+### capture()
+
+```ts
+capture(source, timeMs): void;
+```
+
+Defined in: [packages/media/src/scrub-cache.ts:30](https://github.com/mattppal/mcut/blob/main/packages/media/src/scrub-cache.ts#L30)
+
+Capture the element's current frame if this instant isn't cached yet.
+
+#### Parameters
+
+##### source
+
+`HTMLVideoElement`
+
+##### timeMs
+
+`number`
+
+#### Returns
+
+`void`
+
+***
+
+### clear()
+
+```ts
+clear(): void;
+```
+
+Defined in: [packages/media/src/scrub-cache.ts:78](https://github.com/mattppal/mcut/blob/main/packages/media/src/scrub-cache.ts#L78)
+
+#### Returns
+
+`void`
+
+***
+
+### nearest()
+
+```ts
+nearest(timeMs): OffscreenCanvas | null;
+```
+
+Defined in: [packages/media/src/scrub-cache.ts:64](https://github.com/mattppal/mcut/blob/main/packages/media/src/scrub-cache.ts#L64)
+
+The cached frame nearest `timeMs`, or null when the cache is empty.
+
+#### Parameters
+
+##### timeMs
+
+`number`
+
+#### Returns
+
+`OffscreenCanvas` \| `null`

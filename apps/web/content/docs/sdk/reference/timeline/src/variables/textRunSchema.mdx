@@ -1,0 +1,29 @@
+---
+title: "textRunSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / textRunSchema
+
+# Variable: textRunSchema
+
+```ts
+const textRunSchema: ZodObject<{
+  end: ZodNumber;
+  start: ZodNumber;
+  style: ZodObject<{
+     color: ZodOptional<ZodString>;
+     fontStyle: ZodOptional<ZodEnum<{
+        italic: "italic";
+        normal: "normal";
+     }>>;
+     fontWeight: ZodOptional<ZodNumber>;
+  }, $strip>;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/rich-text.ts:24](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/rich-text.ts#L24)

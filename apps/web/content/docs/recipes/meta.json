@@ -1,0 +1,12 @@
+{
+  "title": "Recipes",
+  "defaultOpen": false,
+  "pages": [
+    "project-document",
+    "timeline-content",
+    "react-editor",
+    "render-and-export",
+    "captions",
+    "cli-mcp"
+  ]
+}

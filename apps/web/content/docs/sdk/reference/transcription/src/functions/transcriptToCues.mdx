@@ -1,0 +1,31 @@
+---
+title: "transcriptToCues"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / transcriptToCues
+
+# Function: transcriptToCues()
+
+```ts
+function transcriptToCues(result): SubtitleCue[];
+```
+
+Defined in: [packages/transcription/src/subtitles.ts:14](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/subtitles.ts#L14)
+
+Turn a transcript into display cues: prefers provider segments, falls back
+to grouped words, then to one cue spanning the full duration.
+
+## Parameters
+
+### result
+
+[`TranscriptResult`](../interfaces/TranscriptResult.mdx)
+
+## Returns
+
+[`SubtitleCue`](../interfaces/SubtitleCue.mdx)[]

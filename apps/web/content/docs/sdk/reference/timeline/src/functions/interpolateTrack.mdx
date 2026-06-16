@@ -1,0 +1,35 @@
+---
+title: "interpolateTrack"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / interpolateTrack
+
+# Function: interpolateTrack()
+
+```ts
+function interpolateTrack(track, localMs): number;
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:126](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L126)
+
+Value of a keyframe track at element-local `localMs`. Premiere semantics:
+before the first keyframe → first value; after the last → last value.
+
+## Parameters
+
+### track
+
+readonly `object`[]
+
+### localMs
+
+`number`
+
+## Returns
+
+`number`

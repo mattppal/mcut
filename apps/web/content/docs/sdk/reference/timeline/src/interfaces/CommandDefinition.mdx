@@ -1,0 +1,229 @@
+---
+title: "CommandDefinition\\<TPayload\\>"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / CommandDefinition
+
+# Interface: CommandDefinition\<TPayload\>
+
+Defined in: [packages/timeline/src/commands.ts:67](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L67)
+
+A command definition: a serializable edit operation with a validated
+payload and a pure reducer. Definitions double as machine-readable tool
+descriptions, so AI integrations can expose every editor operation as a
+tool (`schema` → tool parameters) without extra glue.
+
+## Type Parameters
+
+### TPayload
+
+`TPayload` = `unknown`
+
+## Properties
+
+### description
+
+```ts
+description: string;
+```
+
+Defined in: [packages/timeline/src/commands.ts:69](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L69)
+
+***
+
+### payloadSchema
+
+```ts
+payloadSchema: ZodType<TPayload, unknown>;
+```
+
+Defined in: [packages/timeline/src/commands.ts:70](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L70)
+
+***
+
+### reduce
+
+```ts
+reduce: (project, payload) => object;
+```
+
+Defined in: [packages/timeline/src/commands.ts:71](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L71)
+
+#### Parameters
+
+##### project
+
+###### assets
+
+`Record`\<`string`, \{
+  `durationMs?`: `number`;
+  `hash?`: `string`;
+  `height?`: `number`;
+  `id`: `` `a-${string}` ``;
+  `kind`: `"video"` \| `"audio"` \| `"image"`;
+  `mimeType?`: `string`;
+  `name?`: `string`;
+  `nativePreview?`: `boolean`;
+  `src`: `string`;
+  `width?`: `number`;
+\}\> = `...`
+
+###### fps
+
+`number` = `...`
+
+###### height
+
+`number` = `...`
+
+###### id
+
+`string` = `...`
+
+###### layouts
+
+`object`[] = `...`
+
+Multicam layout templates this project references. See layouts.ts.
+
+###### markers
+
+`object`[] = `...`
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+###### name
+
+`string` = `...`
+
+###### presets
+
+`object`[] = `...`
+
+Named inspector value bundles (style presets). See presets.ts.
+
+###### tracks
+
+`object`[] = `...`
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+###### version
+
+`1` = `...`
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+###### width
+
+`number` = `...`
+
+##### payload
+
+`TPayload`
+
+#### Returns
+
+##### assets
+
+```ts
+assets: Record<string, {
+  durationMs?: number;
+  hash?: string;
+  height?: number;
+  id: `a-${string}`;
+  kind: "video" | "audio" | "image";
+  mimeType?: string;
+  name?: string;
+  nativePreview?: boolean;
+  src: string;
+  width?: number;
+}>;
+```
+
+##### fps
+
+```ts
+fps: number;
+```
+
+##### height
+
+```ts
+height: number;
+```
+
+##### id
+
+```ts
+id: string;
+```
+
+##### layouts
+
+```ts
+layouts: object[];
+```
+
+Multicam layout templates this project references. See layouts.ts.
+
+##### markers
+
+```ts
+markers: object[];
+```
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+##### name
+
+```ts
+name: string;
+```
+
+##### presets
+
+```ts
+presets: object[];
+```
+
+Named inspector value bundles (style presets). See presets.ts.
+
+##### tracks
+
+```ts
+tracks: object[];
+```
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+##### version
+
+```ts
+version: 1;
+```
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+##### width
+
+```ts
+width: number;
+```
+
+***
+
+### type
+
+```ts
+type: string;
+```
+
+Defined in: [packages/timeline/src/commands.ts:68](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L68)

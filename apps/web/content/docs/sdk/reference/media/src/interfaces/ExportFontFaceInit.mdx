@@ -1,0 +1,75 @@
+---
+title: "ExportFontFaceInit"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / ExportFontFaceInit
+
+# Interface: ExportFontFaceInit
+
+Defined in: [packages/media/src/export-types.ts:18](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L18)
+
+A font face the export worker registers into its own `FontFaceSet` before
+rendering: workers do not see `document.fonts`, so faces loaded on the
+main thread are invisible to an `OffscreenCanvas` in a worker. `source` is
+either the face's binary or a URL the worker can fetch.
+
+## Properties
+
+### family
+
+```ts
+family: string;
+```
+
+Defined in: [packages/media/src/export-types.ts:19](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L19)
+
+***
+
+### source
+
+```ts
+source: string | ArrayBuffer;
+```
+
+Defined in: [packages/media/src/export-types.ts:26](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L26)
+
+***
+
+### style?
+
+```ts
+optional style?: string;
+```
+
+Defined in: [packages/media/src/export-types.ts:23](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L23)
+
+CSS font-style descriptor (e.g. "italic").
+
+***
+
+### unicodeRange?
+
+```ts
+optional unicodeRange?: string;
+```
+
+Defined in: [packages/media/src/export-types.ts:25](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L25)
+
+CSS unicode-range descriptor (Google Fonts ships per-subset faces).
+
+***
+
+### weight?
+
+```ts
+optional weight?: string;
+```
+
+Defined in: [packages/media/src/export-types.ts:21](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L21)
+
+CSS font-weight descriptor (e.g. "400", "100 900" for variable).

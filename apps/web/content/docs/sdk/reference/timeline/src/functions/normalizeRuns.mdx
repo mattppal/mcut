@@ -1,0 +1,35 @@
+---
+title: "normalizeRuns"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / normalizeRuns
+
+# Function: normalizeRuns()
+
+```ts
+function normalizeRuns(runs, textLength): object[];
+```
+
+Defined in: [packages/timeline/src/rich-text.ts:49](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/rich-text.ts#L49)
+
+Canonical form: clamped to the text, sorted, no empty ranges or styles,
+adjacent equal-style runs merged. All helpers return normalized runs.
+
+## Parameters
+
+### runs
+
+readonly `object`[]
+
+### textLength
+
+`number`
+
+## Returns
+
+`object`[]

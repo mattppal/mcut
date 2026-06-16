@@ -1,0 +1,37 @@
+---
+title: "textRunStyleSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / textRunStyleSchema
+
+# Variable: textRunStyleSchema
+
+```ts
+const textRunStyleSchema: ZodObject<{
+  color: ZodOptional<ZodString>;
+  fontStyle: ZodOptional<ZodEnum<{
+     italic: "italic";
+     normal: "normal";
+  }>>;
+  fontWeight: ZodOptional<ZodNumber>;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/rich-text.ts:17](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/rich-text.ts#L17)
+
+Per-range text formatting: a text element's `runs` are style OVERRIDES
+over its base `style`, addressed by character offsets into `text`
+([start, end), like every rich-text run model). Only metrics-stable
+properties can vary per run — font size and family stay element-global,
+which keeps line height uniform and the layout engine simple. The
+compositor slices lines at run boundaries and measures/paints each
+segment with its own font string.
+
+The helpers here are pure and total: the inline editor calls
+[shiftRunsForEdit](../functions/shiftRunsForEdit.mdx) on every keystroke and [applyRunStyle](../functions/applyRunStyle.mdx)
+from its selection toolbar, and serialization just stores the array.

@@ -1,0 +1,30 @@
+---
+title: "keyframeSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / keyframeSchema
+
+# Variable: keyframeSchema
+
+```ts
+const keyframeSchema: ZodObject<{
+  easing: ZodOptional<ZodUnion<readonly [ZodEnum<{
+     easeIn: "easeIn";
+     easeInOut: "easeInOut";
+     easeOut: "easeOut";
+     hold: "hold";
+     linear: "linear";
+   }>, ZodObject<{
+     cubicBezier: ZodTuple<[ZodNumber, ZodNumber, ZodNumber, ZodNumber], null>;
+  }, $strip>]>>;
+  timeMs: ZodNumber;
+  value: ZodNumber;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:53](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L53)

@@ -1,0 +1,32 @@
+---
+title: "registerCoreOperators"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / registerCoreOperators
+
+# Function: registerCoreOperators()
+
+```ts
+function registerCoreOperators(registry): EditorOperatorRegistry;
+```
+
+Defined in: [packages/editor/src/core-operators.ts:51](https://github.com/mattppal/mcut/blob/main/packages/editor/src/core-operators.ts#L51)
+
+Register SDK-level user operations. These are contextual editor operators,
+not just document reducers: UI buttons, hotkeys, agent transports, and tests
+can all execute the same operation by id.
+
+## Parameters
+
+### registry
+
+[`EditorOperatorRegistry`](../classes/EditorOperatorRegistry.mdx)
+
+## Returns
+
+[`EditorOperatorRegistry`](../classes/EditorOperatorRegistry.mdx)

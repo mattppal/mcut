@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.react.json",
+  "compilerOptions": {
+    "types": ["bun"],
+    "skipLibCheck": true
+  },
+  "include": [
+    "packages/*/src"
+  ]
+}

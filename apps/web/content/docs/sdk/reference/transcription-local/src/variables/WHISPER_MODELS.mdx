@@ -1,0 +1,38 @@
+---
+title: "WHISPER\\_MODELS"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / WHISPER\_MODELS
+
+# Variable: WHISPER\_MODELS
+
+```ts
+const WHISPER_MODELS: object;
+```
+
+Defined in: [packages/transcription-local/src/index.ts:40](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L40)
+
+Built-in model choices (ONNX community builds of OpenAI Whisper).
+
+## Type Declaration
+
+### base
+
+```ts
+readonly base: "onnx-community/whisper-base" = 'onnx-community/whisper-base';
+```
+
+Multilingual, ~145MB at q8 — the WebGPU default.
+
+#### tiny.en
+
+```ts
+readonly tiny.en: "onnx-community/whisper-tiny.en" = 'onnx-community/whisper-tiny.en';
+```
+
+English-only, ~40MB — the low-memory default.

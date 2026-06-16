@@ -1,0 +1,49 @@
+---
+title: "trackOfSelection"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / trackOfSelection
+
+# Function: trackOfSelection()
+
+```ts
+function trackOfSelection(engine): 
+  | {
+  elements: TimelineElement[];
+  hidden: boolean;
+  id: `t-${string}`;
+  locked: boolean;
+  magnetic: boolean;
+  muted: boolean;
+  name: string;
+}
+  | undefined;
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:340](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L340)
+
+The track containing the current selection's first element, if any.
+
+## Parameters
+
+### engine
+
+`EditorEngine`
+
+## Returns
+
+  \| \{
+  `elements`: `TimelineElement`[];
+  `hidden`: `boolean`;
+  `id`: `` `t-${string}` ``;
+  `locked`: `boolean`;
+  `magnetic`: `boolean`;
+  `muted`: `boolean`;
+  `name`: `string`;
+\}
+  \| `undefined`

@@ -1,30 +1,29 @@
 ---
 title: mcut docs
-description: Backend and agent-facing reference for the open-source mcut packages.
+description: Current docs for the open-source mcut TypeScript packages.
 ---
 
-mcut is an open-source video editing SDK for TypeScript apps. These docs focus
-on the backend, contributor, and agent-facing surfaces in the OSS repo: project
-documents, serializable commands, editor operators, CLI workflows, MCP tools, and
-the monorepo development environment.
+mcut is an open-source video editing SDK for TypeScript apps. The current OSS
+repo is strongest at project documents, headless timeline edits, editor
+operators, React preview surfaces, browser media helpers, captions, CLI
+workflows, and MCP tools.
+
+The visual editor and commercial mcut Studio app are separate from these docs.
 
 ## Intro
 
-- [Quickstart](/docs/quickstart): create a project document, inspect it, and connect an MCP client.
-- [Agent instructions](/docs/agent-instructions): copyable operating rules for AI agents editing with mcut.
-- [Development environment](/docs/contributing/devenv): install the workspace, run local dev, and validate changes.
-- [Contributing guide](/docs/contributing/contributing): package boundaries, clean-room rules, tests, and pull requests.
+- [Quickstart](/docs/quickstart): create a project document and inspect it with the CLI.
+- [Project model](/docs/concepts/project-model): understand the JSON document mcut edits.
+- [Package architecture](/docs/concepts/package-architecture): choose the package that owns your task.
+- [SDK Reference](/docs/sdk): generated TypeScript API docs for public exports.
 
-## Reference
+## Current state
 
-- [CLI](/docs/reference/cli): headless project-document commands.
-- [MCP server](/docs/reference/mcp-server): static tools, generated command tools, and generated operator tools.
-- [Local bridge](/docs/reference/bridge): live browser editor bridge and local RPC commands.
-- [Commands](/docs/reference/commands): the low-level project mutation registry.
-- [Operators](/docs/reference/operators): UI-parity editing intents built on commands.
+mcut is alpha software. The packages are useful today, but the API is still
+settling. Prefer commands and operators over editing project JSON by hand, and
+check the generated SDK reference when you need exact signatures.
 
-## Scope
+## For agents
 
-The visual editor and commercial mcut Studio app are outside this documentation
-set. Browser export also stays in browser-facing packages; MCP and CLI tools edit
-project state and project JSON.
+Use [Agent instructions](/docs/agent-instructions) when an AI agent edits an
+mcut project through CLI, MCP, or the browser bridge.

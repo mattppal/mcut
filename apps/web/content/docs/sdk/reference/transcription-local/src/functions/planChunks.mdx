@@ -1,0 +1,41 @@
+---
+title: "planChunks"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / planChunks
+
+# Function: planChunks()
+
+```ts
+function planChunks(
+   durationS, 
+   windowS?, 
+   overlapS?): AudioChunk[];
+```
+
+Defined in: [packages/transcription-local/src/chunking.ts:22](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/chunking.ts#L22)
+
+Split a duration into overlapping windows (last window may be shorter).
+
+## Parameters
+
+### durationS
+
+`number`
+
+### windowS?
+
+`number` = `CHUNK_WINDOW_S`
+
+### overlapS?
+
+`number` = `CHUNK_OVERLAP_S`
+
+## Returns
+
+[`AudioChunk`](../interfaces/AudioChunk.mdx)[]

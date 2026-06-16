@@ -1,0 +1,101 @@
+---
+title: "applyResize"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [react/src](../index.mdx) / applyResize
+
+# Function: applyResize()
+
+```ts
+function applyResize(
+   base, 
+   obb, 
+   handle, 
+   start, 
+   current): object;
+```
+
+Defined in: [packages/react/src/gestures.ts:70](https://github.com/mattppal/mcut/blob/main/packages/react/src/gestures.ts#L70)
+
+Resize gesture. Corner handles scale uniformly; edge handles scale one
+axis. Pointer positions are mapped into the element's local (un-rotated)
+space so resizing behaves intuitively on rotated elements.
+
+## Parameters
+
+### base
+
+#### rotation
+
+`number`
+
+#### scaleX
+
+`number`
+
+#### scaleY
+
+`number`
+
+#### x
+
+`number`
+
+#### y
+
+`number`
+
+### obb
+
+`OBB`
+
+### handle
+
+`"w"` \| `"nw"` \| `"n"` \| `"ne"` \| `"e"` \| `"se"` \| `"s"` \| `"sw"`
+
+### start
+
+[`GesturePoint`](../interfaces/GesturePoint.mdx)
+
+### current
+
+[`GesturePoint`](../interfaces/GesturePoint.mdx)
+
+## Returns
+
+`object`
+
+### rotation
+
+```ts
+rotation: number;
+```
+
+### scaleX
+
+```ts
+scaleX: number;
+```
+
+### scaleY
+
+```ts
+scaleY: number;
+```
+
+### x
+
+```ts
+x: number;
+```
+
+### y
+
+```ts
+y: number;
+```

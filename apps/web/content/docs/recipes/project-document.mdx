@@ -1,0 +1,27 @@
+---
+title: Create a project document
+description: Start with a valid mcut project before adding timeline content.
+---
+
+Use `createProject` for new documents and `parseProject` for loaded documents.
+That keeps versioning, defaults, and migrations in one place.
+
+```ts
+import { createProject, parseProject } from "@mcut/timeline"
+
+const project = createProject({
+  name: "Demo",
+  width: 1920,
+  height: 1080,
+  fps: 30,
+})
+
+const loaded = parseProject(JSON.parse(fileText))
+```
+
+For command-line workflows, let the CLI create the file:
+
+```sh
+bunx @mcut/cli new project.mcut.json
+bunx @mcut/cli validate project.mcut.json
+```

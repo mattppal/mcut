@@ -1,0 +1,79 @@
+---
+title: "ImageQuad"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / ImageQuad
+
+# Interface: ImageQuad
+
+Defined in: [packages/compositor/src/backend.ts:45](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L45)
+
+A plain media draw: one image into a centered rect, optional crop/radius.
+
+## Properties
+
+### cornerRadius
+
+```ts
+cornerRadius: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:53](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L53)
+
+Rounded-corner radius in destination pixels (0 = sharp).
+
+***
+
+### dh
+
+```ts
+dh: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:51](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L51)
+
+***
+
+### dw
+
+```ts
+dw: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:50](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L50)
+
+Destination size, centered on the chrome's origin.
+
+***
+
+### image
+
+```ts
+image: CanvasImageSource;
+```
+
+Defined in: [packages/compositor/src/backend.ts:46](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L46)
+
+***
+
+### src
+
+```ts
+src: 
+  | {
+  sh: number;
+  sw: number;
+  sx: number;
+  sy: number;
+}
+  | null;
+```
+
+Defined in: [packages/compositor/src/backend.ts:48](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L48)
+
+Source crop rect in image pixels; null draws the whole image.

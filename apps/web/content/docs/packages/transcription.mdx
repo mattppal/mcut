@@ -1,0 +1,26 @@
+---
+title: Transcription
+description: Transcript normalization, captions, subtitles, and providers.
+---
+
+`@mcut/transcription` defines the shared transcript shape and helpers for
+turning transcripts into captions. Provider packages adapt AssemblyAI, the
+Vercel AI SDK, and local Whisper into that shape.
+
+Use the core package for caption generation and subtitle output. Use provider
+packages when you need to create transcripts.
+
+```sh
+bun add @mcut/transcription
+```
+
+```ts
+import { toCaptionElements } from "@mcut/transcription"
+
+const captions = toCaptionElements(transcript)
+```
+
+Read next:
+
+- [Captions](/docs/recipes/captions)
+- [SDK reference](/docs/sdk/reference/transcription/src)

@@ -1,0 +1,28 @@
+---
+title: "motionBlurSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / motionBlurSchema
+
+# Variable: motionBlurSchema
+
+```ts
+const motionBlurSchema: ZodObject<{
+  enabled: ZodDefault<ZodBoolean>;
+  shutterAngle: ZodDefault<ZodNumber>;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/effects.ts:203](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L203)
+
+Per-element motion blur (After Effects' layer motion blur model): the
+compositor re-samples the element's animated transform at sub-frame times
+inside a shutter window centered on the frame and accumulates the passes.
+Only KEYFRAMED transform motion blurs — static clips and source-footage
+motion are unaffected. Deterministic: the same frame always blurs the same
+way, in preview and export.

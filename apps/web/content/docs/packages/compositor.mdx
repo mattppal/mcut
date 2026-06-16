@@ -1,0 +1,25 @@
+---
+title: Compositor
+description: Frame rendering, hit testing, and renderer extension points.
+---
+
+`@mcut/compositor` renders project frames. It includes the Canvas2D renderer,
+WebGPU backend support, hit-test geometry, text layout, and renderer registries.
+
+Use it when you need preview pixels, export frames, or custom renderers.
+
+```sh
+bun add @mcut/compositor @mcut/timeline
+```
+
+```ts
+import { renderFrame } from "@mcut/compositor"
+
+renderFrame(ctx, project, 1000)
+```
+
+Read next:
+
+- [Render and export](/docs/recipes/render-and-export)
+- [Extension points](/docs/concepts/extension-points)
+- [SDK reference](/docs/sdk/reference/compositor/src)

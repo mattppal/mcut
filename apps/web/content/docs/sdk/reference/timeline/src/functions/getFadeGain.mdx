@@ -1,0 +1,37 @@
+---
+title: "getFadeGain"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getFadeGain
+
+# Function: getFadeGain()
+
+```ts
+function getFadeGain(element, localMs): number;
+```
+
+Defined in: [packages/timeline/src/audio.ts:17](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio.ts#L17)
+
+Fade multiplier (0..1) at element-local `localMs`: linear ramps over the
+first `fadeInMs` and last `fadeOutMs` of the clip. Fades longer than the
+clip clamp to its duration; overlapping ramps take the minimum (a dip, the
+standard NLE behavior). 1 everywhere when no fades are set.
+
+## Parameters
+
+### element
+
+[`FadeableElement`](../interfaces/FadeableElement.mdx)
+
+### localMs
+
+`number`
+
+## Returns
+
+`number`

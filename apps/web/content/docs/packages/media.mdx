@@ -1,0 +1,28 @@
+---
+title: Media
+description: Browser media probing, preview helpers, and export.
+---
+
+`@mcut/media` handles browser-facing media work: probing files, creating assets,
+extracting audio, generating thumbnails, syncing preview media, and exporting a
+project to a video file.
+
+Use it in browser-capable surfaces. Keep pure project edits in
+`@mcut/timeline`.
+
+```sh
+bun add @mcut/media @mcut/timeline @mcut/compositor
+```
+
+```ts
+import { createAssetFromFile, exportProject } from "@mcut/media"
+
+const asset = await createAssetFromFile(file)
+const result = await exportProject(project)
+```
+
+Read next:
+
+- [Runtime compatibility](/docs/concepts/runtime-compatibility)
+- [Render and export](/docs/recipes/render-and-export)
+- [SDK reference](/docs/sdk/reference/media/src)

@@ -1,0 +1,268 @@
+---
+title: "WebGPUBackend"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / WebGPUBackend
+
+# Class: WebGPUBackend
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:78](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L78)
+
+## Implements
+
+- [`RenderBackend`](../interfaces/RenderBackend.mdx)
+
+## Properties
+
+### height
+
+```ts
+readonly height: number;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:81](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L81)
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`height`](../interfaces/RenderBackend.mdx#height)
+
+***
+
+### kind
+
+```ts
+readonly kind: "webgpu" = 'webgpu';
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:79](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L79)
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`kind`](../interfaces/RenderBackend.mdx#kind)
+
+***
+
+### width
+
+```ts
+readonly width: number;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:80](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L80)
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`width`](../interfaces/RenderBackend.mdx#width)
+
+## Methods
+
+### acquireRaster()
+
+```ts
+acquireRaster(): Canvas2D;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:284](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L284)
+
+The frame-space canvas2d context for raster content. Acquiring it marks
+the raster surface dirty so the backend composites it in z-order;
+renderers that only need it for text measurement still go through here
+(text rasterizes anyway).
+
+#### Returns
+
+[`Canvas2D`](../type-aliases/Canvas2D.mdx)
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`acquireRaster`](../interfaces/RenderBackend.mdx#acquireraster)
+
+***
+
+### beginFrame()
+
+```ts
+beginFrame(backgroundColor): void;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:233](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L233)
+
+#### Parameters
+
+##### backgroundColor
+
+`string`
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`beginFrame`](../interfaces/RenderBackend.mdx#beginframe)
+
+***
+
+### dispose()
+
+```ts
+dispose(): void;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:322](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L322)
+
+Free GPU resources. The backend is unusable afterwards.
+
+#### Returns
+
+`void`
+
+***
+
+### drawImageQuad()
+
+```ts
+drawImageQuad(quad, chrome): void;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:297](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L297)
+
+Composite a media quad with chrome — the GPU fast path. Backends without
+one (or layers a backend cannot run, e.g. raw `css` filters on WebGPU)
+draw it through the raster context instead.
+
+#### Parameters
+
+##### quad
+
+[`ImageQuad`](../interfaces/ImageQuad.mdx)
+
+##### chrome
+
+[`LayerChrome`](../interfaces/LayerChrome.mdx)
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`drawImageQuad`](../interfaces/RenderBackend.mdx#drawimagequad)
+
+***
+
+### endFrame()
+
+```ts
+endFrame(): void;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:251](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L251)
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`endFrame`](../interfaces/RenderBackend.mdx#endframe)
+
+***
+
+### popRasterScope()
+
+```ts
+popRasterScope(): void;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:293](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L293)
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`popRasterScope`](../interfaces/RenderBackend.mdx#poprasterscope)
+
+***
+
+### pushRasterScope()
+
+```ts
+pushRasterScope(): void;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:289](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L289)
+
+While a raster scope is open, every draw — including image quads — lands
+on the raster context, so canvas2d state (clips, alpha, transforms) set
+by the caller applies. Transition mixes and motion-blur accumulation
+need this. Scopes nest.
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`pushRasterScope`](../interfaces/RenderBackend.mdx#pushrasterscope)
+
+***
+
+### registerLut3D()
+
+```ts
+registerLut3D(
+   lutId, 
+   size, 
+   data): void;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:198](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L198)
+
+Register a 3D LUT for `lut3d` effects: `data` is size³ RGB triples
+(0..1, red fastest), flattened to a (size² × size) 2D texture.
+
+#### Parameters
+
+##### lutId
+
+`string`
+
+##### size
+
+`number`
+
+##### data
+
+`Float32Array`
+
+#### Returns
+
+`void`
+
+***
+
+### create()
+
+```ts
+static create(options): Promise<WebGPUBackend>;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:114](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L114)
+
+#### Parameters
+
+##### options
+
+[`WebGPUBackendOptions`](../interfaces/WebGPUBackendOptions.mdx)
+
+#### Returns
+
+`Promise`\<`WebGPUBackend`\>

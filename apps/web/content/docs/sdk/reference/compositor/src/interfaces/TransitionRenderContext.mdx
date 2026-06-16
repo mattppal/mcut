@@ -1,0 +1,181 @@
+---
+title: "TransitionRenderContext"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / TransitionRenderContext
+
+# Interface: TransitionRenderContext
+
+Defined in: [packages/compositor/src/transition-renderers.ts:13](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/transition-renderers.ts#L13)
+
+Everything a transition renderer needs to blend its pair.
+
+## Properties
+
+### completion
+
+```ts
+completion: number;
+```
+
+Defined in: [packages/compositor/src/transition-renderers.ts:19](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/transition-renderers.ts#L19)
+
+Blend completion 0→1 across the window (0.5 at the cut).
+
+***
+
+### ctx
+
+```ts
+ctx: Canvas2D;
+```
+
+Defined in: [packages/compositor/src/transition-renderers.ts:14](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/transition-renderers.ts#L14)
+
+***
+
+### drawLeft
+
+```ts
+drawLeft: () => void;
+```
+
+Defined in: [packages/compositor/src/transition-renderers.ts:21](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/transition-renderers.ts#L21)
+
+Draw the outgoing clip (already extended past its out point).
+
+#### Returns
+
+`void`
+
+***
+
+### drawRight
+
+```ts
+drawRight: () => void;
+```
+
+Defined in: [packages/compositor/src/transition-renderers.ts:23](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/transition-renderers.ts#L23)
+
+Draw the incoming clip (already pre-rolling before its in point).
+
+#### Returns
+
+`void`
+
+***
+
+### pair
+
+```ts
+pair: TransitionPair;
+```
+
+Defined in: [packages/compositor/src/transition-renderers.ts:16](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/transition-renderers.ts#L16)
+
+***
+
+### project
+
+```ts
+project: object;
+```
+
+Defined in: [packages/compositor/src/transition-renderers.ts:15](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/transition-renderers.ts#L15)
+
+#### assets
+
+```ts
+assets: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+  durationMs: z.ZodOptional<z.ZodNumber>;
+  hash: z.ZodOptional<z.ZodString>;
+  height: z.ZodOptional<z.ZodNumber>;
+  id: z.ZodCustom<`a-${string}`, `a-${string}`>;
+  kind: z.ZodEnum<{
+     audio: "audio";
+     image: "image";
+     video: "video";
+  }>;
+  mimeType: z.ZodOptional<z.ZodString>;
+  name: z.ZodOptional<z.ZodString>;
+  nativePreview: z.ZodOptional<z.ZodBoolean>;
+  src: z.ZodString;
+  width: z.ZodOptional<z.ZodNumber>;
+}, z.core.$strip>>>;
+```
+
+#### fps
+
+```ts
+fps: number;
+```
+
+#### height
+
+```ts
+height: number;
+```
+
+#### id
+
+```ts
+id: string;
+```
+
+#### layouts
+
+```ts
+layouts: object[];
+```
+
+#### markers
+
+```ts
+markers: object[];
+```
+
+#### name
+
+```ts
+name: string;
+```
+
+#### presets
+
+```ts
+presets: object[];
+```
+
+#### tracks
+
+```ts
+tracks: object[];
+```
+
+#### version
+
+```ts
+version: 1;
+```
+
+#### width
+
+```ts
+width: number;
+```
+
+***
+
+### timeMs
+
+```ts
+timeMs: number;
+```
+
+Defined in: [packages/compositor/src/transition-renderers.ts:17](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/transition-renderers.ts#L17)

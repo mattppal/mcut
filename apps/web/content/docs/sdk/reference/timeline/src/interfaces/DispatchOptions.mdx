@@ -1,0 +1,42 @@
+---
+title: "DispatchOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / DispatchOptions
+
+# Interface: DispatchOptions
+
+Defined in: [packages/timeline/src/engine.ts:43](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L43)
+
+## Properties
+
+### history?
+
+```ts
+optional history?: boolean;
+```
+
+Defined in: [packages/timeline/src/engine.ts:45](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L45)
+
+Record this edit in undo history (default true).
+
+***
+
+### selection?
+
+```ts
+optional selection?: `e-${string}`[];
+```
+
+Defined in: [packages/timeline/src/engine.ts:53](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/engine.ts#L53)
+
+Selection this edit conceptually produces (e.g. `[]` for a delete, the
+new ids for a paste). Applied after the command, and it marks the history
+entry: undoing restores the pre-edit selection, redoing re-applies this
+one. Edits that don't declare it leave selection untouched across
+undo/redo (beyond pruning removed ids).

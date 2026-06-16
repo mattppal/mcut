@@ -1,0 +1,25 @@
+---
+title: Extension points
+description: Public places where apps can add behavior.
+---
+
+mcut has extension points, but they are still alpha. Use them when you need to
+ship a real integration, and keep the integration close to your app until the
+API stabilizes.
+
+## Available today
+
+- timeline element types with `registerTimelineElementType`
+- effect types with `registerEffectType`
+- transition types with `registerTransitionType`
+- compositor element renderers with `registerElementRenderer`
+- compositor transition renderers with `registerTransitionRenderer`
+- container formats with `registerContainerFormat`
+- editor operators with `EditorOperatorRegistry.define`
+- transcription providers through the `TranscriptionProvider` interface
+
+## What to avoid
+
+Do not patch project JSON with undocumented fields and expect the engine to keep
+them valid. Register the relevant type or keep app-specific data in metadata
+until the extension surface you need exists.

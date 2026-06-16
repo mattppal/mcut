@@ -1,0 +1,36 @@
+---
+title: "extractAudioPeaks"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / extractAudioPeaks
+
+# Function: extractAudioPeaks()
+
+```ts
+function extractAudioPeaks(src, options?): Promise<AudioPeaks | null>;
+```
+
+Defined in: [packages/media/src/audio-peaks.ts:36](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-peaks.ts#L36)
+
+Decode a file's audio and reduce it to waveform peaks for timeline clip
+rendering. Returns `null` when the file has no audio track. Browser-only
+(WebCodecs decode via Mediabunny).
+
+## Parameters
+
+### src
+
+[`MediaSourceLike`](../type-aliases/MediaSourceLike.mdx)
+
+### options?
+
+[`AudioPeaksOptions`](../interfaces/AudioPeaksOptions.mdx) = `{}`
+
+## Returns
+
+`Promise`\<[`AudioPeaks`](../interfaces/AudioPeaks.mdx) \| `null`\>

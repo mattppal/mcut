@@ -1,0 +1,106 @@
+---
+title: "EffectTypeConfig"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / EffectTypeConfig
+
+# Interface: EffectTypeConfig
+
+Defined in: [packages/timeline/src/effects.ts:17](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L17)
+
+Visual effects as data: an ordered stack of `{ type, ...params }` records
+per element, compiled by the compositor into a canvas2d `ctx.filter`
+string. Effect TYPES live in a registry (MLT's service + property-bag
+pattern): each entry owns its zod params, its filter compiler, and an
+optional primary-param descriptor that the inspector renders as a slider.
+The built-ins register through the same API custom effects use, so a
+custom effect parses in saved projects, validates, compiles, and gets UI
+for free. Register at module load, before parsing projects.
+
+The `css` escape hatch accepts any raw CSS filter() value list, which is
+how SVG/url() filters plug in without a new type.
+
+## Properties
+
+### param?
+
+```ts
+optional param?: object;
+```
+
+Defined in: [packages/timeline/src/effects.ts:24](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L24)
+
+Primary scrubbable param for compact one-row UI (inspector slider).
+
+#### key
+
+```ts
+key: string;
+```
+
+#### max
+
+```ts
+max: number;
+```
+
+#### min
+
+```ts
+min: number;
+```
+
+#### unit?
+
+```ts
+optional unit?: string;
+```
+
+***
+
+### shape
+
+```ts
+shape: z.ZodRawShape;
+```
+
+Defined in: [packages/timeline/src/effects.ts:20](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L20)
+
+The effect's OWN params; `type` and `enabled` are composed in.
+
+***
+
+### toFilter
+
+```ts
+toFilter: (effect) => string;
+```
+
+Defined in: [packages/timeline/src/effects.ts:22](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L22)
+
+Compile to a CSS filter() fragment ('' when inert at these params).
+
+#### Parameters
+
+##### effect
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`string`
+
+***
+
+### type
+
+```ts
+type: string;
+```
+
+Defined in: [packages/timeline/src/effects.ts:18](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L18)

@@ -1,0 +1,41 @@
+---
+title: "MeasureFn"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / MeasureFn
+
+# Type Alias: MeasureFn
+
+```ts
+type MeasureFn = (text, font, letterSpacingPx?) => number;
+```
+
+Defined in: [packages/compositor/src/text.ts:9](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/text.ts#L9)
+
+Width of `text` drawn with `font` and `letterSpacingPx` of tracking.
+Implementations should set `ctx.letterSpacing` when the engine supports it
+so measurement matches drawing; engines without it ignore the parameter
+(and the renderer draws without tracking — consistent both ways).
+
+## Parameters
+
+### text
+
+`string`
+
+### font
+
+`string`
+
+### letterSpacingPx?
+
+`number`
+
+## Returns
+
+`number`

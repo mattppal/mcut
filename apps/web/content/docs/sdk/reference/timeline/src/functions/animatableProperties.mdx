@@ -1,0 +1,49 @@
+---
+title: "animatableProperties"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / animatableProperties
+
+# Function: animatableProperties()
+
+```ts
+function animatableProperties(element): (
+  | "opacity"
+  | "volume"
+  | "blur"
+  | "letterSpacing"
+  | "rotation"
+  | "position.x"
+  | "position.y"
+  | "scale.x"
+  | "scale.y")[];
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:156](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L156)
+
+Which fixed-effect properties exist on this element type — declared by the
+type's registry entry (unknown strings are filtered defensively).
+
+## Parameters
+
+### element
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)
+
+## Returns
+
+(
+  \| `"opacity"`
+  \| `"volume"`
+  \| `"blur"`
+  \| `"letterSpacing"`
+  \| `"rotation"`
+  \| `"position.x"`
+  \| `"position.y"`
+  \| `"scale.x"`
+  \| `"scale.y"`)[]

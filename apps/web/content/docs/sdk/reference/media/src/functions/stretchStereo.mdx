@@ -1,0 +1,35 @@
+---
+title: "stretchStereo"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / stretchStereo
+
+# Function: stretchStereo()
+
+```ts
+function stretchStereo(data, tempo): Promise<StereoData>;
+```
+
+Defined in: [packages/media/src/time-stretch.ts:53](https://github.com/mattppal/mcut/blob/main/packages/media/src/time-stretch.ts#L53)
+
+Stretch stereo PCM by `tempo` (2 = twice as fast, half as long) with
+pitch preserved. Output length ≈ input / tempo.
+
+## Parameters
+
+### data
+
+[`StereoData`](../interfaces/StereoData.mdx)
+
+### tempo
+
+`number`
+
+## Returns
+
+`Promise`\<[`StereoData`](../interfaces/StereoData.mdx)\>

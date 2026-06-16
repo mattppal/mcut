@@ -1,0 +1,10 @@
+{
+  "title": "SDK Reference",
+  "description": "Generated TypeScript API reference.",
+  "root": true,
+  "defaultOpen": false,
+  "pages": [
+    "index",
+    "...reference"
+  ]
+}

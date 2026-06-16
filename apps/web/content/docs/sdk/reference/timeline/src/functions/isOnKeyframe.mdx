@@ -1,0 +1,54 @@
+---
+title: "isOnKeyframe"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / isOnKeyframe
+
+# Function: isOnKeyframe()
+
+```ts
+function isOnKeyframe(
+   element, 
+   property, 
+   timelineMs, 
+   toleranceMs?): boolean;
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:212](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L212)
+
+Is the playhead exactly on a keyframe (drives the diamond's filled state)?
+
+## Parameters
+
+### element
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)
+
+### property
+
+  \| `"opacity"`
+  \| `"volume"`
+  \| `"blur"`
+  \| `"letterSpacing"`
+  \| `"rotation"`
+  \| `"position.x"`
+  \| `"position.y"`
+  \| `"scale.x"`
+  \| `"scale.y"`
+
+### timelineMs
+
+`number`
+
+### toleranceMs?
+
+`number` = `1`
+
+## Returns
+
+`boolean`

@@ -1,0 +1,53 @@
+---
+title: "upsertKeyframe"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / upsertKeyframe
+
+# Function: upsertKeyframe()
+
+```ts
+function upsertKeyframe(track, keyframe): object[];
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:315](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L315)
+
+Insert-or-replace a keyframe, keeping the track sorted and unique by time.
+
+## Parameters
+
+### track
+
+readonly `object`[]
+
+### keyframe
+
+#### easing?
+
+  \| `"linear"`
+  \| `"hold"`
+  \| `"easeIn"`
+  \| `"easeOut"`
+  \| `"easeInOut"`
+  \| \{
+  `cubicBezier`: \[`number`, `number`, `number`, `number`\];
+\} = `...`
+
+Outgoing interpolation; default linear.
+
+#### timeMs
+
+`number` = `...`
+
+Element-local ms (relative to `startMs`): moving a clip moves its animation.
+
+#### value
+
+`number` = `...`
+
+## Returns

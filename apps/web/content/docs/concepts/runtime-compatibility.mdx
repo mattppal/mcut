@@ -1,0 +1,26 @@
+---
+title: Runtime compatibility
+description: Which package surfaces run in headless, browser, and React environments.
+---
+
+Not every package runs everywhere. The model and edit engine are headless; media
+preview and export depend on browser APIs.
+
+| Surface | Bun/Node | Browser | React |
+| --- | --- | --- | --- |
+| `@mcut/timeline` | Yes | Yes | Yes |
+| `@mcut/editor` | Yes | Yes | Yes |
+| `@mcut/compositor` Canvas2D path | Limited by canvas availability | Yes | Yes |
+| `@mcut/compositor` WebGPU path | No | When WebGPU is available | Yes |
+| `@mcut/media` probing/thumbnails/export | Mostly browser-oriented | Yes | Yes |
+| `@mcut/react` | No | Yes | Yes |
+| `@mcut/transcription` core helpers | Yes | Yes | Yes |
+| AssemblyAI / AI SDK providers | Server-side recommended | Only through your own backend | Yes, through app routes |
+| local Whisper provider | No | WebGPU-capable browsers | Yes |
+| CLI and MCP stdio | Yes | No | No |
+| live browser bridge | Local process plus browser | Yes | Yes |
+
+## Practical guidance
+
+Keep project mutation in `@mcut/timeline` and `@mcut/editor`. Add browser media,
+preview, and export only where the runtime can provide the required APIs.

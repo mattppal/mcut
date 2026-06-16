@@ -1,0 +1,35 @@
+---
+title: "insertElementAtPlayhead"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / insertElementAtPlayhead
+
+# Function: insertElementAtPlayhead()
+
+```ts
+function insertElementAtPlayhead(engine, element): string;
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:40](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L40)
+
+Insert an element at the playhead on the topmost unlocked track with room,
+creating a new track when none fits. Returns the new element's id.
+
+## Parameters
+
+### engine
+
+`EditorEngine`
+
+### element
+
+`TimelineElementInput`
+
+## Returns
+
+`string`

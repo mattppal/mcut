@@ -1,0 +1,97 @@
+---
+title: "exportProject"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / exportProject
+
+# Function: exportProject()
+
+```ts
+function exportProject(project, options?): Promise<ExportResult>;
+```
+
+Defined in: [packages/media/src/export.ts:42](https://github.com/mattppal/mcut/blob/main/packages/media/src/export.ts#L42)
+
+Render a project to a video file, fully client-side and deterministically.
+
+The audio mix renders first on the main thread (`OfflineAudioContext` and
+the time-stretch worklet don't exist in workers), then the frame
+decode→composite→encode→mux pipeline runs in a dedicated worker so the
+editor stays responsive; environments without workers (Node/Bun, spawn
+failure) fall back to running the same pipeline in-context.
+
+## Parameters
+
+### project
+
+#### assets
+
+`z.ZodDefault`\<`z.ZodRecord`\<`z.ZodString`, `z.ZodObject`\<\{
+  `durationMs`: `z.ZodOptional`\<`z.ZodNumber`\>;
+  `hash`: `z.ZodOptional`\<`z.ZodString`\>;
+  `height`: `z.ZodOptional`\<`z.ZodNumber`\>;
+  `id`: `z.ZodCustom`\<`` `a-${string}` ``, `` `a-${string}` ``\>;
+  `kind`: `z.ZodEnum`\<\{
+     `audio`: `"audio"`;
+     `image`: `"image"`;
+     `video`: `"video"`;
+  \}\>;
+  `mimeType`: `z.ZodOptional`\<`z.ZodString`\>;
+  `name`: `z.ZodOptional`\<`z.ZodString`\>;
+  `nativePreview`: `z.ZodOptional`\<`z.ZodBoolean`\>;
+  `src`: `z.ZodString`;
+  `width`: `z.ZodOptional`\<`z.ZodNumber`\>;
+\}, `z.core.$strip`\>\>\>
+
+#### fps
+
+`number`
+
+#### height
+
+`number`
+
+#### id
+
+`string`
+
+#### layouts
+
+`object`[]
+
+#### markers
+
+`object`[]
+
+#### name
+
+`string`
+
+#### presets
+
+`object`[]
+
+#### tracks
+
+`object`[]
+
+#### version
+
+`1`
+
+#### width
+
+`number`
+
+### options?
+
+[`ExportProjectOptions`](../interfaces/ExportProjectOptions.mdx) = `{}`
+
+## Returns
+
+`Promise`\<[`ExportResult`](../interfaces/ExportResult.mdx)\>

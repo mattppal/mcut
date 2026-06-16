@@ -1,0 +1,40 @@
+---
+title: Project model
+description: The JSON document that mcut commands read and write.
+---
+
+An mcut project is a serializable JSON document. The timeline engine parses it,
+validates it, migrates older versions, and applies edits through commands.
+
+## Shape
+
+A project contains:
+
+- project settings: name, size, frame rate, and version
+- assets: registered video, audio, and image sources
+- tracks: ordered bottom to top
+- elements: clips on tracks, with timing and type-specific fields
+- markers, layouts, effects, transitions, captions, and metadata
+
+Times are integer milliseconds. Timeline positions are absolute. Keyframe times
+are local to the element that owns them.
+
+## Invariants
+
+The engine protects basic timeline rules:
+
+- elements on the same track cannot overlap
+- ids use typed prefixes such as `t-`, `e-`, `a-`, and `m-`
+- element durations cannot be shorter than `MIN_ELEMENT_DURATION_MS`
+- command payloads must pass zod validation
+- migrations must run before old project versions are trusted
+
+Do not treat project JSON as a loose interchange format. Parse with
+`parseProject`, create new files with `createProject`, and edit through
+`EditorEngine.dispatch`.
+
+## Where to look
+
+- SDK: [`Project`](/docs/sdk/reference/timeline/src/interfaces/Project)
+- SDK: [`TimelineElement`](/docs/sdk/reference/timeline/src/type-aliases/TimelineElement)
+- SDK: [`EditorEngine`](/docs/sdk/reference/timeline/src/classes/EditorEngine)

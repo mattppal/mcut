@@ -1,0 +1,46 @@
+---
+title: "snapTime"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / snapTime
+
+# Function: snapTime()
+
+```ts
+function snapTime(
+   candidateMs, 
+   targets, 
+   thresholdMs, 
+   options?): SnapResult;
+```
+
+Defined in: [packages/timeline/src/snap.ts:110](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/snap.ts#L110)
+
+Snap a single time to the nearest target within `thresholdMs`.
+
+## Parameters
+
+### candidateMs
+
+`number`
+
+### targets
+
+readonly [`SnapTarget`](../interfaces/SnapTarget.mdx)[]
+
+### thresholdMs
+
+`number`
+
+### options?
+
+[`SnapOptions`](../interfaces/SnapOptions.mdx) = `{}`
+
+## Returns
+
+[`SnapResult`](../interfaces/SnapResult.mdx)

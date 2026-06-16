@@ -1,0 +1,46 @@
+---
+title: "FrameSource"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / FrameSource
+
+# Interface: FrameSource
+
+Defined in: [packages/compositor/src/types.ts:12](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L12)
+
+Supplies pixel data for media assets at a given source time. The preview
+implementation is allowed to be approximate (pooled `<video>` elements);
+the export implementation must be exact (decoded samples). Keeping this
+behind an interface is what lets one compositor serve both.
+
+## Methods
+
+### getFrame()
+
+```ts
+getFrame(assetId, sourceTimeMs): CanvasImageSource | null;
+```
+
+Defined in: [packages/compositor/src/types.ts:17](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L17)
+
+Image for `assetId` at `sourceTimeMs` (media-local time, after trim).
+Return `null` when no frame is available yet; the compositor skips it.
+
+#### Parameters
+
+##### assetId
+
+`` `a-${string}` ``
+
+##### sourceTimeMs
+
+`number`
+
+#### Returns
+
+`CanvasImageSource` \| `null`

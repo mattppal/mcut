@@ -1,0 +1,38 @@
+---
+title: "blendModeSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / blendModeSchema
+
+# Variable: blendModeSchema
+
+```ts
+const blendModeSchema: ZodEnum<{
+  color: "color";
+  color-burn: "color-burn";
+  color-dodge: "color-dodge";
+  darken: "darken";
+  difference: "difference";
+  exclusion: "exclusion";
+  hard-light: "hard-light";
+  hue: "hue";
+  lighten: "lighten";
+  luminosity: "luminosity";
+  multiply: "multiply";
+  normal: "normal";
+  overlay: "overlay";
+  saturation: "saturation";
+  screen: "screen";
+  soft-light: "soft-light";
+}>;
+```
+
+Defined in: [packages/timeline/src/effects.ts:218](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L218)
+
+Compositing blend modes (canvas `globalCompositeOperation` subset that maps
+1:1 onto the CSS/Photoshop blend modes).

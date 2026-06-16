@@ -1,0 +1,80 @@
+---
+title: "canPlace"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / canPlace
+
+# Function: canPlace()
+
+```ts
+function canPlace(
+   track, 
+   startMs, 
+   durationMs, 
+   ignoreElementId?): boolean;
+```
+
+Defined in: [packages/timeline/src/selectors.ts:96](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L96)
+
+## Parameters
+
+### track
+
+#### elements
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)[] = `...`
+
+Sorted by `startMs`; never overlapping in time.
+
+#### hidden
+
+`boolean` = `...`
+
+Visuals from this track are not rendered.
+
+#### id
+
+`` `t-${string}` `` = `trackIdSchema`
+
+#### locked
+
+`boolean` = `...`
+
+UI hint: track rejects edits. The engine does not enforce this.
+
+#### magnetic
+
+`boolean` = `...`
+
+When enabled, edits compact this track so clips keep no gaps between them.
+
+#### muted
+
+`boolean` = `...`
+
+Audio from this track is silenced.
+
+#### name
+
+`string` = `...`
+
+### startMs
+
+`number`
+
+### durationMs
+
+`number`
+
+### ignoreElementId?
+
+`` `e-${string}` ``
+
+## Returns
+
+`boolean`

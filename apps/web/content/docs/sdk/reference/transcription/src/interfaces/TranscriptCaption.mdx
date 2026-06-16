@@ -1,0 +1,88 @@
+---
+title: "TranscriptCaption"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / TranscriptCaption
+
+# Interface: TranscriptCaption
+
+Defined in: [packages/transcription/src/transcript-tools.ts:11](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L11)
+
+Pure transcript tooling over word-timed captions: search, replace, and
+repair. Works identically for AssemblyAI- and Whisper-produced transcripts
+— the only contract is the caption element shape below (word timings are
+relative to the caption's `startMs`, and optional: captions whose words
+were invalidated by manual edits degrade to caption-level granularity).
+
+## Properties
+
+### durationMs
+
+```ts
+durationMs: number;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:14](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L14)
+
+***
+
+### id
+
+```ts
+id: string;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:12](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L12)
+
+***
+
+### startMs
+
+```ts
+startMs: number;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:13](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L13)
+
+***
+
+### text
+
+```ts
+text: string;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:15](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L15)
+
+***
+
+### words?
+
+```ts
+optional words?: object[];
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:16](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L16)
+
+#### endMs
+
+```ts
+endMs: number;
+```
+
+#### startMs
+
+```ts
+startMs: number;
+```
+
+#### text
+
+```ts
+text: string;
+```

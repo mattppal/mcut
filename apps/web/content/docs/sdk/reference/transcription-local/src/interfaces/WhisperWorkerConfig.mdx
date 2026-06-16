@@ -1,0 +1,48 @@
+---
+title: "WhisperWorkerConfig"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / WhisperWorkerConfig
+
+# Interface: WhisperWorkerConfig
+
+Defined in: [packages/transcription-local/src/protocol.ts:8](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/protocol.ts#L8)
+
+## Properties
+
+### device
+
+```ts
+device: "webgpu" | "wasm";
+```
+
+Defined in: [packages/transcription-local/src/protocol.ts:11](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/protocol.ts#L11)
+
+***
+
+### dtype
+
+```ts
+dtype: WhisperDtype;
+```
+
+Defined in: [packages/transcription-local/src/protocol.ts:13](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/protocol.ts#L13)
+
+Quantization, e.g. "q8".
+
+***
+
+### model
+
+```ts
+model: string;
+```
+
+Defined in: [packages/transcription-local/src/protocol.ts:10](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/protocol.ts#L10)
+
+HF model id, e.g. "onnx-community/whisper-base".

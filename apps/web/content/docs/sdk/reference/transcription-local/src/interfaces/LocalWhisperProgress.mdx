@@ -1,0 +1,38 @@
+---
+title: "LocalWhisperProgress"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / LocalWhisperProgress
+
+# Interface: LocalWhisperProgress
+
+Defined in: [packages/transcription-local/src/index.ts:76](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L76)
+
+## Properties
+
+### phase
+
+```ts
+phase: "model" | "transcribe";
+```
+
+Defined in: [packages/transcription-local/src/index.ts:78](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L78)
+
+'model' while downloading/loading weights, then 'transcribe'.
+
+***
+
+### progress
+
+```ts
+progress: number;
+```
+
+Defined in: [packages/transcription-local/src/index.ts:80](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L80)
+
+0–1 within the phase.

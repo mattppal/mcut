@@ -1,0 +1,170 @@
+---
+title: "ProjectCaptionRef"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / ProjectCaptionRef
+
+# Interface: ProjectCaptionRef
+
+Defined in: [packages/timeline/src/project-context.ts:19](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L19)
+
+## Properties
+
+### caption
+
+```ts
+caption: object;
+```
+
+Defined in: [packages/timeline/src/project-context.ts:23](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L23)
+
+#### durationMs
+
+```ts
+durationMs: number;
+```
+
+#### id
+
+```ts
+id: `e-${string}` = elementIdSchema;
+```
+
+#### keyframes?
+
+```ts
+optional keyframes?: Partial<Record<
+  | "opacity"
+  | "volume"
+  | "blur"
+  | "letterSpacing"
+  | "rotation"
+  | "position.x"
+  | "position.y"
+  | "scale.x"
+| "scale.y", object[]>>;
+```
+
+Armed fixed-effect properties (Premiere stopwatch on): per-property
+keyframe tracks, sorted and unique by element-local `timeMs`.
+
+#### linkId?
+
+```ts
+optional linkId?: string;
+```
+
+Elements sharing a `linkId` are linked (e.g. video + its detached audio):
+UIs select and move them together. The engine stores the linkage; it does
+not enforce cascading edits.
+
+#### startMs
+
+```ts
+startMs: number;
+```
+
+#### style
+
+```ts
+style: object = captionStyleSchema;
+```
+
+##### style.activeWordColor?
+
+```ts
+optional activeWordColor?: string;
+```
+
+Color applied to the word under the playhead (karaoke highlight).
+
+##### style.backgroundColor
+
+```ts
+backgroundColor: string;
+```
+
+##### style.color
+
+```ts
+color: string;
+```
+
+##### style.fontFamily
+
+```ts
+fontFamily: string;
+```
+
+##### style.fontSize
+
+```ts
+fontSize: number;
+```
+
+##### style.fontWeight
+
+```ts
+fontWeight: number;
+```
+
+##### style.position
+
+```ts
+position: "top" | "middle" | "bottom";
+```
+
+#### text
+
+```ts
+text: string;
+```
+
+#### type
+
+```ts
+type: "caption";
+```
+
+#### words?
+
+```ts
+optional words?: object[];
+```
+
+Optional word-level timings, relative to `startMs`.
+
+***
+
+### trackId
+
+```ts
+trackId: string;
+```
+
+Defined in: [packages/timeline/src/project-context.ts:20](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L20)
+
+***
+
+### trackIndex
+
+```ts
+trackIndex: number;
+```
+
+Defined in: [packages/timeline/src/project-context.ts:22](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L22)
+
+***
+
+### trackName
+
+```ts
+trackName: string;
+```
+
+Defined in: [packages/timeline/src/project-context.ts:21](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/project-context.ts#L21)

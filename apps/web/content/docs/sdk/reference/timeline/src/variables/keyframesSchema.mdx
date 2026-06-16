@@ -1,0 +1,42 @@
+---
+title: "keyframesSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / keyframesSchema
+
+# Variable: keyframesSchema
+
+```ts
+const keyframesSchema: ZodRecord<ZodEnum<{
+  blur: "blur";
+  letterSpacing: "letterSpacing";
+  opacity: "opacity";
+  position.x: "position.x";
+  position.y: "position.y";
+  rotation: "rotation";
+  scale.x: "scale.x";
+  scale.y: "scale.y";
+  volume: "volume";
+}> & $partial, ZodArray<ZodObject<{
+  easing: ZodOptional<ZodUnion<readonly [ZodEnum<{
+     easeIn: "easeIn";
+     easeInOut: "easeInOut";
+     easeOut: "easeOut";
+     hold: "hold";
+     linear: "linear";
+   }>, ZodObject<{
+     cubicBezier: ZodTuple<[..., ..., ..., ...], null>;
+  }, $strip>]>>;
+  timeMs: ZodNumber;
+  value: ZodNumber;
+}, $strip>>>;
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:64](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L64)
+
+Sorted-by-time, unique-time per property (enforced by reducers).

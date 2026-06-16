@@ -1,0 +1,46 @@
+---
+title: "hitTestHandles"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / hitTestHandles
+
+# Function: hitTestHandles()
+
+```ts
+function hitTestHandles(
+   obb, 
+   x, 
+   y, 
+   size?): HandleId | null;
+```
+
+Defined in: [packages/compositor/src/geometry.ts:189](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/geometry.ts#L189)
+
+Hit-test the handles (square hit area of `size` px around each).
+
+## Parameters
+
+### obb
+
+[`OBB`](../interfaces/OBB.mdx)
+
+### x
+
+`number`
+
+### y
+
+`number`
+
+### size?
+
+`number` = `12`
+
+## Returns
+
+[`HandleId`](../type-aliases/HandleId.mdx) \| `null`

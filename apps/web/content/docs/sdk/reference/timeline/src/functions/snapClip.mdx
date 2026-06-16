@@ -1,0 +1,52 @@
+---
+title: "snapClip"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / snapClip
+
+# Function: snapClip()
+
+```ts
+function snapClip(
+   startMs, 
+   durationMs, 
+   targets, 
+   thresholdMs, 
+   options?): SnapClipResult;
+```
+
+Defined in: [packages/timeline/src/snap.ts:126](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/snap.ts#L126)
+
+Snap a clip by either edge: whichever of start/end is closest to a target
+wins, and the clip shifts so that edge lands exactly on it.
+
+## Parameters
+
+### startMs
+
+`number`
+
+### durationMs
+
+`number`
+
+### targets
+
+readonly [`SnapTarget`](../interfaces/SnapTarget.mdx)[]
+
+### thresholdMs
+
+`number`
+
+### options?
+
+[`SnapOptions`](../interfaces/SnapOptions.mdx) = `{}`
+
+## Returns
+
+[`SnapClipResult`](../interfaces/SnapClipResult.mdx)

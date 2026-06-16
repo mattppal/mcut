@@ -1,0 +1,27 @@
+---
+title: "TrimEdge"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / TrimEdge
+
+# Type Alias: TrimEdge
+
+```ts
+type TrimEdge = "start" | "end";
+```
+
+Defined in: [packages/timeline/src/edge-trim.ts:22](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/edge-trim.ts#L22)
+
+Edge trims: move one boundary of a clip while its content stays anchored —
+the shared core under roll, slide, and ripple-trim edits.
+
+`deltaMs` always moves the edge RIGHT (later) when positive. Shrinking an
+edge reuses the SPLIT machinery (each element type's onSplit hook plus
+splitKeyframes), so trims, timeMaps, reversed spans, angle lists, and word
+timings get exactly the bookkeeping a split-and-discard would produce.
+Growing an edge reveals more source where the type supports it.

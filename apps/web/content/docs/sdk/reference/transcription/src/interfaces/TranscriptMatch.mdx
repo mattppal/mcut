@@ -1,0 +1,92 @@
+---
+title: "TranscriptMatch"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / TranscriptMatch
+
+# Interface: TranscriptMatch
+
+Defined in: [packages/transcription/src/transcript-tools.ts:20](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L20)
+
+A search hit inside one caption.
+
+## Properties
+
+### captionId
+
+```ts
+captionId: string;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:21](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L21)
+
+***
+
+### endChar
+
+```ts
+endChar: number;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:24](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L24)
+
+***
+
+### endTimeMs
+
+```ts
+endTimeMs: number;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:30](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L30)
+
+***
+
+### firstWord?
+
+```ts
+optional firstWord?: number;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:26](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L26)
+
+Inclusive word-index range, when the caption's words map onto its text.
+
+***
+
+### lastWord?
+
+```ts
+optional lastWord?: number;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:27](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L27)
+
+***
+
+### startChar
+
+```ts
+startChar: number;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:23](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L23)
+
+Character range in the caption's `text`.
+
+***
+
+### timeMs
+
+```ts
+timeMs: number;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:29](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L29)
+
+Absolute timeline time of the hit (word-accurate when words exist).

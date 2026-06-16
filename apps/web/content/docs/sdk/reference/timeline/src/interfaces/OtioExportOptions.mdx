@@ -1,0 +1,42 @@
+---
+title: "OtioExportOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / OtioExportOptions
+
+# Interface: OtioExportOptions
+
+Defined in: [packages/timeline/src/otio.ts:22](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/otio.ts#L22)
+
+OpenTimelineIO export: the project as an OTIO JSON document (the
+`.otio` format read by Resolve, RV, Premiere via plugin, and the OTIO
+toolchain).
+
+Mapping decisions:
+- mcut times are integer ms; OTIO RationalTime uses rate 1000 (1 unit =
+  1ms) so every value round-trips exactly. Consumers rescale to frames.
+- Inter-clip spacing becomes explicit transparent Gaps (OTIO has no
+  absolute clip positions).
+- Transitions become zero-footprint OTIO Transitions after the left clip,
+  with in/out offsets of half the (already clamped) window each.
+- Speed ramps/freezes and multicam have no faithful core-schema peers and
+  are flattened to their overall source span; the full element JSON rides
+  in metadata.mcut for lossless reimport.
+- Project markers attach to the top-level Stack.
+
+## Properties
+
+### fps?
+
+```ts
+optional fps?: number;
+```
+
+Defined in: [packages/timeline/src/otio.ts:24](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/otio.ts#L24)
+
+Frame rate stamped on marker/global ranges (default: project fps).

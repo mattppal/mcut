@@ -1,0 +1,11 @@
+{
+  "title": "@mcut/timeline",
+  "pages": [
+    "index",
+    "...classes",
+    "...functions",
+    "...interfaces",
+    "...type-aliases",
+    "...variables"
+  ]
+}

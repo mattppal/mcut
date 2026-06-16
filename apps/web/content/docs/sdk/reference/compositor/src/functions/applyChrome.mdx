@@ -1,0 +1,44 @@
+---
+title: "applyChrome"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / applyChrome
+
+# Function: applyChrome()
+
+```ts
+function applyChrome(
+   ctx, 
+   chrome, 
+   draw): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:91](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L91)
+
+Transform + opacity + effect-stack filter + blend mode around a canvas2d
+draw (the original withTransform). `ctx.filter` is unsupported in some
+older engines; there the stack degrades to an unfiltered render rather
+than failing.
+
+## Parameters
+
+### ctx
+
+[`Canvas2D`](../type-aliases/Canvas2D.mdx)
+
+### chrome
+
+[`LayerChrome`](../interfaces/LayerChrome.mdx)
+
+### draw
+
+() => `void`
+
+## Returns
+
+`void`

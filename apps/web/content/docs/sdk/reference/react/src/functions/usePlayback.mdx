@@ -1,0 +1,40 @@
+---
+title: "usePlayback"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [react/src](../index.mdx) / usePlayback
+
+# Function: usePlayback()
+
+```ts
+function usePlayback<TSelected>(selector?, compare?): TSelected;
+```
+
+Defined in: [packages/react/src/hooks.ts:30](https://github.com/mattppal/mcut/blob/main/packages/react/src/hooks.ts#L30)
+
+Subscribe to a slice of playback state (time, playing, volume).
+
+## Type Parameters
+
+### TSelected
+
+`TSelected` = `PlaybackState`
+
+## Parameters
+
+### selector?
+
+(`state`) => `TSelected`
+
+### compare?
+
+(`a`, `b`) => `boolean`
+
+## Returns
+
+`TSelected`

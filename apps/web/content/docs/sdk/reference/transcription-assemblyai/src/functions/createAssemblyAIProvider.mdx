@@ -1,0 +1,38 @@
+---
+title: "createAssemblyAIProvider"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-assemblyai/src](../index.mdx) / createAssemblyAIProvider
+
+# Function: createAssemblyAIProvider()
+
+```ts
+function createAssemblyAIProvider(options?): TranscriptionProvider;
+```
+
+Defined in: [packages/transcription-assemblyai/src/index.ts:91](https://github.com/mattppal/mcut/blob/main/packages/transcription-assemblyai/src/index.ts#L91)
+
+mcut's flagship transcription provider: native AssemblyAI with word-level
+timestamps, per-word confidence, and speaker labels — everything caption
+editing wants. Server-side only (the API key must stay secret); browsers
+should POST audio to a route that runs this provider.
+
+```ts
+const provider = createAssemblyAIProvider({ apiKey: process.env.ASSEMBLYAI_API_KEY! })
+const transcript = await provider.transcribe({ audio: wavBlob })
+```
+
+## Parameters
+
+### options?
+
+[`AssemblyAIProviderOptions`](../interfaces/AssemblyAIProviderOptions.mdx) = `{}`
+
+## Returns
+
+`TranscriptionProvider`

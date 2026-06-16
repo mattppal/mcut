@@ -1,0 +1,31 @@
+---
+title: Package architecture
+description: How the public packages fit together today.
+---
+
+mcut is split by ownership. Lower packages do not know about higher packages.
+
+| Package | Owns |
+| --- | --- |
+| `@mcut/timeline` | Project model, commands, engine, selectors, timing helpers |
+| `@mcut/editor` | User-level editing operators and gesture planning |
+| `@mcut/compositor` | Frame rendering, hit testing, text layout, compositor extension points |
+| `@mcut/media` | Media probing, thumbnails, preview pools, browser export |
+| `@mcut/react` | React provider, hooks, `PlayerCanvas`, gesture helpers |
+| `@mcut/transcription` | Transcript model, caption generation, subtitle output |
+| provider packages | AssemblyAI, AI SDK, and local Whisper adapters |
+| `@mcut/cli` | Headless project-file workflows |
+| `@mcut/mcp-server` | MCP tools and local browser bridge |
+
+## Dependency direction
+
+Use the lowest package that owns the behavior:
+
+- Pure project edits belong in `@mcut/timeline`.
+- UI-like edit intent belongs in `@mcut/editor`.
+- React state and canvas bindings belong in `@mcut/react`.
+- Browser media and export helpers belong in `@mcut/media`.
+- CLI and MCP should expose lower-level behavior, not duplicate it.
+
+This keeps project behavior reusable in Bun, Node, browsers, MCP tools, and
+React apps.

@@ -1,0 +1,175 @@
+---
+title: "EditorOperatorRegistry"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / EditorOperatorRegistry
+
+# Class: EditorOperatorRegistry
+
+Defined in: [packages/editor/src/operators.ts:57](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L57)
+
+## Constructors
+
+### Constructor
+
+```ts
+new EditorOperatorRegistry(): EditorOperatorRegistry;
+```
+
+#### Returns
+
+`EditorOperatorRegistry`
+
+## Methods
+
+### define()
+
+```ts
+define<Input, Output>(operator): EditorOperator<Input, Output>;
+```
+
+Defined in: [packages/editor/src/operators.ts:60](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L60)
+
+#### Type Parameters
+
+##### Input
+
+`Input`
+
+##### Output
+
+`Output` = `unknown`
+
+#### Parameters
+
+##### operator
+
+[`EditorOperator`](../interfaces/EditorOperator.mdx)\<`Input`, `Output`\>
+
+#### Returns
+
+[`EditorOperator`](../interfaces/EditorOperator.mdx)\<`Input`, `Output`\>
+
+***
+
+### get()
+
+```ts
+get(id): 
+  | EditorOperator<unknown, unknown>
+  | undefined;
+```
+
+Defined in: [packages/editor/src/operators.ts:68](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L68)
+
+#### Parameters
+
+##### id
+
+`string`
+
+#### Returns
+
+  \| [`EditorOperator`](../interfaces/EditorOperator.mdx)\<`unknown`, `unknown`\>
+  \| `undefined`
+
+***
+
+### isEnabled()
+
+```ts
+isEnabled(
+   id, 
+   context, 
+   input?): boolean;
+```
+
+Defined in: [packages/editor/src/operators.ts:92](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L92)
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### context
+
+[`EditorOperatorContext`](../interfaces/EditorOperatorContext.mdx)
+
+##### input?
+
+`unknown` = `{}`
+
+#### Returns
+
+`boolean`
+
+***
+
+### list()
+
+```ts
+list(): EditorOperator<unknown, unknown>[];
+```
+
+Defined in: [packages/editor/src/operators.ts:72](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L72)
+
+#### Returns
+
+[`EditorOperator`](../interfaces/EditorOperator.mdx)\<`unknown`, `unknown`\>[]
+
+***
+
+### listAvailable()
+
+```ts
+listAvailable(context): ListedEditorOperator[];
+```
+
+Defined in: [packages/editor/src/operators.ts:76](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L76)
+
+#### Parameters
+
+##### context
+
+[`EditorOperatorContext`](../interfaces/EditorOperatorContext.mdx)
+
+#### Returns
+
+[`ListedEditorOperator`](../interfaces/ListedEditorOperator.mdx)[]
+
+***
+
+### run()
+
+```ts
+run(
+   id, 
+   context, 
+input?): Promise<unknown>;
+```
+
+Defined in: [packages/editor/src/operators.ts:98](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L98)
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### context
+
+[`EditorOperatorContext`](../interfaces/EditorOperatorContext.mdx)
+
+##### input?
+
+`unknown` = `{}`
+
+#### Returns
+
+`Promise`\<`unknown`\>

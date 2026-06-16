@@ -1,0 +1,53 @@
+---
+title: "TranscriptionProvider"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / TranscriptionProvider
+
+# Interface: TranscriptionProvider
+
+Defined in: [packages/transcription/src/types.ts:46](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L46)
+
+A pluggable transcription backend. Implementations are transport-agnostic:
+they may call a cloud API (run them server-side and proxy from the
+browser) or run a local model. See `@mcut/transcription-ai-sdk` for an
+adapter over any Vercel AI SDK transcription model.
+
+## Properties
+
+### id
+
+```ts
+readonly id: string;
+```
+
+Defined in: [packages/transcription/src/types.ts:47](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L47)
+
+## Methods
+
+### transcribe()
+
+```ts
+transcribe(input, options?): Promise<TranscriptResult>;
+```
+
+Defined in: [packages/transcription/src/types.ts:48](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L48)
+
+#### Parameters
+
+##### input
+
+[`TranscribeInput`](TranscribeInput.mdx)
+
+##### options?
+
+[`TranscribeOptions`](TranscribeOptions.mdx)
+
+#### Returns
+
+`Promise`\<[`TranscriptResult`](TranscriptResult.mdx)\>
