@@ -1,0 +1,34 @@
+---
+title: "getVideoThumbnail"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / getVideoThumbnail
+
+# Function: getVideoThumbnail()
+
+```ts
+function getVideoThumbnail(src, options?): Promise<HTMLCanvasElement | OffscreenCanvas | null>;
+```
+
+Defined in: [packages/media/src/thumbnails.ts:12](https://github.com/mattppal/mcut/blob/main/packages/media/src/thumbnails.ts#L12)
+
+Extract a single poster frame from a video. Returns `null` for audio-only files.
+
+## Parameters
+
+### src
+
+[`MediaSourceLike`](../type-aliases/MediaSourceLike.mdx)
+
+### options?
+
+[`ThumbnailOptions`](../interfaces/ThumbnailOptions.mdx) = `{}`
+
+## Returns
+
+`Promise`\<`HTMLCanvasElement` \| `OffscreenCanvas` \| `null`\>

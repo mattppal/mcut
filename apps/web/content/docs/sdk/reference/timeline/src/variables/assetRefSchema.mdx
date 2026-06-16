@@ -1,0 +1,33 @@
+---
+title: "assetRefSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / assetRefSchema
+
+# Variable: assetRefSchema
+
+```ts
+const assetRefSchema: ZodObject<{
+  durationMs: ZodOptional<ZodNumber>;
+  hash: ZodOptional<ZodString>;
+  height: ZodOptional<ZodNumber>;
+  id: ZodCustom<`a-${string}`, `a-${string}`>;
+  kind: ZodEnum<{
+     audio: "audio";
+     image: "image";
+     video: "video";
+  }>;
+  mimeType: ZodOptional<ZodString>;
+  name: ZodOptional<ZodString>;
+  nativePreview: ZodOptional<ZodBoolean>;
+  src: ZodString;
+  width: ZodOptional<ZodNumber>;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/model.ts:356](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L356)

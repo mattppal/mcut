@@ -1,0 +1,47 @@
+---
+title: Add timeline content
+description: Add tracks, assets, and elements through the engine.
+---
+
+Use `EditorEngine.dispatch` for low-level edits. The engine validates each
+command and records undo history.
+
+```ts
+import { EditorEngine, createAssetId, createProject } from "@mcut/timeline"
+
+const engine = new EditorEngine({ project: createProject() })
+
+engine.dispatch({ type: "addTrack", name: "Video" })
+const trackId = engine.project.tracks[0]!.id
+
+const assetId = createAssetId()
+engine.dispatch({
+  type: "addAsset",
+  asset: {
+    id: assetId,
+    kind: "video",
+    name: "clip.mp4",
+    src: "clip.mp4",
+    durationMs: 5000,
+  },
+})
+
+engine.dispatch({
+  type: "addElement",
+  trackId,
+  element: {
+    type: "video",
+    startMs: 0,
+    durationMs: 5000,
+    assetId,
+    trimStartMs: 0,
+    transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+    opacity: 1,
+    volume: 1,
+    muted: false,
+  },
+})
+```
+
+If placement should follow editor behavior, use `@mcut/editor` operators
+instead of calculating every command yourself.

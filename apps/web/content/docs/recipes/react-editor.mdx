@@ -1,0 +1,32 @@
+---
+title: Build a React editor
+description: Mount the engine, preview pool, and canvas binding.
+---
+
+Use `EditorProvider` at the top of your editor surface. Read project and
+selection state through hooks, and write through the engine.
+
+```tsx
+import { EditorProvider, PlayerCanvas, useEditor } from "@mcut/react"
+
+function AddTrackButton() {
+  const engine = useEditor()
+  return (
+    <button onClick={() => engine.dispatch({ type: "addTrack", name: "Video" })}>
+      Add track
+    </button>
+  )
+}
+
+export function Editor() {
+  return (
+    <EditorProvider>
+      <PlayerCanvas />
+      <AddTrackButton />
+    </EditorProvider>
+  )
+}
+```
+
+`@mcut/react` is intentionally thin. Timeline logic should stay in
+`@mcut/timeline` or `@mcut/editor`.

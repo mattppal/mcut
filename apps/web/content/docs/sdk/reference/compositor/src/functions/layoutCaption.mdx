@@ -1,0 +1,79 @@
+---
+title: "layoutCaption"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / layoutCaption
+
+# Function: layoutCaption()
+
+```ts
+function layoutCaption(
+   measure, 
+   element, 
+   style, 
+   maxWidth): CaptionLayout;
+```
+
+Defined in: [packages/compositor/src/text.ts:302](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/text.ts#L302)
+
+Greedily wrap caption words into centered lines no wider than `maxWidth`.
+Falls back to whitespace-split text when word timings are absent.
+
+## Parameters
+
+### measure
+
+[`MeasureFn`](../type-aliases/MeasureFn.mdx)
+
+### element
+
+#### text
+
+`string`
+
+#### words?
+
+`object`[]
+
+### style
+
+#### activeWordColor?
+
+`string`
+
+#### backgroundColor
+
+`string`
+
+#### color
+
+`string`
+
+#### fontFamily
+
+`string`
+
+#### fontSize
+
+`number`
+
+#### fontWeight
+
+`number`
+
+#### position
+
+`"top"` \| `"middle"` \| `"bottom"`
+
+### maxWidth
+
+`number`
+
+## Returns
+
+[`CaptionLayout`](../interfaces/CaptionLayout.mdx)

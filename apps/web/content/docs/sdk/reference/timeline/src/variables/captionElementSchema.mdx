@@ -1,0 +1,58 @@
+---
+title: "captionElementSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / captionElementSchema
+
+# Variable: captionElementSchema
+
+```ts
+const captionElementSchema: ZodObject<{
+  durationMs: ZodNumber;
+  id: ZodCustom<`e-${string}`, `e-${string}`>;
+  keyframes: ZodOptional<ZodRecord<ZodEnum<{
+     blur: "blur";
+     letterSpacing: "letterSpacing";
+     opacity: "opacity";
+     position.x: "position.x";
+     position.y: "position.y";
+     rotation: "rotation";
+     scale.x: "scale.x";
+     scale.y: "scale.y";
+     volume: "volume";
+   }> & $partial, ZodArray<ZodObject<{
+     easing: ZodOptional<ZodUnion<readonly [ZodEnum<...>, ZodObject<..., ...>]>>;
+     timeMs: ZodNumber;
+     value: ZodNumber;
+  }, $strip>>>>;
+  linkId: ZodOptional<ZodString>;
+  startMs: ZodNumber;
+  style: ZodPrefault<ZodObject<{
+     activeWordColor: ZodOptional<ZodString>;
+     backgroundColor: ZodDefault<ZodString>;
+     color: ZodDefault<ZodString>;
+     fontFamily: ZodDefault<ZodString>;
+     fontSize: ZodDefault<ZodNumber>;
+     fontWeight: ZodDefault<ZodNumber>;
+     position: ZodDefault<ZodEnum<{
+        bottom: "bottom";
+        middle: "middle";
+        top: "top";
+     }>>;
+  }, $strip>>;
+  text: ZodString;
+  type: ZodLiteral<"caption">;
+  words: ZodOptional<ZodArray<ZodObject<{
+     endMs: ZodNumber;
+     startMs: ZodNumber;
+     text: ZodString;
+  }, $strip>>>;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/model.ts:343](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L343)

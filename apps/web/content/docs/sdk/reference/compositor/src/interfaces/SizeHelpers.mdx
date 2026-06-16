@@ -1,0 +1,158 @@
+---
+title: "SizeHelpers"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / SizeHelpers
+
+# Interface: SizeHelpers
+
+Defined in: [packages/compositor/src/geometry.ts:31](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/geometry.ts#L31)
+
+## Properties
+
+### getAssetSize?
+
+```ts
+optional getAssetSize?: (assetId) => ElementSize | null;
+```
+
+Defined in: [packages/compositor/src/geometry.ts:33](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/geometry.ts#L33)
+
+Natural pixel size of a media asset (probed metadata).
+
+#### Parameters
+
+##### assetId
+
+`string`
+
+#### Returns
+
+[`ElementSize`](ElementSize.mdx) \| `null`
+
+***
+
+### measureText?
+
+```ts
+optional measureText?: (text, style, box?, runs?) => ElementSize;
+```
+
+Defined in: [packages/compositor/src/geometry.ts:35](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/geometry.ts#L35)
+
+Measure a text block (unscaled). Required for text element bounds.
+
+#### Parameters
+
+##### text
+
+`string`
+
+##### style
+
+###### align
+
+`"left"` \| `"center"` \| `"right"`
+
+###### backgroundColor?
+
+`string`
+
+###### color
+
+`string`
+
+###### fontFamily
+
+`string`
+
+###### fontSize
+
+`number`
+
+###### fontStyle
+
+`"normal"` \| `"italic"`
+
+###### fontWeight
+
+`number`
+
+###### letterSpacing
+
+`number`
+
+###### lineHeight
+
+`number`
+
+###### shadow?
+
+\{
+  `blur`: `number`;
+  `color`: `string`;
+  `offsetX`: `number`;
+  `offsetY`: `number`;
+\}
+
+###### shadow.blur
+
+`number`
+
+###### shadow.color
+
+`string`
+
+###### shadow.offsetX
+
+`number`
+
+###### shadow.offsetY
+
+`number`
+
+###### stroke?
+
+\{
+  `color`: `string`;
+  `width`: `number`;
+\}
+
+###### stroke.color
+
+`string`
+
+###### stroke.width
+
+`number`
+
+###### textTransform
+
+`"none"` \| `"uppercase"` \| `"lowercase"`
+
+##### box?
+
+###### height?
+
+`number`
+
+###### overflow
+
+`"visible"` \| `"clip"`
+
+###### width
+
+`number`
+
+##### runs?
+
+readonly `object`[]
+
+#### Returns
+
+[`ElementSize`](ElementSize.mdx)

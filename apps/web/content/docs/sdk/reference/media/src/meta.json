@@ -1,0 +1,11 @@
+{
+  "title": "@mcut/media",
+  "pages": [
+    "index",
+    "...classes",
+    "...functions",
+    "...interfaces",
+    "...type-aliases",
+    "...variables"
+  ]
+}

@@ -1,0 +1,40 @@
+---
+title: "getSourceTimeMs"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getSourceTimeMs
+
+# Function: getSourceTimeMs()
+
+```ts
+function getSourceTimeMs(element, localMs): number;
+```
+
+Defined in: [packages/timeline/src/speed.ts:57](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/speed.ts#L57)
+
+Source media time (ms) that plays at element-local output time `localMs`.
+THE seam between timeline and media: compositor, export, preview pool, and
+filmstrips must all use this so preview and export agree frame-for-frame.
+
+`reversed` plays the same source span backward: it post-transforms the
+mapped offset (span − offset), so the timeMap keeps its monotone invariant
+and ramps compose with reversal instead of fighting it.
+
+## Parameters
+
+### element
+
+[`TimeMappedElement`](../interfaces/TimeMappedElement.mdx)
+
+### localMs
+
+`number`
+
+## Returns
+
+`number`

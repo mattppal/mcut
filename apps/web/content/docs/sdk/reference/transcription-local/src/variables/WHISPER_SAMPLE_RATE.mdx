@@ -1,0 +1,23 @@
+---
+title: "WHISPER\\_SAMPLE\\_RATE"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / WHISPER\_SAMPLE\_RATE
+
+# Variable: WHISPER\_SAMPLE\_RATE
+
+```ts
+const WHISPER_SAMPLE_RATE: 16000 = 16_000;
+```
+
+Defined in: [packages/transcription-local/src/wav.ts:8](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/wav.ts#L8)
+
+Minimal WAV reader → 16kHz mono Float32Array (Whisper's input format).
+The editor extracts clip audio as 16kHz WAV already (`extractAudioToWav`),
+so this covers the hot path without any AudioContext — it runs in workers
+and tests alike. Non-WAV input falls back to decodeAudioData upstream.

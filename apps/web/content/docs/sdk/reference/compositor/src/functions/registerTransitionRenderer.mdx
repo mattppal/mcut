@@ -1,0 +1,36 @@
+---
+title: "registerTransitionRenderer"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / registerTransitionRenderer
+
+# Function: registerTransitionRenderer()
+
+```ts
+function registerTransitionRenderer(type, renderer): void;
+```
+
+Defined in: [packages/compositor/src/transition-renderers.ts:35](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/transition-renderers.ts#L35)
+
+Register the renderer half of a transition type. Built-ins register below
+through the same call; re-registering overrides (e.g. to restyle a
+built-in wipe).
+
+## Parameters
+
+### type
+
+`string`
+
+### renderer
+
+[`TransitionRenderer`](../type-aliases/TransitionRenderer.mdx)
+
+## Returns
+
+`void`

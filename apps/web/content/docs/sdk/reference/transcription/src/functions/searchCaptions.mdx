@@ -1,0 +1,36 @@
+---
+title: "searchCaptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / searchCaptions
+
+# Function: searchCaptions()
+
+```ts
+function searchCaptions(captions, query): TranscriptMatch[];
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:80](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L80)
+
+Case-insensitive substring search across captions. Substrings spanning
+word boundaries match (the index is the caption text, not single words),
+and each hit carries the word span + absolute time when word timings map.
+
+## Parameters
+
+### captions
+
+readonly [`TranscriptCaption`](../interfaces/TranscriptCaption.mdx)[]
+
+### query
+
+`string`
+
+## Returns
+
+[`TranscriptMatch`](../interfaces/TranscriptMatch.mdx)[]

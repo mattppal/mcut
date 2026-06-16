@@ -1,0 +1,78 @@
+---
+title: "SnapClipResult"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / SnapClipResult
+
+# Interface: SnapClipResult
+
+Defined in: [packages/timeline/src/snap.ts:41](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/snap.ts#L41)
+
+## Extends
+
+- [`SnapResult`](SnapResult.mdx)
+
+## Properties
+
+### edge
+
+```ts
+edge: "start" | "end" | null;
+```
+
+Defined in: [packages/timeline/src/snap.ts:43](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/snap.ts#L43)
+
+Which clip edge landed on the target.
+
+***
+
+### guideMs
+
+```ts
+guideMs: number | null;
+```
+
+Defined in: [packages/timeline/src/snap.ts:36](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/snap.ts#L36)
+
+Where to render a guide line, if a magnetic target grabbed the value.
+
+#### Inherited from
+
+[`SnapResult`](SnapResult.mdx).[`guideMs`](SnapResult.mdx#guidems)
+
+***
+
+### ms
+
+```ts
+ms: number;
+```
+
+Defined in: [packages/timeline/src/snap.ts:34](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/snap.ts#L34)
+
+Snapped (or passed-through/quantized) time.
+
+#### Inherited from
+
+[`SnapResult`](SnapResult.mdx).[`ms`](SnapResult.mdx#ms)
+
+***
+
+### target
+
+```ts
+target: SnapTarget | null;
+```
+
+Defined in: [packages/timeline/src/snap.ts:38](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/snap.ts#L38)
+
+The target that grabbed the value (kind drives guide styling).
+
+#### Inherited from
+
+[`SnapResult`](SnapResult.mdx).[`target`](SnapResult.mdx#target)

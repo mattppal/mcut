@@ -1,0 +1,27 @@
+---
+title: Generate captions
+description: Turn a normalized transcript into timeline caption elements.
+---
+
+Provider packages produce `TranscriptResult`. The core transcription package can
+turn that result into caption elements and subtitle files.
+
+```ts
+import { buildApplyCaptionsCommand, toCaptionElements, toSrt } from "@mcut/transcription"
+
+const elements = toCaptionElements(transcript, {
+  maxChars: 36,
+  maxGapMs: 800,
+})
+
+const command = buildApplyCaptionsCommand(elements, {
+  trackName: "Captions",
+})
+
+engine.dispatch(command)
+
+const srt = toSrt(transcript)
+```
+
+Use server-side providers for API-key services. Use the local Whisper provider
+only in browsers that pass its WebGPU capability checks.

@@ -1,0 +1,128 @@
+---
+title: "textElementSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / textElementSchema
+
+# Variable: textElementSchema
+
+```ts
+const textElementSchema: ZodObject<{
+  blendMode: ZodOptional<ZodEnum<{
+     color: "color";
+     color-burn: "color-burn";
+     color-dodge: "color-dodge";
+     darken: "darken";
+     difference: "difference";
+     exclusion: "exclusion";
+     hard-light: "hard-light";
+     hue: "hue";
+     lighten: "lighten";
+     luminosity: "luminosity";
+     multiply: "multiply";
+     normal: "normal";
+     overlay: "overlay";
+     saturation: "saturation";
+     screen: "screen";
+     soft-light: "soft-light";
+  }>>;
+  box: ZodOptional<ZodObject<{
+     height: ZodOptional<ZodNumber>;
+     overflow: ZodDefault<ZodEnum<{
+        clip: "clip";
+        visible: "visible";
+     }>>;
+     width: ZodNumber;
+  }, $strip>>;
+  durationMs: ZodNumber;
+  effects: ZodOptional<ZodArray<ZodType<Effect, unknown, $ZodTypeInternals<Effect, unknown>>>>;
+  id: ZodCustom<`e-${string}`, `e-${string}`>;
+  keyframes: ZodOptional<ZodRecord<ZodEnum<{
+     blur: "blur";
+     letterSpacing: "letterSpacing";
+     opacity: "opacity";
+     position.x: "position.x";
+     position.y: "position.y";
+     rotation: "rotation";
+     scale.x: "scale.x";
+     scale.y: "scale.y";
+     volume: "volume";
+   }> & $partial, ZodArray<ZodObject<{
+     easing: ZodOptional<ZodUnion<readonly [ZodEnum<...>, ZodObject<..., ...>]>>;
+     timeMs: ZodNumber;
+     value: ZodNumber;
+  }, $strip>>>>;
+  linkId: ZodOptional<ZodString>;
+  motionBlur: ZodOptional<ZodObject<{
+     enabled: ZodDefault<ZodBoolean>;
+     shutterAngle: ZodDefault<ZodNumber>;
+  }, $strip>>;
+  opacity: ZodDefault<ZodNumber>;
+  runs: ZodOptional<ZodArray<ZodObject<{
+     end: ZodNumber;
+     start: ZodNumber;
+     style: ZodObject<{
+        color: ZodOptional<ZodString>;
+        fontStyle: ZodOptional<ZodEnum<{
+           italic: ...;
+           normal: ...;
+        }>>;
+        fontWeight: ZodOptional<ZodNumber>;
+     }, $strip>;
+  }, $strip>>>;
+  startMs: ZodNumber;
+  style: ZodPrefault<ZodObject<{
+     align: ZodDefault<ZodEnum<{
+        center: "center";
+        left: "left";
+        right: "right";
+     }>>;
+     backgroundColor: ZodOptional<ZodString>;
+     color: ZodDefault<ZodString>;
+     fontFamily: ZodDefault<ZodString>;
+     fontSize: ZodDefault<ZodNumber>;
+     fontStyle: ZodDefault<ZodEnum<{
+        italic: "italic";
+        normal: "normal";
+     }>>;
+     fontWeight: ZodDefault<ZodNumber>;
+     letterSpacing: ZodDefault<ZodNumber>;
+     lineHeight: ZodDefault<ZodNumber>;
+     shadow: ZodOptional<ZodObject<{
+        blur: ZodDefault<ZodNumber>;
+        color: ZodDefault<ZodString>;
+        offsetX: ZodDefault<ZodNumber>;
+        offsetY: ZodDefault<ZodNumber>;
+     }, $strip>>;
+     stroke: ZodOptional<ZodObject<{
+        color: ZodDefault<ZodString>;
+        width: ZodNumber;
+     }, $strip>>;
+     textTransform: ZodDefault<ZodEnum<{
+        lowercase: "lowercase";
+        none: "none";
+        uppercase: "uppercase";
+     }>>;
+  }, $strip>>;
+  text: ZodString;
+  transform: ZodPrefault<ZodObject<{
+     rotation: ZodDefault<ZodNumber>;
+     scaleX: ZodDefault<ZodNumber>;
+     scaleY: ZodDefault<ZodNumber>;
+     x: ZodDefault<ZodNumber>;
+     y: ZodDefault<ZodNumber>;
+  }, $strip>>;
+  transition: ZodOptional<ZodObject<{
+     durationMs: ZodDefault<ZodNumber>;
+     type: ZodString;
+  }, $strip>>;
+  type: ZodLiteral<"text">;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/model.ts:342](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L342)

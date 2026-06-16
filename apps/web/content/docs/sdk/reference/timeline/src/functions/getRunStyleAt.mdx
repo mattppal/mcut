@@ -1,0 +1,52 @@
+---
+title: "getRunStyleAt"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getRunStyleAt
+
+# Function: getRunStyleAt()
+
+```ts
+function getRunStyleAt(runs, offset): object;
+```
+
+Defined in: [packages/timeline/src/rich-text.ts:71](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/rich-text.ts#L71)
+
+The effective override style at a character offset (\{\} when none).
+
+## Parameters
+
+### runs
+
+readonly `object`[]
+
+### offset
+
+`number`
+
+## Returns
+
+### color?
+
+```ts
+optional color?: string;
+```
+
+Any CSS color; overrides the base fill for the range.
+
+### fontStyle?
+
+```ts
+optional fontStyle?: "normal" | "italic";
+```
+
+### fontWeight?
+
+```ts
+optional fontWeight?: number;
+```

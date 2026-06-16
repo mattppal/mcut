@@ -1,0 +1,53 @@
+---
+title: "insertElementOnTrack"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / insertElementOnTrack
+
+# Function: insertElementOnTrack()
+
+```ts
+function insertElementOnTrack(
+   engine, 
+   trackId, 
+   element, 
+   startMs, 
+   editMode?): string;
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:208](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L208)
+
+Place an element on a specific track near `startMs`. In `normal` mode the
+position clamps to free space; `overwrite` and `insert` keep the requested
+position and let the engine carve or ripple (see addElement's editMode).
+
+## Parameters
+
+### engine
+
+`EditorEngine`
+
+### trackId
+
+`` `t-${string}` ``
+
+### element
+
+`TimelineElementInput`
+
+### startMs
+
+`number`
+
+### editMode?
+
+`"normal"` \| `"overwrite"` \| `"insert"`
+
+## Returns
+
+`string`

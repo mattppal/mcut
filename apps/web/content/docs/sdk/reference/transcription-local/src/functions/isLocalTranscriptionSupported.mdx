@@ -1,0 +1,26 @@
+---
+title: "isLocalTranscriptionSupported"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / isLocalTranscriptionSupported
+
+# Function: isLocalTranscriptionSupported()
+
+```ts
+function isLocalTranscriptionSupported(): boolean;
+```
+
+Defined in: [packages/transcription-local/src/index.ts:61](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/index.ts#L61)
+
+Hard capability gate: WebGPU plus ≥4GB device memory. Browsers that don't
+report `deviceMemory` (Safari/Firefox) pass on WebGPU alone — the spec
+caps reported values at 8 anyway.
+
+## Returns
+
+`boolean`

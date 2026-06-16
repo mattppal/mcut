@@ -1,0 +1,11 @@
+{
+  "title": "@mcut/editor",
+  "pages": [
+    "index",
+    "...classes",
+    "...functions",
+    "...interfaces",
+    "...type-aliases",
+    "...variables"
+  ]
+}

@@ -1,0 +1,74 @@
+---
+title: "WebGPUBackendOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / WebGPUBackendOptions
+
+# Interface: WebGPUBackendOptions
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:41](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L41)
+
+The WebGPU compositor backend. Image quads (video/image elements)
+composite as full-frame passes over a ping-pong texture pair —
+`importExternalTexture` keeps `VideoFrame`s zero-copy — with effects as
+WGSL passes and every blend mode in one shader (mode uniform). Raster
+content (text, captions, multicam chrome, transitions, custom renderers)
+still paints through canvas2d in frame space and uploads as a texture
+layer in z-order, so output matches the reference Canvas2D backend.
+
+Lifecycle: `WebGPUBackend.create({ canvas, width, height })` once, then
+`renderFrameWith(backend, project, timeMs, options)` per frame, `resize`
+on project dimension changes, `dispose` when done. For export, pass the
+GPUTexture-backed canvas straight to Mediabunny's CanvasSource — no CPU
+readback.
+
+## Properties
+
+### canvas
+
+```ts
+canvas: HTMLCanvasElement | OffscreenCanvas;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:43](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L43)
+
+Presentation canvas; the backend configures its 'webgpu' context.
+
+***
+
+### device?
+
+```ts
+optional device?: GPUDevice;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:48](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L48)
+
+Bring your own device (tests/sharing); otherwise adapter-requested.
+
+***
+
+### height
+
+```ts
+height: number;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:46](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L46)
+
+***
+
+### width
+
+```ts
+width: number;
+```
+
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:45](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L45)
+
+Project (composition) size — passes render at this resolution.

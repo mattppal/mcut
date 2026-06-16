@@ -1,0 +1,28 @@
+---
+title: Editor
+description: UI-level editing operations over the timeline engine.
+---
+
+`@mcut/editor` turns editor intent into timeline commands. It handles operations
+such as split, duplicate, trim, selection edits, track actions, and keyframe
+helpers.
+
+Use it when an edit should behave like the UI instead of like a raw JSON patch.
+
+```sh
+bun add @mcut/editor @mcut/timeline
+```
+
+```ts
+import { splitSelectionAtPlayhead } from "@mcut/editor"
+
+splitSelectionAtPlayhead(engine)
+```
+
+The package also includes an operator registry for transports such as MCP.
+
+Read next:
+
+- [Commands vs operators](/docs/concepts/commands-vs-operators)
+- [Operators](/docs/reference/operators)
+- [SDK reference](/docs/sdk/reference/editor/src)

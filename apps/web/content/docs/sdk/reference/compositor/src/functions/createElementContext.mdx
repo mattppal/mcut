@@ -1,0 +1,136 @@
+---
+title: "createElementContext"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / createElementContext
+
+# Function: createElementContext()
+
+```ts
+function createElementContext(
+   backend, 
+   project, 
+   track, 
+   timeMs, 
+   source): ElementRenderContext;
+```
+
+Defined in: [packages/compositor/src/backend.ts:167](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L167)
+
+Build the per-element render context. `ctx` is a getter so backends learn
+when raster content is actually being drawn (GPU backends flush the
+raster surface lazily, in z-order).
+
+## Parameters
+
+### backend
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx)
+
+### project
+
+#### assets
+
+`z.ZodDefault`\<`z.ZodRecord`\<`z.ZodString`, `z.ZodObject`\<\{
+  `durationMs`: `z.ZodOptional`\<`z.ZodNumber`\>;
+  `hash`: `z.ZodOptional`\<`z.ZodString`\>;
+  `height`: `z.ZodOptional`\<`z.ZodNumber`\>;
+  `id`: `z.ZodCustom`\<`` `a-${string}` ``, `` `a-${string}` ``\>;
+  `kind`: `z.ZodEnum`\<\{
+     `audio`: `"audio"`;
+     `image`: `"image"`;
+     `video`: `"video"`;
+  \}\>;
+  `mimeType`: `z.ZodOptional`\<`z.ZodString`\>;
+  `name`: `z.ZodOptional`\<`z.ZodString`\>;
+  `nativePreview`: `z.ZodOptional`\<`z.ZodBoolean`\>;
+  `src`: `z.ZodString`;
+  `width`: `z.ZodOptional`\<`z.ZodNumber`\>;
+\}, `z.core.$strip`\>\>\>
+
+#### fps
+
+`number`
+
+#### height
+
+`number`
+
+#### id
+
+`string`
+
+#### layouts
+
+`object`[]
+
+#### markers
+
+`object`[]
+
+#### name
+
+`string`
+
+#### presets
+
+`object`[]
+
+#### tracks
+
+`object`[]
+
+#### version
+
+`1`
+
+#### width
+
+`number`
+
+### track
+
+#### elements
+
+`TimelineElement`[]
+
+#### hidden
+
+`boolean`
+
+#### id
+
+`` `t-${string}` ``
+
+#### locked
+
+`boolean`
+
+#### magnetic
+
+`boolean`
+
+#### muted
+
+`boolean`
+
+#### name
+
+`string`
+
+### timeMs
+
+`number`
+
+### source
+
+[`FrameSource`](../interfaces/FrameSource.mdx) \| `undefined`
+
+## Returns
+
+[`ElementRenderContext`](../interfaces/ElementRenderContext.mdx)

@@ -1,0 +1,16 @@
+{
+  "title": "Generated API",
+  "defaultOpen": false,
+  "pages": [
+    "index",
+    "timeline",
+    "editor",
+    "compositor",
+    "media",
+    "react",
+    "transcription",
+    "transcription-ai-sdk",
+    "transcription-assemblyai",
+    "transcription-local"
+  ]
+}

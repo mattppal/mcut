@@ -1,0 +1,31 @@
+---
+title: "buildFilterString"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / buildFilterString
+
+# Function: buildFilterString()
+
+```ts
+function buildFilterString(effects): string;
+```
+
+Defined in: [packages/timeline/src/effects.ts:103](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L103)
+
+Compile an effect stack to a canvas2d/CSS filter string ('' when inert).
+Order matters: filters apply left to right, like the stack reads top down.
+
+## Parameters
+
+### effects
+
+readonly [`Effect`](../type-aliases/Effect.mdx)[] \| `undefined`
+
+## Returns
+
+`string`

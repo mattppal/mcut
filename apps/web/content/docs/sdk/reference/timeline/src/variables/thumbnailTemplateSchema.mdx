@@ -1,0 +1,58 @@
+---
+title: "thumbnailTemplateSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / thumbnailTemplateSchema
+
+# Variable: thumbnailTemplateSchema
+
+```ts
+const thumbnailTemplateSchema: ZodObject<{
+  items: ZodArray<ZodDiscriminatedUnion<[ZodObject<{
+     kind: ZodLiteral<"text">;
+     rect: ZodObject<{
+        h: ZodNumber;
+        w: ZodNumber;
+        x: ZodNumber;
+        y: ZodNumber;
+     }, $strip>;
+     role: ZodDefault<ZodString>;
+     style: ZodPrefault<ZodObject<{
+        align: ZodDefault<...>;
+        backgroundColor: ZodOptional<...>;
+        color: ZodDefault<...>;
+        fontFamily: ZodDefault<...>;
+        fontSize: ZodDefault<...>;
+        fontStyle: ZodDefault<...>;
+        fontWeight: ZodDefault<...>;
+        letterSpacing: ZodDefault<...>;
+        lineHeight: ZodDefault<...>;
+        shadow: ZodOptional<...>;
+        stroke: ZodOptional<...>;
+        textTransform: ZodDefault<...>;
+     }, $strip>>;
+     text: ZodString;
+   }, $strip>, ZodObject<{
+     fit: ZodDefault<ZodEnum<{
+        contain: "contain";
+        cover: "cover";
+     }>>;
+     kind: ZodLiteral<"slot">;
+     label: ZodDefault<ZodString>;
+     rect: ZodObject<{
+        h: ZodNumber;
+        w: ZodNumber;
+        x: ZodNumber;
+        y: ZodNumber;
+     }, $strip>;
+  }, $strip>], "kind">>;
+  name: ZodString;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/thumbnails.ts:51](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/thumbnails.ts#L51)

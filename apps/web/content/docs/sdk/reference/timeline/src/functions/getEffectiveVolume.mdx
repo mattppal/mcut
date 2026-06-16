@@ -1,0 +1,37 @@
+---
+title: "getEffectiveVolume"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getEffectiveVolume
+
+# Function: getEffectiveVolume()
+
+```ts
+function getEffectiveVolume(element, timelineMs): number;
+```
+
+Defined in: [packages/timeline/src/audio.ts:36](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio.ts#L36)
+
+The volume that actually plays at an absolute timeline time: the animated
+(or static) volume scaled by the fade envelope. The single seam preview
+sync, export mixing, and volume visualizations must share so they agree.
+0 for elements without volume (text, image, caption).
+
+## Parameters
+
+### element
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)
+
+### timelineMs
+
+`number`
+
+## Returns
+
+`number`

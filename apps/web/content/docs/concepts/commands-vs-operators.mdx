@@ -1,0 +1,45 @@
+---
+title: Commands vs operators
+description: When to use low-level mutations and when to use UI-level actions.
+---
+
+Commands and operators both change projects, but they answer different
+questions.
+
+## Commands
+
+Commands are exact project mutations from `@mcut/timeline`.
+
+Use a command when you already know the target ids and payload:
+
+```ts
+engine.dispatch({
+  type: "addTrack",
+  name: "Captions",
+})
+```
+
+Commands are serializable, zod-validated, undoable through `EditorEngine`, and
+safe to expose as MCP tools.
+
+## Operators
+
+Operators are user-level actions from `@mcut/editor`.
+
+Use an operator when current editor state matters:
+
+- playhead position
+- current selection
+- track placement
+- enabled/disabled state
+- UI parity
+
+For example, splitting selected clips at the playhead is an operator-shaped
+task. The caller should not need to compute every affected element manually.
+
+## Rule of thumb
+
+Use commands for exact edits. Use operators for editing intent.
+
+Agents should prefer operators when possible because operators encode the same
+preconditions and placement rules a UI would use.

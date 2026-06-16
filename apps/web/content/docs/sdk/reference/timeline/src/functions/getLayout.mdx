@@ -1,0 +1,72 @@
+---
+title: "getLayout"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getLayout
+
+# Function: getLayout()
+
+```ts
+function getLayout(layouts, layoutId): 
+  | {
+  id: string;
+  name: string;
+  slots: object[];
+}
+  | null;
+```
+
+Defined in: [packages/timeline/src/layouts.ts:91](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/layouts.ts#L91)
+
+The layout with this id, or null.
+
+## Parameters
+
+### layouts
+
+readonly `object`[]
+
+### layoutId
+
+`string`
+
+## Returns
+
+### Type Literal
+
+```ts
+{
+  id: string;
+  name: string;
+  slots: object[];
+}
+```
+
+#### id
+
+```ts
+id: string;
+```
+
+#### name
+
+```ts
+name: string;
+```
+
+#### slots
+
+```ts
+slots: object[];
+```
+
+Paint order: first slot is painted first (bottom).
+
+***
+
+`null`

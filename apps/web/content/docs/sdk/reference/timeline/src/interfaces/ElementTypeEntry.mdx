@@ -1,0 +1,195 @@
+---
+title: "ElementTypeEntry"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / ElementTypeEntry
+
+# Interface: ElementTypeEntry
+
+Defined in: [packages/timeline/src/element-registry.ts:19](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/element-registry.ts#L19)
+
+The element-type registry — mcut's ShapeUtil. An element type is a
+vocabulary entry in the document: its zod schemas (composed with the
+shared id/timing fields by `registerTimelineElementType` in model.ts),
+which fixed-effect properties animate, and the behavior hooks the engine
+consults (split, validation, summaries, frame decoding).
+
+The built-in types register through this exact API, so custom types are
+first-class: they parse in saved projects, split correctly, keyframe, and
+appear in agent summaries. Renderers live in @mcut/compositor's renderer
+registry and UI chrome in the webapp's element-ui registry — same `type`
+key, layered packages.
+
+Register custom types at module load, before parsing or editing projects.
+
+## Properties
+
+### describe?
+
+```ts
+optional describe?: (element, project) => string;
+```
+
+Defined in: [packages/timeline/src/element-registry.ts:42](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/element-registry.ts#L42)
+
+One-line agent-facing description (summarizeProject).
+
+#### Parameters
+
+##### element
+
+`Record`\<`string`, `unknown`\>
+
+##### project
+
+`unknown`
+
+#### Returns
+
+`string`
+
+***
+
+### frameRequests?
+
+```ts
+optional frameRequests?: (project, element, timelineMs) => object[];
+```
+
+Defined in: [packages/timeline/src/element-registry.ts:44](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/element-registry.ts#L44)
+
+Decode requests for a frame — the render/decode parity seam.
+
+#### Parameters
+
+##### project
+
+`unknown`
+
+##### element
+
+`Record`\<`string`, `unknown`\>
+
+##### timelineMs
+
+`number`
+
+#### Returns
+
+`object`[]
+
+***
+
+### fullSchema
+
+```ts
+fullSchema: ZodType;
+```
+
+Defined in: [packages/timeline/src/element-registry.ts:22](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/element-registry.ts#L22)
+
+Composed schema: \{ id, type, timing…, …own fields \}.
+
+***
+
+### inputSchema
+
+```ts
+inputSchema: ZodType;
+```
+
+Defined in: [packages/timeline/src/element-registry.ts:24](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/element-registry.ts#L24)
+
+Same with `id` optional (generated on insert).
+
+***
+
+### keyframeable
+
+```ts
+keyframeable: readonly string[];
+```
+
+Defined in: [packages/timeline/src/element-registry.ts:26](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/element-registry.ts#L26)
+
+Fixed-effect properties this type animates (see keyframes.ts).
+
+***
+
+### onSplit?
+
+```ts
+optional onSplit?: (context) => void;
+```
+
+Defined in: [packages/timeline/src/element-registry.ts:33](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/element-registry.ts#L33)
+
+Adjust the two halves of a split (mutate the draft copies). The engine
+has already divided `keyframes` continuously and set the halves' timing;
+implement source bookkeeping here (advancing trims, dividing a timeMap,
+splitting a word list).
+
+#### Parameters
+
+##### context
+
+###### element
+
+`Record`\<`string`, `unknown`\>
+
+###### left
+
+`Record`\<`string`, `unknown`\>
+
+###### offsetMs
+
+`number`
+
+###### right
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`void`
+
+***
+
+### type
+
+```ts
+type: string;
+```
+
+Defined in: [packages/timeline/src/element-registry.ts:20](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/element-registry.ts#L20)
+
+***
+
+### validate?
+
+```ts
+optional validate?: (project, element) => void;
+```
+
+Defined in: [packages/timeline/src/element-registry.ts:40](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/element-registry.ts#L40)
+
+Validate against the project (throw CommandError-likes to reject).
+
+#### Parameters
+
+##### project
+
+`unknown`
+
+##### element
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`void`

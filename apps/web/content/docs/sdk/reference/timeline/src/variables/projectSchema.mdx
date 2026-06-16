@@ -1,0 +1,80 @@
+---
+title: "projectSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / projectSchema
+
+# Variable: projectSchema
+
+```ts
+const projectSchema: ZodObject<{
+  assets: ZodDefault<ZodRecord<ZodString, ZodObject<{
+     durationMs: ZodOptional<ZodNumber>;
+     hash: ZodOptional<ZodString>;
+     height: ZodOptional<ZodNumber>;
+     id: ZodCustom<`a-${string}`, `a-${string}`>;
+     kind: ZodEnum<{
+        audio: "audio";
+        image: "image";
+        video: "video";
+     }>;
+     mimeType: ZodOptional<ZodString>;
+     name: ZodOptional<ZodString>;
+     nativePreview: ZodOptional<ZodBoolean>;
+     src: ZodString;
+     width: ZodOptional<ZodNumber>;
+  }, $strip>>>;
+  fps: ZodNumber;
+  height: ZodNumber;
+  id: ZodString;
+  layouts: ZodDefault<ZodArray<ZodObject<{
+     id: ZodString;
+     name: ZodString;
+     slots: ZodArray<ZodObject<{
+        cornerRadius: ZodDefault<ZodNumber>;
+        fit: ZodDefault<ZodEnum<...>>;
+        focus: ZodDefault<ZodObject<..., ...>>;
+        rect: ZodObject<{
+           h: ...;
+           w: ...;
+           x: ...;
+           y: ...;
+        }, $strip>;
+        shadow: ZodDefault<ZodBoolean>;
+        source: ZodString;
+        stroke: ZodOptional<ZodObject<..., ...>>;
+     }, $strip>>;
+  }, $strip>>>;
+  markers: ZodDefault<ZodArray<ZodObject<{
+     color: ZodOptional<ZodString>;
+     id: ZodCustom<`m-${string}`, `m-${string}`>;
+     label: ZodOptional<ZodString>;
+     timeMs: ZodNumber;
+  }, $strip>>>;
+  name: ZodString;
+  presets: ZodDefault<ZodArray<ZodObject<{
+     id: ZodString;
+     kind: ZodString;
+     name: ZodString;
+     values: ZodRecord<ZodString, ZodUnknown>;
+  }, $strip>>>;
+  tracks: ZodDefault<ZodArray<ZodObject<{
+     elements: ZodDefault<ZodArray<ZodType<TimelineElement, unknown, $ZodTypeInternals<TimelineElement, unknown>>>>;
+     hidden: ZodDefault<ZodBoolean>;
+     id: ZodCustom<`t-${string}`, `t-${string}`>;
+     locked: ZodDefault<ZodBoolean>;
+     magnetic: ZodDefault<ZodBoolean>;
+     muted: ZodDefault<ZodBoolean>;
+     name: ZodString;
+  }, $strip>>>;
+  version: ZodDefault<ZodLiteral<1>>;
+  width: ZodNumber;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/model.ts:408](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L408)

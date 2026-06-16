@@ -1,0 +1,53 @@
+---
+title: "applyRunStyle"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / applyRunStyle
+
+# Function: applyRunStyle()
+
+```ts
+function applyRunStyle(
+   runs, 
+   start, 
+   end, 
+   patch, 
+   textLength): object[];
+```
+
+Defined in: [packages/timeline/src/rich-text.ts:88](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/rich-text.ts#L88)
+
+Apply a style patch over [start, end): existing overrides in the range
+are merged with the patch (null entries clear), runs outside the range
+are untouched, and partially-covered runs split at the boundaries.
+
+## Parameters
+
+### runs
+
+readonly `object`[]
+
+### start
+
+`number`
+
+### end
+
+`number`
+
+### patch
+
+[`TextRunStylePatch`](../type-aliases/TextRunStylePatch.mdx)
+
+### textLength
+
+`number`
+
+## Returns
+
+`object`[]

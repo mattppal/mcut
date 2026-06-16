@@ -1,0 +1,32 @@
+---
+title: "mapCaptionWords"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / mapCaptionWords
+
+# Function: mapCaptionWords()
+
+```ts
+function mapCaptionWords(caption): MappedWord[] | null;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:56](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L56)
+
+Locate each timed word inside the caption text (in order). Returns null
+when the words no longer correspond to the text — e.g. after a free-form
+manual edit — in which case callers degrade to caption-level behavior.
+
+## Parameters
+
+### caption
+
+[`TranscriptCaption`](../interfaces/TranscriptCaption.mdx)
+
+## Returns
+
+[`MappedWord`](../interfaces/MappedWord.mdx)[] \| `null`

@@ -1,0 +1,43 @@
+---
+title: "timeMapSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / timeMapSchema
+
+# Variable: timeMapSchema
+
+```ts
+const timeMapSchema: ZodArray<ZodObject<{
+  easing: ZodOptional<ZodUnion<readonly [ZodEnum<{
+     easeIn: "easeIn";
+     easeInOut: "easeInOut";
+     easeOut: "easeOut";
+     hold: "hold";
+     linear: "linear";
+   }>, ZodObject<{
+     cubicBezier: ZodTuple<[ZodNumber, ZodNumber, ZodNumber, ZodNumber], null>;
+  }, $strip>]>>;
+  timeMs: ZodNumber;
+  value: ZodNumber;
+}, $strip>>;
+```
+
+Defined in: [packages/timeline/src/speed.ts:18](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/speed.ts#L18)
+
+Time remapping (clip speed) as a keyframe curve, not a scalar rate.
+
+A `timeMap` maps element-local OUTPUT time (ms since the clip's start on
+the timeline) to a SOURCE offset (ms relative to `trimStartMs`). Constant
+speed is the degenerate two-keyframe linear map; bezier easing between
+keyframes is a speed ramp; a flat segment is a freeze-frame. Absent map =
+1x. Values must be monotone non-decreasing (no reverse playback — a
+deliberate v1 constraint, matching GES's invariants).
+
+Every mature NLE converged on this representation (libopenshot's `time`
+keyframe, MLT's `timeremap` link, Blender's retiming keys); a scalar
+`playbackRate` cannot express ramps and gets migrated away eventually.

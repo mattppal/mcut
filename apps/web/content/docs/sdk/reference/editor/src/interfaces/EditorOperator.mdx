@@ -1,0 +1,127 @@
+---
+title: "EditorOperator\\<Input, Output\\>"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / EditorOperator
+
+# Interface: EditorOperator\<Input, Output\>
+
+Defined in: [packages/editor/src/operators.ts:22](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L22)
+
+## Type Parameters
+
+### Input
+
+`Input` = `unknown`
+
+### Output
+
+`Output` = `unknown`
+
+## Properties
+
+### category
+
+```ts
+category: OperatorCategory;
+```
+
+Defined in: [packages/editor/src/operators.ts:27](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L27)
+
+***
+
+### description
+
+```ts
+description: string;
+```
+
+Defined in: [packages/editor/src/operators.ts:26](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L26)
+
+***
+
+### enabled?
+
+```ts
+optional enabled?: (context, input) => EnabledResult;
+```
+
+Defined in: [packages/editor/src/operators.ts:33](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L33)
+
+Whether this operator applies in the current editor state. Returning a
+reason lets agent transports explain why a user-level action is unavailable.
+
+#### Parameters
+
+##### context
+
+[`EditorOperatorContext`](EditorOperatorContext.mdx)
+
+##### input
+
+`Input`
+
+#### Returns
+
+[`EnabledResult`](../type-aliases/EnabledResult.mdx)
+
+***
+
+### id
+
+```ts
+id: string;
+```
+
+Defined in: [packages/editor/src/operators.ts:24](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L24)
+
+Stable id, e.g. "edit.splitSelectionAtPlayhead".
+
+***
+
+### inputSchema
+
+```ts
+inputSchema: ZodType<Input, unknown>;
+```
+
+Defined in: [packages/editor/src/operators.ts:28](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L28)
+
+***
+
+### label
+
+```ts
+label: string;
+```
+
+Defined in: [packages/editor/src/operators.ts:25](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L25)
+
+***
+
+### run
+
+```ts
+run: (context, input) => Output | Promise<Output>;
+```
+
+Defined in: [packages/editor/src/operators.ts:34](https://github.com/mattppal/mcut/blob/main/packages/editor/src/operators.ts#L34)
+
+#### Parameters
+
+##### context
+
+[`EditorOperatorContext`](EditorOperatorContext.mdx)
+
+##### input
+
+`Input`
+
+#### Returns
+
+`Output` \| `Promise`\<`Output`\>

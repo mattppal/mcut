@@ -1,0 +1,31 @@
+---
+title: "SnapTargetKind"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / SnapTargetKind
+
+# Type Alias: SnapTargetKind
+
+```ts
+type SnapTargetKind = "origin" | "clip-start" | "clip-end" | "marker" | "playhead";
+```
+
+Defined in: [packages/timeline/src/snap.ts:18](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/snap.ts#L18)
+
+Magnetic snapping for editing gestures (clip drag, trim, drop previews).
+
+Policy lives here so every gesture agrees on what attracts: clip edges,
+markers, the playhead, and timeline zero. Commands stay snapping-free —
+gestures snap, then dispatch (the OTIO data/policy boundary). Tolerance is
+the caller's concern: UIs convert a pixel radius through their zoom
+(`thresholdMs = SNAP_PX / pxPerMs`).
+
+Frame quantization is independent of magnetic snapping: pass `fps` and
+times that no target grabs still land on frame boundaries (the time.ts
+editing-surface contract). Disabling snapping disables the magnets, not
+frame accuracy.

@@ -1,0 +1,12 @@
+{
+  "title": "Packages",
+  "defaultOpen": false,
+  "pages": [
+    "timeline",
+    "editor",
+    "react",
+    "compositor",
+    "media",
+    "transcription"
+  ]
+}

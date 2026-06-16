@@ -1,0 +1,72 @@
+---
+title: "TranscriptResult"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / TranscriptResult
+
+# Interface: TranscriptResult
+
+Defined in: [packages/transcription/src/types.ts:17](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L17)
+
+Normalized transcription output, regardless of provider.
+
+## Properties
+
+### durationMs?
+
+```ts
+optional durationMs?: number;
+```
+
+Defined in: [packages/transcription/src/types.ts:21](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L21)
+
+***
+
+### language?
+
+```ts
+optional language?: string;
+```
+
+Defined in: [packages/transcription/src/types.ts:20](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L20)
+
+ISO-639-1 code when detected.
+
+***
+
+### segments
+
+```ts
+segments: TranscriptSegment[];
+```
+
+Defined in: [packages/transcription/src/types.ts:25](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L25)
+
+Sentence/utterance-level timings; may be empty.
+
+***
+
+### text
+
+```ts
+text: string;
+```
+
+Defined in: [packages/transcription/src/types.ts:18](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L18)
+
+***
+
+### words
+
+```ts
+words: TranscriptWord[];
+```
+
+Defined in: [packages/transcription/src/types.ts:23](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L23)
+
+Word-level timings; may be empty for providers without word granularity.

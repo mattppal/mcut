@@ -1,0 +1,125 @@
+---
+title: "layoutTextBlock"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / layoutTextBlock
+
+# Function: layoutTextBlock()
+
+```ts
+function layoutTextBlock(
+   measure, 
+   text, 
+   style, 
+   options?): TextBlockLayout;
+```
+
+Defined in: [packages/compositor/src/text.ts:246](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/text.ts#L246)
+
+Lay out a (possibly multi-line) text element. Lines come from explicit
+newlines only unless a text box width is provided.
+
+## Parameters
+
+### measure
+
+[`MeasureFn`](../type-aliases/MeasureFn.mdx)
+
+### text
+
+`string`
+
+### style
+
+#### align
+
+`"left"` \| `"center"` \| `"right"`
+
+#### backgroundColor?
+
+`string`
+
+#### color
+
+`string`
+
+#### fontFamily
+
+`string`
+
+#### fontSize
+
+`number`
+
+#### fontStyle
+
+`"normal"` \| `"italic"`
+
+#### fontWeight
+
+`number`
+
+#### letterSpacing
+
+`number`
+
+#### lineHeight
+
+`number`
+
+#### shadow?
+
+\{
+  `blur`: `number`;
+  `color`: `string`;
+  `offsetX`: `number`;
+  `offsetY`: `number`;
+\}
+
+#### shadow.blur
+
+`number`
+
+#### shadow.color
+
+`string`
+
+#### shadow.offsetX
+
+`number`
+
+#### shadow.offsetY
+
+`number`
+
+#### stroke?
+
+\{
+  `color`: `string`;
+  `width`: `number`;
+\}
+
+#### stroke.color
+
+`string`
+
+#### stroke.width
+
+`number`
+
+#### textTransform
+
+`"none"` \| `"uppercase"` \| `"lowercase"`
+
+### options?
+
+`TextBlockOptions` = `{}`
+
+## Returns
+
+[`TextBlockLayout`](../interfaces/TextBlockLayout.mdx)

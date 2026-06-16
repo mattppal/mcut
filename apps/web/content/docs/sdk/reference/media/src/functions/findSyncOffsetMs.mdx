@@ -1,0 +1,42 @@
+---
+title: "findSyncOffsetMs"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / findSyncOffsetMs
+
+# Function: findSyncOffsetMs()
+
+```ts
+function findSyncOffsetMs(
+   a, 
+   b, 
+options?): Promise<SyncResult | null>;
+```
+
+Defined in: [packages/media/src/audio-sync.ts:119](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L119)
+
+The sync offset between two recordings: how many ms after A's recording
+started did B's start. Null when either source has no audio.
+
+## Parameters
+
+### a
+
+[`MediaSourceLike`](../type-aliases/MediaSourceLike.mdx)
+
+### b
+
+[`MediaSourceLike`](../type-aliases/MediaSourceLike.mdx)
+
+### options?
+
+[`AudioSyncOptions`](../interfaces/AudioSyncOptions.mdx) = `{}`
+
+## Returns
+
+`Promise`\<[`SyncResult`](../interfaces/SyncResult.mdx) \| `null`\>

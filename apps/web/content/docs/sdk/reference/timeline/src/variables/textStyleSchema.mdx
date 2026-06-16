@@ -1,0 +1,50 @@
+---
+title: "textStyleSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / textStyleSchema
+
+# Variable: textStyleSchema
+
+```ts
+const textStyleSchema: ZodPrefault<ZodObject<{
+  align: ZodDefault<ZodEnum<{
+     center: "center";
+     left: "left";
+     right: "right";
+  }>>;
+  backgroundColor: ZodOptional<ZodString>;
+  color: ZodDefault<ZodString>;
+  fontFamily: ZodDefault<ZodString>;
+  fontSize: ZodDefault<ZodNumber>;
+  fontStyle: ZodDefault<ZodEnum<{
+     italic: "italic";
+     normal: "normal";
+  }>>;
+  fontWeight: ZodDefault<ZodNumber>;
+  letterSpacing: ZodDefault<ZodNumber>;
+  lineHeight: ZodDefault<ZodNumber>;
+  shadow: ZodOptional<ZodObject<{
+     blur: ZodDefault<ZodNumber>;
+     color: ZodDefault<ZodString>;
+     offsetX: ZodDefault<ZodNumber>;
+     offsetY: ZodDefault<ZodNumber>;
+  }, $strip>>;
+  stroke: ZodOptional<ZodObject<{
+     color: ZodDefault<ZodString>;
+     width: ZodNumber;
+  }, $strip>>;
+  textTransform: ZodDefault<ZodEnum<{
+     lowercase: "lowercase";
+     none: "none";
+     uppercase: "uppercase";
+  }>>;
+}, $strip>>;
+```
+
+Defined in: [packages/timeline/src/model.ts:89](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L89)

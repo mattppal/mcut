@@ -1,0 +1,29 @@
+---
+title: "TimelineElement"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / TimelineElement
+
+# Type Alias: TimelineElement
+
+```ts
+type TimelineElement = 
+  | VideoElement
+  | AudioElement
+  | ImageElement
+  | TextElement
+  | CaptionElement
+  | MulticamElement;
+```
+
+Defined in: [packages/timeline/src/model.ts:451](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L451)
+
+Named to avoid colliding with the DOM `Element` type. Statically this is
+the union of BUILT-IN types; custom registered types parse at runtime and
+surface as this union (consumers narrowing on `type` fall through their
+default branches; plugin code casts to its own type).

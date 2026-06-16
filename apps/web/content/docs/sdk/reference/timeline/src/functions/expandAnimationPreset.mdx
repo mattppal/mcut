@@ -1,0 +1,76 @@
+---
+title: "expandAnimationPreset"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / expandAnimationPreset
+
+# Function: expandAnimationPreset()
+
+```ts
+function expandAnimationPreset(
+   element, 
+   preset, 
+   options?): KeyframeMap;
+```
+
+Defined in: [packages/timeline/src/animation-presets.ts:459](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/animation-presets.ts#L459)
+
+Expand a preset into keyframe tracks for `element`, merged (upserted) into
+any existing tracks. Pure; the `applyAnimationPreset` reducer applies it.
+
+## Parameters
+
+### element
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)
+
+### preset
+
+  \| `"zoom-in"`
+  \| `"zoom-out"`
+  \| `"fade-in"`
+  \| `"slide-in"`
+  \| `"pop-in"`
+  \| `"scale-in"`
+  \| `"whip-in"`
+  \| `"blur-in"`
+  \| `"fade-out"`
+  \| `"slide-out"`
+  \| `"pop-out"`
+  \| `"whip-out"`
+  \| `"blur-out"`
+  \| `"ken-burns"`
+  \| `"punch-zoom"`
+  \| `"pulse"`
+  \| `"breathe"`
+  \| `"float"`
+  \| `"sway"`
+  \| `"shake"`
+
+### options?
+
+#### direction?
+
+`"left"` \| `"right"` \| `"up"` \| `"down"` = `...`
+
+#### durationMs?
+
+`number` = `...`
+
+Length of the enter/exit portion, or the half-cycle of a looping preset.
+Defaults are per-preset (see ANIMATION_PRESET_DEFAULT_DURATION_MS).
+
+#### intensity?
+
+`number` = `...`
+
+Effect magnitude multiplier. Default 1.
+
+## Returns
+
+[`KeyframeMap`](../type-aliases/KeyframeMap.mdx)

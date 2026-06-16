@@ -1,0 +1,11 @@
+{
+  "title": "Concepts",
+  "defaultOpen": true,
+  "pages": [
+    "project-model",
+    "package-architecture",
+    "commands-vs-operators",
+    "runtime-compatibility",
+    "extension-points"
+  ]
+}

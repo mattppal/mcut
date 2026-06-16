@@ -1,0 +1,49 @@
+---
+title: "layoutSlotSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / layoutSlotSchema
+
+# Variable: layoutSlotSchema
+
+```ts
+const layoutSlotSchema: ZodObject<{
+  cornerRadius: ZodDefault<ZodNumber>;
+  fit: ZodDefault<ZodEnum<{
+     contain: "contain";
+     cover: "cover";
+  }>>;
+  focus: ZodDefault<ZodObject<{
+     x: ZodNumber;
+     y: ZodNumber;
+  }, $strip>>;
+  rect: ZodObject<{
+     h: ZodNumber;
+     w: ZodNumber;
+     x: ZodNumber;
+     y: ZodNumber;
+  }, $strip>;
+  shadow: ZodDefault<ZodBoolean>;
+  source: ZodString;
+  stroke: ZodOptional<ZodObject<{
+     color: ZodDefault<ZodString>;
+     width: ZodNumber;
+  }, $strip>>;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/layouts.ts:15](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/layouts.ts#L15)
+
+Layouts: named arrangements of multicam sources on the canvas ("screen +
+camera PiP", "camera full", …). A layout is pure data — slot rects in
+normalized canvas coordinates — resolved at render time by the multicam
+renderer, and equally usable outside multicam to position plain clips.
+
+Layouts referenced by a project's multicam clips live IN the project
+(`project.layouts`) so documents stay self-contained; app-level template
+libraries are just a palette that copies layouts in.

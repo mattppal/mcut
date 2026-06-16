@@ -1,0 +1,93 @@
+---
+title: "RenderFrameOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / RenderFrameOptions
+
+# Interface: RenderFrameOptions
+
+Defined in: [packages/compositor/src/types.ts:20](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L20)
+
+## Properties
+
+### backgroundColor?
+
+```ts
+optional backgroundColor?: string;
+```
+
+Defined in: [packages/compositor/src/types.ts:24](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L24)
+
+Canvas background. Default black.
+
+***
+
+### createScratchContext?
+
+```ts
+optional createScratchContext?: (width, height) => Canvas2D | null;
+```
+
+Defined in: [packages/compositor/src/types.ts:41](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L41)
+
+Scratch surface factory for motion-blur accumulation; the context is
+cleared before each use. Defaults to a cached `OffscreenCanvas` —
+environments without one (and tests) inject this. Return null to
+disable motion blur.
+
+#### Parameters
+
+##### width
+
+`number`
+
+##### height
+
+`number`
+
+#### Returns
+
+[`Canvas2D`](../type-aliases/Canvas2D.mdx) \| `null`
+
+***
+
+### motionBlurSamples?
+
+```ts
+optional motionBlurSamples?: number;
+```
+
+Defined in: [packages/compositor/src/types.ts:34](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L34)
+
+Sub-frame passes for per-element motion blur (see `motion-blur.ts`).
+Default 8; export passes 16.
+
+***
+
+### skipElementIds?
+
+```ts
+optional skipElementIds?: ReadonlySet<string>;
+```
+
+Defined in: [packages/compositor/src/types.ts:29](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L29)
+
+Elements to leave out of the frame — e.g. a text element while a DOM
+inline editor is overlaid on it (the editor IS its WYSIWYG render).
+
+***
+
+### source?
+
+```ts
+optional source?: FrameSource;
+```
+
+Defined in: [packages/compositor/src/types.ts:22](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L22)
+
+Pixel source for video/image assets. Omit to render only vector elements.

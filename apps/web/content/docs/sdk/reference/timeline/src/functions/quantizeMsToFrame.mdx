@@ -1,0 +1,42 @@
+---
+title: "quantizeMsToFrame"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / quantizeMsToFrame
+
+# Function: quantizeMsToFrame()
+
+```ts
+function quantizeMsToFrame(
+   timeMs, 
+   fps, 
+   mode?): number;
+```
+
+Defined in: [packages/timeline/src/time.ts:35](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/time.ts#L35)
+
+Snap a timestamp to the nearest frame boundary, in integer ms.
+`quantizeMsToFrame(t, fps)` is idempotent up to ±1ms rounding.
+
+## Parameters
+
+### timeMs
+
+`number`
+
+### fps
+
+`number`
+
+### mode?
+
+`"round"` \| `"floor"` \| `"ceil"`
+
+## Returns
+
+`number`

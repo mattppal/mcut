@@ -1,0 +1,26 @@
+---
+title: "markerSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / markerSchema
+
+# Variable: markerSchema
+
+```ts
+const markerSchema: ZodObject<{
+  color: ZodOptional<ZodString>;
+  id: ZodCustom<`m-${string}`, `m-${string}`>;
+  label: ZodOptional<ZodString>;
+  timeMs: ZodNumber;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/model.ts:385](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L385)
+
+A timeline marker: a named point on the project's time ruler (navigation,
+notes, keyword hits). Markers live on the project, not on tracks/elements.

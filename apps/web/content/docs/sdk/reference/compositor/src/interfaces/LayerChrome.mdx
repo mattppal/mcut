@@ -1,0 +1,116 @@
+---
+title: "LayerChrome"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / LayerChrome
+
+# Interface: LayerChrome
+
+Defined in: [packages/compositor/src/backend.ts:31](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L31)
+
+Resolved element chrome: transform in frame coords + compositing state.
+
+## Properties
+
+### blendMode?
+
+```ts
+optional blendMode?: 
+  | "color"
+  | "normal"
+  | "multiply"
+  | "screen"
+  | "overlay"
+  | "darken"
+  | "lighten"
+  | "color-dodge"
+  | "color-burn"
+  | "hard-light"
+  | "soft-light"
+  | "difference"
+  | "exclusion"
+  | "hue"
+  | "saturation"
+  | "luminosity";
+```
+
+Defined in: [packages/compositor/src/backend.ts:40](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L40)
+
+***
+
+### centerX
+
+```ts
+centerX: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:33](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L33)
+
+Element center in canvas coordinates.
+
+***
+
+### centerY
+
+```ts
+centerY: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:34](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L34)
+
+***
+
+### effects?
+
+```ts
+optional effects?: readonly Effect[];
+```
+
+Defined in: [packages/compositor/src/backend.ts:41](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L41)
+
+***
+
+### opacity
+
+```ts
+opacity: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:39](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L39)
+
+0..1, multiplied into the layer.
+
+***
+
+### rotationDeg
+
+```ts
+rotationDeg: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:35](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L35)
+
+***
+
+### scaleX
+
+```ts
+scaleX: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:36](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L36)
+
+***
+
+### scaleY
+
+```ts
+scaleY: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:37](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L37)

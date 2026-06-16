@@ -1,0 +1,55 @@
+---
+title: "createAssetFromFile"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / createAssetFromFile
+
+# Function: createAssetFromFile()
+
+```ts
+function createAssetFromFile(file): Promise<{
+  durationMs?: number;
+  hash?: string;
+  height?: number;
+  id: `a-${string}`;
+  kind: "video" | "audio" | "image";
+  mimeType?: string;
+  name?: string;
+  nativePreview?: boolean;
+  src: string;
+  width?: number;
+}>;
+```
+
+Defined in: [packages/media/src/probe.ts:206](https://github.com/mattppal/mcut/blob/main/packages/media/src/probe.ts#L206)
+
+Turn a dropped/picked file into a probed [AssetRef](/docs/sdk/reference/timeline/src/type-aliases/AssetRef) ready for the
+`addAsset` command. Creates an object URL for `src` — callers own its
+lifetime (revoke when the asset is removed). `hash` (SHA-256) is the
+asset's stable identity for persistence/relink; very large files skip it.
+
+## Parameters
+
+### file
+
+`File`
+
+## Returns
+
+`Promise`\<\{
+  `durationMs?`: `number`;
+  `hash?`: `string`;
+  `height?`: `number`;
+  `id`: `` `a-${string}` ``;
+  `kind`: `"video"` \| `"audio"` \| `"image"`;
+  `mimeType?`: `string`;
+  `name?`: `string`;
+  `nativePreview?`: `boolean`;
+  `src`: `string`;
+  `width?`: `number`;
+\}\>

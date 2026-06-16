@@ -1,0 +1,86 @@
+---
+title: "expandThumbnailTemplate"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / expandThumbnailTemplate
+
+# Function: expandThumbnailTemplate()
+
+```ts
+function expandThumbnailTemplate(project, template): TimelineElement[];
+```
+
+Defined in: [packages/timeline/src/thumbnails.ts:95](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/thumbnails.ts#L95)
+
+Expand a template's TEXT items into elements for the Thumbnail track.
+Slots are panel affordances (filled with image elements by the UI), so
+they expand to nothing here.
+
+## Parameters
+
+### project
+
+`Pick`\<[`Project`](../type-aliases/Project.mdx), `"width"` \| `"height"` \| `"fps"`\>
+
+### template
+
+#### items
+
+(
+  \| \{
+  `kind`: `"text"`;
+  `rect`: \{
+     `h`: `number`;
+     `w`: `number`;
+     `x`: `number`;
+     `y`: `number`;
+  \};
+  `role`: `string`;
+  `style`: \{
+     `align`: `"left"` \| `"center"` \| `"right"`;
+     `backgroundColor?`: `string`;
+     `color`: `string`;
+     `fontFamily`: `string`;
+     `fontSize`: `number`;
+     `fontStyle`: `"normal"` \| `"italic"`;
+     `fontWeight`: `number`;
+     `letterSpacing`: `number`;
+     `lineHeight`: `number`;
+     `shadow?`: \{
+        `blur`: `number`;
+        `color`: `string`;
+        `offsetX`: `number`;
+        `offsetY`: `number`;
+     \};
+     `stroke?`: \{
+        `color`: `string`;
+        `width`: `number`;
+     \};
+     `textTransform`: `"none"` \| `"uppercase"` \| `"lowercase"`;
+  \};
+  `text`: `string`;
+\}
+  \| \{
+  `fit`: `"cover"` \| `"contain"`;
+  `kind`: `"slot"`;
+  `label`: `string`;
+  `rect`: \{
+     `h`: `number`;
+     `w`: `number`;
+     `x`: `number`;
+     `y`: `number`;
+  \};
+\})[] = `...`
+
+#### name
+
+`string` = `...`
+
+## Returns
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)[]

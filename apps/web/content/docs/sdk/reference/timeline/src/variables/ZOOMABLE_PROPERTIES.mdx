@@ -1,0 +1,25 @@
+---
+title: "ZOOMABLE\\_PROPERTIES"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / ZOOMABLE\_PROPERTIES
+
+# Variable: ZOOMABLE\_PROPERTIES
+
+```ts
+const ZOOMABLE_PROPERTIES: readonly ["position.x", "position.y", "scale.x", "scale.y"];
+```
+
+Defined in: [packages/timeline/src/zoom-presets.ts:21](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/zoom-presets.ts#L21)
+
+Saved zooms: relative keyframe patterns for the punch-in/punch-out moves a
+talking-head edit applies constantly. A preset stores NORMALIZED tracks —
+time as a 0..1 fraction of its duration, scale as a MULTIPLIER of the
+clip's current scale, position as a DELTA in project px — so one preset
+applies to any clip at any playhead position, at any duration, and expands
+into ordinary editable keyframes (the animation-preset philosophy).

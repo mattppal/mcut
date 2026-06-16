@@ -1,0 +1,81 @@
+---
+title: "splitKeyframes"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / splitKeyframes
+
+# Function: splitKeyframes()
+
+```ts
+function splitKeyframes(keyframes, offsetMs): object;
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:329](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L329)
+
+Split a keyframe map at element-local `offsetMs` (the cut point) into the
+tracks for the left and right halves. Boundary keyframes carry the
+evaluated value so motion stays continuous across the cut; the easing of a
+crossed segment is approximated on each side by the segment's own easing.
+
+## Parameters
+
+### keyframes
+
+  \| `Partial`\<`Record`\<
+  \| `"opacity"`
+  \| `"volume"`
+  \| `"blur"`
+  \| `"letterSpacing"`
+  \| `"rotation"`
+  \| `"position.x"`
+  \| `"position.y"`
+  \| `"scale.x"`
+  \| `"scale.y"`, `object`[]\>\>
+  \| `undefined`
+
+### offsetMs
+
+`number`
+
+## Returns
+
+`object`
+
+### left
+
+```ts
+left: 
+  | Partial<Record<
+  | "opacity"
+  | "volume"
+  | "blur"
+  | "letterSpacing"
+  | "rotation"
+  | "position.x"
+  | "position.y"
+  | "scale.x"
+  | "scale.y", object[]>>
+  | undefined;
+```
+
+### right
+
+```ts
+right: 
+  | Partial<Record<
+  | "opacity"
+  | "volume"
+  | "blur"
+  | "letterSpacing"
+  | "rotation"
+  | "position.x"
+  | "position.y"
+  | "scale.x"
+  | "scale.y", object[]>>
+  | undefined;
+```

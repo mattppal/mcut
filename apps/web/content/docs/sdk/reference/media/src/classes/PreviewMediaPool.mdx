@@ -1,0 +1,150 @@
+---
+title: "PreviewMediaPool"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / PreviewMediaPool
+
+# Class: PreviewMediaPool
+
+Defined in: [packages/media/src/preview-pool.ts:236](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L236)
+
+The approximate, low-latency [FrameSource](/docs/sdk/reference/compositor/src/interfaces/FrameSource) used for interactive
+preview: one pooled `<video>`/`<audio>` element per media asset, kept in
+sync with the playback clock, plus decoded `ImageBitmap`s for images.
+Audio plays through the media elements themselves (no Web Audio graph);
+the deterministic export pipeline is a separate implementation.
+
+Known approximation: two simultaneously-active elements sharing one asset
+share one media element, so they render the same source frame.
+
+## Implements
+
+- [`FrameSource`](/docs/sdk/reference/compositor/src/interfaces/FrameSource)
+
+## Constructors
+
+### Constructor
+
+```ts
+new PreviewMediaPool(resolveAsset): PreviewMediaPool;
+```
+
+Defined in: [packages/media/src/preview-pool.ts:245](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L245)
+
+#### Parameters
+
+##### resolveAsset
+
+(`assetId`) => 
+  \| \{
+  `durationMs?`: `number`;
+  `hash?`: `string`;
+  `height?`: `number`;
+  `id`: `` `a-${string}` ``;
+  `kind`: `"video"` \| `"audio"` \| `"image"`;
+  `mimeType?`: `string`;
+  `name?`: `string`;
+  `nativePreview?`: `boolean`;
+  `src`: `string`;
+  `width?`: `number`;
+\}
+  \| `undefined`
+
+#### Returns
+
+`PreviewMediaPool`
+
+## Methods
+
+### dispose()
+
+```ts
+dispose(): void;
+```
+
+Defined in: [packages/media/src/preview-pool.ts:408](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L408)
+
+#### Returns
+
+`void`
+
+***
+
+### getFrame()
+
+```ts
+getFrame(assetId, sourceTimeMs): CanvasImageSource | null;
+```
+
+Defined in: [packages/media/src/preview-pool.ts:247](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L247)
+
+Image for `assetId` at `sourceTimeMs` (media-local time, after trim).
+Return `null` when no frame is available yet; the compositor skips it.
+
+#### Parameters
+
+##### assetId
+
+`` `a-${string}` ``
+
+##### sourceTimeMs
+
+`number`
+
+#### Returns
+
+`CanvasImageSource` \| `null`
+
+#### Implementation of
+
+```ts
+FrameSource.getFrame
+```
+
+***
+
+### pauseAll()
+
+```ts
+pauseAll(): void;
+```
+
+Defined in: [packages/media/src/preview-pool.ts:402](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L402)
+
+Pause everything (e.g. when the player unmounts a project).
+
+#### Returns
+
+`void`
+
+***
+
+### sync()
+
+```ts
+sync(items, options): void;
+```
+
+Defined in: [packages/media/src/preview-pool.ts:292](https://github.com/mattppal/mcut/blob/main/packages/media/src/preview-pool.ts#L292)
+
+Reconcile pooled media elements with the items active under the
+playhead. Called by the playback loop every frame and on seeks.
+
+#### Parameters
+
+##### items
+
+[`ActiveMediaItem`](../interfaces/ActiveMediaItem.mdx)[]
+
+##### options
+
+[`PreviewSyncOptions`](../interfaces/PreviewSyncOptions.mdx)
+
+#### Returns
+
+`void`

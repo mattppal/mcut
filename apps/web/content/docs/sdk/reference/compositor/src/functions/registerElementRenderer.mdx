@@ -1,0 +1,42 @@
+---
+title: "registerElementRenderer"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / registerElementRenderer
+
+# Function: registerElementRenderer()
+
+```ts
+function registerElementRenderer<E>(type, renderer): void;
+```
+
+Defined in: [packages/compositor/src/renderers.ts:35](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/renderers.ts#L35)
+
+Register a renderer for an element type. Built-in types can be overridden;
+custom element types (added via custom commands) plug in here — the
+compositor side of the engine's command registry.
+
+## Type Parameters
+
+### E
+
+`E` *extends* `TimelineElement`
+
+## Parameters
+
+### type
+
+`string` & `object` \| `E`\[`"type"`\]
+
+### renderer
+
+[`ElementRenderer`](../type-aliases/ElementRenderer.mdx)\<`E`\>
+
+## Returns
+
+`void`

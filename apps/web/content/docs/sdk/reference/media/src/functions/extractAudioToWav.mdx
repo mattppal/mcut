@@ -1,0 +1,41 @@
+---
+title: "extractAudioToWav"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / extractAudioToWav
+
+# Function: extractAudioToWav()
+
+```ts
+function extractAudioToWav(src, options?): Promise<Blob | null>;
+```
+
+Defined in: [packages/media/src/extract-audio.ts:76](https://github.com/mattppal/mcut/blob/main/packages/media/src/extract-audio.ts#L76)
+
+Extract a file's audio track to a PCM WAV blob, fully client-side.
+Returns `null` when the file has no audio track. The default
+16 kHz/mono output keeps uploads to transcription APIs small.
+
+Resilience: when the resampled conversion fails (Mediabunny's resampler /
+channel mixer can throw "Assertion failed." on unusual source layouts),
+retry once WITHOUT resampling — the WAV is bigger but transcription APIs
+accept any PCM rate. Undecodable codecs fail fast with a clear error.
+
+## Parameters
+
+### src
+
+[`MediaSourceLike`](../type-aliases/MediaSourceLike.mdx)
+
+### options?
+
+[`ExtractAudioOptions`](../interfaces/ExtractAudioOptions.mdx) = `{}`
+
+## Returns
+
+`Promise`\<`Blob` \| `null`\>

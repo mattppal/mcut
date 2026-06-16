@@ -4,8 +4,15 @@
     "index",
     "quickstart",
     "agent-instructions",
+    "---Concepts---",
+    "...concepts",
+    "---Packages---",
+    "...packages",
+    "---Recipes---",
+    "...recipes",
     "...contributing",
     "---Reference---",
-    "...reference"
+    "...reference",
+    "troubleshooting"
   ]
 }

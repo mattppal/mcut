@@ -1,0 +1,158 @@
+---
+title: "RenderBackend"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / RenderBackend
+
+# Interface: RenderBackend
+
+Defined in: [packages/compositor/src/backend.ts:56](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L56)
+
+## Properties
+
+### height
+
+```ts
+readonly height: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:59](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L59)
+
+***
+
+### kind
+
+```ts
+readonly kind: string & object | "canvas2d" | "webgpu";
+```
+
+Defined in: [packages/compositor/src/backend.ts:57](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L57)
+
+***
+
+### width
+
+```ts
+readonly width: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:58](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L58)
+
+## Methods
+
+### acquireRaster()
+
+```ts
+acquireRaster(): Canvas2D;
+```
+
+Defined in: [packages/compositor/src/backend.ts:68](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L68)
+
+The frame-space canvas2d context for raster content. Acquiring it marks
+the raster surface dirty so the backend composites it in z-order;
+renderers that only need it for text measurement still go through here
+(text rasterizes anyway).
+
+#### Returns
+
+[`Canvas2D`](../type-aliases/Canvas2D.mdx)
+
+***
+
+### beginFrame()
+
+```ts
+beginFrame(backgroundColor): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:60](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L60)
+
+#### Parameters
+
+##### backgroundColor
+
+`string`
+
+#### Returns
+
+`void`
+
+***
+
+### drawImageQuad()
+
+```ts
+drawImageQuad(quad, chrome): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:74](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L74)
+
+Composite a media quad with chrome — the GPU fast path. Backends without
+one (or layers a backend cannot run, e.g. raw `css` filters on WebGPU)
+draw it through the raster context instead.
+
+#### Parameters
+
+##### quad
+
+[`ImageQuad`](ImageQuad.mdx)
+
+##### chrome
+
+[`LayerChrome`](LayerChrome.mdx)
+
+#### Returns
+
+`void`
+
+***
+
+### endFrame()
+
+```ts
+endFrame(): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:61](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L61)
+
+#### Returns
+
+`void`
+
+***
+
+### popRasterScope()
+
+```ts
+popRasterScope(): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:82](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L82)
+
+#### Returns
+
+`void`
+
+***
+
+### pushRasterScope()
+
+```ts
+pushRasterScope(): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:81](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L81)
+
+While a raster scope is open, every draw — including image quads — lands
+on the raster context, so canvas2d state (clips, alpha, transforms) set
+by the caller applies. Transition mixes and motion-blur accumulation
+need this. Scopes nest.
+
+#### Returns
+
+`void`

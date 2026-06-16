@@ -1,0 +1,37 @@
+---
+title: "getSourceSpanMs"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getSourceSpanMs
+
+# Function: getSourceSpanMs()
+
+```ts
+function getSourceSpanMs(element): number;
+```
+
+Defined in: [packages/timeline/src/speed.ts:69](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/speed.ts#L69)
+
+Source duration (ms) the element consumes. Without a timeMap this equals
+`durationMs`; with one it is the last keyframe's value (maps are monotone).
+
+## Parameters
+
+### element
+
+#### durationMs
+
+`number`
+
+#### timeMap?
+
+`object`[]
+
+## Returns
+
+`number`

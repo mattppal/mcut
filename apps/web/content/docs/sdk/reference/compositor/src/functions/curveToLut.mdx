@@ -1,0 +1,30 @@
+---
+title: "curveToLut"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / curveToLut
+
+# Function: curveToLut()
+
+```ts
+function curveToLut(points): Float32Array;
+```
+
+Defined in: [packages/compositor/src/webgpu/effect-plan.ts:60](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/effect-plan.ts#L60)
+
+Monotone-x piecewise-linear curve → 256-entry LUT (identity when empty).
+
+## Parameters
+
+### points
+
+readonly `CurvePoint`[] \| `undefined`
+
+## Returns
+
+`Float32Array`

@@ -1,0 +1,34 @@
+---
+title: "extractEnvelope"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / extractEnvelope
+
+# Function: extractEnvelope()
+
+```ts
+function extractEnvelope(src, __namedParameters?): Promise<Float32Array<ArrayBufferLike> | null>;
+```
+
+Defined in: [packages/media/src/audio-sync.ts:80](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L80)
+
+RMS envelope of the first `windowS` seconds at `rateHz` buckets/second.
+
+## Parameters
+
+### src
+
+[`MediaSourceLike`](../type-aliases/MediaSourceLike.mdx)
+
+### \_\_namedParameters?
+
+[`AudioSyncOptions`](../interfaces/AudioSyncOptions.mdx) = `{}`
+
+## Returns
+
+`Promise`\<`Float32Array`\<`ArrayBufferLike`\> \| `null`\>

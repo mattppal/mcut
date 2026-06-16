@@ -1,0 +1,34 @@
+---
+title: "mergeChunkWords"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / mergeChunkWords
+
+# Function: mergeChunkWords()
+
+```ts
+function mergeChunkWords(results): TranscriptWord[];
+```
+
+Defined in: [packages/transcription-local/src/chunking.ts:56](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/chunking.ts#L56)
+
+Merge consecutive chunk transcripts on word timestamps rather than
+concatenating: inside each overlap the cut lands on the largest silence
+between the incoming chunk's words (falling back to the overlap midpoint),
+the outgoing chunk keeps words before the cut, the incoming one after.
+This absorbs the timestamp drift Whisper accumulates near window edges.
+
+## Parameters
+
+### results
+
+[`ChunkResult`](../interfaces/ChunkResult.mdx)[]
+
+## Returns
+
+`TranscriptWord`[]

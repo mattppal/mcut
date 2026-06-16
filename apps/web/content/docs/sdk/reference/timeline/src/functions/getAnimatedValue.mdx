@@ -1,0 +1,50 @@
+---
+title: "getAnimatedValue"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getAnimatedValue
+
+# Function: getAnimatedValue()
+
+```ts
+function getAnimatedValue(
+   element, 
+   property, 
+   timelineMs): number;
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:226](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L226)
+
+Property value at an absolute timeline time: the keyframe track when armed,
+the static value otherwise.
+
+## Parameters
+
+### element
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)
+
+### property
+
+  \| `"opacity"`
+  \| `"volume"`
+  \| `"blur"`
+  \| `"letterSpacing"`
+  \| `"rotation"`
+  \| `"position.x"`
+  \| `"position.y"`
+  \| `"scale.x"`
+  \| `"scale.y"`
+
+### timelineMs
+
+`number`
+
+## Returns
+
+`number`

@@ -1,0 +1,44 @@
+---
+title: "SyncResult"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / SyncResult
+
+# Interface: SyncResult
+
+Defined in: [packages/media/src/audio-sync.ts:12](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L12)
+
+Audio-waveform autosync for multicam: two recordings of the same room
+align where their loudness envelopes correlate best. RMS envelopes at
+100Hz (10ms buckets) give talking-head-grade sync; normalized
+cross-correlation over a bounded lag search finds the offset, and the
+peak-vs-noise ratio doubles as a confidence score.
+
+## Properties
+
+### confidence
+
+```ts
+confidence: number;
+```
+
+Defined in: [packages/media/src/audio-sync.ts:16](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L16)
+
+Peak correlation ÷ runner-up — \<1.3 means "don't trust this".
+
+***
+
+### offsetMs
+
+```ts
+offsetMs: number;
+```
+
+Defined in: [packages/media/src/audio-sync.ts:14](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L14)
+
+How much B starts AFTER A in real time (negative = B started first).

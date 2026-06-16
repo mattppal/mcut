@@ -1,0 +1,174 @@
+---
+title: "getTrack"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getTrack
+
+# Function: getTrack()
+
+```ts
+function getTrack(project, trackId): 
+  | {
+  elements: TimelineElement[];
+  hidden: boolean;
+  id: `t-${string}`;
+  locked: boolean;
+  magnetic: boolean;
+  muted: boolean;
+  name: string;
+}
+  | undefined;
+```
+
+Defined in: [packages/timeline/src/selectors.ts:11](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L11)
+
+## Parameters
+
+### project
+
+#### assets
+
+`Record`\<`string`, \{
+  `durationMs?`: `number`;
+  `hash?`: `string`;
+  `height?`: `number`;
+  `id`: `` `a-${string}` ``;
+  `kind`: `"video"` \| `"audio"` \| `"image"`;
+  `mimeType?`: `string`;
+  `name?`: `string`;
+  `nativePreview?`: `boolean`;
+  `src`: `string`;
+  `width?`: `number`;
+\}\> = `...`
+
+#### fps
+
+`number` = `...`
+
+#### height
+
+`number` = `...`
+
+#### id
+
+`string` = `...`
+
+#### layouts
+
+`object`[] = `...`
+
+Multicam layout templates this project references. See layouts.ts.
+
+#### markers
+
+`object`[] = `...`
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+#### name
+
+`string` = `...`
+
+#### presets
+
+`object`[] = `...`
+
+Named inspector value bundles (style presets). See presets.ts.
+
+#### tracks
+
+`object`[] = `...`
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+#### version
+
+`1` = `...`
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+#### width
+
+`number` = `...`
+
+### trackId
+
+`` `t-${string}` ``
+
+## Returns
+
+### Type Literal
+
+```ts
+{
+  elements: TimelineElement[];
+  hidden: boolean;
+  id: `t-${string}`;
+  locked: boolean;
+  magnetic: boolean;
+  muted: boolean;
+  name: string;
+}
+```
+
+#### elements
+
+```ts
+elements: TimelineElement[];
+```
+
+Sorted by `startMs`; never overlapping in time.
+
+#### hidden
+
+```ts
+hidden: boolean;
+```
+
+Visuals from this track are not rendered.
+
+#### id
+
+```ts
+id: `t-${string}` = trackIdSchema;
+```
+
+#### locked
+
+```ts
+locked: boolean;
+```
+
+UI hint: track rejects edits. The engine does not enforce this.
+
+#### magnetic
+
+```ts
+magnetic: boolean;
+```
+
+When enabled, edits compact this track so clips keep no gaps between them.
+
+#### muted
+
+```ts
+muted: boolean;
+```
+
+Audio from this track is silenced.
+
+#### name
+
+```ts
+name: string;
+```
+
+***
+
+`undefined`

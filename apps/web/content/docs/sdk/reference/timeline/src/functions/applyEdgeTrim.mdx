@@ -1,0 +1,45 @@
+---
+title: "applyEdgeTrim"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / applyEdgeTrim
+
+# Function: applyEdgeTrim()
+
+```ts
+function applyEdgeTrim(
+   element, 
+   edge, 
+   deltaMs): TimelineElement;
+```
+
+Defined in: [packages/timeline/src/edge-trim.ts:37](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/edge-trim.ts#L37)
+
+Move one edge of an element by `deltaMs`, keeping its content anchored.
+Pure on the element; the caller re-validates (asset bounds) and re-places
+(overlaps). Throws CommandError on minimum-duration violations, negative
+trims, and unsupported combinations (growing the head of a reversed
+speed-ramped clip).
+
+## Parameters
+
+### element
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)
+
+### edge
+
+[`TrimEdge`](../type-aliases/TrimEdge.mdx)
+
+### deltaMs
+
+`number`
+
+## Returns
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)

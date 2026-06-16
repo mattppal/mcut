@@ -1,0 +1,112 @@
+---
+title: "PlayerCanvasProps"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [react/src](../index.mdx) / PlayerCanvasProps
+
+# Interface: PlayerCanvasProps
+
+Defined in: [packages/react/src/player-canvas.tsx:51](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L51)
+
+## Properties
+
+### background?
+
+```ts
+optional background?: string;
+```
+
+Defined in: [packages/react/src/player-canvas.tsx:56](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L56)
+
+Project background color. Default black.
+
+***
+
+### className?
+
+```ts
+optional className?: string;
+```
+
+Defined in: [packages/react/src/player-canvas.tsx:52](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L52)
+
+***
+
+### hiddenElementIds?
+
+```ts
+optional hiddenElementIds?: ReadonlySet<string>;
+```
+
+Defined in: [packages/react/src/player-canvas.tsx:61](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L61)
+
+Elements left out of the render — e.g. a text element while a DOM
+inline editor overlays it (renderFrame's skipElementIds).
+
+***
+
+### interactive?
+
+```ts
+optional interactive?: boolean;
+```
+
+Defined in: [packages/react/src/player-canvas.tsx:54](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L54)
+
+Enable canvas selection/move/resize/rotate. Default true.
+
+***
+
+### onElementDoubleClick?
+
+```ts
+optional onElementDoubleClick?: (elementId) => void;
+```
+
+Defined in: [packages/react/src/player-canvas.tsx:63](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L63)
+
+Double-click on an element (topmost hit). Hosts use it to open editors.
+
+#### Parameters
+
+##### elementId
+
+`` `e-${string}` ``
+
+#### Returns
+
+`void`
+
+***
+
+### quality?
+
+```ts
+optional quality?: PreviewQuality;
+```
+
+Defined in: [packages/react/src/player-canvas.tsx:70](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L70)
+
+Preview raster resolution; `'auto'` (default) matches the displayed
+size. A 4K project in an ~800px pane rasters ~20× fewer pixels per
+frame than `'full'`, which is usually the difference between smooth
+and dropped playback on big projects.
+
+***
+
+### renderer?
+
+```ts
+optional renderer?: "canvas2d" | "webgpu";
+```
+
+Defined in: [packages/react/src/player-canvas.tsx:76](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L76)
+
+Compositor backend. `'webgpu'` renders through the WebGPU pass
+pipeline (requires `navigator.gpu`; falls back to canvas2d when
+unavailable or when device initialization fails). Default `'webgpu'`.

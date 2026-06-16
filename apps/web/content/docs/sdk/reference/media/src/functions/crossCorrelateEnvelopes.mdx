@@ -1,0 +1,56 @@
+---
+title: "crossCorrelateEnvelopes"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / crossCorrelateEnvelopes
+
+# Function: crossCorrelateEnvelopes()
+
+```ts
+function crossCorrelateEnvelopes(
+   a, 
+   b, 
+   maxLagBuckets): object;
+```
+
+Defined in: [packages/media/src/audio-sync.ts:35](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-sync.ts#L35)
+
+Normalized cross-correlation of two zero-meaned envelopes. Returns the lag
+(in buckets) that best aligns `b` to `a`: positive lag means b's content
+happens LATER in its own file, i.e. b started recording earlier.
+Pure — unit-testable without decoding.
+
+## Parameters
+
+### a
+
+`Float32Array`
+
+### b
+
+`Float32Array`
+
+### maxLagBuckets
+
+`number`
+
+## Returns
+
+`object`
+
+### confidence
+
+```ts
+confidence: number;
+```
+
+### lag
+
+```ts
+lag: number;
+```

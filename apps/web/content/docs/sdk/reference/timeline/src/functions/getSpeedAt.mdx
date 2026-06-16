@@ -1,0 +1,42 @@
+---
+title: "getSpeedAt"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getSpeedAt
+
+# Function: getSpeedAt()
+
+```ts
+function getSpeedAt(
+   element, 
+   localMs, 
+   windowMs?): number;
+```
+
+Defined in: [packages/timeline/src/speed.ts:86](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/speed.ts#L86)
+
+Instantaneous speed (d source / d output) at element-local `localMs`,
+via central finite difference — robust for any easing. 0 inside a freeze.
+
+## Parameters
+
+### element
+
+[`TimeMappedElement`](../interfaces/TimeMappedElement.mdx)
+
+### localMs
+
+`number`
+
+### windowMs?
+
+`number` = `8`
+
+## Returns
+
+`number`

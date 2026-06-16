@@ -1,0 +1,51 @@
+---
+title: "AISDKTranscriptionProviderOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-ai-sdk/src](../index.mdx) / AISDKTranscriptionProviderOptions
+
+# Interface: AISDKTranscriptionProviderOptions
+
+Defined in: [packages/transcription-ai-sdk/src/index.ts:11](https://github.com/mattppal/mcut/blob/main/packages/transcription-ai-sdk/src/index.ts#L11)
+
+## Properties
+
+### id?
+
+```ts
+optional id?: string;
+```
+
+Defined in: [packages/transcription-ai-sdk/src/index.ts:20](https://github.com/mattppal/mcut/blob/main/packages/transcription-ai-sdk/src/index.ts#L20)
+
+Provider id for diagnostics. Default `'ai-sdk'`.
+
+***
+
+### model
+
+```ts
+model: TranscriptionModel;
+```
+
+Defined in: [packages/transcription-ai-sdk/src/index.ts:13](https://github.com/mattppal/mcut/blob/main/packages/transcription-ai-sdk/src/index.ts#L13)
+
+Any AI SDK transcription model, e.g. `openai.transcription('whisper-1')`.
+
+***
+
+### providerOptions?
+
+```ts
+optional providerOptions?: SharedV3ProviderOptions;
+```
+
+Defined in: [packages/transcription-ai-sdk/src/index.ts:18](https://github.com/mattppal/mcut/blob/main/packages/transcription-ai-sdk/src/index.ts#L18)
+
+Provider-specific options forwarded to the AI SDK, e.g.
+`{ openai: { timestampGranularities: ['word'] } }` for word timings.

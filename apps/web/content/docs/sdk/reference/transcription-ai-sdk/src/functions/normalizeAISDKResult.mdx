@@ -1,0 +1,33 @@
+---
+title: "normalizeAISDKResult"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-ai-sdk/src](../index.mdx) / normalizeAISDKResult
+
+# Function: normalizeAISDKResult()
+
+```ts
+function normalizeAISDKResult(result): TranscriptResult;
+```
+
+Defined in: [packages/transcription-ai-sdk/src/index.ts:37](https://github.com/mattppal/mcut/blob/main/packages/transcription-ai-sdk/src/index.ts#L37)
+
+Normalize an AI SDK transcription result to mcut's `TranscriptResult`.
+Word-granularity outputs (every segment a single word) are detected and
+exposed as `words` so captions get karaoke timings; sentence-level
+segments pass through as `segments`.
+
+## Parameters
+
+### result
+
+[`AISDKTranscriptionResultLike`](../interfaces/AISDKTranscriptionResultLike.mdx)
+
+## Returns
+
+`TranscriptResult`

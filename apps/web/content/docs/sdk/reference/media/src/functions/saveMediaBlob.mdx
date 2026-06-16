@@ -1,0 +1,34 @@
+---
+title: "saveMediaBlob"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / saveMediaBlob
+
+# Function: saveMediaBlob()
+
+```ts
+function saveMediaBlob(hash, blob): Promise<boolean>;
+```
+
+Defined in: [packages/media/src/media-store.ts:43](https://github.com/mattppal/mcut/blob/main/packages/media/src/media-store.ts#L43)
+
+Persist a blob under its hash. No-op when already stored (same content).
+
+## Parameters
+
+### hash
+
+`string`
+
+### blob
+
+`Blob`
+
+## Returns
+
+`Promise`\<`boolean`\>

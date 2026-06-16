@@ -1,0 +1,258 @@
+---
+title: "getMulticamSourceTimeMs"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / getMulticamSourceTimeMs
+
+# Function: getMulticamSourceTimeMs()
+
+```ts
+function getMulticamSourceTimeMs(
+   element, 
+   source, 
+   timelineMs): number;
+```
+
+Defined in: [packages/timeline/src/multicam.ts:46](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L46)
+
+Source media time for one multicam source at an absolute timeline time.
+The element-level timeMap (speed) applies first, then the source's trim.
+Clamped ≥ 0 — render and frame-request enumeration must agree exactly.
+
+## Parameters
+
+### element
+
+#### angles
+
+`object`[] = `...`
+
+#### angleTransition?
+
+\{
+  `durationMs`: `number`;
+  `type`: `string`;
+\} = `...`
+
+Uniform transition blended at EVERY angle cut (omit = hard jump cuts).
+One setting standardizes the whole switch list; the window is centered
+on each cut and clamped so neighboring windows never overlap.
+
+#### angleTransition.durationMs
+
+`number` = `...`
+
+Total blend window, centered on the cut.
+
+#### angleTransition.type
+
+`string` = `transitionTypeSchema`
+
+#### audioSource?
+
+`string` = `...`
+
+Key of the source whose audio plays (omit to mute all sources).
+
+#### blendMode?
+
+  \| `"color"`
+  \| `"normal"`
+  \| `"multiply"`
+  \| `"screen"`
+  \| `"overlay"`
+  \| `"darken"`
+  \| `"lighten"`
+  \| `"color-dodge"`
+  \| `"color-burn"`
+  \| `"hard-light"`
+  \| `"soft-light"`
+  \| `"difference"`
+  \| `"exclusion"`
+  \| `"hue"`
+  \| `"saturation"`
+  \| `"luminosity"` = `...`
+
+Compositing blend mode against the layers below. Absent = normal.
+
+#### durationMs
+
+`number` = `...`
+
+#### effects?
+
+[`Effect`](../type-aliases/Effect.mdx)[] = `...`
+
+Ordered effect stack, compiled to a canvas filter. See `effects.ts`.
+
+#### fadeInMs?
+
+`number` = `...`
+
+Audio fade-in length from the clip's start (ms). Absent = none.
+
+#### fadeOutMs?
+
+`number` = `...`
+
+Audio fade-out length before the clip's end (ms). Absent = none.
+
+#### id
+
+`` `e-${string}` `` = `elementIdSchema`
+
+#### keyframes?
+
+`Partial`\<`Record`\<
+  \| `"opacity"`
+  \| `"volume"`
+  \| `"blur"`
+  \| `"letterSpacing"`
+  \| `"rotation"`
+  \| `"position.x"`
+  \| `"position.y"`
+  \| `"scale.x"`
+  \| `"scale.y"`, `object`[]\>\> = `...`
+
+Armed fixed-effect properties (Premiere stopwatch on): per-property
+keyframe tracks, sorted and unique by element-local `timeMs`.
+
+#### linkId?
+
+`string` = `...`
+
+Elements sharing a `linkId` are linked (e.g. video + its detached audio):
+UIs select and move them together. The engine stores the linkage; it does
+not enforce cascading edits.
+
+#### motionBlur?
+
+\{
+  `enabled`: `boolean`;
+  `shutterAngle`: `number`;
+\} = `...`
+
+Sub-frame motion blur on keyframed transform motion. Absent = off.
+See `effects.ts`.
+
+#### motionBlur.enabled
+
+`boolean` = `...`
+
+#### motionBlur.shutterAngle
+
+`number` = `...`
+
+Shutter angle in degrees: 360° exposes the full frame interval, 180°
+(the default) is the film-camera look — half the interval.
+
+#### muted
+
+`boolean` = `...`
+
+#### opacity
+
+`number` = `...`
+
+#### sources
+
+`object`[] = `...`
+
+#### startMs
+
+`number` = `...`
+
+#### timeMap?
+
+`object`[] = `...`
+
+Time remap (speed) for the whole multicam; see `speed.ts`.
+
+#### transform
+
+\{
+  `rotation`: `number`;
+  `scaleX`: `number`;
+  `scaleY`: `number`;
+  `x`: `number`;
+  `y`: `number`;
+\} = `transformSchema`
+
+#### transform.rotation
+
+`number` = `...`
+
+#### transform.scaleX
+
+`number` = `...`
+
+#### transform.scaleY
+
+`number` = `...`
+
+#### transform.x
+
+`number` = `...`
+
+#### transform.y
+
+`number` = `...`
+
+#### transition?
+
+\{
+  `durationMs`: `number`;
+  `type`: `string`;
+\} = `...`
+
+Transition INTO the next exactly-adjacent clip on the same track; this
+element is the left side of the pair. See `transitions.ts`.
+
+#### transition.durationMs
+
+`number` = `...`
+
+Total blend window, centered on the cut.
+
+#### transition.type
+
+`string` = `transitionTypeSchema`
+
+#### type
+
+`"multicam"` = `...`
+
+#### volume
+
+`number` = `...`
+
+### source
+
+#### assetId
+
+`` `a-${string}` `` = `assetIdSchema`
+
+#### key
+
+`string` = `...`
+
+Role key referenced by layout slots ('screen', 'camera', ...).
+
+#### trimStartMs
+
+`number` = `...`
+
+Where this source's media starts at the multicam's start (also the sync nudge).
+
+### timelineMs
+
+`number`
+
+## Returns
+
+`number`

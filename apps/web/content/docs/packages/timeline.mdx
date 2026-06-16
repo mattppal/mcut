@@ -1,0 +1,28 @@
+---
+title: Timeline
+description: The headless project model and edit engine.
+---
+
+`@mcut/timeline` is the lowest package. It owns the project schema, commands,
+engine, undo/redo, selectors, timing helpers, effects, transitions, captions,
+and migrations.
+
+Use it when you need deterministic project edits without React or browser media
+APIs.
+
+```sh
+bun add @mcut/timeline
+```
+
+```ts
+import { EditorEngine, createProject } from "@mcut/timeline"
+
+const engine = new EditorEngine({ project: createProject({ name: "Demo" }) })
+engine.dispatch({ type: "addTrack", name: "Video" })
+```
+
+Read next:
+
+- [Project model](/docs/concepts/project-model)
+- [Commands](/docs/reference/commands)
+- [SDK reference](/docs/sdk/reference/timeline/src)

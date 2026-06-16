@@ -1,0 +1,231 @@
+---
+title: "Canvas2DBackend"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / Canvas2DBackend
+
+# Class: Canvas2DBackend
+
+Defined in: [packages/compositor/src/backend.ts:131](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L131)
+
+The canvas2d backend: draws straight into the target context.
+
+## Implements
+
+- [`RenderBackend`](../interfaces/RenderBackend.mdx)
+
+## Constructors
+
+### Constructor
+
+```ts
+new Canvas2DBackend(
+   ctx, 
+   width, 
+   height): Canvas2DBackend;
+```
+
+Defined in: [packages/compositor/src/backend.ts:134](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L134)
+
+#### Parameters
+
+##### ctx
+
+[`Canvas2D`](../type-aliases/Canvas2D.mdx)
+
+##### width
+
+`number`
+
+##### height
+
+`number`
+
+#### Returns
+
+`Canvas2DBackend`
+
+## Properties
+
+### height
+
+```ts
+readonly height: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:137](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L137)
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`height`](../interfaces/RenderBackend.mdx#height)
+
+***
+
+### kind
+
+```ts
+readonly kind: "canvas2d" = 'canvas2d';
+```
+
+Defined in: [packages/compositor/src/backend.ts:132](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L132)
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`kind`](../interfaces/RenderBackend.mdx#kind)
+
+***
+
+### width
+
+```ts
+readonly width: number;
+```
+
+Defined in: [packages/compositor/src/backend.ts:136](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L136)
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`width`](../interfaces/RenderBackend.mdx#width)
+
+## Methods
+
+### acquireRaster()
+
+```ts
+acquireRaster(): Canvas2D;
+```
+
+Defined in: [packages/compositor/src/backend.ts:150](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L150)
+
+The frame-space canvas2d context for raster content. Acquiring it marks
+the raster surface dirty so the backend composites it in z-order;
+renderers that only need it for text measurement still go through here
+(text rasterizes anyway).
+
+#### Returns
+
+[`Canvas2D`](../type-aliases/Canvas2D.mdx)
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`acquireRaster`](../interfaces/RenderBackend.mdx#acquireraster)
+
+***
+
+### beginFrame()
+
+```ts
+beginFrame(backgroundColor): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:140](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L140)
+
+#### Parameters
+
+##### backgroundColor
+
+`string`
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`beginFrame`](../interfaces/RenderBackend.mdx#beginframe)
+
+***
+
+### drawImageQuad()
+
+```ts
+drawImageQuad(quad, chrome): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:154](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L154)
+
+Composite a media quad with chrome — the GPU fast path. Backends without
+one (or layers a backend cannot run, e.g. raw `css` filters on WebGPU)
+draw it through the raster context instead.
+
+#### Parameters
+
+##### quad
+
+[`ImageQuad`](../interfaces/ImageQuad.mdx)
+
+##### chrome
+
+[`LayerChrome`](../interfaces/LayerChrome.mdx)
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`drawImageQuad`](../interfaces/RenderBackend.mdx#drawimagequad)
+
+***
+
+### endFrame()
+
+```ts
+endFrame(): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:146](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L146)
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`endFrame`](../interfaces/RenderBackend.mdx#endframe)
+
+***
+
+### popRasterScope()
+
+```ts
+popRasterScope(): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:159](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L159)
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`popRasterScope`](../interfaces/RenderBackend.mdx#poprasterscope)
+
+***
+
+### pushRasterScope()
+
+```ts
+pushRasterScope(): void;
+```
+
+Defined in: [packages/compositor/src/backend.ts:158](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L158)
+
+While a raster scope is open, every draw — including image quads — lands
+on the raster context, so canvas2d state (clips, alpha, transforms) set
+by the caller applies. Transition mixes and motion-blur accumulation
+need this. Scopes nest.
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`RenderBackend`](../interfaces/RenderBackend.mdx).[`pushRasterScope`](../interfaces/RenderBackend.mdx#pushrasterscope)

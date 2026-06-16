@@ -1,0 +1,50 @@
+---
+title: "splitTimeMap"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / splitTimeMap
+
+# Function: splitTimeMap()
+
+```ts
+function splitTimeMap(timeMap, offsetMs): object;
+```
+
+Defined in: [packages/timeline/src/speed.ts:110](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/speed.ts#L110)
+
+Split a timeMap at element-local `offsetMs` into maps for the two halves
+of a split clip. Both halves get an evaluated boundary keyframe so motion
+through the cut stays continuous; the right half's map is rebased so its
+values stay relative to the ORIGINAL `trimStartMs` (split does not change
+`trimStartMs` on time-mapped clips — the map carries the offset).
+
+## Parameters
+
+### timeMap
+
+`object`[]
+
+### offsetMs
+
+`number`
+
+## Returns
+
+`object`
+
+### left
+
+```ts
+left: object[];
+```
+
+### right
+
+```ts
+right: object[];
+```

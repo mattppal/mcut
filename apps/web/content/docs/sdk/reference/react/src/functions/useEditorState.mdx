@@ -1,0 +1,40 @@
+---
+title: "useEditorState"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [react/src](../index.mdx) / useEditorState
+
+# Function: useEditorState()
+
+```ts
+function useEditorState<TSelected>(selector?, compare?): TSelected;
+```
+
+Defined in: [packages/react/src/hooks.ts:21](https://github.com/mattppal/mcut/blob/main/packages/react/src/hooks.ts#L21)
+
+Subscribe to a slice of editor state (project, selection, history flags).
+
+## Type Parameters
+
+### TSelected
+
+`TSelected` = `EditorState`
+
+## Parameters
+
+### selector?
+
+(`state`) => `TSelected`
+
+### compare?
+
+(`a`, `b`) => `boolean`
+
+## Returns
+
+`TSelected`

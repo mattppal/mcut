@@ -1,0 +1,36 @@
+---
+title: "mergeCaptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / mergeCaptions
+
+# Function: mergeCaptions()
+
+```ts
+function mergeCaptions(a, b): CaptionMergeResult;
+```
+
+Defined in: [packages/transcription/src/transcript-tools.ts:325](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/transcript-tools.ts#L325)
+
+Merge two captions (order-independent) into one spanning both. Word
+timings survive when both sides carry them; otherwise the merged caption
+degrades to caption-level granularity.
+
+## Parameters
+
+### a
+
+[`TranscriptCaption`](../interfaces/TranscriptCaption.mdx)
+
+### b
+
+[`TranscriptCaption`](../interfaces/TranscriptCaption.mdx)
+
+## Returns
+
+[`CaptionMergeResult`](../interfaces/CaptionMergeResult.mdx)

@@ -1,0 +1,33 @@
+---
+title: "migrateProject"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / migrateProject
+
+# Function: migrateProject()
+
+```ts
+function migrateProject(data): unknown;
+```
+
+Defined in: [packages/timeline/src/migrations.ts:45](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/migrations.ts#L45)
+
+Upgrade a persisted project document to [PROJECT\_VERSION](../variables/PROJECT_VERSION.mdx).
+Documents without a `version` field predate versioning and are treated as
+version 1 (the shapes are identical). Throws [ProjectFormatError](../classes/ProjectFormatError.mdx)
+for documents written by a newer mcut.
+
+## Parameters
+
+### data
+
+`unknown`
+
+## Returns
+
+`unknown`

@@ -1,0 +1,158 @@
+---
+title: "ElementTypeConfig"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / ElementTypeConfig
+
+# Interface: ElementTypeConfig
+
+Defined in: [packages/timeline/src/model.ts:307](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L307)
+
+## Properties
+
+### describe?
+
+```ts
+optional describe?: (element, project) => string;
+```
+
+Defined in: [packages/timeline/src/model.ts:315](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L315)
+
+#### Parameters
+
+##### element
+
+`Record`\<`string`, `unknown`\>
+
+##### project
+
+`unknown`
+
+#### Returns
+
+`string`
+
+***
+
+### frameRequests?
+
+```ts
+optional frameRequests?: (project, element, timelineMs) => object[];
+```
+
+Defined in: [packages/timeline/src/model.ts:316](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L316)
+
+#### Parameters
+
+##### project
+
+`unknown`
+
+##### element
+
+`Record`\<`string`, `unknown`\>
+
+##### timelineMs
+
+`number`
+
+#### Returns
+
+`object`[]
+
+***
+
+### keyframeable?
+
+```ts
+optional keyframeable?: readonly string[];
+```
+
+Defined in: [packages/timeline/src/model.ts:312](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L312)
+
+Fixed-effect properties this type animates (see keyframes.ts).
+
+***
+
+### onSplit?
+
+```ts
+optional onSplit?: (context) => void;
+```
+
+Defined in: [packages/timeline/src/model.ts:313](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L313)
+
+#### Parameters
+
+##### context
+
+###### element
+
+`Record`\<`string`, `unknown`\>
+
+###### left
+
+`Record`\<`string`, `unknown`\>
+
+###### offsetMs
+
+`number`
+
+###### right
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`void`
+
+***
+
+### shape
+
+```ts
+shape: z.ZodRawShape;
+```
+
+Defined in: [packages/timeline/src/model.ts:310](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L310)
+
+The type's OWN fields — id/type/start/duration/keyframes/linkId are composed in.
+
+***
+
+### type
+
+```ts
+type: string;
+```
+
+Defined in: [packages/timeline/src/model.ts:308](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L308)
+
+***
+
+### validate?
+
+```ts
+optional validate?: (project, element) => void;
+```
+
+Defined in: [packages/timeline/src/model.ts:314](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L314)
+
+#### Parameters
+
+##### project
+
+`unknown`
+
+##### element
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`void`

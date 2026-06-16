@@ -1,0 +1,34 @@
+---
+title: "propertyPresetSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / propertyPresetSchema
+
+# Variable: propertyPresetSchema
+
+```ts
+const propertyPresetSchema: ZodObject<{
+  id: ZodString;
+  kind: ZodString;
+  name: ZodString;
+  values: ZodRecord<ZodString, ZodUnknown>;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/presets.ts:16](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/presets.ts#L16)
+
+Property presets: named bundles of inspector values, the ONE preset
+primitive every editing surface shares (Figma styles, loosely). A preset
+is pure data — `kind` names the surface that captured it ("effects",
+"text-style", "slot-style", …) and `values` holds whatever that surface
+chose to capture. Applying is the surface's job: it reads `values` and
+writes them back through its normal commands, so presets work identically
+for timeline elements and multicam layout slots without bespoke plumbing.
+
+Presets referenced by a project live IN the project (`project.presets`)
+so documents stay self-contained, mirroring `project.layouts`.

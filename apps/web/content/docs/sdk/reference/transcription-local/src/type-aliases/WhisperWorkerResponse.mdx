@@ -1,0 +1,112 @@
+---
+title: "WhisperWorkerResponse"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / WhisperWorkerResponse
+
+# Type Alias: WhisperWorkerResponse
+
+```ts
+type WhisperWorkerResponse = 
+  | {
+  type: "ready";
+}
+  | {
+  id: number;
+  phase: "model" | "transcribe";
+  progress: number;
+  type: "progress";
+}
+  | {
+  id: number;
+  result: TranscriptResult;
+  type: "result";
+}
+  | {
+  id: number;
+  message: string;
+  type: "error";
+};
+```
+
+Defined in: [packages/transcription-local/src/protocol.ts:27](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/protocol.ts#L27)
+
+## Union Members
+
+### Type Literal
+
+```ts
+{
+  type: "ready";
+}
+```
+
+***
+
+### Type Literal
+
+```ts
+{
+  id: number;
+  phase: "model" | "transcribe";
+  progress: number;
+  type: "progress";
+}
+```
+
+#### id
+
+```ts
+id: number;
+```
+
+#### phase
+
+```ts
+phase: "model" | "transcribe";
+```
+
+Model download/load vs. actual transcription.
+
+#### progress
+
+```ts
+progress: number;
+```
+
+0–1 within the phase.
+
+#### type
+
+```ts
+type: "progress";
+```
+
+***
+
+### Type Literal
+
+```ts
+{
+  id: number;
+  result: TranscriptResult;
+  type: "result";
+}
+```
+
+***
+
+### Type Literal
+
+```ts
+{
+  id: number;
+  message: string;
+  type: "error";
+}
+```

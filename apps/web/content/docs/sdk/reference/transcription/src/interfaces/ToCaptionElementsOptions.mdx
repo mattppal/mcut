@@ -1,0 +1,125 @@
+---
+title: "ToCaptionElementsOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / ToCaptionElementsOptions
+
+# Interface: ToCaptionElementsOptions
+
+Defined in: [packages/transcription/src/captions.ts:73](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L73)
+
+## Extends
+
+- [`GroupWordsOptions`](GroupWordsOptions.mdx)
+
+## Extended by
+
+- [`BuildApplyCaptionsOptions`](BuildApplyCaptionsOptions.mdx)
+
+## Properties
+
+### maxChars?
+
+```ts
+optional maxChars?: number;
+```
+
+Defined in: [packages/transcription/src/captions.ts:12](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L12)
+
+Soft maximum characters per caption line group. Default 36.
+
+#### Inherited from
+
+[`GroupWordsOptions`](GroupWordsOptions.mdx).[`maxChars`](GroupWordsOptions.mdx#maxchars)
+
+***
+
+### maxDurationMs?
+
+```ts
+optional maxDurationMs?: number;
+```
+
+Defined in: [packages/transcription/src/captions.ts:14](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L14)
+
+Maximum duration of one caption. Default 5000ms.
+
+#### Inherited from
+
+[`GroupWordsOptions`](GroupWordsOptions.mdx).[`maxDurationMs`](GroupWordsOptions.mdx#maxdurationms)
+
+***
+
+### maxGapMs?
+
+```ts
+optional maxGapMs?: number;
+```
+
+Defined in: [packages/transcription/src/captions.ts:16](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L16)
+
+A silence gap longer than this starts a new caption. Default 800ms.
+
+#### Inherited from
+
+[`GroupWordsOptions`](GroupWordsOptions.mdx).[`maxGapMs`](GroupWordsOptions.mdx#maxgapms)
+
+***
+
+### sourceEndMs?
+
+```ts
+optional sourceEndMs?: number;
+```
+
+Defined in: [packages/transcription/src/captions.ts:83](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L83)
+
+Ignore transcript content at or after this source-media timestamp.
+
+***
+
+### sourceStartMs?
+
+```ts
+optional sourceStartMs?: number;
+```
+
+Defined in: [packages/transcription/src/captions.ts:81](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L81)
+
+Ignore transcript content before this source-media timestamp.
+
+***
+
+### style?
+
+```ts
+optional style?: Partial<{
+  activeWordColor?: string;
+  backgroundColor: string;
+  color: string;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: number;
+  position: "top" | "middle" | "bottom";
+}>;
+```
+
+Defined in: [packages/transcription/src/captions.ts:74](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L74)
+
+***
+
+### timeOffsetMs?
+
+```ts
+optional timeOffsetMs?: number;
+```
+
+Defined in: [packages/transcription/src/captions.ts:79](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L79)
+
+Shift generated captions onto a timeline position. For example, a
+transcript from a clip starting at 10s should use `timeOffsetMs: 10000`.

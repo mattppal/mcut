@@ -1,0 +1,197 @@
+---
+title: "captureThumbnailTemplate"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / captureThumbnailTemplate
+
+# Function: captureThumbnailTemplate()
+
+```ts
+function captureThumbnailTemplate(project, name): 
+  | {
+  items: (
+     | {
+     kind: "text";
+     rect: {
+        h: number;
+        w: number;
+        x: number;
+        y: number;
+     };
+     role: string;
+     style: {
+        align: "left" | "center" | "right";
+        backgroundColor?: string;
+        color: string;
+        fontFamily: string;
+        fontSize: number;
+        fontStyle: "normal" | "italic";
+        fontWeight: number;
+        letterSpacing: number;
+        lineHeight: number;
+        shadow?: {
+           blur: number;
+           color: string;
+           offsetX: number;
+           offsetY: number;
+        };
+        stroke?: {
+           color: string;
+           width: number;
+        };
+        textTransform: "none" | "uppercase" | "lowercase";
+     };
+     text: string;
+   }
+     | {
+     fit: "cover" | "contain";
+     kind: "slot";
+     label: string;
+     rect: {
+        h: number;
+        w: number;
+        x: number;
+        y: number;
+     };
+  })[];
+  name: string;
+}
+  | null;
+```
+
+Defined in: [packages/timeline/src/thumbnails.ts:130](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/thumbnails.ts#L130)
+
+Capture the current Thumbnail-track composition back into a template
+("save my cover for the next video"). Text elements round-trip fully;
+image elements become slots (geometry only — assets stay in the project).
+
+## Parameters
+
+### project
+
+#### assets
+
+`Record`\<`string`, \{
+  `durationMs?`: `number`;
+  `hash?`: `string`;
+  `height?`: `number`;
+  `id`: `` `a-${string}` ``;
+  `kind`: `"video"` \| `"audio"` \| `"image"`;
+  `mimeType?`: `string`;
+  `name?`: `string`;
+  `nativePreview?`: `boolean`;
+  `src`: `string`;
+  `width?`: `number`;
+\}\> = `...`
+
+#### fps
+
+`number` = `...`
+
+#### height
+
+`number` = `...`
+
+#### id
+
+`string` = `...`
+
+#### layouts
+
+`object`[] = `...`
+
+Multicam layout templates this project references. See layouts.ts.
+
+#### markers
+
+`object`[] = `...`
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+#### name
+
+`string` = `...`
+
+#### presets
+
+`object`[] = `...`
+
+Named inspector value bundles (style presets). See presets.ts.
+
+#### tracks
+
+`object`[] = `...`
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+#### version
+
+`1` = `...`
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+#### width
+
+`number` = `...`
+
+### name
+
+`string`
+
+## Returns
+
+  \| \{
+  `items`: (
+     \| \{
+     `kind`: `"text"`;
+     `rect`: \{
+        `h`: `number`;
+        `w`: `number`;
+        `x`: `number`;
+        `y`: `number`;
+     \};
+     `role`: `string`;
+     `style`: \{
+        `align`: `"left"` \| `"center"` \| `"right"`;
+        `backgroundColor?`: `string`;
+        `color`: `string`;
+        `fontFamily`: `string`;
+        `fontSize`: `number`;
+        `fontStyle`: `"normal"` \| `"italic"`;
+        `fontWeight`: `number`;
+        `letterSpacing`: `number`;
+        `lineHeight`: `number`;
+        `shadow?`: \{
+           `blur`: `number`;
+           `color`: `string`;
+           `offsetX`: `number`;
+           `offsetY`: `number`;
+        \};
+        `stroke?`: \{
+           `color`: `string`;
+           `width`: `number`;
+        \};
+        `textTransform`: `"none"` \| `"uppercase"` \| `"lowercase"`;
+     \};
+     `text`: `string`;
+   \}
+     \| \{
+     `fit`: `"cover"` \| `"contain"`;
+     `kind`: `"slot"`;
+     `label`: `string`;
+     `rect`: \{
+        `h`: `number`;
+        `w`: `number`;
+        `x`: `number`;
+        `y`: `number`;
+     \};
+  \})[];
+  `name`: `string`;
+\}
+  \| `null`

@@ -1,0 +1,36 @@
+---
+title: "toCaptionElements"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / toCaptionElements
+
+# Function: toCaptionElements()
+
+```ts
+function toCaptionElements(result, options?): CaptionElementInput[];
+```
+
+Defined in: [packages/transcription/src/captions.ts:112](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L112)
+
+Convert a transcript into caption elements ready for the `applyCaptions`
+command: grouped to caption length, word timings made relative to each
+element, overlaps clamped to satisfy the track invariant.
+
+## Parameters
+
+### result
+
+[`TranscriptResult`](../interfaces/TranscriptResult.mdx)
+
+### options?
+
+[`ToCaptionElementsOptions`](../interfaces/ToCaptionElementsOptions.mdx) = `{}`
+
+## Returns
+
+[`CaptionElementInput`](../interfaces/CaptionElementInput.mdx)[]

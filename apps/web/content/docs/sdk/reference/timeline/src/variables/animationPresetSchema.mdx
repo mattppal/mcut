@@ -1,0 +1,49 @@
+---
+title: "animationPresetSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / animationPresetSchema
+
+# Variable: animationPresetSchema
+
+```ts
+const animationPresetSchema: ZodEnum<{
+  blur-in: "blur-in";
+  blur-out: "blur-out";
+  breathe: "breathe";
+  fade-in: "fade-in";
+  fade-out: "fade-out";
+  float: "float";
+  ken-burns: "ken-burns";
+  pop-in: "pop-in";
+  pop-out: "pop-out";
+  pulse: "pulse";
+  punch-zoom: "punch-zoom";
+  scale-in: "scale-in";
+  shake: "shake";
+  slide-in: "slide-in";
+  slide-out: "slide-out";
+  sway: "sway";
+  whip-in: "whip-in";
+  whip-out: "whip-out";
+  zoom-in: "zoom-in";
+  zoom-out: "zoom-out";
+}>;
+```
+
+Defined in: [packages/timeline/src/animation-presets.ts:24](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/animation-presets.ts#L24)
+
+CapCut-style In / Out / Emphasis animation gallery. Presets are not a
+runtime system: applying one EXPANDS to ordinary keyframes on the element,
+fully inspectable and editable afterwards.
+
+The curve and duration choices follow current motion-design practice
+(After Effects "Easy Ease"+, Flow, Material 3, CapCut's tasteful subset):
+decelerating entrances on long-tail expo/quint curves, faster accelerating
+exits, overshoot reserved for "pop", and loops on sine S-curves. Entrances
+default to 300–600ms, exits run shorter, loops breathe over seconds.

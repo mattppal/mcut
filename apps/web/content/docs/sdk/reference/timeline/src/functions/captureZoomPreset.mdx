@@ -1,0 +1,87 @@
+---
+title: "captureZoomPreset"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / captureZoomPreset
+
+# Function: captureZoomPreset()
+
+```ts
+function captureZoomPreset(
+   element, 
+   name, 
+   fromLocalMs?, 
+   toLocalMs?): 
+  | {
+  durationMs: number;
+  name: string;
+  tracks: Partial<Record<"position.x" | "position.y" | "scale.x" | "scale.y", object[]>>;
+}
+  | null;
+```
+
+Defined in: [packages/timeline/src/zoom-presets.ts:155](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/zoom-presets.ts#L155)
+
+Capture the keyframes between two element-local times as a reusable zoom
+preset ("save what I just hand-animated"). Values normalize relative to
+each track's first keyframe; returns null when the range has no zoomable
+keyframes.
+
+## Parameters
+
+### element
+
+[`TimelineElement`](../type-aliases/TimelineElement.mdx)
+
+### name
+
+`string`
+
+### fromLocalMs?
+
+`number`
+
+### toLocalMs?
+
+`number`
+
+## Returns
+
+### Type Literal
+
+```ts
+{
+  durationMs: number;
+  name: string;
+  tracks: Partial<Record<"position.x" | "position.y" | "scale.x" | "scale.y", object[]>>;
+}
+```
+
+#### durationMs
+
+```ts
+durationMs: number;
+```
+
+Default length; override at apply time.
+
+#### name
+
+```ts
+name: string;
+```
+
+#### tracks
+
+```ts
+tracks: Partial<Record<"position.x" | "position.y" | "scale.x" | "scale.y", object[]>>;
+```
+
+***
+
+`null`

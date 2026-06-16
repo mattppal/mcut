@@ -1,0 +1,82 @@
+---
+title: "ExportProjectOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / ExportProjectOptions
+
+# Interface: ExportProjectOptions
+
+Defined in: [packages/media/src/export-types.ts:29](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L29)
+
+## Properties
+
+### fonts?
+
+```ts
+optional fonts?: ExportFontFaceInit[];
+```
+
+Defined in: [packages/media/src/export-types.ts:39](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L39)
+
+Font faces for text/caption rendering inside the export worker. Without
+them the worker draws text with system fallback faces (web fonts loaded
+on the main thread don't exist in worker scope).
+
+***
+
+### format?
+
+```ts
+optional format?: ContainerFormatId;
+```
+
+Defined in: [packages/media/src/export-types.ts:31](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L31)
+
+Container format id from the registry. Default `'mp4'`.
+
+***
+
+### onProgress?
+
+```ts
+optional onProgress?: (progress) => void;
+```
+
+Defined in: [packages/media/src/export-types.ts:40](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L40)
+
+#### Parameters
+
+##### progress
+
+[`ExportProgress`](ExportProgress.mdx)
+
+#### Returns
+
+`void`
+
+***
+
+### signal?
+
+```ts
+optional signal?: AbortSignal;
+```
+
+Defined in: [packages/media/src/export-types.ts:41](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L41)
+
+***
+
+### videoBitrate?
+
+```ts
+optional videoBitrate?: number | Quality;
+```
+
+Defined in: [packages/media/src/export-types.ts:33](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L33)
+
+Video bitrate in bits/s or a mediabunny `Quality`. Default `QUALITY_HIGH`.

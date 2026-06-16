@@ -1,0 +1,10 @@
+{
+  "title": "@mcut/transcription-local",
+  "pages": [
+    "index",
+    "...functions",
+    "...interfaces",
+    "...type-aliases",
+    "...variables"
+  ]
+}

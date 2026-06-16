@@ -1,0 +1,51 @@
+---
+title: "Effect"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / Effect
+
+# Type Alias: Effect
+
+```ts
+type Effect = 
+  | BuiltinEffect<"blur", {
+  radius: number;
+}>
+  | BuiltinEffect<"brightness", {
+  amount: number;
+}>
+  | BuiltinEffect<"contrast", {
+  amount: number;
+}>
+  | BuiltinEffect<"saturate", {
+  amount: number;
+}>
+  | BuiltinEffect<"grayscale", {
+  amount: number;
+}>
+  | BuiltinEffect<"sepia", {
+  amount: number;
+}>
+  | BuiltinEffect<"hue-rotate", {
+  degrees: number;
+}>
+  | BuiltinEffect<"invert", {
+  amount: number;
+}>
+  | BuiltinEffect<"drop-shadow", {
+  blur: number;
+  color: string;
+  offsetX: number;
+  offsetY: number;
+}>
+  | BuiltinEffect<"css", {
+  filter: string;
+}>;
+```
+
+Defined in: [packages/timeline/src/effects.ts:61](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L61)

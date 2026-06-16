@@ -1,0 +1,74 @@
+---
+title: "AssemblyAIProviderOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-assemblyai/src](../index.mdx) / AssemblyAIProviderOptions
+
+# Interface: AssemblyAIProviderOptions
+
+Defined in: [packages/transcription-assemblyai/src/index.ts:60](https://github.com/mattppal/mcut/blob/main/packages/transcription-assemblyai/src/index.ts#L60)
+
+## Properties
+
+### apiKey?
+
+```ts
+optional apiKey?: string;
+```
+
+Defined in: [packages/transcription-assemblyai/src/index.ts:62](https://github.com/mattppal/mcut/blob/main/packages/transcription-assemblyai/src/index.ts#L62)
+
+AssemblyAI API key. Keep server-side; never expose to the browser.
+
+***
+
+### client?
+
+```ts
+optional client?: AssemblyAI;
+```
+
+Defined in: [packages/transcription-assemblyai/src/index.ts:64](https://github.com/mattppal/mcut/blob/main/packages/transcription-assemblyai/src/index.ts#L64)
+
+Bring your own configured client instead of `apiKey`.
+
+***
+
+### id?
+
+```ts
+optional id?: string;
+```
+
+Defined in: [packages/transcription-assemblyai/src/index.ts:70](https://github.com/mattppal/mcut/blob/main/packages/transcription-assemblyai/src/index.ts#L70)
+
+Provider id for diagnostics. Default `'assemblyai'`.
+
+***
+
+### params?
+
+```ts
+optional params?: Partial<Omit<TranscribeParams, "audio">>;
+```
+
+Defined in: [packages/transcription-assemblyai/src/index.ts:68](https://github.com/mattppal/mcut/blob/main/packages/transcription-assemblyai/src/index.ts#L68)
+
+Extra AssemblyAI request params (model, custom vocabulary, ...).
+
+***
+
+### speakerLabels?
+
+```ts
+optional speakerLabels?: boolean;
+```
+
+Defined in: [packages/transcription-assemblyai/src/index.ts:66](https://github.com/mattppal/mcut/blob/main/packages/transcription-assemblyai/src/index.ts#L66)
+
+Label speakers (populates `speaker` on words/segments). Default true.

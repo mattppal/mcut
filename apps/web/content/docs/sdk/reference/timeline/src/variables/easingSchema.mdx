@@ -1,0 +1,30 @@
+---
+title: "easingSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / easingSchema
+
+# Variable: easingSchema
+
+```ts
+const easingSchema: ZodUnion<readonly [ZodEnum<{
+  easeIn: "easeIn";
+  easeInOut: "easeInOut";
+  easeOut: "easeOut";
+  hold: "hold";
+  linear: "linear";
+}>, ZodObject<{
+  cubicBezier: ZodTuple<[ZodNumber, ZodNumber, ZodNumber, ZodNumber], null>;
+}, $strip>]>;
+```
+
+Defined in: [packages/timeline/src/keyframes.ts:46](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L46)
+
+Temporal interpolation toward the NEXT keyframe (Premiere's interpolation
+menu / CapCut's curve presets). Named easings are cubic-bezier aliases;
+`hold` is a step.

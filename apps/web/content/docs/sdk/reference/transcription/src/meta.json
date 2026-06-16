@@ -1,0 +1,8 @@
+{
+  "title": "@mcut/transcription",
+  "pages": [
+    "index",
+    "...functions",
+    "...interfaces"
+  ]
+}

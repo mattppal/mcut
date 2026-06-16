@@ -1,0 +1,96 @@
+---
+title: "ActiveElement"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / ActiveElement
+
+# Interface: ActiveElement
+
+Defined in: [packages/timeline/src/selectors.ts:63](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L63)
+
+## Properties
+
+### element
+
+```ts
+element: TimelineElement;
+```
+
+Defined in: [packages/timeline/src/selectors.ts:66](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L66)
+
+***
+
+### track
+
+```ts
+track: object;
+```
+
+Defined in: [packages/timeline/src/selectors.ts:64](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L64)
+
+#### elements
+
+```ts
+elements: TimelineElement[];
+```
+
+Sorted by `startMs`; never overlapping in time.
+
+#### hidden
+
+```ts
+hidden: boolean;
+```
+
+Visuals from this track are not rendered.
+
+#### id
+
+```ts
+id: `t-${string}` = trackIdSchema;
+```
+
+#### locked
+
+```ts
+locked: boolean;
+```
+
+UI hint: track rejects edits. The engine does not enforce this.
+
+#### magnetic
+
+```ts
+magnetic: boolean;
+```
+
+When enabled, edits compact this track so clips keep no gaps between them.
+
+#### muted
+
+```ts
+muted: boolean;
+```
+
+Audio from this track is silenced.
+
+#### name
+
+```ts
+name: string;
+```
+
+***
+
+### trackIndex
+
+```ts
+trackIndex: number;
+```
+
+Defined in: [packages/timeline/src/selectors.ts:65](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/selectors.ts#L65)

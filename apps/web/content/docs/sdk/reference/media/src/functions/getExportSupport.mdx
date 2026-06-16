@@ -1,0 +1,36 @@
+---
+title: "getExportSupport"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / getExportSupport
+
+# Function: getExportSupport()
+
+```ts
+function getExportSupport(format?): Promise<{
+  audio: boolean;
+  video: boolean;
+}>;
+```
+
+Defined in: [packages/media/src/export-core.ts:49](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-core.ts#L49)
+
+Can this browser encode video (and audio) for the given format?
+
+## Parameters
+
+### format?
+
+[`ContainerFormatId`](../type-aliases/ContainerFormatId.mdx) = `'mp4'`
+
+## Returns
+
+`Promise`\<\{
+  `audio`: `boolean`;
+  `video`: `boolean`;
+\}\>

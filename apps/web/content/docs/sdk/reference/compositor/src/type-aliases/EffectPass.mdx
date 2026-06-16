@@ -1,0 +1,124 @@
+---
+title: "EffectPass"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / EffectPass
+
+# Type Alias: EffectPass
+
+```ts
+type EffectPass = 
+  | {
+  curves:   | {
+     b: Float32Array;
+     g: Float32Array;
+     r: Float32Array;
+   }
+     | null;
+  kind: "color";
+  ops: ColorOp[];
+}
+  | {
+  kind: "blur";
+  radius: number;
+}
+  | {
+  blur: number;
+  color: [number, number, number, number];
+  kind: "shadow";
+  offsetX: number;
+  offsetY: number;
+}
+  | {
+  intensity: number;
+  kind: "lut3d";
+  lutId: string;
+};
+```
+
+Defined in: [packages/compositor/src/webgpu/effect-plan.ts:32](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/effect-plan.ts#L32)
+
+## Union Members
+
+### Type Literal
+
+```ts
+{
+  curves:   | {
+     b: Float32Array;
+     g: Float32Array;
+     r: Float32Array;
+   }
+     | null;
+  kind: "color";
+  ops: ColorOp[];
+}
+```
+
+#### curves
+
+```ts
+curves: 
+  | {
+  b: Float32Array;
+  g: Float32Array;
+  r: Float32Array;
+}
+  | null;
+```
+
+Per-channel 256-entry LUTs when a curves op is in this run.
+
+#### kind
+
+```ts
+kind: "color";
+```
+
+#### ops
+
+```ts
+ops: ColorOp[];
+```
+
+***
+
+### Type Literal
+
+```ts
+{
+  kind: "blur";
+  radius: number;
+}
+```
+
+***
+
+### Type Literal
+
+```ts
+{
+  blur: number;
+  color: [number, number, number, number];
+  kind: "shadow";
+  offsetX: number;
+  offsetY: number;
+}
+```
+
+***
+
+### Type Literal
+
+```ts
+{
+  intensity: number;
+  kind: "lut3d";
+  lutId: string;
+}
+```

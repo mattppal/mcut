@@ -1,0 +1,50 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "mcut SDK",
+  "entryPoints": [
+    "packages/timeline/src/index.ts",
+    "packages/editor/src/index.ts",
+    "packages/compositor/src/index.ts",
+    "packages/media/src/index.ts",
+    "packages/react/src/index.ts",
+    "packages/transcription/src/index.ts",
+    "packages/transcription-ai-sdk/src/index.ts",
+    "packages/transcription-assemblyai/src/index.ts",
+    "packages/transcription-local/src/index.ts"
+  ],
+  "entryPointStrategy": "resolve",
+  "tsconfig": "tsconfig.typedoc.json",
+  "plugin": [
+    "typedoc-plugin-markdown",
+    "typedoc-plugin-frontmatter"
+  ],
+  "out": "apps/web/content/docs/sdk/reference",
+  "readme": "none",
+  "entryFileName": "index",
+  "fileExtension": ".mdx",
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "externalSymbolLinkMappings": {
+    "@mcut/timeline": {
+      "AssetRef": "/docs/sdk/reference/timeline/src/type-aliases/AssetRef"
+    },
+    "@mcut/compositor": {
+      "FrameSource": "/docs/sdk/reference/compositor/src/interfaces/FrameSource"
+    },
+    "mediabunny": {
+      "OutputFormat": "https://mediabunny.dev/"
+    }
+  },
+  "includeVersion": false,
+  "githubPages": false,
+  "sourceLinkTemplate": "https://github.com/mattppal/mcut/blob/main/{path}#L{line}",
+  "sanitizeComments": true,
+  "useCodeBlocks": true,
+  "frontmatterGlobals": {
+    "description": "Generated TypeScript API reference for the public mcut SDK."
+  },
+  "indexFrontmatter": {
+    "title": "Generated SDK Reference"
+  }
+}

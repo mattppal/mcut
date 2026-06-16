@@ -1,0 +1,48 @@
+---
+title: "splitAngles"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / splitAngles
+
+# Function: splitAngles()
+
+```ts
+function splitAngles(angles, offsetMs): object;
+```
+
+Defined in: [packages/timeline/src/multicam.ts:65](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L65)
+
+Split an angle list at element-local `offsetMs` for a clip split: the left
+half keeps cuts before the offset; the right half starts with the active
+layout at the cut and rebases later cuts.
+
+## Parameters
+
+### angles
+
+readonly [`AngleCut`](../interfaces/AngleCut.mdx)[]
+
+### offsetMs
+
+`number`
+
+## Returns
+
+`object`
+
+### left
+
+```ts
+left: AngleCut[];
+```
+
+### right
+
+```ts
+right: AngleCut[];
+```

@@ -1,0 +1,54 @@
+---
+title: "GroupWordsOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription/src](../index.mdx) / GroupWordsOptions
+
+# Interface: GroupWordsOptions
+
+Defined in: [packages/transcription/src/captions.ts:10](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L10)
+
+## Extended by
+
+- [`ToCaptionElementsOptions`](ToCaptionElementsOptions.mdx)
+
+## Properties
+
+### maxChars?
+
+```ts
+optional maxChars?: number;
+```
+
+Defined in: [packages/transcription/src/captions.ts:12](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L12)
+
+Soft maximum characters per caption line group. Default 36.
+
+***
+
+### maxDurationMs?
+
+```ts
+optional maxDurationMs?: number;
+```
+
+Defined in: [packages/transcription/src/captions.ts:14](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L14)
+
+Maximum duration of one caption. Default 5000ms.
+
+***
+
+### maxGapMs?
+
+```ts
+optional maxGapMs?: number;
+```
+
+Defined in: [packages/transcription/src/captions.ts:16](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/captions.ts#L16)
+
+A silence gap longer than this starts a new caption. Default 800ms.

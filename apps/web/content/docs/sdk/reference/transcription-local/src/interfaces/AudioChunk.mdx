@@ -1,0 +1,44 @@
+---
+title: "AudioChunk"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [transcription-local/src](../index.mdx) / AudioChunk
+
+# Interface: AudioChunk
+
+Defined in: [packages/transcription-local/src/chunking.ts:11](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/chunking.ts#L11)
+
+Chunked-streaming plan for long audio: fixed windows with overlap, merged
+back together on word timestamps. Whisper's native receptive field is 30s;
+processing window-by-window keeps the tab responsive (progress per chunk)
+and lets the worker skip non-speech windows and retry hallucinating ones
+without redoing the whole file.
+
+## Properties
+
+### endS
+
+```ts
+endS: number;
+```
+
+Defined in: [packages/transcription-local/src/chunking.ts:15](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/chunking.ts#L15)
+
+Window end (exclusive), seconds.
+
+***
+
+### startS
+
+```ts
+startS: number;
+```
+
+Defined in: [packages/transcription-local/src/chunking.ts:13](https://github.com/mattppal/mcut/blob/main/packages/transcription-local/src/chunking.ts#L13)
+
+Window start in the source audio, seconds.

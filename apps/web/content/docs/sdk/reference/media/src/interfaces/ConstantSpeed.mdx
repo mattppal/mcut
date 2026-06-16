@@ -1,0 +1,65 @@
+---
+title: "ConstantSpeed"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / ConstantSpeed
+
+# Interface: ConstantSpeed
+
+Defined in: [packages/media/src/time-stretch.ts:21](https://github.com/mattppal/mcut/blob/main/packages/media/src/time-stretch.ts#L21)
+
+Pitch-preserving time-stretch for export audio.
+
+Preview already preserves pitch — media elements default
+`preservesPitch = true` when `playbackRate` changes — so without this the
+export would chipmunk where the preview didn't. Constant-speed clips
+(linear two-keyframe timeMaps, which is everything setElementSpeed
+produces, including its split halves) stretch through here; variable
+ramps keep the per-buffer `playbackRate` fallback.
+
+Engine: Signalsmith Stretch (WASM, notably higher quality and faster than
+phase-vocoder/WSOLA approaches), driven through the offline buffer driver
+in signalsmith-offline.ts — no Web Audio required, so the same path runs
+on the main thread, in workers, and under Bun tests. Failures reject and
+the export falls back to per-buffer `playbackRate` at the call site.
+
+## Properties
+
+### rate
+
+```ts
+rate: number;
+```
+
+Defined in: [packages/media/src/time-stretch.ts:23](https://github.com/mattppal/mcut/blob/main/packages/media/src/time-stretch.ts#L23)
+
+Source ms consumed per output ms.
+
+***
+
+### sourceSpanMs
+
+```ts
+sourceSpanMs: number;
+```
+
+Defined in: [packages/media/src/time-stretch.ts:27](https://github.com/mattppal/mcut/blob/main/packages/media/src/time-stretch.ts#L27)
+
+Source ms consumed in total.
+
+***
+
+### sourceStartOffsetMs
+
+```ts
+sourceStartOffsetMs: number;
+```
+
+Defined in: [packages/media/src/time-stretch.ts:25](https://github.com/mattppal/mcut/blob/main/packages/media/src/time-stretch.ts#L25)
+
+First source offset (ms relative to trimStart) the map plays.

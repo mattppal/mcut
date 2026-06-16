@@ -1,0 +1,99 @@
+---
+title: "planDuplicateClipsToNewTracks"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / planDuplicateClipsToNewTracks
+
+# Function: planDuplicateClipsToNewTracks()
+
+```ts
+function planDuplicateClipsToNewTracks(
+   project, 
+   ids, 
+   options?): 
+  | DuplicateClipsToNewTracksPlan
+  | null;
+```
+
+Defined in: [packages/editor/src/timeline-gesture.ts:165](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L165)
+
+## Parameters
+
+### project
+
+#### assets
+
+`z.ZodDefault`\<`z.ZodRecord`\<`z.ZodString`, `z.ZodObject`\<\{
+  `durationMs`: `z.ZodOptional`\<`z.ZodNumber`\>;
+  `hash`: `z.ZodOptional`\<`z.ZodString`\>;
+  `height`: `z.ZodOptional`\<`z.ZodNumber`\>;
+  `id`: `z.ZodCustom`\<`` `a-${string}` ``, `` `a-${string}` ``\>;
+  `kind`: `z.ZodEnum`\<\{
+     `audio`: `"audio"`;
+     `image`: `"image"`;
+     `video`: `"video"`;
+  \}\>;
+  `mimeType`: `z.ZodOptional`\<`z.ZodString`\>;
+  `name`: `z.ZodOptional`\<`z.ZodString`\>;
+  `nativePreview`: `z.ZodOptional`\<`z.ZodBoolean`\>;
+  `src`: `z.ZodString`;
+  `width`: `z.ZodOptional`\<`z.ZodNumber`\>;
+\}, `z.core.$strip`\>\>\>
+
+#### fps
+
+`number`
+
+#### height
+
+`number`
+
+#### id
+
+`string`
+
+#### layouts
+
+`object`[]
+
+#### markers
+
+`object`[]
+
+#### name
+
+`string`
+
+#### presets
+
+`object`[]
+
+#### tracks
+
+`object`[]
+
+#### version
+
+`1`
+
+#### width
+
+`number`
+
+### ids
+
+readonly `` `e-${string}` ``[]
+
+### options?
+
+[`DuplicateClipsToNewTracksOptions`](../interfaces/DuplicateClipsToNewTracksOptions.mdx) = `{}`
+
+## Returns
+
+  \| [`DuplicateClipsToNewTracksPlan`](../interfaces/DuplicateClipsToNewTracksPlan.mdx)
+  \| `null`

@@ -1,0 +1,207 @@
+---
+title: "ElementRenderContext"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [compositor/src](../index.mdx) / ElementRenderContext
+
+# Interface: ElementRenderContext
+
+Defined in: [packages/compositor/src/types.ts:44](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L44)
+
+## Properties
+
+### backend
+
+```ts
+backend: RenderBackend;
+```
+
+Defined in: [packages/compositor/src/types.ts:54](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L54)
+
+The draw layer (see backend.ts) — structured fast paths live here.
+
+***
+
+### ctx
+
+```ts
+ctx: Canvas2D;
+```
+
+Defined in: [packages/compositor/src/types.ts:52](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L52)
+
+Frame-space canvas2d context for raster drawing (text, chrome, custom
+renderers). On the canvas2d backend this is the target itself; on GPU
+backends it is a scratch surface composited in z-order. Reading it marks
+the raster surface in use — renderers with a structured fast path (video
+/image quads) should draw via `backend` instead.
+
+***
+
+### project
+
+```ts
+project: object;
+```
+
+Defined in: [packages/compositor/src/types.ts:55](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L55)
+
+#### assets
+
+```ts
+assets: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+  durationMs: z.ZodOptional<z.ZodNumber>;
+  hash: z.ZodOptional<z.ZodString>;
+  height: z.ZodOptional<z.ZodNumber>;
+  id: z.ZodCustom<`a-${string}`, `a-${string}`>;
+  kind: z.ZodEnum<{
+     audio: "audio";
+     image: "image";
+     video: "video";
+  }>;
+  mimeType: z.ZodOptional<z.ZodString>;
+  name: z.ZodOptional<z.ZodString>;
+  nativePreview: z.ZodOptional<z.ZodBoolean>;
+  src: z.ZodString;
+  width: z.ZodOptional<z.ZodNumber>;
+}, z.core.$strip>>>;
+```
+
+#### fps
+
+```ts
+fps: number;
+```
+
+#### height
+
+```ts
+height: number;
+```
+
+#### id
+
+```ts
+id: string;
+```
+
+#### layouts
+
+```ts
+layouts: object[];
+```
+
+#### markers
+
+```ts
+markers: object[];
+```
+
+#### name
+
+```ts
+name: string;
+```
+
+#### presets
+
+```ts
+presets: object[];
+```
+
+#### tracks
+
+```ts
+tracks: object[];
+```
+
+#### version
+
+```ts
+version: 1;
+```
+
+#### width
+
+```ts
+width: number;
+```
+
+***
+
+### source
+
+```ts
+source: FrameSource | undefined;
+```
+
+Defined in: [packages/compositor/src/types.ts:59](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L59)
+
+***
+
+### timeMs
+
+```ts
+timeMs: number;
+```
+
+Defined in: [packages/compositor/src/types.ts:58](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L58)
+
+Absolute timeline time being rendered.
+
+***
+
+### track
+
+```ts
+track: object;
+```
+
+Defined in: [packages/compositor/src/types.ts:56](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/types.ts#L56)
+
+#### elements
+
+```ts
+elements: TimelineElement[];
+```
+
+#### hidden
+
+```ts
+hidden: boolean;
+```
+
+#### id
+
+```ts
+id: `t-${string}`;
+```
+
+#### locked
+
+```ts
+locked: boolean;
+```
+
+#### magnetic
+
+```ts
+magnetic: boolean;
+```
+
+#### muted
+
+```ts
+muted: boolean;
+```
+
+#### name
+
+```ts
+name: string;
+```

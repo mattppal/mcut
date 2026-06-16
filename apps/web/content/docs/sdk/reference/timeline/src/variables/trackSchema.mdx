@@ -1,0 +1,26 @@
+---
+title: "trackSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / trackSchema
+
+# Variable: trackSchema
+
+```ts
+const trackSchema: ZodObject<{
+  elements: ZodDefault<ZodArray<ZodType<TimelineElement, unknown, $ZodTypeInternals<TimelineElement, unknown>>>>;
+  hidden: ZodDefault<ZodBoolean>;
+  id: ZodCustom<`t-${string}`, `t-${string}`>;
+  locked: ZodDefault<ZodBoolean>;
+  magnetic: ZodDefault<ZodBoolean>;
+  muted: ZodDefault<ZodBoolean>;
+  name: ZodString;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/model.ts:393](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L393)

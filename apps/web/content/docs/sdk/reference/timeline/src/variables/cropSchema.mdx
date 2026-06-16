@@ -1,0 +1,27 @@
+---
+title: "cropSchema"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / cropSchema
+
+# Variable: cropSchema
+
+```ts
+const cropSchema: ZodObject<{
+  h: ZodNumber;
+  w: ZodNumber;
+  x: ZodNumber;
+  y: ZodNumber;
+}, $strip>;
+```
+
+Defined in: [packages/timeline/src/style.ts:39](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/style.ts#L39)
+
+Source-space crop mask, normalized 0..1 of the media's natural size. The
+kept region BECOMES the element's frame: natural size shrinks to
+`w × h` of the asset, so layout, handles, and the inspector all follow.

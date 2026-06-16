@@ -1,0 +1,35 @@
+---
+title: "toggleSoloTrack"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / toggleSoloTrack
+
+# Function: toggleSoloTrack()
+
+```ts
+function toggleSoloTrack(engine, trackId): void;
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:384](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L384)
+
+Solo a track: mute every other track; toggling again unmutes everything.
+No schema change is needed because solo is a derived mute state.
+
+## Parameters
+
+### engine
+
+`EditorEngine`
+
+### trackId
+
+`` `t-${string}` ``
+
+## Returns
+
+`void`
