@@ -1,0 +1,22 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "mcut-web": "0.1.0",
+    "agentic-editing-example": "0.0.0",
+    "headless-editing-example": "0.0.0",
+    "mcp-server-example": "0.0.0",
+    "@mcut/cli": "0.1.0-alpha.0",
+    "@mcut/compositor": "0.1.0-alpha.0",
+    "@mcut/editor": "0.1.0-alpha.0",
+    "@mcut/mcp-server": "0.1.0-alpha.0",
+    "@mcut/media": "0.1.0-alpha.0",
+    "@mcut/react": "0.1.0-alpha.0",
+    "@mcut/timeline": "0.1.0-alpha.0",
+    "@mcut/transcription": "0.1.0-alpha.0",
+    "@mcut/transcription-ai-sdk": "0.1.0-alpha.0",
+    "@mcut/transcription-assemblyai": "0.1.0-alpha.0",
+    "@mcut/transcription-local": "0.1.0-alpha.0"
+  },
+  "changesets": []
+}

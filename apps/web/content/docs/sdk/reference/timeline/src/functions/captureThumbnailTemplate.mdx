@@ -12,7 +12,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 # Function: captureThumbnailTemplate()
 
 ```ts
-function captureThumbnailTemplate(project, name): 
+function captureThumbnailTemplate(project, name):
   | {
   items: (
      | {
@@ -44,7 +44,7 @@ function captureThumbnailTemplate(project, name):
            color: string;
            width: number;
         };
-        textTransform: "none" | "uppercase" | "lowercase";
+        textTransform: "lowercase" | "uppercase" | "none";
      };
      text: string;
    }
@@ -177,7 +177,7 @@ older documents before validating; the default covers in-memory creation.
            `color`: `string`;
            `width`: `number`;
         \};
-        `textTransform`: `"none"` \| `"uppercase"` \| `"lowercase"`;
+        `textTransform`: `"lowercase"` \| `"uppercase"` \| `"none"`;
      \};
      `text`: `string`;
    \}

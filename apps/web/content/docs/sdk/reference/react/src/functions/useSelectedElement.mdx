@@ -12,7 +12,9 @@ description: Generated TypeScript API reference for the public mcut SDK.
 # Function: useSelectedElement()
 
 ```ts
-function useSelectedElement(): ElementLocation | undefined;
+function useSelectedElement():
+  | ElementLocation
+  | undefined;
 ```
 
 Defined in: [packages/react/src/hooks.ts:47](https://github.com/mattppal/mcut/blob/main/packages/react/src/hooks.ts#L47)
@@ -21,4 +23,5 @@ The first selected element with its track, if any.
 
 ## Returns
 
-`ElementLocation` \| `undefined`
+  \| [`ElementLocation`](../../../timeline/src/interfaces/ElementLocation.mdx)
+  \| `undefined`

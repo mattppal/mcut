@@ -26,9 +26,9 @@ function createAssetFromFile(file): Promise<{
 }>;
 ```
 
-Defined in: [packages/media/src/probe.ts:206](https://github.com/mattppal/mcut/blob/main/packages/media/src/probe.ts#L206)
+Defined in: [packages/media/src/probe.ts:195](https://github.com/mattppal/mcut/blob/main/packages/media/src/probe.ts#L195)
 
-Turn a dropped/picked file into a probed [AssetRef](/docs/sdk/reference/timeline/src/type-aliases/AssetRef) ready for the
+Turn a dropped/picked file into a probed [AssetRef](../../../timeline/src/type-aliases/AssetRef.mdx) ready for the
 `addAsset` command. Creates an object URL for `src` — callers own its
 lifetime (revoke when the asset is removed). `hash` (SHA-256) is the
 asset's stable identity for persistence/relink; very large files skip it.

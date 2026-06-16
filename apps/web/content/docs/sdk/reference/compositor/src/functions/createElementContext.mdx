@@ -13,10 +13,10 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 ```ts
 function createElementContext(
-   backend, 
-   project, 
-   track, 
-   timeMs, 
+   backend,
+   project,
+   track,
+   timeMs,
    source): ElementRenderContext;
 ```
 
@@ -36,92 +36,109 @@ raster surface lazily, in z-order).
 
 #### assets
 
-`z.ZodDefault`\<`z.ZodRecord`\<`z.ZodString`, `z.ZodObject`\<\{
-  `durationMs`: `z.ZodOptional`\<`z.ZodNumber`\>;
-  `hash`: `z.ZodOptional`\<`z.ZodString`\>;
-  `height`: `z.ZodOptional`\<`z.ZodNumber`\>;
-  `id`: `z.ZodCustom`\<`` `a-${string}` ``, `` `a-${string}` ``\>;
-  `kind`: `z.ZodEnum`\<\{
-     `audio`: `"audio"`;
-     `image`: `"image"`;
-     `video`: `"video"`;
-  \}\>;
-  `mimeType`: `z.ZodOptional`\<`z.ZodString`\>;
-  `name`: `z.ZodOptional`\<`z.ZodString`\>;
-  `nativePreview`: `z.ZodOptional`\<`z.ZodBoolean`\>;
-  `src`: `z.ZodString`;
-  `width`: `z.ZodOptional`\<`z.ZodNumber`\>;
-\}, `z.core.$strip`\>\>\>
+`Record`\<`string`, \{
+  `durationMs?`: `number`;
+  `hash?`: `string`;
+  `height?`: `number`;
+  `id`: `` `a-${string}` ``;
+  `kind`: `"video"` \| `"audio"` \| `"image"`;
+  `mimeType?`: `string`;
+  `name?`: `string`;
+  `nativePreview?`: `boolean`;
+  `src`: `string`;
+  `width?`: `number`;
+\}\> = `...`
 
 #### fps
 
-`number`
+`number` = `...`
 
 #### height
 
-`number`
+`number` = `...`
 
 #### id
 
-`string`
+`string` = `...`
 
 #### layouts
 
-`object`[]
+`object`[] = `...`
+
+Multicam layout templates this project references. See layouts.ts.
 
 #### markers
 
-`object`[]
+`object`[] = `...`
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
 
 #### name
 
-`string`
+`string` = `...`
 
 #### presets
 
-`object`[]
+`object`[] = `...`
+
+Named inspector value bundles (style presets). See presets.ts.
 
 #### tracks
 
-`object`[]
+`object`[] = `...`
+
+Render order: index 0 is painted first (bottom); last is topmost.
 
 #### version
 
-`1`
+`1` = `...`
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
 
 #### width
 
-`number`
+`number` = `...`
 
 ### track
 
 #### elements
 
-`TimelineElement`[]
+[`TimelineElement`](../../../timeline/src/type-aliases/TimelineElement.mdx)[] = `...`
+
+Sorted by `startMs`; never overlapping in time.
 
 #### hidden
 
-`boolean`
+`boolean` = `...`
+
+Visuals from this track are not rendered.
 
 #### id
 
-`` `t-${string}` ``
+`` `t-${string}` `` = `trackIdSchema`
 
 #### locked
 
-`boolean`
+`boolean` = `...`
+
+UI hint: track rejects edits. The engine does not enforce this.
 
 #### magnetic
 
-`boolean`
+`boolean` = `...`
+
+When enabled, edits compact this track so clips keep no gaps between them.
 
 #### muted
 
-`boolean`
+`boolean` = `...`
+
+Audio from this track is silenced.
 
 #### name
 
-`string`
+`string` = `...`
 
 ### timeMs
 

@@ -13,8 +13,8 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 ```ts
 function getMulticamSourceTimeMs(
-   element, 
-   source, 
+   element,
+   source,
    timelineMs): number;
 ```
 
@@ -109,15 +109,15 @@ Audio fade-out length before the clip's end (ms). Absent = none.
 #### keyframes?
 
 `Partial`\<`Record`\<
-  \| `"opacity"`
-  \| `"volume"`
   \| `"blur"`
-  \| `"letterSpacing"`
   \| `"rotation"`
   \| `"position.x"`
   \| `"position.y"`
   \| `"scale.x"`
-  \| `"scale.y"`, `object`[]\>\> = `...`
+  \| `"scale.y"`
+  \| `"opacity"`
+  \| `"volume"`
+  \| `"letterSpacing"`, `object`[]\>\> = `...`
 
 Armed fixed-effect properties (Premiere stopwatch on): per-property
 keyframe tracks, sorted and unique by element-local `timeMs`.

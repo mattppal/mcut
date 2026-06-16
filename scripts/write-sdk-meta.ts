@@ -54,28 +54,40 @@ function titleFromMarkdown(markdown: string, filePath: string) {
   return path.basename(filePath, ".mdx");
 }
 
-async function ensureGeneratedTitles() {
+function stripTrailingWhitespace(markdown: string) {
+  return markdown.replace(/[ \t]+$/gm, "");
+}
+
+async function normalizeGeneratedMarkdown() {
   const files = (await walkFiles(referenceRoot)).filter((file) => file.endsWith(".mdx"));
 
   for (const file of files) {
     const markdown = await readFile(file, "utf8");
-    if (!markdown.startsWith("---\n")) continue;
+    let next = stripTrailingWhitespace(markdown);
+    if (!next.startsWith("---\n")) {
+      if (next !== markdown) await writeFile(file, next);
+      continue;
+    }
 
-    const frontmatterEnd = markdown.indexOf("\n---", 4);
-    if (frontmatterEnd === -1) continue;
+    const frontmatterEnd = next.indexOf("\n---", 4);
+    if (frontmatterEnd === -1) {
+      if (next !== markdown) await writeFile(file, next);
+      continue;
+    }
 
-    const frontmatter = markdown.slice(4, frontmatterEnd);
-    if (/^title:/m.test(frontmatter)) continue;
+    const frontmatter = next.slice(4, frontmatterEnd);
+    if (!/^title:/m.test(frontmatter)) {
+      const title = titleFromMarkdown(next.slice(frontmatterEnd + 4), file);
+      next = `---\ntitle: ${JSON.stringify(title)}\n${frontmatter}\n---${next.slice(frontmatterEnd + 4)}`;
+    }
 
-    const title = titleFromMarkdown(markdown.slice(frontmatterEnd + 4), file);
-    const next = `---\ntitle: ${JSON.stringify(title)}\n${frontmatter}\n---${markdown.slice(frontmatterEnd + 4)}`;
-    await writeFile(file, next);
+    if (next !== markdown) await writeFile(file, next);
   }
 }
 
 const packageDirs = await existingPackageDirs();
 
-await ensureGeneratedTitles();
+await normalizeGeneratedMarkdown();
 
 await writeFile(
   path.join(sdkRoot, "meta.json"),

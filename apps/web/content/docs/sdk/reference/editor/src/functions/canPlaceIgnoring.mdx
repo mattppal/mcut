@@ -13,9 +13,9 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 ```ts
 function canPlaceIgnoring(
-   track, 
-   startMs, 
-   durationMs, 
+   track,
+   startMs,
+   durationMs,
    ignore): boolean;
 ```
 
@@ -27,31 +27,41 @@ Defined in: [packages/editor/src/timeline-gesture.ts:62](https://github.com/matt
 
 #### elements
 
-`TimelineElement`[]
+[`TimelineElement`](../../../timeline/src/type-aliases/TimelineElement.mdx)[] = `...`
+
+Sorted by `startMs`; never overlapping in time.
 
 #### hidden
 
-`boolean`
+`boolean` = `...`
+
+Visuals from this track are not rendered.
 
 #### id
 
-`` `t-${string}` ``
+`` `t-${string}` `` = `trackIdSchema`
 
 #### locked
 
-`boolean`
+`boolean` = `...`
+
+UI hint: track rejects edits. The engine does not enforce this.
 
 #### magnetic
 
-`boolean`
+`boolean` = `...`
+
+When enabled, edits compact this track so clips keep no gaps between them.
 
 #### muted
 
-`boolean`
+`boolean` = `...`
+
+Audio from this track is silenced.
 
 #### name
 
-`string`
+`string` = `...`
 
 ### startMs
 

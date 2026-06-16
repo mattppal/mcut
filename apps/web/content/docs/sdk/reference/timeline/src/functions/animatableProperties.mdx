@@ -13,15 +13,15 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 ```ts
 function animatableProperties(element): (
-  | "opacity"
-  | "volume"
   | "blur"
-  | "letterSpacing"
   | "rotation"
   | "position.x"
   | "position.y"
   | "scale.x"
-  | "scale.y")[];
+  | "scale.y"
+  | "opacity"
+  | "volume"
+  | "letterSpacing")[];
 ```
 
 Defined in: [packages/timeline/src/keyframes.ts:156](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/keyframes.ts#L156)
@@ -38,12 +38,12 @@ type's registry entry (unknown strings are filtered defensively).
 ## Returns
 
 (
-  \| `"opacity"`
-  \| `"volume"`
   \| `"blur"`
-  \| `"letterSpacing"`
   \| `"rotation"`
   \| `"position.x"`
   \| `"position.y"`
   \| `"scale.x"`
-  \| `"scale.y"`)[]
+  \| `"scale.y"`
+  \| `"opacity"`
+  \| `"volume"`
+  \| `"letterSpacing"`)[]

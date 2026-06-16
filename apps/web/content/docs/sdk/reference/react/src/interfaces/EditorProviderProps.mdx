@@ -60,22 +60,18 @@ Initial project for the internally-created engine.
 #### assets
 
 ```ts
-assets: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
-  durationMs: z.ZodOptional<z.ZodNumber>;
-  hash: z.ZodOptional<z.ZodString>;
-  height: z.ZodOptional<z.ZodNumber>;
-  id: z.ZodCustom<`a-${string}`, `a-${string}`>;
-  kind: z.ZodEnum<{
-     audio: "audio";
-     image: "image";
-     video: "video";
-  }>;
-  mimeType: z.ZodOptional<z.ZodString>;
-  name: z.ZodOptional<z.ZodString>;
-  nativePreview: z.ZodOptional<z.ZodBoolean>;
-  src: z.ZodString;
-  width: z.ZodOptional<z.ZodNumber>;
-}, z.core.$strip>>>;
+assets: Record<string, {
+  durationMs?: number;
+  hash?: string;
+  height?: number;
+  id: `a-${string}`;
+  kind: "video" | "audio" | "image";
+  mimeType?: string;
+  name?: string;
+  nativePreview?: boolean;
+  src: string;
+  width?: number;
+}>;
 ```
 
 #### fps
@@ -102,11 +98,15 @@ id: string;
 layouts: object[];
 ```
 
+Multicam layout templates this project references. See layouts.ts.
+
 #### markers
 
 ```ts
 markers: object[];
 ```
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
 
 #### name
 
@@ -120,17 +120,24 @@ name: string;
 presets: object[];
 ```
 
+Named inspector value bundles (style presets). See presets.ts.
+
 #### tracks
 
 ```ts
 tracks: object[];
 ```
 
+Render order: index 0 is painted first (bottom); last is topmost.
+
 #### version
 
 ```ts
 version: 1;
 ```
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
 
 #### width
 

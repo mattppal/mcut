@@ -57,39 +57,43 @@ Measure a text block (unscaled). Required for text element bounds.
 
 ###### align
 
-`"left"` \| `"center"` \| `"right"`
+`"left"` \| `"center"` \| `"right"` = `...`
 
 ###### backgroundColor?
 
-`string`
+`string` = `...`
 
 ###### color
 
-`string`
+`string` = `...`
 
 ###### fontFamily
 
-`string`
+`string` = `...`
 
 ###### fontSize
 
-`number`
+`number` = `...`
 
 ###### fontStyle
 
-`"normal"` \| `"italic"`
+`"normal"` \| `"italic"` = `...`
 
 ###### fontWeight
 
-`number`
+`number` = `...`
 
 ###### letterSpacing
 
-`number`
+`number` = `...`
+
+Extra space between characters in px (tracking).
 
 ###### lineHeight
 
-`number`
+`number` = `...`
+
+Line height as a multiple of fontSize.
 
 ###### shadow?
 
@@ -98,56 +102,64 @@ Measure a text block (unscaled). Required for text element bounds.
   `color`: `string`;
   `offsetX`: `number`;
   `offsetY`: `number`;
-\}
+\} = `...`
 
 ###### shadow.blur
 
-`number`
+`number` = `...`
 
 ###### shadow.color
 
-`string`
+`string` = `...`
+
+Any CSS color (alpha encodes the strength).
 
 ###### shadow.offsetX
 
-`number`
+`number` = `...`
 
 ###### shadow.offsetY
 
-`number`
+`number` = `...`
 
 ###### stroke?
 
 \{
   `color`: `string`;
   `width`: `number`;
-\}
+\} = `...`
 
 ###### stroke.color
 
-`string`
+`string` = `...`
+
+Any CSS color.
 
 ###### stroke.width
 
-`number`
+`number` = `...`
+
+Visible width in project px (frames paint it inside the bounds).
 
 ###### textTransform
 
-`"none"` \| `"uppercase"` \| `"lowercase"`
+`"lowercase"` \| `"uppercase"` \| `"none"` = `...`
+
+Case applied at render time; the stored text keeps the user's casing.
 
 ##### box?
 
 ###### height?
 
-`number`
+`number` = `...`
 
 ###### overflow
 
-`"visible"` \| `"clip"`
+`"visible"` \| `"clip"` = `...`
 
 ###### width
 
-`number`
+`number` = `...`
 
 ##### runs?
 
