@@ -3,6 +3,6 @@
 
 [scripts]
 setup = "bun install --frozen-lockfile"
-run = "bun run dev"
+run = 'cd apps/web && bun run dev -- --port "$CONDUCTOR_PORT"'
 run_mode = "concurrent"
 archive = "true"

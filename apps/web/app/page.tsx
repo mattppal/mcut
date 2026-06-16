@@ -1,6 +1,7 @@
 import { BrandMark } from "@/components/brand-mark";
 import { InstallCommands } from "@/components/install-commands";
 import { SignupForm } from "@/components/signup-form";
+import Link from "next/link";
 
 const POINTS: [string, React.ReactNode][] = [
   [
@@ -36,6 +37,12 @@ export default function Home() {
       <header className="mx-auto flex w-full max-w-2xl items-center justify-between px-6 py-6">
         <BrandMark wordmark className="tracking-wide" />
         <nav className="flex items-center gap-5 text-sm">
+          <Link
+            className="text-muted-foreground transition-colors hover:text-foreground"
+            href="/docs"
+          >
+            Docs
+          </Link>
           <a
             className="text-muted-foreground transition-colors hover:text-foreground"
             href="https://github.com/mattppal/mcut"

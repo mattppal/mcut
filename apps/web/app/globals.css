@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -57,7 +59,6 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
     scrollbar-color: var(--scrollbar-thumb) transparent;
     scrollbar-width: thin;
   }
@@ -92,7 +93,7 @@
   }
 
   body {
-    @apply min-h-full bg-background text-foreground;
+    @apply min-h-full;
   }
 }
 

@@ -1,0 +1,11 @@
+{
+  "pages": [
+    "---Intro---",
+    "index",
+    "quickstart",
+    "agent-instructions",
+    "...contributing",
+    "---Reference---",
+    "...reference"
+  ]
+}
