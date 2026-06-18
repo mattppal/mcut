@@ -57,6 +57,19 @@ export {
 } from './audio-peaks'
 
 export {
+  DEFAULT_ACTIVITY_FRAME_MS,
+  DEFAULT_ACTIVITY_THRESHOLD,
+  DEFAULT_MIN_SILENCE_MS,
+  DEFAULT_MIN_SOUND_MS,
+  analyzeAudioActivity,
+  analyzeAudioSamples,
+  type AudioActivity,
+  type AudioActivityOptions,
+  type AudioActivitySummary,
+  type AudioActivityWindow,
+} from './audio-activity'
+
+export {
   MAX_HASHABLE_BYTES,
   hashBlob,
   isMediaStoreSupported,

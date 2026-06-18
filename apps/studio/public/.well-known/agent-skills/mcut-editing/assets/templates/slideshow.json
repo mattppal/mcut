@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "id": "p-slideshow",
+  "name": "Slideshow",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "tracks": [
+    {
+      "id": "t-default",
+      "name": "Photos",
+      "muted": false,
+      "hidden": false,
+      "locked": false,
+      "magnetic": false,
+      "elements": [
+        {
+          "id": "e-photo-1",
+          "type": "image",
+          "startMs": 0,
+          "durationMs": 4000,
+          "assetId": "a-photo-1",
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "rotation": 0
+          },
+          "opacity": 1
+        },
+        {
+          "id": "e-photo-2",
+          "type": "image",
+          "startMs": 4000,
+          "durationMs": 4000,
+          "assetId": "a-photo-2",
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "rotation": 0
+          },
+          "opacity": 1
+        },
+        {
+          "id": "e-photo-3",
+          "type": "image",
+          "startMs": 8000,
+          "durationMs": 4000,
+          "assetId": "a-photo-3",
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "rotation": 0
+          },
+          "opacity": 1
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "a-photo-1": {
+      "id": "a-photo-1",
+      "kind": "image",
+      "src": "media/photo-1.jpg",
+      "name": "photo-1.jpg",
+      "mimeType": "image/jpeg",
+      "width": 2000,
+      "height": 1333
+    },
+    "a-photo-2": {
+      "id": "a-photo-2",
+      "kind": "image",
+      "src": "media/photo-2.jpg",
+      "name": "photo-2.jpg",
+      "mimeType": "image/jpeg",
+      "width": 2000,
+      "height": 1333
+    },
+    "a-photo-3": {
+      "id": "a-photo-3",
+      "kind": "image",
+      "src": "media/photo-3.jpg",
+      "name": "photo-3.jpg",
+      "mimeType": "image/jpeg",
+      "width": 2000,
+      "height": 1333
+    }
+  },
+  "layouts": [],
+  "presets": [],
+  "markers": []
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "youtube",
+    "label": "YouTube (16:9)",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "safeArea": {
+      "top": 0,
+      "bottom": 0.08
+    },
+    "notes": "Standard horizontal video. The bottom ~8% is covered by the scrubber on hover; avoid parking captions or lower thirds at the very bottom edge."
+  },
+  {
+    "id": "youtube-4k",
+    "label": "YouTube 4K (16:9)",
+    "width": 3840,
+    "height": 2160,
+    "fps": 30,
+    "safeArea": {
+      "top": 0,
+      "bottom": 0.08
+    },
+    "notes": "As youtube, at UHD. Use for screen-recording-heavy content where text must stay crisp."
+  },
+  {
+    "id": "shorts",
+    "label": "YouTube Shorts (9:16)",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "safeArea": {
+      "top": 0.1,
+      "bottom": 0.25
+    },
+    "notes": "Vertical, 60s max (3min allowed, 60s favored). Title/channel chrome overlays the top 10%; like/comment rail and description cover the bottom 25%. Center captions in the middle band."
+  },
+  {
+    "id": "tiktok",
+    "label": "TikTok (9:16)",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "safeArea": {
+      "top": 0.1,
+      "bottom": 0.25
+    },
+    "notes": "Vertical. Hook in the first 1–2s; 21–34s is the engagement sweet spot. Keep captions and faces inside the middle band — the right rail and bottom description bar overlap the frame."
+  },
+  {
+    "id": "reels",
+    "label": "Instagram Reels (9:16)",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "safeArea": {
+      "top": 0.1,
+      "bottom": 0.25
+    },
+    "notes": "Vertical, 90s max. The feed crops a 4:5 preview from the center — keep the subject centered vertically so the crop still works."
+  },
+  {
+    "id": "square",
+    "label": "Square (1:1)",
+    "width": 1080,
+    "height": 1080,
+    "fps": 30,
+    "safeArea": {
+      "top": 0,
+      "bottom": 0.1
+    },
+    "notes": "Feed-neutral square. Works on LinkedIn and X timelines without cropping."
+  }
+]

@@ -1,0 +1,444 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Scrims and badges layered on media (video frames, thumbnails, clips).
+   * Theme-constant by design: media is unpredictable, so overlays stay dark
+   * and overlay text stays light in both modes. Use with opacity modifiers:
+   * `bg-overlay/60`, `text-overlay-foreground/90`. */
+  --color-overlay: var(--overlay);
+  --color-overlay-foreground: var(--overlay-foreground);
+  /* Micro type for dense chrome: badges, timecodes, section labels.
+   * Convention: text-2xs for micro labels, text-xs for small body —
+   * no arbitrary text-[9px]/text-[10px]. Timecodes compose as
+   * `font-mono text-2xs tabular-nums`. */
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 0.875rem;
+}
+
+:root {
+  --overlay: oklch(0 0 0);
+  --overlay-foreground: oklch(1 0 0);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+/* ---------------------------------------------------------------------------
+ * mcut editor design tokens
+ *
+ * One warm-grey palette in two modes. The chrome (toolbar + rail) sits
+ * directly on `--background`; panels float as `--card` windows. Separation
+ * comes from background depth and gaps — `--border` exists but is reached
+ * for rarely. A single `--radius` drives the whole radius scale (controls
+ * use rounded-lg = --radius, floating surfaces use rounded-xl).
+ *
+ * Conventions:
+ * - Anything layered on media uses the theme-constant overlay tokens
+ *   (`bg-overlay/60`, `text-overlay-foreground/90`), never bg-black/NN.
+ * - Micro type is `text-2xs`, small body is `text-xs` — no text-[NNpx].
+ * - Transitions use Tailwind's default duration in editor (registry) code;
+ *   components/ui keeps upstream shadcn's `duration-200` to minimize drift.
+ * - These tokens are mirrored into registry.json `css`/`cssVars` fields so
+ *   registry consumers receive them — keep both in sync when editing.
+ * ------------------------------------------------------------------------- */
+[data-editor] {
+  color-scheme: light;
+  --radius: 0.5rem;
+  /* Warm paper greys (hue ~85, low chroma): calm, never blue-sterile. */
+  --background: oklch(0.943 0.005 85);
+  --foreground: #100f0f;
+  --card: oklch(0.985 0.003 85);
+  --card-foreground: #100f0f;
+  --popover: oklch(0.99 0.002 85);
+  --popover-foreground: #100f0f;
+  --primary: #af3029;
+  --primary-foreground: #fffcf0;
+  --secondary: oklch(0.925 0.005 85);
+  --secondary-foreground: #100f0f;
+  --muted: oklch(0.93 0.005 85);
+  --muted-foreground: #6f6e69;
+  --accent: oklch(0.915 0.006 85);
+  --accent-foreground: #100f0f;
+  --destructive: #af3029;
+  --border: #cecdc3;
+  --input: oklch(0.9 0.006 85);
+  --ring: #af3029;
+  /* Clip-type colors for the timeline. Alpha is baked in so call sites never
+   * need opacity modifiers. Deliberately NOT registered in `@theme inline`:
+   * `--color-clip-text` would generate a `bg-clip-text` utility that collides
+   * with Tailwind's built-in `background-clip` utilities. Reference with
+   * arbitrary-var syntax instead: `bg-(--clip-video) text-(--clip-video-foreground)`.
+   * Light mode lifts the hues so clips read fresh against paper; the dark
+   * block overrides with deeper tones. */
+  --clip-video: oklch(44.3% 0.11 240.79 / 90%);
+  --clip-video-foreground: oklch(97.7% 0.013 236.62);
+  --clip-audio: oklch(43.2% 0.095 166.913 / 90%);
+  --clip-audio-foreground: oklch(97.9% 0.021 166.113);
+  --clip-image: oklch(47.3% 0.137 46.201 / 80%);
+  --clip-image-foreground: oklch(98.7% 0.022 95.277);
+  --clip-text: oklch(54.1% 0.281 293.009 / 85%);
+  --clip-text-foreground: oklch(1 0 0);
+  --clip-caption: oklch(58.6% 0.253 17.585 / 85%);
+  --clip-caption-foreground: oklch(1 0 0);
+  --clip-multicam: oklch(39.8% 0.195 277.366 / 90%);
+  --clip-multicam-foreground: oklch(96.2% 0.018 272.314);
+  /* Magnetic-snap guide line + adjacency flash. */
+  --snap-guide: oklch(74% 0.238 322.16);
+}
+
+[data-editor].dark,
+.dark [data-editor] {
+  color-scheme: dark;
+  --background: oklch(0.152 0.005 75);
+  --foreground: #cecdc3;
+  --card: oklch(0.208 0.006 75);
+  --card-foreground: #cecdc3;
+  --popover: oklch(0.228 0.006 75);
+  --popover-foreground: #cecdc3;
+  --primary: #d14d41;
+  --primary-foreground: #100f0f;
+  --secondary: oklch(0.262 0.007 75);
+  --secondary-foreground: #cecdc3;
+  --muted: oklch(0.248 0.007 75);
+  --muted-foreground: #878580;
+  --accent: oklch(0.276 0.008 75);
+  --accent-foreground: #cecdc3;
+  --destructive: #d14d41;
+  --border: #403e3c;
+  --input: oklch(1 0 0 / 10%);
+  --ring: #d14d41;
+  /* Deeper clip tones for dark mode (the 950-level hues the editor shipped with). */
+  --clip-video: oklch(29.3% 0.066 243.157 / 90%);
+  --clip-audio: oklch(26.2% 0.051 172.552 / 90%);
+  --clip-image: oklch(27.9% 0.077 45.635 / 80%);
+  --clip-multicam: oklch(25.7% 0.09 281.288 / 90%);
+}
+
+[data-editor] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+[data-editor] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-editor] ::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--foreground) 22%, transparent);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+[data-editor] ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+ * Scroll-edge fade masks (after https://twilson.net/scroll-mask)
+ *
+ * Pure-CSS progressive enhancement: scroll-driven animations fade content at
+ * the edges of a scroll container, only on edges with more content to reach.
+ * Browsers without `animation-timeline: scroll()` render plain scrollers, and
+ * non-overflowing containers stay inert (inactive timeline → @property
+ * initial values → fade size 0).
+ *
+ * Usage: `scroll-mask-y` / `scroll-mask-x` (both edges of an axis) or
+ * `scroll-mask-t/b/l/r` (one edge). Works on a plain `overflow-auto` element
+ * or directly on `<ScrollArea>` (rules also target the
+ * `[data-slot="scroll-area-viewport"]` child, which is the real scroller;
+ * the no-op mask on the non-scrolling root is harmless). Fade size defaults
+ * to 1.5rem — override with `[--scroll-mask-size:2rem]`.
+ *
+ * Placement rule: fade an edge only where content visually slides UNDER a
+ * pinned sibling (a dialog header, the command-palette input). At a panel's
+ * exposed top edge there is nothing to slide under, so a top fade reads as a
+ * rendering smudge — use `scroll-mask-b` there, not `scroll-mask-y`.
+ * ------------------------------------------------------------------------- */
+@property --scroll-mask-t {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --scroll-mask-b {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --scroll-mask-l {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --scroll-mask-r {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes scroll-mask-reveal-t {
+  from {
+    --scroll-mask-t: 0;
+  }
+  to {
+    --scroll-mask-t: 1;
+  }
+}
+@keyframes scroll-mask-conceal-b {
+  from {
+    --scroll-mask-b: 1;
+  }
+  to {
+    --scroll-mask-b: 0;
+  }
+}
+@keyframes scroll-mask-reveal-l {
+  from {
+    --scroll-mask-l: 0;
+  }
+  to {
+    --scroll-mask-l: 1;
+  }
+}
+@keyframes scroll-mask-conceal-r {
+  from {
+    --scroll-mask-r: 1;
+  }
+  to {
+    --scroll-mask-r: 0;
+  }
+}
+
+@utility scroll-mask-y {
+  @supports (animation-timeline: scroll()) {
+    &,
+    & [data-slot="scroll-area-viewport"] {
+      mask-image:
+        linear-gradient(
+          to bottom,
+          transparent,
+          black calc(var(--scroll-mask-t) * var(--scroll-mask-size, 1.5rem))
+        ),
+        linear-gradient(
+          to top,
+          transparent,
+          black calc(var(--scroll-mask-b) * var(--scroll-mask-size, 1.5rem))
+        );
+      mask-composite: intersect;
+      animation:
+        scroll-mask-reveal-t linear both,
+        scroll-mask-conceal-b linear both;
+      animation-timeline: scroll(self block);
+      animation-range:
+        0px calc(var(--scroll-mask-size, 1.5rem) * 2),
+        calc(100% - var(--scroll-mask-size, 1.5rem) * 2) 100%;
+    }
+  }
+}
+
+@utility scroll-mask-x {
+  @supports (animation-timeline: scroll()) {
+    &,
+    & [data-slot="scroll-area-viewport"] {
+      mask-image:
+        linear-gradient(
+          to right,
+          transparent,
+          black calc(var(--scroll-mask-l) * var(--scroll-mask-size, 1.5rem))
+        ),
+        linear-gradient(
+          to left,
+          transparent,
+          black calc(var(--scroll-mask-r) * var(--scroll-mask-size, 1.5rem))
+        );
+      mask-composite: intersect;
+      animation:
+        scroll-mask-reveal-l linear both,
+        scroll-mask-conceal-r linear both;
+      animation-timeline: scroll(self inline);
+      animation-range:
+        0px calc(var(--scroll-mask-size, 1.5rem) * 2),
+        calc(100% - var(--scroll-mask-size, 1.5rem) * 2) 100%;
+    }
+  }
+}
+
+@utility scroll-mask-t {
+  @supports (animation-timeline: scroll()) {
+    &,
+    & [data-slot="scroll-area-viewport"] {
+      mask-image: linear-gradient(
+        to bottom,
+        transparent,
+        black calc(var(--scroll-mask-t) * var(--scroll-mask-size, 1.5rem))
+      );
+      animation: scroll-mask-reveal-t linear both;
+      animation-timeline: scroll(self block);
+      animation-range: 0px calc(var(--scroll-mask-size, 1.5rem) * 2);
+    }
+  }
+}
+
+@utility scroll-mask-b {
+  @supports (animation-timeline: scroll()) {
+    &,
+    & [data-slot="scroll-area-viewport"] {
+      mask-image: linear-gradient(
+        to top,
+        transparent,
+        black calc(var(--scroll-mask-b) * var(--scroll-mask-size, 1.5rem))
+      );
+      animation: scroll-mask-conceal-b linear both;
+      animation-timeline: scroll(self block);
+      animation-range: calc(100% - var(--scroll-mask-size, 1.5rem) * 2) 100%;
+    }
+  }
+}
+
+@utility scroll-mask-l {
+  @supports (animation-timeline: scroll()) {
+    &,
+    & [data-slot="scroll-area-viewport"] {
+      mask-image: linear-gradient(
+        to right,
+        transparent,
+        black calc(var(--scroll-mask-l) * var(--scroll-mask-size, 1.5rem))
+      );
+      animation: scroll-mask-reveal-l linear both;
+      animation-timeline: scroll(self inline);
+      animation-range: 0px calc(var(--scroll-mask-size, 1.5rem) * 2);
+    }
+  }
+}
+
+@utility scroll-mask-r {
+  @supports (animation-timeline: scroll()) {
+    &,
+    & [data-slot="scroll-area-viewport"] {
+      mask-image: linear-gradient(
+        to left,
+        transparent,
+        black calc(var(--scroll-mask-r) * var(--scroll-mask-size, 1.5rem))
+      );
+      animation: scroll-mask-conceal-r linear both;
+      animation-timeline: scroll(self inline);
+      animation-range: calc(100% - var(--scroll-mask-size, 1.5rem) * 2) 100%;
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "mcut-editing-skill",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The mcut-editing agent skill: generated references, starter templates, and executable recipes, synced into the Studio app's .well-known directory",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun run tools/generate.ts && bun run tools/sync.ts",
+    "generate": "bun run tools/generate.ts",
+    "sync": "bun run tools/sync.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@mcut/cli": "workspace:*",
+    "@mcut/timeline": "workspace:*",
+    "@mcut/transcription": "workspace:*"
+  }
+}
