@@ -140,7 +140,6 @@ function AssetThumb({ asset, thumb }: { asset: AssetRef; thumb?: string }) {
 
 function AssetCard({
   asset,
-  thumb,
   selected,
   onAdd,
   onRemove,
@@ -148,18 +147,47 @@ function AssetCard({
   onToggleSelect,
 }: {
   asset: AssetRef;
-  thumb?: string;
   selected: boolean;
   onAdd: () => void;
   onRemove: () => void;
   onSave: () => void;
   onToggleSelect: () => void;
 }) {
+  const assetKind = asset.kind;
+  const assetSrc = asset.src;
+  const assetDurationMs = asset.durationMs;
+  const assetThumbnailTimeMs = thumbnailTimeMs(asset);
+  const [thumbRecord, setThumbRecord] = useState<{ src: string; url: string | null } | null>(null);
+  const thumb = thumbRecord?.src === assetSrc ? (thumbRecord.url ?? undefined) : undefined;
   const dragData: EditorDragData = { kind: "asset", asset, ...(thumb ? { thumb } : {}) };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `asset-${asset.id}`,
     data: dragData,
   });
+
+  useEffect(() => {
+    if (assetKind !== "video") return;
+    let cancelled = false;
+    let url: string | null = null;
+
+    void getVideoThumbnailUrl(assetSrc, { width: 320, timeMs: assetThumbnailTimeMs })
+      .then((nextUrl) => {
+        if (cancelled) {
+          revokeThumbnail(nextUrl);
+          return;
+        }
+        url = nextUrl;
+        setThumbRecord({ src: assetSrc, url: nextUrl });
+      })
+      .catch(() => {
+        if (!cancelled) setThumbRecord({ src: assetSrc, url: null });
+      });
+
+    return () => {
+      cancelled = true;
+      revokeThumbnail(url);
+    };
+  }, [assetKind, assetSrc, assetDurationMs, assetThumbnailTimeMs]);
 
   return (
     <ContextMenu>
@@ -249,8 +277,6 @@ export function MediaBin({
   const project = useProject();
   const { setMode } = useEditorUI();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const pendingThumbIdsRef = useRef(new Set<string>());
-  const [thumbs, setThumbs] = useState<Record<string, string | null>>({});
   const [query, setQuery] = useState("");
   const [isFileDragOver, setIsFileDragOver] = useState(false);
   /** Click-selected asset ids, in click order. */
@@ -282,31 +308,6 @@ export function MediaBin({
       ? { screen: widerFirst[1]!, camera: widerFirst[0]! }
       : { screen: widerFirst[0]!, camera: widerFirst[1]! });
   const allAssets = useMemo(() => Object.values(project.assets), [project.assets]);
-
-  useEffect(() => {
-    const videoAssets = allAssets.filter((asset) => asset.kind === "video");
-
-    for (const asset of videoAssets) {
-      if (thumbs[asset.id] !== undefined || pendingThumbIdsRef.current.has(asset.id)) continue;
-      pendingThumbIdsRef.current.add(asset.id);
-      void getVideoThumbnailUrl(asset.src, { width: 320, timeMs: thumbnailTimeMs(asset) })
-        .then((url) => {
-          setThumbs((current) => {
-            if (!engine.project.assets[asset.id]) {
-              revokeThumbnail(url);
-              return current;
-            }
-            return { ...current, [asset.id]: url };
-          });
-        })
-        .catch(() => {
-          setThumbs((current) => ({ ...current, [asset.id]: null }));
-        })
-        .finally(() => {
-          pendingThumbIdsRef.current.delete(asset.id);
-        });
-    }
-  }, [allAssets, engine, thumbs]);
 
   const createMulticamFromBin = () => {
     if (!roles) return;
@@ -342,14 +343,6 @@ export function MediaBin({
   const removeAsset = (asset: AssetRef) => {
     engine.dispatch({ type: "removeAsset", assetId: asset.id });
     evictClipMediaCache(asset.id);
-    setThumbs((current) => {
-      const url = current[asset.id];
-      if (url === undefined) return current;
-      revokeThumbnail(url);
-      const next = { ...current };
-      delete next[asset.id];
-      return next;
-    });
     if (asset.src.startsWith("blob:")) URL.revokeObjectURL(asset.src);
   };
 
@@ -466,7 +459,6 @@ export function MediaBin({
               <AssetCard
                 key={asset.id}
                 asset={asset}
-                thumb={thumbs[asset.id] ?? undefined}
                 selected={selectedIds.includes(asset.id)}
                 onAdd={() => insertElementAtPlayhead(engine, elementForAsset(engine, asset))}
                 onRemove={() => removeAsset(asset)}
