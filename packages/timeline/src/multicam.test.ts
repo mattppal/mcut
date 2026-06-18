@@ -75,7 +75,13 @@ describe('createMulticam', () => {
     expect(camera.trimStartMs).toBe(0)
     expect(element.audioSource).toBe('camera')
     expect(element.angles).toEqual([{ atMs: 0, layoutId: next.layouts[0]!.id }])
-    expect(next.layouts.length).toBeGreaterThanOrEqual(4)
+    expect(next.layouts.length).toBeGreaterThanOrEqual(5)
+    const cropLayout = next.layouts.find((layout) => layout.name === 'Screen + Cam 3:4')!
+    expect(cropLayout.slots.map((slot) => slot.source)).toEqual(['screen', 'camera'])
+    for (const slot of cropLayout.slots) {
+      expect(slot.fit).toBe('cover')
+      expect((slot.rect.w * next.width) / (slot.rect.h * next.height)).toBeCloseTo(3 / 4, 2)
+    }
     // Originals consumed.
     expect(getElement(next, 'e-screen' as `e-${string}`)).toBeUndefined()
     expect(getElement(next, 'e-cam' as `e-${string}`)).toBeUndefined()

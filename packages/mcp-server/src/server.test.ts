@@ -24,6 +24,7 @@ describe('createMcutMcpServer', () => {
     expect(names).toContain('get_transcript')
     expect(names).toContain('search_transcript')
     expect(names).toContain('ensure_transcript')
+    expect(names).toContain('get_audio_activity')
     expect(names).toContain('list_actions')
     expect(names).toContain('run_action')
     expect(names).toContain('splitElement')
@@ -150,6 +151,11 @@ describe('createMcutMcpServer', () => {
     expect(ensured.isError).toBe(true)
     const ensuredText = (ensured.content as Array<{ type: string; text: string }>)[0]!.text
     expect(ensuredText).toContain('requires a live browser bridge')
+
+    const activity = await client.callTool({ name: 'get_audio_activity', arguments: {} })
+    expect(activity.isError).toBe(true)
+    const activityText = (activity.content as Array<{ type: string; text: string }>)[0]!.text
+    expect(activityText).toContain('requires a live browser bridge')
   })
 
   test('live bridge forwards MCP tools to a connected browser tab', async () => {
@@ -238,6 +244,23 @@ describe('createMcutMcpServer', () => {
         )
         return
       }
+      if (message.type === 'get_audio_activity') {
+        socket.send(
+          JSON.stringify({
+            id: message.id,
+            ok: true,
+            result: {
+              elementId: 'e-video',
+              hasAudio: true,
+              durationMs: 1000,
+              soundWindows: [{ startMs: 0, endMs: 400, durationMs: 400 }],
+              silenceWindows: [{ startMs: 400, endMs: 1000, durationMs: 600 }],
+              summary: { soundMs: 400, silenceMs: 600, soundFraction: 0.4 },
+            },
+          }),
+        )
+        return
+      }
       if (message.type === 'get_summary') {
         socket.send(
           JSON.stringify({
@@ -297,19 +320,28 @@ describe('createMcutMcpServer', () => {
     const ensuredContent = ensured.content as Array<{ type: string; text: string }>
     expect(ensuredContent[0]!.text).toContain('Transcript: true')
 
+    const activity = await client.callTool({
+      name: 'get_audio_activity',
+      arguments: { elementId: 'e-video' },
+    })
+    expect(activity.isError).toBeFalsy()
+    const activityContent = activity.content as Array<{ type: string; text: string }>
+    expect(activityContent[0]!.text).toContain('"soundWindows"')
+    expect(activityContent[0]!.text).toContain('"elementId": "e-video"')
+
     socket.close()
     bridge.close()
   })
 
   test('daemon HTTP target forwards MCP tools to the live browser tab', async () => {
-    const bridge = new LiveMcutBridge({ token: null, requestTimeoutMs: 1000 })
+    const bridge = new LiveMcutBridge({ token: 'daemon-token', requestTimeoutMs: 1000 })
     const port = await bridge.listen(0)
     const server = createMcutMcpServerForTarget({ target: createHttpBridgeTarget(port) })
     const client = new Client({ name: 'test', version: '0.0.0' })
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)])
 
-    const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp`, {
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp?token=daemon-token`, {
       headers: { Origin: 'http://localhost:3000' },
     })
     await new Promise<void>((resolve, reject) => {
@@ -349,6 +381,25 @@ describe('createMcutMcpServer', () => {
     expect(transcriptContent[0]!.text).toContain('daemon transcript')
 
     socket.close()
+    bridge.close()
+  })
+
+  test('live bridge rejects browser sockets without the configured token', async () => {
+    const bridge = new LiveMcutBridge({ token: 'required-token', requestTimeoutMs: 1000 })
+    const port = await bridge.listen(0)
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp`, {
+      headers: { Origin: 'http://localhost:3000' },
+    })
+    socket.on('error', () => {
+      // Expected: the bridge rejects the unauthenticated WebSocket upgrade.
+    })
+
+    const result = await new Promise<'open' | 'closed'>((resolve) => {
+      socket.once('open', () => resolve('open'))
+      socket.once('close', () => resolve('closed'))
+    })
+
+    expect(result).toBe('closed')
     bridge.close()
   })
 })

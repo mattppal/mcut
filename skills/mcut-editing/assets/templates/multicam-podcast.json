@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "id": "p-multicam-podcast",
+  "name": "Multicam podcast",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "tracks": [
+    {
+      "id": "t-default",
+      "name": "Screen",
+      "muted": false,
+      "hidden": false,
+      "locked": false,
+      "magnetic": false,
+      "elements": [
+        {
+          "id": "e-multicam",
+          "type": "multicam",
+          "startMs": 0,
+          "durationMs": 90000,
+          "sources": [
+            {
+              "key": "screen",
+              "assetId": "a-screen",
+              "trimStartMs": 0
+            },
+            {
+              "key": "camera",
+              "assetId": "a-camera",
+              "trimStartMs": 0
+            }
+          ],
+          "angles": [
+            {
+              "atMs": 0,
+              "layoutId": "lay-screen-cam"
+            }
+          ],
+          "audioSource": "camera",
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "rotation": 0
+          },
+          "opacity": 1,
+          "volume": 1,
+          "muted": false
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "a-screen": {
+      "id": "a-screen",
+      "kind": "video",
+      "src": "media/screen.mp4",
+      "name": "screen.mp4",
+      "mimeType": "video/mp4",
+      "durationMs": 90000,
+      "width": 1920,
+      "height": 1080
+    },
+    "a-camera": {
+      "id": "a-camera",
+      "kind": "video",
+      "src": "media/camera.mp4",
+      "name": "camera.mp4",
+      "mimeType": "video/mp4",
+      "durationMs": 90000,
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "layouts": [
+    {
+      "id": "lay-screen-cam",
+      "name": "Screen + Cam",
+      "slots": [
+        {
+          "source": "screen",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          },
+          "fit": "cover",
+          "focus": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "cornerRadius": 0,
+          "shadow": false
+        },
+        {
+          "source": "camera",
+          "rect": {
+            "x": 0.7,
+            "y": 0.69,
+            "w": 0.275,
+            "h": 0.275
+          },
+          "fit": "cover",
+          "focus": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "cornerRadius": 0.12,
+          "shadow": true
+        }
+      ]
+    },
+    {
+      "id": "lay-camera",
+      "name": "Camera",
+      "slots": [
+        {
+          "source": "camera",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          },
+          "fit": "cover",
+          "focus": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "cornerRadius": 0,
+          "shadow": false
+        }
+      ]
+    },
+    {
+      "id": "lay-screen",
+      "name": "Screen",
+      "slots": [
+        {
+          "source": "screen",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          },
+          "fit": "cover",
+          "focus": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "cornerRadius": 0,
+          "shadow": false
+        }
+      ]
+    },
+    {
+      "id": "lay-side-by-side",
+      "name": "Side by side",
+      "slots": [
+        {
+          "source": "screen",
+          "rect": {
+            "x": 0.015,
+            "y": 0.235,
+            "w": 0.475,
+            "h": 0.53
+          },
+          "fit": "cover",
+          "focus": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "cornerRadius": 0.06,
+          "shadow": false
+        },
+        {
+          "source": "camera",
+          "rect": {
+            "x": 0.51,
+            "y": 0.235,
+            "w": 0.475,
+            "h": 0.53
+          },
+          "fit": "cover",
+          "focus": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "cornerRadius": 0.06,
+          "shadow": false
+        }
+      ]
+    }
+  ],
+  "presets": [],
+  "markers": []
+}

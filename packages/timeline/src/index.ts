@@ -20,6 +20,12 @@ export {
   type FadeableElement,
 } from './audio'
 
+export {
+  resolveElementAudioSource,
+  type ElementAudioSource,
+  type ElementAudioSourceType,
+} from './audio-source'
+
 export { migrateProject, ProjectFormatError, PROJECT_VERSION } from './migrations'
 
 export {

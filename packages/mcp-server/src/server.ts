@@ -36,6 +36,7 @@ export interface McutMcpTarget {
   getTranscript?(options?: ProjectTranscriptOptions): unknown | Promise<unknown>
   searchTranscript?(query: string): unknown | Promise<unknown>
   ensureTranscript?(input: unknown): unknown | Promise<unknown>
+  getAudioActivity?(input: unknown): unknown | Promise<unknown>
   listActions(): unknown | Promise<unknown>
   listOperators(): unknown | Promise<unknown>
   runAction(actionId: string, input: unknown): unknown | Promise<unknown>
@@ -67,6 +68,61 @@ export const operatorToolName = (id: string) => `operator_${id.replace(/[^A-Za-z
 
 const toInputSchema = (schema: z.ZodType) =>
   z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any' }) as { type: 'object' }
+
+const AUDIO_ACTIVITY_INPUT_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    elementId: {
+      type: 'string' as const,
+      description: 'Optional video/audio element id. Defaults to selected media, then first video, then first audio.',
+    },
+    includeWaveform: {
+      type: 'boolean' as const,
+      description: 'Include compact max-amplitude waveform buckets for coarse inspection.',
+    },
+    waveformBuckets: {
+      type: 'integer' as const,
+      minimum: 1,
+      description: 'Waveform bucket count when includeWaveform is true. Defaults to 128.',
+    },
+    startMs: {
+      type: 'number' as const,
+      minimum: 0,
+      description: 'Optional source start time in milliseconds. Defaults to the selected element source start.',
+    },
+    endMs: {
+      type: 'number' as const,
+      minimum: 0,
+      description: 'Optional source end time in milliseconds. Defaults to the selected element source end.',
+    },
+    frameMs: {
+      type: 'number' as const,
+      minimum: 1,
+      description: 'Analysis frame size in milliseconds. Defaults to 30.',
+    },
+    threshold: {
+      type: 'number' as const,
+      minimum: 0,
+      description: 'RMS activity threshold. Defaults to 0.004.',
+    },
+    minSoundMs: {
+      type: 'number' as const,
+      minimum: 0,
+      description: 'Sound runs shorter than this are treated as silence. Defaults to 120.',
+    },
+    minSilenceMs: {
+      type: 'number' as const,
+      minimum: 0,
+      description: 'Silence runs shorter than this are treated as sound. Defaults to 120.',
+    },
+    paddingMs: {
+      type: 'number' as const,
+      minimum: 0,
+      description: 'Trim this much from each returned silence window edge. Defaults to 0.',
+    },
+  },
+  additionalProperties: false,
+}
 
 const STATIC_TOOLS = [
   {
@@ -142,6 +198,13 @@ const STATIC_TOOLS = [
       },
       additionalProperties: false,
     },
+  },
+  {
+    name: 'get_audio_activity',
+    description:
+      'Live bridge only: analyze a video/audio clip and return compact source sound/silence windows. ' +
+      'Use this for silence trimming, audio-aware cuts, and coarse non-speech sound inspection.',
+    inputSchema: AUDIO_ACTIVITY_INPUT_SCHEMA,
   },
   {
     name: 'list_operators',
@@ -251,6 +314,9 @@ function createEngineTarget(
     ensureTranscript: async () => {
       throw new Error('ensure_transcript requires a live browser bridge connected to an editor tab.')
     },
+    getAudioActivity: async () => {
+      throw new Error('get_audio_activity requires a live browser bridge connected to an editor tab.')
+    },
     listActions: () => [],
     listOperators: () =>
       operators.listAvailable({ engine }).map((operator) => ({
@@ -358,6 +424,10 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
           const suffix =
             result === undefined ? '' : `\n\nResult:\n${JSON.stringify(result, null, 2)}`
           return text(`OK: transcript ensured.${suffix}\n\n${await target.getSummary()}`)
+        }
+        case 'get_audio_activity': {
+          if (!target.getAudioActivity) return failure('get_audio_activity is not available on this target.')
+          return text(JSON.stringify(await target.getAudioActivity(args ?? {}), null, 2))
         }
         case 'list_operators':
           return text(JSON.stringify(await target.listOperators(), null, 2))

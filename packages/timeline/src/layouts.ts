@@ -78,6 +78,14 @@ export function createDefaultLayouts(): Layout[] {
     { id: createLayoutId(), name: 'Screen', slots: [full('screen')] },
     {
       id: createLayoutId(),
+      name: 'Screen + Cam 3:4',
+      slots: [
+        { source: 'screen', rect: { x: 0.095, y: 0.05, w: 0.38, h: 0.9 }, fit: 'cover', focus: center, cornerRadius: 0.06, shadow: false },
+        { source: 'camera', rect: { x: 0.525, y: 0.05, w: 0.38, h: 0.9 }, fit: 'cover', focus: center, cornerRadius: 0.06, shadow: false },
+      ],
+    },
+    {
+      id: createLayoutId(),
       name: 'Side by side',
       slots: [
         { source: 'screen', rect: { x: 0.015, y: 0.235, w: 0.475, h: 0.53 }, fit: 'cover', focus: center, cornerRadius: 0.06, shadow: false },

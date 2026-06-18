@@ -21,6 +21,7 @@ interface ParsedArgs {
   command: string
   rest: string[]
   port: number
+  token?: string
   json: unknown
   editorUrl: string
   allowedOrigins: string[]
@@ -29,9 +30,9 @@ interface ParsedArgs {
 function usage(): string {
   return [
     'Usage:',
-    '  mcut-bridge start [--port 44737] [--editor-url http://localhost:3000/editor] [--allow-origin https://mcut.com]',
+    '  mcut-bridge start [--port 44737] [--token <token>] [--editor-url http://localhost:3000/editor] [--allow-origin https://mcut.com]',
     '  mcut-bridge status [--port 44737]',
-    '  mcut-bridge url [--editor-url http://localhost:3000/editor] [--port 44737]',
+    '  mcut-bridge url [--editor-url http://localhost:3000/editor] [--port 44737] [--token <token>]',
     '  mcut-bridge get-summary [--port 44737]',
     '  mcut-bridge get-project [--port 44737]',
     '  mcut-bridge get-media-context [--port 44737]',
@@ -57,6 +58,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   const command = argv[0] ?? 'help'
   const rest: string[] = []
   let port = DEFAULT_BRIDGE_PORT
+  let token: string | undefined
   let json: unknown = {}
   let editorUrl = 'http://localhost:3000/editor'
   const allowedOrigins: string[] = []
@@ -66,6 +68,8 @@ function parseArgs(argv: string[]): ParsedArgs {
     if (!arg) continue
     if (arg === '--port') {
       port = parseLiveBridgePort(argv[++i]) ?? DEFAULT_BRIDGE_PORT
+    } else if (arg === '--token') {
+      token = argv[++i]
     } else if (arg === '--json') {
       json = parseJson(argv[++i])
     } else if (arg === '--editor-url') {
@@ -78,7 +82,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
   }
 
-  return { command, rest, port, json, editorUrl, allowedOrigins }
+  return { command, rest, port, token, json, editorUrl, allowedOrigins }
 }
 
 async function rpc(port: number, type: string, payload: unknown = {}): Promise<unknown> {
@@ -104,9 +108,10 @@ async function status(port: number): Promise<unknown> {
   return json.result
 }
 
-function editorUrl(base: string, port: number): string {
+function editorUrl(base: string, port: number, token?: string | null): string {
   const url = new URL(base)
   url.searchParams.set('mcpBridge', String(port))
+  if (token) url.searchParams.set('mcpToken', token)
   return url.toString()
 }
 
@@ -137,10 +142,10 @@ async function main(): Promise<void> {
     case 'start': {
       const editorOrigin = originOf(args.editorUrl)
       const allowedOrigins = [...args.allowedOrigins, ...(editorOrigin ? [editorOrigin] : [])]
-      const bridge = new LiveMcutBridge({ token: null, allowedOrigins })
+      const bridge = new LiveMcutBridge({ token: args.token, allowedOrigins })
       const port = await bridge.listen(args.port)
       console.error(`mcut bridge ready — ws://127.0.0.1:${port}/mcut-mcp`)
-      console.error(`Editor URL: ${editorUrl(args.editorUrl, port)}`)
+      console.error(`Editor URL: ${editorUrl(args.editorUrl, port, bridge.token)}`)
       console.error('Leave this process running while agents edit the browser project.')
       await new Promise<void>(() => {})
       return
@@ -149,7 +154,7 @@ async function main(): Promise<void> {
       print(await status(args.port))
       return
     case 'url':
-      console.log(editorUrl(args.editorUrl, args.port))
+      console.log(editorUrl(args.editorUrl, args.port, args.token))
       return
     case 'get-summary':
       print(await rpc(args.port, 'get_summary'))
