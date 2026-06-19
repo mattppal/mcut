@@ -65,6 +65,7 @@ interface OperatorPayload {
 
 interface ActionPayload {
   actionId: string;
+  input?: unknown;
 }
 
 interface ApplyCommandsPayload {
@@ -203,7 +204,7 @@ function actionPayload(value: unknown): ActionPayload {
   if (!isRecord(value) || typeof value.actionId !== "string") {
     throw new Error("Invalid run_action payload.");
   }
-  return { actionId: value.actionId };
+  return { actionId: value.actionId, input: value.input ?? {} };
 }
 
 function isAudioActivityElement(element: unknown): element is VideoElement | AudioElement {
@@ -451,10 +452,12 @@ export async function handleLiveMcpRequest(
       return listEditorActions().map((action) => ({
         id: action.id,
         label: action.label,
+        description: action.description,
         category: action.category,
         enabled: isActionEnabled(action, context),
         shortcut: formatShortcut(action.shortcut),
         palette: action.palette ?? true,
+        inputSchema: action.inputSchema,
         operator: action.operator?.id,
       }));
     case "undo":
@@ -471,14 +474,13 @@ export async function handleLiveMcpRequest(
       return null;
     }
     case "run_action": {
-      const { actionId } = actionPayload(request.payload);
+      const { actionId, input } = actionPayload(request.payload);
       const action = getEditorAction(actionId);
       if (!action) throw new Error(`Unknown editor action "${actionId}".`);
       if (!isActionEnabled(action, context)) {
         throw new Error(`Editor action "${actionId}" is disabled.`);
       }
-      runEditorAction(action, context);
-      return null;
+      return runEditorAction(action, { ...context, input, throwOnError: true }) ?? null;
     }
     default:
       throw new Error(`Unknown live MCP request "${request.type}".`);

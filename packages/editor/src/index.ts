@@ -54,4 +54,12 @@ export {
   type ResolvedClipDragMode,
 } from './timeline-gesture'
 
+export {
+  planSilenceCuts,
+  type SilenceCutOptions,
+  type SilenceCutPlan,
+  type SilenceCutTranscript,
+  type SilenceWindow,
+} from './silence-cuts'
+
 export { registerCoreOperators } from './core-operators'

@@ -7,6 +7,7 @@ import {
 import {
   EditorEngine,
   createProject,
+  getElementLocation,
   listCommands,
 } from "@mcut/timeline";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -189,6 +190,133 @@ describe("Studio action/operator MCP surface", () => {
       "e-agent-title",
     ]);
     expect(engine.canUndo()).toBe(true);
+  });
+
+  test("live bridge lists agent-focused action schemas", async () => {
+    const engine = new EditorEngine({ project: createProject() });
+    const actions = (await handleLiveMcpRequest(engine, {} as never, {
+      id: "test",
+      type: "list_actions",
+    })) as Array<{ id: string; description?: string; inputSchema?: Record<string, unknown> }>;
+
+    expect(actions.find((action) => action.id === "transcript.remove-silence")).toMatchObject({
+      description: expect.stringContaining("ensure_transcript"),
+      inputSchema: expect.objectContaining({ type: "object" }),
+    });
+    expect(actions.find((action) => action.id === "effects.fade-open-close")).toMatchObject({
+      description: expect.stringContaining("fade-in"),
+      inputSchema: expect.objectContaining({ type: "object" }),
+    });
+  });
+
+  test("live bridge removes silence through transcript action without audio analysis", async () => {
+    const engine = new EditorEngine({ project: createProject() });
+    const videoTrackId = engine.project.tracks[0]!.id;
+    engine.dispatch({ type: "addTrack", id: "t-captions", name: "Captions" });
+    engine.dispatch({
+      type: "addAsset",
+      asset: {
+        id: "a-video",
+        kind: "video",
+        src: "blob:video",
+        name: "talk.mp4",
+        durationMs: 10000,
+        width: 1920,
+        height: 1080,
+      },
+    });
+    engine.dispatch({
+      type: "addElement",
+      trackId: videoTrackId,
+      element: {
+        id: "e-video",
+        type: "video",
+        assetId: "a-video",
+        startMs: 0,
+        durationMs: 10000,
+        trimStartMs: 0,
+      },
+    });
+    engine.dispatch({
+      type: "addElement",
+      trackId: "t-captions",
+      element: {
+        id: "e-caption",
+        type: "caption",
+        startMs: 0,
+        durationMs: 10000,
+        text: "hello world",
+        words: [
+          { text: "hello", startMs: 0, endMs: 3000 },
+          { text: "world", startMs: 7000, endMs: 10000 },
+        ],
+      },
+    });
+
+    const result = (await handleLiveMcpRequest(engine, {} as never, {
+      id: "test",
+      type: "run_action",
+      payload: {
+        actionId: "transcript.remove-silence",
+        input: { elementId: "e-video", paddingMs: 0 },
+      },
+    })) as { removedMs: number; silences: Array<{ startMs: number; endMs: number }> };
+
+    expect(result.removedMs).toBe(4000);
+    expect(result.silences).toEqual([{ startMs: 3000, endMs: 7000 }]);
+    const elements = engine.project.tracks.find((track) => track.id === videoTrackId)!.elements;
+    expect(elements).toHaveLength(2);
+    expect(elements[0]).toMatchObject({ id: "e-video", startMs: 0, durationMs: 3000 });
+    expect(elements[1]).toMatchObject({ startMs: 3000, trimStartMs: 7000, durationMs: 3000 });
+  });
+
+  test("live bridge applies opening and closing fades through preset action", async () => {
+    const engine = new EditorEngine({ project: createProject() });
+    const trackId = engine.project.tracks[0]!.id;
+    engine.dispatch({
+      type: "addAsset",
+      asset: {
+        id: "a-video",
+        kind: "video",
+        src: "blob:video",
+        name: "talk.mp4",
+        durationMs: 5000,
+        width: 1920,
+        height: 1080,
+      },
+    });
+    engine.dispatch({
+      type: "addElement",
+      trackId,
+      element: {
+        id: "e-video",
+        type: "video",
+        assetId: "a-video",
+        startMs: 0,
+        durationMs: 5000,
+        trimStartMs: 0,
+      },
+    });
+
+    const result = (await handleLiveMcpRequest(engine, {} as never, {
+      id: "test",
+      type: "run_action",
+      payload: {
+        actionId: "effects.fade-open-close",
+        input: { elementId: "e-video", durationMs: 500 },
+      },
+    })) as { elementId: string; presets: string[]; durationMs: number };
+    const element = getElementLocation(engine.project, "e-video")!.element;
+
+    expect(result).toEqual({ elementId: "e-video", durationMs: 500, presets: ["fade-in", "fade-out"] });
+    expect("keyframes" in element ? element.keyframes?.opacity : undefined).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ timeMs: 0, value: 0 }),
+        expect.objectContaining({ timeMs: 500, value: 1 }),
+        expect.objectContaining({ timeMs: 4500, value: 1 }),
+        expect.objectContaining({ timeMs: 5000, value: 0 }),
+      ]),
+    );
   });
 
   test("live bridge returns semantic audio activity windows for a resolved media source", async () => {

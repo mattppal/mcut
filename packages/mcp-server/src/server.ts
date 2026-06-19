@@ -149,7 +149,8 @@ const STATIC_TOOLS = [
     name: 'get_transcript',
     description:
       'Read the current transcript derived from caption elements. This never starts transcription. ' +
-      'If no transcript exists and speech context is needed, call ensure_transcript in live bridge mode.',
+      'If no transcript exists and speech context is needed, call ensure_transcript in live bridge mode. ' +
+      'Do not use ffmpeg or shell media analysis as a substitute for transcript-aware edits.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -179,7 +180,8 @@ const STATIC_TOOLS = [
     name: 'ensure_transcript',
     description:
       'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
-      'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes.',
+      'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
+      'Required before transcript-based silence removal when captions are missing.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -203,7 +205,8 @@ const STATIC_TOOLS = [
     name: 'get_audio_activity',
     description:
       'Live bridge only: analyze a video/audio clip and return compact source sound/silence windows. ' +
-      'Use this for silence trimming, audio-aware cuts, and coarse non-speech sound inspection.',
+      'Use this only through the connected browser for audio-aware inspection; do not fall back to ffmpeg. ' +
+      'For spoken-word silence removal, prefer ensure_transcript followed by the live editor action transcript.remove-silence.',
     inputSchema: AUDIO_ACTIVITY_INPUT_SCHEMA,
   },
   {
@@ -217,13 +220,14 @@ const STATIC_TOOLS = [
     name: 'list_actions',
     description:
       'List browser editor actions available in the live editor, including menu/palette/hotkey actions. ' +
-      'Use this in live bridge mode when you need exact UI parity.',
+      'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close.',
     inputSchema: { type: 'object' as const, properties: {}, additionalProperties: false },
   },
   {
     name: 'run_action',
     description:
-      'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette.',
+      'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette. ' +
+      'Prefer high-level actions over hand-authored command sequences when available.',
     inputSchema: {
       type: 'object' as const,
       properties: {

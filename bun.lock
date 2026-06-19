@@ -137,6 +137,7 @@
         "mcut": "./dist/cli.js",
       },
       "dependencies": {
+        "@mcut/editor": "workspace:*",
         "@mcut/timeline": "workspace:*",
         "@mcut/transcription": "workspace:*",
         "zod": "4.4.3",

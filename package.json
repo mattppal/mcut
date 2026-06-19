@@ -27,6 +27,7 @@
     "mcut:preview": "bun run scripts/mcut-dev.ts preview",
     "mcut:published": "bun run scripts/mcut-dev.ts published",
     "mcut:status": "bun run scripts/mcut-dev.ts status",
+    "codex:setup:mcut": "bun run scripts/setup-codex-mcut-env.ts",
     "env:list": "bun run scripts/mcut-dev.ts env:list",
     "env:new": "bun run scripts/mcut-dev.ts env:new",
     "env:use": "bun run scripts/mcut-dev.ts env:use",
