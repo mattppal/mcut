@@ -15,6 +15,8 @@ export interface ActionContext {
   engine: EditorEngine;
   ui: EditorUIValue;
   clipboard: EditorClipboard;
+  input?: unknown;
+  throwOnError?: boolean;
 }
 
 export interface Shortcut {
@@ -74,12 +76,14 @@ export interface EditorAction {
   /** Stable id, "category.verb" ("selection.select-all"). */
   id: string;
   label: string;
+  description?: string;
   category: ActionCategory;
   shortcut?: Shortcut | Shortcut[];
   /** Icon for the palette/menus (optional). */
   icon?: ComponentType<{ className?: string }>;
   /** Show in the ⌘K palette. Default true. */
   palette?: boolean;
+  inputSchema?: Record<string, unknown>;
   /**
    * Delegate behavior to a user-level operator (@mcut/editor) — the same
    * definition agents call over MCP. `run`/`enabled` are synthesized from
@@ -91,7 +95,7 @@ export interface EditorAction {
     input?: Record<string, unknown> | ((context: ActionContext) => Record<string, unknown>);
   };
   enabled?: (context: ActionContext) => boolean;
-  run?: (context: ActionContext) => void;
+  run?: (context: ActionContext) => unknown;
 }
 
 const registry = new Map<string, EditorAction>();
@@ -144,11 +148,11 @@ export function isActionEnabled(action: EditorAction, context: ActionContext): b
 }
 
 /** Run by id or reference; no-ops when missing or disabled. */
-export function runEditorAction(idOrAction: string | EditorAction, context: ActionContext): void {
+export function runEditorAction(idOrAction: string | EditorAction, context: ActionContext): unknown {
   const action = typeof idOrAction === "string" ? registry.get(idOrAction) : idOrAction;
   if (!action || !isActionEnabled(action, context)) return;
   try {
-    if (action.run) action.run(context);
+    if (action.run) return action.run(context);
     else if (action.operator) {
       void editorOperators.run(
         action.operator.id,
@@ -156,7 +160,8 @@ export function runEditorAction(idOrAction: string | EditorAction, context: Acti
         operatorInput(action, context),
       );
     }
-  } catch {
+  } catch (error) {
+    if (context.throwOnError) throw error;
     // Engine rejections (CommandError) are non-fatal in UI paths.
   }
 }

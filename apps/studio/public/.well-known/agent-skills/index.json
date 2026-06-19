@@ -11,9 +11,9 @@
     {
       "name": "mcut-editing",
       "type": "skill-md",
-      "description": "Edit video programmatically with the mcut engine — cut/trim/splice, silence removal, captions, multicam switching, keyframe animation, speed ramps, transitions, platform reformatting, and export. Use when asked to edit, assemble, caption, tighten, or repurpose a video using mcut, via the MCP server, the CLI, a headless script, or an in-app agent.",
+      "description": "Edit videos with mcut via the MCP server, live browser bridge, CLI, or headless scripts. Use when asked to transcribe, caption, remove silence, tighten speech, cut/trim/splice, add fades/transitions, animate, reformat, multicam-edit, or export an mcut project.",
       "url": "/.well-known/agent-skills/mcut-editing/SKILL.md",
-      "digest": "sha256:dcfaf1f88441772b8ad6ba8cd150cbb0a50862cb3402454228f745e7677c206e"
+      "digest": "sha256:d6eb5042d72d90b5f8f59626dd39fd20c0da165ebb22650f8aee5e93e8540fa5"
     }
   ]
 }

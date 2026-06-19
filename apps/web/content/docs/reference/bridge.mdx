@@ -56,3 +56,14 @@ This exposes the running bridge as an MCP stdio server.
 Use the bridge when an edit needs browser-only capabilities, live editor state,
 local Whisper transcription, or exact parity with a running editor tab. Use the
 stdio project server when a project JSON file is enough.
+
+For agent editing, use the high-level live actions before raw commands:
+
+```sh
+mcut-bridge action transcript.remove-silence --json '{"elementId":"e-video","paddingMs":120}'
+mcut-bridge action effects.fade-open-close --json '{"elementId":"e-video","durationMs":500}'
+```
+
+`transcript.remove-silence` requires word-timed captions. Call
+`ensure-transcript` first when captions are missing. Do not use ffmpeg as a
+fallback for transcription or silence detection.

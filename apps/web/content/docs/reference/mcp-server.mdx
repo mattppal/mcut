@@ -45,6 +45,17 @@ For example, `edit.splitSelectionAtPlayhead` becomes
 Prefer operator tools for UI-parity edits because they understand playback,
 selection, and editor context.
 
+In live bridge mode, prefer high-level actions when they exist:
+
+- Remove spoken-word silence with `run_action` and `actionId:
+  "transcript.remove-silence"` after `ensure_transcript` has produced word-timed
+  captions.
+- Open from black and close to black with `run_action` and `actionId:
+  "effects.fade-open-close"` so the built-in animation presets are used.
+
+Do not fall back to `ffmpeg` or shell audio analysis for agent edits that mcut
+tools can perform.
+
 ## Generated command tools
 
 Every registered timeline command also becomes an MCP tool. The command

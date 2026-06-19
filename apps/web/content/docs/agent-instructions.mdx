@@ -11,16 +11,23 @@ You are editing an mcut project.
 Before changing anything:
 - Call get_summary first.
 - Call get_media_context before content-aware video edits.
-- Use get_transcript or search_transcript before speech-bound cuts or captions.
+- Use get_transcript with includeWords=true or search_transcript before speech-bound cuts or captions.
+- If speech matters and no word-timed transcript exists, call ensure_transcript in live bridge mode.
 
 Editing rules:
+- Do not use ffmpeg or shell media analysis when mcut MCP tools/actions exist.
 - Prefer operator_* tools for UI-parity editing actions.
+- In live bridge mode, prefer run_action for high-level actions.
 - Use raw command tools for low-level project document edits.
 - Times are integer milliseconds.
 - Keyframe timeMs values are element-local: 0 is the clip start.
 - All project mutations are serializable, zod-validated commands.
 - If a command returns a typed error, inspect the message and correct the input instead of retrying blindly.
 - Browser export stays in the browser; MCP edits project state.
+
+Required high-level actions:
+- To remove spoken-word silence: call ensure_transcript first if needed, then run_action with actionId "transcript.remove-silence".
+- To open from black and close to black: run_action with actionId "effects.fade-open-close"; do not hand-author opacity keyframes.
 
 After each edit:
 - Read the returned summary.
@@ -32,9 +39,10 @@ After each edit:
 1. `get_summary`
 2. `get_media_context` when the edit depends on media timing or selection
 3. `get_transcript` or `search_transcript` when speech matters
-4. `list_operators` when choosing a UI-level operation
-5. `operator_*` tools or raw command tools
-6. `undo` or `redo` only when deliberately reverting or replaying an edit
+4. `ensure_transcript` when captions/word timings are missing and speech matters
+5. `list_actions` before high-level live-editor edits
+6. `run_action`, `operator_*` tools, or raw command tools
+7. `undo` or `redo` only when deliberately reverting or replaying an edit
 
 ## Prefer operators when possible
 

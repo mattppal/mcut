@@ -26,6 +26,7 @@ import { importMediaFiles, pickFiles } from "./media-import";
 import { clearSavedSession, saveAssetBlob } from "./persistence";
 import { openProjectFromFile, saveProjectToFile } from "./project-file";
 import { requestTranscriptFind } from "./transcript-keywords";
+import { applyOpeningClosingFades, removeTranscriptSilence } from "./agent-edit-actions";
 
 /**
  * The default action set. Declared once; hotkeys, the ⌘K palette, context
@@ -286,6 +287,47 @@ defineAction({
   run: () => requestTranscriptFind(),
 });
 
+defineAction({
+  id: "transcript.remove-silence",
+  label: "Remove transcript silence",
+  description:
+    "Remove silent gaps using existing word-timed transcript captions. Call ensure_transcript first when captions are missing. Does not use ffmpeg or local shell analysis.",
+  category: "transcript",
+  inputSchema: {
+    type: "object",
+    properties: {
+      elementId: {
+        type: "string",
+        description: "Optional target video/audio element id. Defaults to selected media, then first media clip.",
+      },
+      minGapMs: {
+        type: "number",
+        minimum: 0,
+        description: "Minimum word gap to remove. Defaults to 600.",
+      },
+      paddingMs: {
+        type: "number",
+        minimum: 0,
+        description: "Breathing room kept on each side of a cut. Defaults to 120.",
+      },
+      minKeepMs: {
+        type: "number",
+        minimum: 0,
+        description: "Speech chunks shorter than this merge into the surrounding cut. Defaults to 250.",
+      },
+      trimEnds: {
+        type: "boolean",
+        description: "Also remove silence before the first word and after the last word. Defaults to true.",
+      },
+    },
+    additionalProperties: false,
+  },
+  enabled: ({ engine }) => engine.project.tracks.some((track) =>
+    track.elements.some((element) => element.type === "video" || element.type === "audio"),
+  ),
+  run: ({ engine, input }) => removeTranscriptSilence(engine, input),
+});
+
 // ---------------------------------------------------------------------------
 // Reverse
 // ---------------------------------------------------------------------------
@@ -295,6 +337,38 @@ defineAction({
   label: "Reverse selected clips (toggle)",
   category: "edit",
   operator: { id: "edit.toggleReverseSelection" },
+});
+
+defineAction({
+  id: "effects.fade-open-close",
+  label: "Fade from/to black",
+  description:
+    "Apply the built-in fade-in and fade-out animation presets to the selected visual clip. Use this for opening from black and closing to black instead of hand-authoring opacity keyframes.",
+  category: "edit",
+  inputSchema: {
+    type: "object",
+    properties: {
+      elementId: {
+        type: "string",
+        description: "Optional target visual element id. Defaults to selected visual clip, then first visual clip.",
+      },
+      durationMs: {
+        type: "number",
+        minimum: 10,
+        description: "Fade duration in milliseconds. Defaults to 500.",
+      },
+    },
+    additionalProperties: false,
+  },
+  enabled: ({ engine }) => engine.project.tracks.some((track) =>
+    track.elements.some((element) =>
+      element.type === "video" ||
+      element.type === "image" ||
+      element.type === "text" ||
+      element.type === "multicam",
+    ),
+  ),
+  run: ({ engine, input }) => applyOpeningClosingFades(engine, input),
 });
 
 // ---------------------------------------------------------------------------

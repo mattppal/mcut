@@ -107,12 +107,12 @@ const STATIC_TOOL_DETAILS: Record<
   },
   get_audio_activity: {
     description:
-      "Live bridge only: analyze a video/audio clip and return compact source sound/silence windows for silence trimming, audio-aware cuts, and coarse sound inspection.",
+      "Live bridge only: analyze a video/audio clip in the connected browser and return compact source sound/silence windows. Do not fall back to ffmpeg. For spoken-word silence removal, prefer ensure_transcript followed by run_action transcript.remove-silence.",
     inputSchema: AUDIO_ACTIVITY_INPUT_SCHEMA,
   },
   get_transcript: {
     description:
-      "Read the transcript derived from caption elements. This does not start transcription.",
+      "Read the transcript derived from caption elements. This does not start transcription. If speech context is needed and captions are missing, call ensure_transcript in live bridge mode. Do not use ffmpeg or shell media analysis as a substitute.",
     inputSchema: {
       type: "object",
       properties: {
@@ -135,7 +135,7 @@ const STATIC_TOOL_DETAILS: Record<
   },
   ensure_transcript: {
     description:
-      "Live bridge only: transcribe a target clip with local Whisper in the connected browser when transcript captions are missing, then apply word-timed captions.",
+      "Live bridge only: transcribe a target clip with local Whisper in the connected browser when transcript captions are missing, then apply word-timed captions. Required before transcript.remove-silence when captions are missing.",
     inputSchema: {
       type: "object",
       properties: {
@@ -209,12 +209,12 @@ const STATIC_TOOL_DETAILS: Record<
   },
   list_actions: {
     description:
-      "List browser editor actions available in the live editor, including menu, palette, and hotkey actions.",
+      "List browser editor actions available in the live editor, including high-level agent actions such as transcript.remove-silence and effects.fade-open-close.",
     inputSchema: EMPTY_SCHEMA,
   },
   run_action: {
     description:
-      "Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette.",
+      "Run a browser editor action by id in the live editor. Prefer high-level actions over hand-authored command sequences when available.",
     inputSchema: {
       type: "object",
       properties: {
