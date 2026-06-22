@@ -38,10 +38,26 @@ bunx shadcn build
 From the repo root:
 
 ```sh
-bun run studio
-bun run studio:typecheck
-bun run studio:test
+bun run setup
+bun run dev
 ```
 
-Open `http://localhost:3000` for the editor. Set `ASSEMBLYAI_API_KEY` to enable
-the demo transcription API route.
+Local defaults are Studio on `http://localhost:3000` and the bridge on port
+`44737`. The bridge exposes browser sync at `/mcut-mcp` and MCP over HTTP at
+`/mcp`. In Conductor, Studio uses `CONDUCTOR_PORT` and the bridge uses
+`CONDUCTOR_PORT + 1`. Open the connected editor URL printed by `bun run dev`, or
+print it again with:
+
+```sh
+bun run scripts/mcut-local-dev.ts url
+```
+
+Then enable the `mcut-live` MCP server in Codex. Codex connects to the HTTP MCP
+endpoint on the bridge that `bun run dev` already started.
+
+Studio checks:
+
+```sh
+bun run --filter=mcut-studio-web typecheck
+bun run --filter=mcut-studio-web test
+```

@@ -1,0 +1,108 @@
+---
+title: "AudioActivityOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / AudioActivityOptions
+
+# Interface: AudioActivityOptions
+
+Defined in: [packages/media/src/audio-activity.ts:10](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L10)
+
+## Properties
+
+### endMs?
+
+```ts
+optional endMs?: number;
+```
+
+Defined in: [packages/media/src/audio-activity.ts:13](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L13)
+
+***
+
+### frameMs?
+
+```ts
+optional frameMs?: number;
+```
+
+Defined in: [packages/media/src/audio-activity.ts:15](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L15)
+
+Fixed analysis frame size. Default 30ms.
+
+***
+
+### minSilenceMs?
+
+```ts
+optional minSilenceMs?: number;
+```
+
+Defined in: [packages/media/src/audio-activity.ts:21](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L21)
+
+Silent runs shorter than this are treated as sound. Default 120ms.
+
+***
+
+### minSoundMs?
+
+```ts
+optional minSoundMs?: number;
+```
+
+Defined in: [packages/media/src/audio-activity.ts:19](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L19)
+
+Active runs shorter than this are treated as silence. Default 120ms.
+
+***
+
+### paddingMs?
+
+```ts
+optional paddingMs?: number;
+```
+
+Defined in: [packages/media/src/audio-activity.ts:23](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L23)
+
+Trim this much from each returned silence window edge. Default 0ms.
+
+***
+
+### startMs?
+
+```ts
+optional startMs?: number;
+```
+
+Defined in: [packages/media/src/audio-activity.ts:12](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L12)
+
+Source range. Defaults to the whole file for decoded media, or all samples for PCM input.
+
+***
+
+### threshold?
+
+```ts
+optional threshold?: number;
+```
+
+Defined in: [packages/media/src/audio-activity.ts:17](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L17)
+
+A frame is sound when RMS is greater than this threshold. Default 0.004.
+
+***
+
+### waveformBuckets?
+
+```ts
+optional waveformBuckets?: number;
+```
+
+Defined in: [packages/media/src/audio-activity.ts:25](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L25)
+
+Optional compact max-amplitude waveform bucket count.

@@ -1,12 +1,14 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { randomBytes } from 'node:crypto'
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { WebSocket, WebSocketServer, type VerifyClientCallbackSync } from 'ws'
-import type { McutMcpTarget } from './server'
+import { createMcutMcpServerForTarget, type McutMcpTarget } from './server'
 
 export const DEFAULT_BRIDGE_PORT = 44737
 
 export interface LiveBridgeOptions {
   token?: string | null
+  editorUrl?: string
   allowedOrigins?: string[]
   requestTimeoutMs?: number
   transcriptionTimeoutMs?: number
@@ -56,10 +58,13 @@ function isAllowedOrigin(origin: string | undefined, allowedOrigins: readonly st
   return parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1'
 }
 
-function tokenFrom(req: IncomingMessage): string | null {
+function requestUrl(req: IncomingMessage): URL {
   const host = req.headers.host ?? '127.0.0.1'
-  const url = new URL(req.url ?? '/', `http://${host}`)
-  return url.searchParams.get('token')
+  return new URL(req.url ?? '/', `http://${host}`)
+}
+
+function tokenFrom(req: IncomingMessage): string | null {
+  return requestUrl(req).searchParams.get('token')
 }
 
 function hasCliHeader(req: IncomingMessage): boolean {
@@ -72,6 +77,20 @@ function sendJson(res: ServerResponse, status: number, value: unknown): void {
     'cache-control': 'no-store',
   })
   res.end(`${JSON.stringify(value)}\n`)
+}
+
+function sendMcpError(res: ServerResponse, status: number, message: string): void {
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  })
+  res.end(
+    `${JSON.stringify({
+      jsonrpc: '2.0',
+      error: { code: -32603, message },
+      id: null,
+    })}\n`,
+  )
 }
 
 async function readJson(req: IncomingMessage): Promise<unknown> {
@@ -90,6 +109,7 @@ function messageError(error: { name?: string; code?: string; message?: string })
 
 export class LiveMcutBridge {
   readonly token: string | null
+  readonly editorUrl: string | null
   readonly requestTimeoutMs: number
   readonly transcriptionTimeoutMs: number
 
@@ -102,6 +122,7 @@ export class LiveMcutBridge {
 
   constructor(options: LiveBridgeOptions = {}) {
     this.token = options.token === undefined ? randomBytes(32).toString('hex') : options.token
+    this.editorUrl = options.editorUrl ?? null
     this.requestTimeoutMs = options.requestTimeoutMs ?? 30_000
     this.transcriptionTimeoutMs = options.transcriptionTimeoutMs ?? 10 * 60_000
     const allowedOrigins = options.allowedOrigins ?? []
@@ -117,9 +138,32 @@ export class LiveMcutBridge {
 
   async listen(port = 0): Promise<number> {
     await new Promise<void>((resolve, reject) => {
-      this.server.once('error', reject)
+      let settled = false
+      const cleanup = () => {
+        this.server.off('error', onError)
+        this.wss.off('error', onError)
+      }
+      const onError = (error: NodeJS.ErrnoException) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        if (error.code === 'EADDRINUSE' && port !== 0) {
+          reject(
+            new LiveBridgeError(
+              'port-in-use',
+              `Port ${port} is already in use. Stop the other mcut-mcp-live instance (lsof -ti:${port} | xargs kill) or omit --port to pick a free one.`,
+            ),
+          )
+          return
+        }
+        reject(error)
+      }
+      this.server.once('error', onError)
+      this.wss.once('error', onError)
       this.server.listen(port, '127.0.0.1', () => {
-        this.server.off('error', reject)
+        if (settled) return
+        settled = true
+        cleanup()
         resolve()
       })
     })
@@ -149,12 +193,32 @@ export class LiveMcutBridge {
     return this.tabInfo
   }
 
+  getOpenEditorUrl(): string | null {
+    if (!this.editorUrl) return null
+    const address = this.server.address()
+    if (!address || typeof address === 'string') return null
+    const url = new URL(this.editorUrl)
+    url.searchParams.set('mcpBridge', String(address.port))
+    if (this.token) url.searchParams.set('mcpToken', this.token)
+    return url.toString()
+  }
+
+  getMcpUrl(): string | null {
+    const address = this.server.address()
+    if (!address || typeof address === 'string') return null
+    const url = new URL(`http://127.0.0.1:${address.port}/mcp`)
+    if (this.token) url.searchParams.set('token', this.token)
+    return url.toString()
+  }
+
   async rpc(type: string, payload: unknown = {}): Promise<unknown> {
     switch (type) {
       case 'status':
         return {
           connected: this.isConnected(),
           tab: this.tabInfo,
+          mcpUrl: this.getMcpUrl(),
+          openEditorUrl: this.getOpenEditorUrl(),
         }
       default:
         return await this.request(type, payload)
@@ -164,9 +228,12 @@ export class LiveMcutBridge {
   async request(type: string, payload: unknown = {}): Promise<unknown> {
     const socket = this.socket
     if (!socket || socket.readyState !== WebSocket.OPEN) {
+      const openEditorUrl = this.getOpenEditorUrl()
       throw new LiveBridgeError(
         'browser-not-connected',
-        'No mcut editor tab is connected. Open the live editor URL printed by the MCP server.',
+        openEditorUrl
+          ? `No mcut editor tab is connected to the live bridge. Open ${openEditorUrl}, or run \`bun run setup\` to print the current workspace URL.`
+          : 'No mcut editor tab is connected to the live bridge. Open the connected editor URL, or run `bun run setup` to print the current workspace URL.',
       )
     }
 
@@ -258,6 +325,11 @@ export class LiveMcutBridge {
   }
 
   private async handleHttp(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (requestUrl(req).pathname === '/mcp') {
+      await this.handleMcp(req, res)
+      return
+    }
+
     if (req.method === 'GET' && req.url === '/status') {
       sendJson(res, 200, { ok: true, result: await this.rpc('status') })
       return
@@ -286,6 +358,40 @@ export class LiveMcutBridge {
         ok: false,
         error: error instanceof Error ? error.message : String(error),
       })
+    }
+  }
+
+  private async handleMcp(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'POST') {
+      sendMcpError(res, 405, 'Method not allowed.')
+      return
+    }
+
+    if (req.headers.origin || (this.token !== null && tokenFrom(req) !== this.token)) {
+      sendMcpError(res, 403, 'MCP endpoint requires the local bridge token.')
+      return
+    }
+
+    const server = createMcutMcpServerForTarget({
+      target: this.createTarget(),
+      name: 'mcut-live',
+    })
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+    })
+
+    res.on('close', () => {
+      void transport.close()
+      void server.close()
+    })
+
+    try {
+      await server.connect(transport)
+      await transport.handleRequest(req, res)
+    } catch (error) {
+      if (!res.headersSent) {
+        sendMcpError(res, 500, error instanceof Error ? error.message : String(error))
+      }
     }
   }
 }

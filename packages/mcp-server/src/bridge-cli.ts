@@ -57,7 +57,7 @@ function parseJson(value: string | undefined): unknown {
 function parseArgs(argv: string[]): ParsedArgs {
   const command = argv[0] ?? 'help'
   const rest: string[] = []
-  let port = DEFAULT_BRIDGE_PORT
+  let port = parseLiveBridgePort(process.env.MCUT_BRIDGE_PORT) ?? DEFAULT_BRIDGE_PORT
   let token: string | undefined
   let json: unknown = {}
   let editorUrl = 'http://localhost:3000/editor'
@@ -115,6 +115,12 @@ function editorUrl(base: string, port: number, token?: string | null): string {
   return url.toString()
 }
 
+function mcpUrl(port: number, token?: string | null): string {
+  const url = new URL(`http://127.0.0.1:${port}/mcp`)
+  if (token) url.searchParams.set('token', token)
+  return url.toString()
+}
+
 function originOf(value: string): string | null {
   try {
     return new URL(value).origin
@@ -142,10 +148,11 @@ async function main(): Promise<void> {
     case 'start': {
       const editorOrigin = originOf(args.editorUrl)
       const allowedOrigins = [...args.allowedOrigins, ...(editorOrigin ? [editorOrigin] : [])]
-      const bridge = new LiveMcutBridge({ token: args.token, allowedOrigins })
+      const bridge = new LiveMcutBridge({ token: args.token, editorUrl: args.editorUrl, allowedOrigins })
       const port = await bridge.listen(args.port)
       console.error(`mcut bridge ready — ws://127.0.0.1:${port}/mcut-mcp`)
-      console.error(`Editor URL: ${editorUrl(args.editorUrl, port, bridge.token)}`)
+      console.error(`MCP URL: ${bridge.getMcpUrl() ?? mcpUrl(port, bridge.token)}`)
+      console.error(`Editor URL: ${bridge.getOpenEditorUrl() ?? editorUrl(args.editorUrl, port, bridge.token)}`)
       console.error('Leave this process running while agents edit the browser project.')
       await new Promise<void>(() => {})
       return

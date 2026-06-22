@@ -41,60 +41,60 @@ function readArgs(argv: string[]): Args {
   return args
 }
 
-function editorBridgeUrl(editorUrl: string, port: number, token: string): string {
-  const url = new URL(editorUrl)
-  url.searchParams.set('mcpBridge', String(port))
-  url.searchParams.set('mcpToken', token)
-  return url.toString()
-}
+async function main(): Promise<void> {
+  const args = readArgs(process.argv.slice(2))
+  const bridge = new LiveMcutBridge({ token: args.token, editorUrl: args.editorUrl })
+  const port = await bridge.listen(args.port)
 
-const args = readArgs(process.argv.slice(2))
-const bridge = new LiveMcutBridge({ token: args.token })
-const port = await bridge.listen(args.port)
-
-console.error(
-  [
-    `mcut live MCP server ready — bridge: ws://127.0.0.1:${port}/mcut-mcp`,
-    `Open editor: ${editorBridgeUrl(args.editorUrl, port, bridge.token ?? '')}`,
-    '',
-    'MCP client config:',
-    JSON.stringify(
-      {
-        mcpServers: {
-          'mcut-live': {
-            command: 'bunx',
-            args: [
-              '-p',
-              '@mcut/mcp-server',
-              'mcut-mcp-live',
-              '--port',
-              String(port),
-              '--token',
-              bridge.token ?? '',
-              '--editor-url',
-              args.editorUrl,
-            ],
+  console.error(
+    [
+      `mcut live MCP server ready — bridge: ws://127.0.0.1:${port}/mcut-mcp`,
+      `Open editor: ${bridge.getOpenEditorUrl() ?? args.editorUrl}`,
+      '',
+      'MCP client config:',
+      JSON.stringify(
+        {
+          mcpServers: {
+            'mcut-live': {
+              command: 'bunx',
+              args: [
+                '-p',
+                '@mcut/mcp-server',
+                'mcut-mcp-live',
+                '--port',
+                String(port),
+                '--token',
+                bridge.token ?? '',
+                '--editor-url',
+                args.editorUrl,
+              ],
+            },
           },
         },
-      },
-      null,
-      2,
-    ),
-  ].join('\n'),
-)
+        null,
+        2,
+      ),
+    ].join('\n'),
+  )
 
-const server = createMcutMcpServerForTarget({
-  target: bridge.createTarget(),
-  name: 'mcut-live',
-})
+  const server = createMcutMcpServerForTarget({
+    target: bridge.createTarget(),
+    name: 'mcut-live',
+  })
 
-process.on('SIGINT', () => {
-  bridge.close()
-  process.exit(130)
-})
-process.on('SIGTERM', () => {
-  bridge.close()
-  process.exit(143)
-})
+  process.on('SIGINT', () => {
+    bridge.close()
+    process.exit(130)
+  })
+  process.on('SIGTERM', () => {
+    bridge.close()
+    process.exit(143)
+  })
 
-await server.connect(new StdioServerTransport())
+  await server.connect(new StdioServerTransport())
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error))
+  process.exit(1)
+})

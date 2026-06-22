@@ -1,0 +1,115 @@
+---
+title: "planSilenceCuts"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / planSilenceCuts
+
+# Function: planSilenceCuts()
+
+```ts
+function planSilenceCuts(
+   project,
+   elementId,
+   transcript,
+   options?): SilenceCutPlan;
+```
+
+Defined in: [packages/editor/src/silence-cuts.ts:53](https://github.com/mattppal/mcut/blob/main/packages/editor/src/silence-cuts.ts#L53)
+
+Plan and apply silence cuts on one video/audio element from transcript word timings.
+
+Word timings are source-media times, so the element must play at 1x (no
+timeMap). Interior and leading silences become split + rippleDelete; trailing
+silence becomes a trim. Cuts are applied last-to-first so earlier timeline
+positions stay valid throughout.
+
+## Parameters
+
+### project
+
+#### assets
+
+`Record`\<`string`, \{
+  `durationMs?`: `number`;
+  `hash?`: `string`;
+  `height?`: `number`;
+  `id`: `` `a-${string}` ``;
+  `kind`: `"video"` \| `"audio"` \| `"image"`;
+  `mimeType?`: `string`;
+  `name?`: `string`;
+  `nativePreview?`: `boolean`;
+  `src`: `string`;
+  `width?`: `number`;
+\}\> = `...`
+
+#### fps
+
+`number` = `...`
+
+#### height
+
+`number` = `...`
+
+#### id
+
+`string` = `...`
+
+#### layouts
+
+`object`[] = `...`
+
+Multicam layout templates this project references. See layouts.ts.
+
+#### markers
+
+`object`[] = `...`
+
+Timeline markers, sorted by `timeMs` (the commands keep them sorted).
+
+#### name
+
+`string` = `...`
+
+#### presets
+
+`object`[] = `...`
+
+Named inspector value bundles (style presets). See presets.ts.
+
+#### tracks
+
+`object`[] = `...`
+
+Render order: index 0 is painted first (bottom); last is topmost.
+
+#### version
+
+`1` = `...`
+
+Project format version (see `migrations.ts`). `parseProject` migrates
+older documents before validating; the default covers in-memory creation.
+
+#### width
+
+`number` = `...`
+
+### elementId
+
+`string`
+
+### transcript
+
+[`SilenceCutTranscript`](../interfaces/SilenceCutTranscript.mdx)
+
+### options?
+
+[`SilenceCutOptions`](../interfaces/SilenceCutOptions.mdx) = `{}`
+
+## Returns
+
+[`SilenceCutPlan`](../interfaces/SilenceCutPlan.mdx)
