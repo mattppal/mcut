@@ -349,11 +349,44 @@ describe('createMcutMcpServer', () => {
     }
   })
 
+  test('live bridge waits for a browser tab to reconnect before failing a request', async () => {
+    const bridge = new LiveMcutBridge({
+      token: 'reconnect-token',
+      requestTimeoutMs: 1000,
+      reconnectGraceMs: 1000,
+    })
+    const port = await bridge.listen(0)
+
+    try {
+      const summary = bridge.createTarget().getSummary()
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp?token=reconnect-token`, {
+        headers: { Origin: 'http://localhost:3000' },
+      })
+      socket.on('message', (raw) => {
+        const message = JSON.parse(raw.toString()) as { id: string; type: string }
+        if (message.type === 'get_summary') {
+          socket.send(JSON.stringify({ id: message.id, ok: true, result: 'reconnected summary' }))
+        }
+      })
+      await new Promise<void>((resolve, reject) => {
+        socket.once('open', resolve)
+        socket.once('error', reject)
+      })
+
+      await expect(summary).resolves.toBe('reconnected summary')
+      socket.close()
+    } finally {
+      bridge.close()
+    }
+  })
+
   test('live bridge reports the editor URL when no browser tab is connected', async () => {
     const bridge = new LiveMcutBridge({
       token: 'missing-tab-token',
       editorUrl: 'http://localhost:3000/editor',
-      requestTimeoutMs: 1000,
+      reconnectGraceMs: 20,
     })
     const port = await bridge.listen(0)
 

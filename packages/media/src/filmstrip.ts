@@ -93,6 +93,10 @@ async function getNativeFilmstrip(
   })
 }
 
+function canUseCanvasSinkFallback(src: MediaSourceLike): boolean {
+  return typeof src !== 'string' || src.startsWith('blob:')
+}
+
 export async function getFilmstrip(
   src: MediaSourceLike,
   options: FilmstripOptions,
@@ -106,5 +110,10 @@ export async function getFilmstrip(
   } catch {
     // Fall through: browser-native capture is unavailable or cannot decode this source.
   }
-  return getCanvasSinkFilmstrip(src, { ...options, frameWidth, frameCount })
+  if (!canUseCanvasSinkFallback(src)) return null
+  try {
+    return await getCanvasSinkFilmstrip(src, { ...options, frameWidth, frameCount })
+  } catch {
+    return null
+  }
 }

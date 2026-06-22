@@ -68,6 +68,23 @@ function bunBin(): string {
   return process.execPath
 }
 
+async function prepareDevPackages(filters: string[]): Promise<void> {
+  const cmd = [
+    bunBin(),
+    'run',
+    'turbo',
+    'run',
+    'build',
+    ...filters.map((filter) => `--filter=${filter}`),
+  ]
+  console.error(`[mcut-dev] preparing package builds: ${cmd.join(' ')}`)
+  const child = spawnProcess('package builds', cmd)
+  const code = await child.exited
+  if (code !== 0) {
+    throw new Error(`Package build preparation failed with exit code ${code ?? 'unknown'}.`)
+  }
+}
+
 async function waitForFirstExit(children: Bun.Subprocess[]): Promise<number> {
   const code = await Promise.race(children.map((child) => child.exited))
   for (const child of children) {
@@ -78,6 +95,7 @@ async function waitForFirstExit(children: Bun.Subprocess[]): Promise<number> {
 }
 
 async function runBridge(): Promise<void> {
+  await prepareDevPackages(['@mcut/mcp-server...'])
   const child = spawnProcess('mcp bridge', [
     bunBin(),
     'packages/mcp-server/src/bridge-cli.ts',
@@ -95,6 +113,8 @@ async function runBridge(): Promise<void> {
 async function runDev(): Promise<void> {
   const studioPort = localStudioPort()
   const bridgePort = localBridgePort()
+
+  await prepareDevPackages(['mcut-studio-web^...'])
 
   console.error(`[mcut-dev] Studio: http://localhost:${studioPort}`)
   console.error(`[mcut-dev] Bridge: ws://127.0.0.1:${bridgePort}/mcut-mcp`)

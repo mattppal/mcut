@@ -36,6 +36,10 @@ async function getNativeThumbnail(
   return frame?.canvas ?? null
 }
 
+function canUseCanvasSinkFallback(src: MediaSourceLike): boolean {
+  return typeof src !== 'string' || src.startsWith('blob:')
+}
+
 /** Extract a single poster frame from a video. Returns `null` for audio-only files. */
 export async function getVideoThumbnail(
   src: MediaSourceLike,
@@ -47,7 +51,12 @@ export async function getVideoThumbnail(
   } catch {
     // Fall through: browser-native capture is unavailable or cannot decode this source.
   }
-  return getCanvasSinkThumbnail(src, options)
+  if (!canUseCanvasSinkFallback(src)) return null
+  try {
+    return await getCanvasSinkThumbnail(src, options)
+  } catch {
+    return null
+  }
 }
 
 /** A poster frame as a data URL (handy for `<img>` in media bins). */
