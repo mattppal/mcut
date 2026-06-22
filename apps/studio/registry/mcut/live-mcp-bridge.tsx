@@ -96,6 +96,7 @@ type AudioActivityAnalyzer = (
 
 const operators = registerCoreOperators(createEditorOperatorRegistry());
 const DEFAULT_BRIDGE_PORT = "44737";
+const BRIDGE_CONFIG_STORAGE_KEY = "mcut.liveMcpBridge";
 
 export const LIVE_MCP_STATIC_TOOL_REQUESTS = MCP_AGENT_TOOL_NAMES;
 
@@ -487,13 +488,42 @@ export async function handleLiveMcpRequest(
   }
 }
 
+function readStoredBridgeConfig(): { port: string; token: string | null } | null {
+  try {
+    const raw = window.sessionStorage.getItem(BRIDGE_CONFIG_STORAGE_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as unknown;
+    if (!isRecord(value) || typeof value.port !== "string") return null;
+    return {
+      port: value.port || DEFAULT_BRIDGE_PORT,
+      token: typeof value.token === "string" ? value.token : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredBridgeConfig(config: { port: string; token: string | null }): void {
+  try {
+    window.sessionStorage.setItem(BRIDGE_CONFIG_STORAGE_KEY, JSON.stringify(config));
+  } catch {
+    // Ignore storage failures; explicit URL params still connect for this page load.
+  }
+}
+
 function bridgeConfig(): { port: string; token: string | null; quiet: boolean } | null {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
-  if (!params.has("mcpBridge")) return null;
-  const port = params.get("mcpBridge");
-  const token = params.get("mcpToken");
-  return { port: port || DEFAULT_BRIDGE_PORT, token, quiet: false };
+  if (params.has("mcpBridge")) {
+    const config = {
+      port: params.get("mcpBridge") || DEFAULT_BRIDGE_PORT,
+      token: params.get("mcpToken"),
+    };
+    writeStoredBridgeConfig(config);
+    return { ...config, quiet: false };
+  }
+  const stored = readStoredBridgeConfig();
+  return stored ? { ...stored, quiet: true } : null;
 }
 
 export function LiveMcpBridge() {

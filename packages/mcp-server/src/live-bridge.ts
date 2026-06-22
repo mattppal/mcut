@@ -12,10 +12,17 @@ export interface LiveBridgeOptions {
   allowedOrigins?: string[]
   requestTimeoutMs?: number
   transcriptionTimeoutMs?: number
+  reconnectGraceMs?: number
 }
 
 interface PendingRequest {
   resolve: (value: unknown) => void
+  reject: (error: Error) => void
+  timer: ReturnType<typeof setTimeout>
+}
+
+interface SocketWaiter {
+  resolve: (socket: WebSocket) => void
   reject: (error: Error) => void
   timer: ReturnType<typeof setTimeout>
 }
@@ -112,10 +119,12 @@ export class LiveMcutBridge {
   readonly editorUrl: string | null
   readonly requestTimeoutMs: number
   readonly transcriptionTimeoutMs: number
+  readonly reconnectGraceMs: number
 
   private readonly server = createServer((req, res) => void this.handleHttp(req, res))
   private readonly wss: WebSocketServer
   private readonly pending = new Map<string, PendingRequest>()
+  private readonly socketWaiters = new Set<SocketWaiter>()
   private socket: WebSocket | null = null
   private nextId = 1
   private tabInfo: unknown = null
@@ -125,6 +134,7 @@ export class LiveMcutBridge {
     this.editorUrl = options.editorUrl ?? null
     this.requestTimeoutMs = options.requestTimeoutMs ?? 30_000
     this.transcriptionTimeoutMs = options.transcriptionTimeoutMs ?? 10 * 60_000
+    this.reconnectGraceMs = options.reconnectGraceMs ?? 5_000
     const allowedOrigins = options.allowedOrigins ?? []
     const verifyClient: VerifyClientCallbackSync = ({ origin, req }) =>
       (this.token === null || tokenFrom(req) === this.token) && isAllowedOrigin(origin, allowedOrigins)
@@ -178,6 +188,7 @@ export class LiveMcutBridge {
     this.socket?.close()
     this.wss.close()
     this.server.close()
+    this.rejectSocketWaiters(new LiveBridgeError('bridge-closed', 'Live bridge closed before a browser tab connected.'))
     for (const [id, pending] of this.pending) {
       clearTimeout(pending.timer)
       pending.reject(new LiveBridgeError('bridge-closed', `Live bridge closed before response ${id}.`))
@@ -226,18 +237,8 @@ export class LiveMcutBridge {
   }
 
   async request(type: string, payload: unknown = {}): Promise<unknown> {
-    const socket = this.socket
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      const openEditorUrl = this.getOpenEditorUrl()
-      throw new LiveBridgeError(
-        'browser-not-connected',
-        openEditorUrl
-          ? `No mcut editor tab is connected to the live bridge. Open ${openEditorUrl}, or run \`bun run setup\` to print the current workspace URL.`
-          : 'No mcut editor tab is connected to the live bridge. Open the connected editor URL, or run `bun run setup` to print the current workspace URL.',
-      )
-    }
-
     const timeoutMs = type === 'ensure_transcript' ? this.transcriptionTimeoutMs : this.requestTimeoutMs
+    const socket = await this.waitForSocket(Math.min(timeoutMs, this.reconnectGraceMs))
     const id = String(this.nextId++)
     const body = JSON.stringify({ id, type, payload })
     return await new Promise((resolve, reject) => {
@@ -281,6 +282,7 @@ export class LiveMcutBridge {
     this.socket?.close(1012, 'Another mcut editor tab connected.')
     this.socket = socket
     this.tabInfo = null
+    this.resolveSocketWaiters(socket)
 
     socket.on('message', (raw) => this.receive(raw.toString()))
     socket.on('close', () => {
@@ -296,6 +298,53 @@ export class LiveMcutBridge {
       }
       this.pending.clear()
     })
+  }
+
+  private openSocket(): WebSocket | null {
+    return this.socket?.readyState === WebSocket.OPEN ? this.socket : null
+  }
+
+  private browserNotConnectedError(): LiveBridgeError {
+    const openEditorUrl = this.getOpenEditorUrl()
+    return new LiveBridgeError(
+      'browser-not-connected',
+      openEditorUrl
+        ? `No mcut editor tab is connected to the live bridge. Open ${openEditorUrl}, or run \`bun run setup\` to print the current workspace URL.`
+        : 'No mcut editor tab is connected to the live bridge. Open the connected editor URL, or run `bun run setup` to print the current workspace URL.',
+    )
+  }
+
+  private async waitForSocket(timeoutMs: number): Promise<WebSocket> {
+    const socket = this.openSocket()
+    if (socket) return socket
+
+    return await new Promise<WebSocket>((resolve, reject) => {
+      const waiter: SocketWaiter = {
+        resolve,
+        reject,
+        timer: setTimeout(() => {
+          this.socketWaiters.delete(waiter)
+          reject(this.browserNotConnectedError())
+        }, timeoutMs),
+      }
+      this.socketWaiters.add(waiter)
+    })
+  }
+
+  private resolveSocketWaiters(socket: WebSocket): void {
+    for (const waiter of this.socketWaiters) {
+      clearTimeout(waiter.timer)
+      waiter.resolve(socket)
+    }
+    this.socketWaiters.clear()
+  }
+
+  private rejectSocketWaiters(error: Error): void {
+    for (const waiter of this.socketWaiters) {
+      clearTimeout(waiter.timer)
+      waiter.reject(error)
+    }
+    this.socketWaiters.clear()
   }
 
   private receive(raw: string): void {
