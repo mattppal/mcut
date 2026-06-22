@@ -43,25 +43,43 @@ bunx @mcut/cli --help
 
 ## Develop
 
-This is a Bun workspace monorepo managed with Turbo:
+This is a Bun workspace monorepo managed with Turbo.
 
-- `packages/*` contains the publishable `@mcut/*` SDK packages.
-- `examples/*` contains runnable package examples.
-- `apps/*` contains applications, including the web app in `apps/web`.
+### Local editor + MCP
 
 ```sh
 bun install
+bun run setup   # once per worktree: Codex config + agent skill
+bun run dev     # Studio + local MCP bridge
+```
+
+By default, `bun run dev` starts Studio on `http://localhost:3000` and the local
+MCP bridge on port `44737`. In Conductor workspaces, Studio uses
+`CONDUCTOR_PORT` and the bridge uses `CONDUCTOR_PORT + 1`.
+
+Open the connected editor URL printed by `bun run dev` or by
+`bun run scripts/mcut-local-dev.ts url`, then enable the `mcut-live` MCP server
+in Codex. Codex connects to the bridge's Streamable HTTP MCP endpoint; it does
+not start a second bridge. Print the MCP URL with
+`bun run scripts/mcut-local-dev.ts mcp-url`.
+
+The `@mcut/mcp-server` package README explains the HTTP bridge endpoint plus
+the compatibility stdio entrypoints.
+
+### Docs site only
+
+```sh
+bun run dev:web
+```
+
+### Validate changes
+
+```sh
 bun run build
 bun run typecheck
 bun run test
 bun run lint
 bun run smoke:packages
-```
-
-To run only the web app:
-
-```sh
-bun run dev:web
 ```
 
 The full release gate is:

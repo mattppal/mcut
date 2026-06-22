@@ -1,0 +1,41 @@
+---
+title: "analyzeAudioSamples"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / analyzeAudioSamples
+
+# Function: analyzeAudioSamples()
+
+```ts
+function analyzeAudioSamples(
+   samples,
+   sampleRate,
+   options?): AudioActivity;
+```
+
+Defined in: [packages/media/src/audio-activity.ts:260](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L260)
+
+Analyze mono PCM samples into compact sound/silence windows.
+
+## Parameters
+
+### samples
+
+`Float32Array`
+
+### sampleRate
+
+`number`
+
+### options?
+
+[`AudioActivityOptions`](../interfaces/AudioActivityOptions.mdx) = `{}`
+
+## Returns
+
+[`AudioActivity`](../interfaces/AudioActivity.mdx)

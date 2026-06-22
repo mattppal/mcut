@@ -74,7 +74,7 @@ function listWorktrees() {
 
   if (worktrees.length === 0) {
     console.log(`No mcut worktrees found under ${defaultReposDir}.`);
-    console.log("Set MCUT_REPOS_DIR or pass an explicit path to `bun run mcut:use <path>`.");
+    console.log("Set MCUT_REPOS_DIR or pass an explicit path to `bun run mcut:dev use <path>`.");
     return;
   }
 
@@ -92,7 +92,7 @@ function useMcut(commandArgs: string[]) {
   const noInstall = commandArgs.includes("--no-install") || dryRun;
 
   if (!selector) {
-    fail("Usage: bun run mcut:use <worktree-name|branch|path> [--no-install] [--dry-run]");
+    fail("Usage: bun run mcut:dev use <worktree-name|branch|path> [--no-install] [--dry-run]");
   }
 
   const selectedPath = resolveMcutSelector(selector);
@@ -147,7 +147,7 @@ function usePreview(commandArgs: string[]) {
   const noInstall = commandArgs.includes("--no-install") || dryRun;
 
   if (!selector) {
-    fail("Usage: bun run mcut:preview <pr-number> [--no-install] [--dry-run]");
+    fail("Usage: bun run mcut:dev preview <pr-number> [--no-install] [--dry-run]");
   }
 
   const previewId = parsePreviewId(selector);
@@ -249,7 +249,7 @@ function listEnvProfiles() {
 
   if (profiles.length === 0) {
     console.log("No env profiles found in apps/studio.");
-    console.log("Create one with `bun run env:new <name>`, then switch with `bun run env:use <name>`.");
+    console.log("Create one with `bun run mcut:dev env:new <name>`, then switch with `bun run mcut:dev env:use <name>`.");
     return;
   }
 
@@ -264,7 +264,7 @@ function useEnv(commandArgs: string[]) {
   const force = commandArgs.includes("--force");
 
   if (!name) {
-    fail("Usage: bun run env:use <name|path> [--force]");
+    fail("Usage: bun run mcut:dev env:use <name|path> [--force]");
   }
 
   const profilePath = resolveEnvProfile(name);
@@ -321,7 +321,7 @@ function clearEnv(commandArgs: string[]) {
 function createEnvProfile(commandArgs: string[]) {
   const name = commandArgs.find((arg) => !arg.startsWith("-"));
   if (!name || name.includes("/") || name.includes("\\")) {
-    fail("Usage: bun run env:new <name>");
+    fail("Usage: bun run mcut:dev env:new <name>");
   }
 
   const profilePath = path.join(studioDir, `.env.${name}.local`);
@@ -430,7 +430,7 @@ function resolveMcutSelector(selector: string): string {
   });
 
   if (matches.length === 0) {
-    fail(`No mcut worktree matched "${selector}". Run "bun run mcut:list".`);
+    fail(`No mcut worktree matched "${selector}". Run "bun run mcut:dev list".`);
   }
 
   if (matches.length > 1) {
@@ -568,7 +568,7 @@ function resolveEnvProfile(nameOrPath: string): string {
 
   const match = candidates.find((candidate) => existsSync(candidate));
   if (!match) {
-    fail(`No env profile found for "${nameOrPath}". Create one with "bun run env:new ${nameOrPath}".`);
+    fail(`No env profile found for "${nameOrPath}". Create one with "bun run mcut:dev env:new ${nameOrPath}".`);
   }
 
   return match;
@@ -909,15 +909,15 @@ function printHelp() {
   console.log(`mcut Studio dev helper
 
 Usage:
-  bun run mcut:list
-  bun run mcut:use <worktree-name|branch|path> [--no-install]
-  bun run mcut:preview <pr-number> [--no-install]
-  bun run mcut:published [--no-install]
-  bun run mcut:status
-  bun run env:list
-  bun run env:new <name>
-  bun run env:use <name|path> [--force]
-  bun run env:clear [--force]
+  bun run mcut:dev list
+  bun run mcut:dev use <worktree-name|branch|path> [--no-install]
+  bun run mcut:dev preview <pr-number> [--no-install]
+  bun run mcut:dev published [--no-install]
+  bun run mcut:dev status
+  bun run mcut:dev env:list
+  bun run mcut:dev env:new <name>
+  bun run mcut:dev env:use <name|path> [--force]
+  bun run mcut:dev env:clear [--force]
 
 Discovery defaults to ${defaultReposDir}. Override it with MCUT_REPOS_DIR.`);
 }

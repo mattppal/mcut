@@ -24,6 +24,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
+    "bridge": "bun ../../scripts/mcut-local-dev.ts bridge",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },

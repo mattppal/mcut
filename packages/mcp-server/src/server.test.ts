@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { EditorEngine, parseProject } from '@mcut/timeline'
 import { WebSocket } from 'ws'
@@ -333,6 +334,42 @@ describe('createMcutMcpServer', () => {
     bridge.close()
   })
 
+  test('live bridge reports fixed-port collisions without crashing', async () => {
+    const bridge = new LiveMcutBridge({ token: 'first-token' })
+    const port = await bridge.listen(0)
+    const collidingBridge = new LiveMcutBridge({ token: 'second-token' })
+
+    try {
+      await expect(collidingBridge.listen(port)).rejects.toMatchObject({
+        code: 'port-in-use',
+      })
+    } finally {
+      collidingBridge.close()
+      bridge.close()
+    }
+  })
+
+  test('live bridge reports the editor URL when no browser tab is connected', async () => {
+    const bridge = new LiveMcutBridge({
+      token: 'missing-tab-token',
+      editorUrl: 'http://localhost:3000/editor',
+      requestTimeoutMs: 1000,
+    })
+    const port = await bridge.listen(0)
+
+    try {
+      await expect(bridge.createTarget().getSummary()).rejects.toThrow(
+        `http://localhost:3000/editor?mcpBridge=${port}&mcpToken=missing-tab-token`,
+      )
+      await expect(bridge.rpc('status')).resolves.toMatchObject({
+        connected: false,
+        openEditorUrl: `http://localhost:3000/editor?mcpBridge=${port}&mcpToken=missing-tab-token`,
+      })
+    } finally {
+      bridge.close()
+    }
+  })
+
   test('daemon HTTP target forwards MCP tools to the live browser tab', async () => {
     const bridge = new LiveMcutBridge({ token: 'daemon-token', requestTimeoutMs: 1000 })
     const port = await bridge.listen(0)
@@ -382,6 +419,45 @@ describe('createMcutMcpServer', () => {
 
     socket.close()
     bridge.close()
+  })
+
+  test('live bridge exposes MCP over Streamable HTTP', async () => {
+    const bridge = new LiveMcutBridge({ token: 'http-token', requestTimeoutMs: 1000 })
+    const port = await bridge.listen(0)
+    const client = new Client({ name: 'test', version: '0.0.0' })
+    const transport = new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp?token=http-token`))
+
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp?token=http-token`, {
+      headers: { Origin: 'http://localhost:3000' },
+    })
+    await new Promise<void>((resolve, reject) => {
+      socket.once('open', resolve)
+      socket.once('error', reject)
+    })
+
+    socket.on('message', (raw) => {
+      const message = JSON.parse(raw.toString()) as { id: string; type: string }
+      if (message.type === 'get_summary') {
+        socket.send(JSON.stringify({ id: message.id, ok: true, result: 'HTTP MCP summary' }))
+        return
+      }
+      socket.send(JSON.stringify({ id: message.id, ok: true, result: null }))
+    })
+
+    try {
+      await client.connect(transport)
+      const { tools } = await client.listTools()
+      expect(tools.map((tool) => tool.name)).toContain('get_summary')
+
+      const result = await client.callTool({ name: 'get_summary', arguments: {} })
+      expect(result.isError).toBeFalsy()
+      const content = result.content as Array<{ type: string; text: string }>
+      expect(content[0]!.text).toContain('HTTP MCP summary')
+    } finally {
+      await client.close()
+      socket.close()
+      bridge.close()
+    }
   })
 
   test('live bridge rejects browser sockets without the configured token', async () => {

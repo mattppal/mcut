@@ -1,0 +1,62 @@
+---
+title: "SilenceCutOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / SilenceCutOptions
+
+# Interface: SilenceCutOptions
+
+Defined in: [packages/editor/src/silence-cuts.ts:18](https://github.com/mattppal/mcut/blob/main/packages/editor/src/silence-cuts.ts#L18)
+
+## Properties
+
+### minGapMs?
+
+```ts
+optional minGapMs?: number;
+```
+
+Defined in: [packages/editor/src/silence-cuts.ts:20](https://github.com/mattppal/mcut/blob/main/packages/editor/src/silence-cuts.ts#L20)
+
+Word gaps shorter than this are speech rhythm, not silence. Default 600.
+
+***
+
+### minKeepMs?
+
+```ts
+optional minKeepMs?: number;
+```
+
+Defined in: [packages/editor/src/silence-cuts.ts:24](https://github.com/mattppal/mcut/blob/main/packages/editor/src/silence-cuts.ts#L24)
+
+Speech chunks shorter than this merge into the surrounding cut. Default 250.
+
+***
+
+### paddingMs?
+
+```ts
+optional paddingMs?: number;
+```
+
+Defined in: [packages/editor/src/silence-cuts.ts:22](https://github.com/mattppal/mcut/blob/main/packages/editor/src/silence-cuts.ts#L22)
+
+Breathing room kept on each side of a cut. Default 120.
+
+***
+
+### trimEnds?
+
+```ts
+optional trimEnds?: boolean;
+```
+
+Defined in: [packages/editor/src/silence-cuts.ts:26](https://github.com/mattppal/mcut/blob/main/packages/editor/src/silence-cuts.ts#L26)
+
+Also cut silence before the first and after the last word. Default true.

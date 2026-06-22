@@ -1,0 +1,239 @@
+---
+title: "ElementAudioSource"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [timeline/src](../index.mdx) / ElementAudioSource
+
+# Interface: ElementAudioSource
+
+Defined in: [packages/timeline/src/audio-source.ts:14](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L14)
+
+Normalized answer to "what source audio does this timeline element play?"
+UI and agent surfaces can use this before passing bytes to a transcription
+provider, waveform analyzer, or any other media-only primitive.
+
+## Properties
+
+### asset
+
+```ts
+asset: object;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:18](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L18)
+
+#### durationMs?
+
+```ts
+optional durationMs?: number;
+```
+
+#### hash?
+
+```ts
+optional hash?: string;
+```
+
+Content hash of the media file (stable identity across reloads/moves).
+
+#### height?
+
+```ts
+optional height?: number;
+```
+
+#### id
+
+```ts
+id: `a-${string}` = assetIdSchema;
+```
+
+#### kind
+
+```ts
+kind: "video" | "audio" | "image";
+```
+
+#### mimeType?
+
+```ts
+optional mimeType?: string;
+```
+
+#### name?
+
+```ts
+optional name?: string;
+```
+
+#### nativePreview?
+
+```ts
+optional nativePreview?: boolean;
+```
+
+True when the browser's native media elements can preview this asset.
+Containers such as Matroska may import/export through Mediabunny while
+still needing decoded-frame fallback for interactive canvas preview.
+
+#### src
+
+```ts
+src: string;
+```
+
+Object URL, data URL, or remote URL. Projects stay JSON-serializable —
+but treat this as a RUNTIME BINDING, not identity: object URLs are dead
+after a reload, so persistence layers re-resolve `src` on load (e.g. from
+OPFS via `hash`) and relink UIs match on `hash`/`name`.
+
+#### width?
+
+```ts
+optional width?: number;
+```
+
+***
+
+### assetId
+
+```ts
+assetId: `a-${string}`;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:17](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L17)
+
+***
+
+### elementId
+
+```ts
+elementId: `e-${string}`;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:15](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L15)
+
+***
+
+### elementType
+
+```ts
+elementType: ElementAudioSourceType;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:16](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L16)
+
+***
+
+### multicamSourceKey?
+
+```ts
+optional multicamSourceKey?: string;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:26](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L26)
+
+***
+
+### reversed
+
+```ts
+reversed: boolean;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:25](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L25)
+
+***
+
+### sourceEndMs
+
+```ts
+sourceEndMs: number;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:22](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L22)
+
+***
+
+### sourceSpanMs
+
+```ts
+sourceSpanMs: number;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:23](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L23)
+
+***
+
+### sourceStartMs
+
+```ts
+sourceStartMs: number;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:21](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L21)
+
+***
+
+### timelineDurationMs
+
+```ts
+timelineDurationMs: number;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:20](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L20)
+
+***
+
+### timelineStartMs
+
+```ts
+timelineStartMs: number;
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:19](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L19)
+
+***
+
+### timeMap?
+
+```ts
+optional timeMap?: object[];
+```
+
+Defined in: [packages/timeline/src/audio-source.ts:24](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/audio-source.ts#L24)
+
+#### easing?
+
+```ts
+optional easing?:
+  | "linear"
+  | "hold"
+  | "easeIn"
+  | "easeOut"
+  | "easeInOut"
+  | {
+  cubicBezier: [number, number, number, number];
+};
+```
+
+Outgoing interpolation; default linear.
+
+#### timeMs
+
+```ts
+timeMs: number;
+```
+
+Element-local ms (relative to `startMs`): moving a clip moves its animation.
+
+#### value
+
+```ts
+value: number;
+```

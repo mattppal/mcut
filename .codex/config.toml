@@ -1,14 +1,7 @@
 approval_policy = "never"
 
 [mcp_servers.mcut-live]
-  command = "bun"
-  args = [
-    "packages/mcp-server/src/bridge-cli.ts",
-    "mcp",
-    "--port",
-    "44737",
-  ]
-  cwd = "/Users/matt/conductor/workspaces/mcut-v2/brasilia"
-  startup_timeout_sec = 20
-  tool_timeout_sec = 300
-  default_tools_approval_mode = "approve"
+url = "http://127.0.0.1:55011/mcp?token=mcut-local-dev"
+startup_timeout_sec = 20
+tool_timeout_sec = 300
+default_tools_approval_mode = "approve"

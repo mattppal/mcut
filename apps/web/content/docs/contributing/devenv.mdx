@@ -27,28 +27,59 @@ bun install --frozen-lockfile
 
 - `packages/*`: publishable `@mcut/*` SDK packages.
 - `examples/*`: runnable examples for headless editing and MCP workflows.
+- `apps/studio`: the local editor and shadcn registry source.
 - `apps/web`: the marketing site and `/docs` implementation.
 - `docs/`: maintainer and release process notes for the repository.
 
 ## Run locally
 
-Run every persistent development task through Turbo:
+### Editor + MCP bridge
+
+Run this from the repo root:
 
 ```sh
+bun run setup   # once per worktree
 bun run dev
 ```
 
-Run only the marketing site and docs:
+`bun run dev` starts:
+
+- Studio at `http://localhost:3000` by default
+- the local bridge on port `44737` by default, with WebSocket browser sync at
+  `/mcut-mcp` and Streamable HTTP MCP at `/mcp`
+
+In Conductor workspaces, Studio uses `CONDUCTOR_PORT` and the bridge uses
+`CONDUCTOR_PORT + 1`, so each workspace can run concurrently.
+
+Open the connected editor URL printed by `bun run dev`. To print it again:
+
+```sh
+bun run scripts/mcut-local-dev.ts url
+```
+
+Then enable the `mcut-live` MCP server in Codex. Codex connects MCP tools to the
+bridge's HTTP endpoint — it does not start a second bridge. To print the MCP URL:
+
+```sh
+bun run scripts/mcut-local-dev.ts mcp-url
+```
+
+The package also exposes compatibility stdio entrypoints: `mcut-mcp` for
+file-backed projects, `mcut-mcp-live` for clients that should start their own
+live bridge, and `mcut-bridge mcp` for clients that cannot connect over HTTP.
+
+### Docs site only
 
 ```sh
 bun run dev:web
 ```
 
-For a specific port, run the web app directly:
+## Advanced worktree tooling
+
+For switching between local worktrees, published packages, or Studio env profiles:
 
 ```sh
-cd apps/web
-bun run dev -- --port 3000
+bun run mcut:dev --help
 ```
 
 ## Validate changes

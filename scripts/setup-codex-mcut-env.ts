@@ -10,15 +10,13 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { relative, resolve } from 'node:path'
+import { localEditorBridgeUrl, localMcpUrl } from './mcut-local-dev'
 
 const root = process.cwd()
 const codexDir = resolve(root, '.codex')
 const agentsSkillsDir = resolve(root, '.agents', 'skills')
-const contextDir = resolve(root, '.context')
 const editingSkillSource = resolve(root, 'skills', 'mcut-editing')
 const editingSkillLink = resolve(agentsSkillsDir, 'mcut-editing')
-const projectPath = '.context/mcut-project.mcut.json'
-const liveBridgeToken = 'mcut-local-dev'
 
 function posixPath(value: string): string {
   return value.split('\\').join('/')
@@ -72,26 +70,8 @@ function ensureEditingSkill(): void {
 function writeCodexConfig(): void {
   const config = `approval_policy = "never"
 
-[mcp_servers.mcut]
-command = "bun"
-args = ["packages/mcp-server/src/cli.ts", "${projectPath}"]
-cwd = "${posixPath(root)}"
-startup_timeout_sec = 20
-tool_timeout_sec = 120
-default_tools_approval_mode = "approve"
-
 [mcp_servers.mcut-live]
-command = "bun"
-args = [
-  "packages/mcp-server/src/live-cli.ts",
-  "--port",
-  "54319",
-  "--token",
-  "${liveBridgeToken}",
-  "--editor-url",
-  "http://localhost:3000/editor",
-]
-cwd = "${posixPath(root)}"
+url = "${localMcpUrl()}"
 startup_timeout_sec = 20
 tool_timeout_sec = 300
 default_tools_approval_mode = "approve"
@@ -102,7 +82,6 @@ default_tools_approval_mode = "approve"
 
 ensureDir(codexDir)
 ensureDir(agentsSkillsDir)
-ensureDir(contextDir)
 
 try {
   ensureEditingSkill()
@@ -118,6 +97,12 @@ try {
 writeCodexConfig()
 
 console.log('Configured worktree-local Codex environment for mcut.')
-console.log('- MCP: mcut file-backed project tools')
-console.log('- MCP: mcut-live browser bridge tools')
+console.log(`- MCP: mcut-live connects to ${localMcpUrl()}`)
 console.log('- Skill: mcut-editing available in .agents/skills')
+console.log('')
+console.log('Local workflow:')
+console.log('1. bun run dev')
+console.log(`2. Open ${localEditorBridgeUrl()}`)
+console.log('3. Trust this project in Codex and enable the mcut-live MCP server')
+console.log('')
+console.log('Tip: run `bun run scripts/mcut-local-dev.ts url` to print the current editor URL.')

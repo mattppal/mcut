@@ -1,0 +1,36 @@
+---
+title: "analyzeAudioActivity"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / analyzeAudioActivity
+
+# Function: analyzeAudioActivity()
+
+```ts
+function analyzeAudioActivity(src, options?): Promise<AudioActivity | null>;
+```
+
+Defined in: [packages/media/src/audio-activity.ts:299](https://github.com/mattppal/mcut/blob/main/packages/media/src/audio-activity.ts#L299)
+
+Decode a media source's primary audio track and reduce it to semantic
+sound/silence windows. Returns `null` when the file has no audio track.
+Browser-only (WebCodecs decode via Mediabunny).
+
+## Parameters
+
+### src
+
+[`MediaSourceLike`](../type-aliases/MediaSourceLike.mdx)
+
+### options?
+
+[`AudioActivityOptions`](../interfaces/AudioActivityOptions.mdx) = `{}`
+
+## Returns
+
+`Promise`\<[`AudioActivity`](../interfaces/AudioActivity.mdx) \| `null`\>

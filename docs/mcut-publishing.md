@@ -79,9 +79,9 @@ preview build, or published packages.
 Preview flow:
 
 1. Open or update an mcut PR and wait for pkg.pr.new to publish its package set.
-2. In this repo, run `bun run mcut:preview <pr-number>`.
-3. Run Studio normally with `bun run studio`.
-4. Return to published packages with `bun run mcut:published`.
+2. In this repo, run `bun run mcut:dev preview <pr-number>`.
+3. Run Studio with `bun run dev`.
+4. Return to published packages with `bun run mcut:dev published`.
 
 The preview helper updates every `@mcut/*` dependency consumed by the Studio app and
 the bundled editing skill to the same pkg.pr.new PR URL. Keep that set in
