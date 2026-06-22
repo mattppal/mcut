@@ -1,6 +1,6 @@
 {
   "name": "mcut-editing-skill",
-  "version": "0.0.0",
+  "version": "0.0.1-alpha.0",
   "private": true,
   "description": "The mcut-editing agent skill: generated references, starter templates, and executable recipes, synced into the Studio app's .well-known directory",
   "license": "Apache-2.0",

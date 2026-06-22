@@ -1,6 +1,6 @@
 {
   "name": "@mcut/compositor",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "Canvas2D and WebGPU frame renderer for mcut projects — one compositor for interactive preview and deterministic export",
   "license": "Apache-2.0",
   "type": "module",

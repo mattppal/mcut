@@ -1,6 +1,6 @@
 {
   "name": "@mcut/transcription",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "Pluggable transcription for mcut: provider interface, normalized transcripts, SRT/VTT, caption generation",
   "license": "Apache-2.0",
   "type": "module",

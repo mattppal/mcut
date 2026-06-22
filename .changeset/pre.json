@@ -16,7 +16,18 @@
     "@mcut/transcription": "0.1.0-alpha.0",
     "@mcut/transcription-ai-sdk": "0.1.0-alpha.0",
     "@mcut/transcription-assemblyai": "0.1.0-alpha.0",
-    "@mcut/transcription-local": "0.1.0-alpha.0"
+    "@mcut/transcription-local": "0.1.0-alpha.0",
+    "mcut-studio-web": "0.1.0",
+    "mcut-editing-skill": "0.0.0"
   },
-  "changesets": []
+  "changesets": [
+    "audio-activity-mcp",
+    "live-bridge-reconnect",
+    "media-thumbnail-decode-fallback",
+    "multicam-audio-source",
+    "native-video-thumbnails",
+    "screen-cam-crop-preset",
+    "secure-bridge-daemon",
+    "webgpu-player-default"
+  ]
 }
