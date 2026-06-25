@@ -9,6 +9,8 @@ import {
 } from "@mcut/compositor";
 import {
   DEFAULT_SHADOW,
+  getElement,
+  getGroupedElementIds,
   getAnimatedValue,
   getAverageSpeed,
   hasKeyframes,
@@ -166,7 +168,46 @@ export function PropertiesPanel({ className }: { className?: string }) {
     values: Partial<{ x: number; y: number; scaleX: number; scaleY: number; rotation: number }>,
   ) => {
     if (!("transform" in element)) return;
-    patch({ transform: { ...element.transform, ...values } });
+    let transform = { ...element.transform, ...values };
+    if (element.groupId) {
+      if (values.scaleX !== undefined || values.scaleY !== undefined) {
+        const sourceScale =
+          values.scaleX !== undefined ? Math.abs(values.scaleX) : Math.abs(values.scaleY ?? transform.scaleY);
+        transform = {
+          ...transform,
+          scaleX: (transform.scaleX < 0 ? -1 : 1) * sourceScale,
+          scaleY: (transform.scaleY < 0 ? -1 : 1) * sourceScale,
+        };
+      }
+      for (const id of getGroupedElementIds(project, element.id)) {
+        const member = getElement(project, id);
+        if (member && "transform" in member) {
+          try {
+            engine.dispatch({ type: "updateElement", elementId: id, patch: { transform } });
+          } catch {
+            // Invalid grouped member patch: continue with remaining members.
+          }
+        }
+      }
+      return;
+    }
+    patch({ transform });
+  };
+  const patchGroupedVisuals = (values: Record<string, unknown>) => {
+    if (!element.groupId) {
+      patch(values);
+      return;
+    }
+    for (const id of getGroupedElementIds(project, element.id)) {
+      const member = getElement(project, id);
+      if (member && "transform" in member) {
+        try {
+          engine.dispatch({ type: "updateElement", elementId: id, patch: values });
+        } catch {
+          // Invalid grouped member patch: continue with remaining members.
+        }
+      }
+    }
   };
   const patchStyle = (values: Record<string, unknown>) => {
     if (element.type !== "text" && element.type !== "caption") return;
@@ -193,12 +234,13 @@ export function PropertiesPanel({ className }: { className?: string }) {
       patch({ box });
       return;
     }
-    patch({
-      transform: getTransformForDisplaySize(element.transform, naturalSize, {
+    patchTransform(
+      getTransformForDisplaySize(element.transform, naturalSize, {
         ...(values.width !== undefined ? { width: values.width } : {}),
         ...(values.height !== undefined ? { height: values.height } : {}),
+        ...(element.groupId ? { preserveAspect: true } : {}),
       }),
-    });
+    );
   };
   const trim = (values: Partial<{ startMs: number; durationMs: number; trimStartMs: number }>) => {
     try {
@@ -254,17 +296,29 @@ export function PropertiesPanel({ className }: { className?: string }) {
             });
           }
         } else {
-          if (patchRect.width !== undefined) {
-            const scaleX =
-              (element.transform.scaleX < 0 ? -1 : 1) *
-              Math.max(0.001, nextWidth / naturalSize.width);
+          const preserveAspect = Boolean(element.groupId);
+          if (preserveAspect && (patchRect.width !== undefined || patchRect.height !== undefined)) {
+            const scale =
+              patchRect.width !== undefined
+                ? Math.max(0.001, nextWidth / naturalSize.width)
+                : Math.max(0.001, nextHeight / naturalSize.height);
+            const scaleX = (element.transform.scaleX < 0 ? -1 : 1) * scale;
+            const scaleY = (element.transform.scaleY < 0 ? -1 : 1) * scale;
             commit("scale.x", scaleX, () => void (staticPatch.scaleX = scaleX));
-          }
-          if (patchRect.height !== undefined) {
-            const scaleY =
-              (element.transform.scaleY < 0 ? -1 : 1) *
-              Math.max(0.001, nextHeight / naturalSize.height);
             commit("scale.y", scaleY, () => void (staticPatch.scaleY = scaleY));
+          } else {
+            if (patchRect.width !== undefined) {
+              const scaleX =
+                (element.transform.scaleX < 0 ? -1 : 1) *
+                Math.max(0.001, nextWidth / naturalSize.width);
+              commit("scale.x", scaleX, () => void (staticPatch.scaleX = scaleX));
+            }
+            if (patchRect.height !== undefined) {
+              const scaleY =
+                (element.transform.scaleY < 0 ? -1 : 1) *
+                Math.max(0.001, nextHeight / naturalSize.height);
+              commit("scale.y", scaleY, () => void (staticPatch.scaleY = scaleY));
+            }
           }
         }
         if (patchRect.x !== undefined) {
@@ -281,6 +335,7 @@ export function PropertiesPanel({ className }: { className?: string }) {
         value: animValue("rotation", element.transform.rotation),
         set: animCommit("rotation", (rotation) => patchTransform({ rotation })),
       },
+      forceAspectLocked: Boolean(element.groupId && element.type !== "text"),
       controls: (field) => {
         if (field === "x") return kfControls("position.x");
         if (field === "y") return kfControls("position.y");
@@ -542,6 +597,7 @@ export function PropertiesPanel({ className }: { className?: string }) {
           const srcW = asset.width;
           const srcH = asset.height;
           const crop: Crop = element.crop ?? { x: 0, y: 0, w: 1, h: 1 };
+          const isGroupedMedia = Boolean(element.groupId);
           const round4 = (v: number) => Math.round(v * 10_000) / 10_000;
           const setCrop = (next: Crop) => {
             const w = Math.min(1, Math.max(0.01, next.w));
@@ -549,8 +605,35 @@ export function PropertiesPanel({ className }: { className?: string }) {
             const x = Math.min(Math.max(0, next.x), 1 - w);
             const y = Math.min(Math.max(0, next.y), 1 - h);
             const full = x === 0 && y === 0 && w === 1 && h === 1;
-            patch({
+            patchGroupedVisuals({
               crop: full ? undefined : { x: round4(x), y: round4(y), w: round4(w), h: round4(h) },
+            });
+          };
+          const setLockedCrop = (zoom: number, focusX: number, focusY: number) => {
+            const size = Math.min(1, Math.max(0.01, 1 / Math.max(1, zoom)));
+            const nextCrop = {
+              x: (1 - size) * Math.min(1, Math.max(0, focusX)),
+              y: (1 - size) * Math.min(1, Math.max(0, focusY)),
+              w: size,
+              h: size,
+            };
+            const full = nextCrop.x === 0 && nextCrop.y === 0 && nextCrop.w === 1 && nextCrop.h === 1;
+            const displayWidth = displaySize?.width ?? srcW * crop.w * Math.abs(element.transform.scaleX);
+            const scale = Math.max(0.001, displayWidth / (srcW * size));
+            patchGroupedVisuals({
+              crop: full
+                ? undefined
+                : {
+                    x: round4(nextCrop.x),
+                    y: round4(nextCrop.y),
+                    w: round4(nextCrop.w),
+                    h: round4(nextCrop.h),
+                  },
+              transform: {
+                ...element.transform,
+                scaleX: (element.transform.scaleX < 0 ? -1 : 1) * scale,
+                scaleY: (element.transform.scaleY < 0 ? -1 : 1) * scale,
+              },
             });
           };
           // Largest centered crop of the source with this frame aspect.
@@ -563,6 +646,47 @@ export function PropertiesPanel({ className }: { className?: string }) {
             }
             setCrop({ x: (1 - w) / 2, y: (1 - h) / 2, w, h });
           };
+          if (isGroupedMedia) {
+            const size = Math.min(crop.w, crop.h);
+            const zoom = 1 / Math.max(0.01, size);
+            const focusX = 1 - size > 0 ? crop.x / (1 - size) : 0.5;
+            const focusY = 1 - size > 0 ? crop.y / (1 - size) : 0.5;
+            return (
+              <Section
+                title="Framing"
+                defaultOpen={element.crop !== undefined}
+                onReset={() => patchGroupedVisuals({ crop: undefined })}
+              >
+                <NumberField
+                  label="Zoom"
+                  value={Math.round(zoom * 100)}
+                  min={100}
+                  max={1000}
+                  unit="%"
+                  scrubPerPx={1}
+                  onCommit={(pct) => setLockedCrop(pct / 100, focusX, focusY)}
+                />
+                <NumberField
+                  label="Focus X"
+                  value={Math.round(focusX * 100)}
+                  min={0}
+                  max={100}
+                  unit="%"
+                  scrubPerPx={0.5}
+                  onCommit={(pct) => setLockedCrop(zoom, pct / 100, focusY)}
+                />
+                <NumberField
+                  label="Focus Y"
+                  value={Math.round(focusY * 100)}
+                  min={0}
+                  max={100}
+                  unit="%"
+                  scrubPerPx={0.5}
+                  onCommit={(pct) => setLockedCrop(zoom, focusX, pct / 100)}
+                />
+              </Section>
+            );
+          }
           return (
             <Section
               title="Crop"

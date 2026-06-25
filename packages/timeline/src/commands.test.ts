@@ -1,7 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError, listCommands, listToolDefinitions } from './commands'
 import { createProject, type CaptionElement, type Project, type VideoElement } from './model'
-import { findNearestFreeSlot, getElement, getProjectDurationMs, getTrack } from './selectors'
+import {
+  findNearestFreeSlot,
+  getElement,
+  getGroupedElementIds,
+  getProjectDurationMs,
+  getTrack,
+} from './selectors'
 
 function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
   let project = createProject({ name: 'test' })
@@ -134,6 +140,50 @@ describe('track commands', () => {
 })
 
 describe('element commands', () => {
+  test('groupId round-trips and grouped selector returns self first', () => {
+    const { project, trackId } = projectWithVideo()
+    let next = applyCommand(project, {
+      type: 'addElement',
+      trackId,
+      element: {
+        id: 'e-one',
+        type: 'video',
+        assetId: 'a-vid',
+        groupId: 'g-one',
+        startMs: 0,
+        durationMs: 1000,
+      },
+    })
+    next = applyCommand(next, {
+      type: 'addElement',
+      trackId,
+      element: {
+        id: 'e-two',
+        type: 'video',
+        assetId: 'a-vid',
+        groupId: 'g-one',
+        startMs: 2000,
+        durationMs: 1000,
+      },
+    })
+    next = applyCommand(next, {
+      type: 'addElement',
+      trackId,
+      element: {
+        id: 'e-three',
+        type: 'video',
+        assetId: 'a-vid',
+        startMs: 4000,
+        durationMs: 1000,
+      },
+    })
+
+    expect(getElement(next, 'e-one')?.groupId).toBe('g-one')
+    expect(getGroupedElementIds(next, 'e-one')).toEqual(['e-one', 'e-two'])
+    expect(getGroupedElementIds(next, 'e-two')).toEqual(['e-two', 'e-one'])
+    expect(getGroupedElementIds(next, 'e-three')).toEqual(['e-three'])
+  })
+
   test('addElement fills defaults, generates ids, keeps sort order', () => {
     const { project, trackId } = projectWithVideo()
     let next = applyCommand(project, {

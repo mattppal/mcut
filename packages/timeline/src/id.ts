@@ -2,6 +2,7 @@ export type TrackId = `t-${string}`
 export type ElementId = `e-${string}`
 export type AssetId = `a-${string}`
 export type MarkerId = `m-${string}`
+export type GroupId = `g-${string}`
 
 function randomSuffix(): string {
   // crypto.randomUUID is available in all supported runtimes (browser, Bun, Node 19+).
@@ -15,6 +16,8 @@ export const createMarkerId = (): MarkerId => `m-${randomSuffix()}`
 export const createProjectId = (): string => `p-${randomSuffix()}`
 /** Shared by linked elements (e.g. a video and its detached audio). */
 export const createLinkId = (): string => `l-${randomSuffix()}`
+/** Shared by timeline elements that should move/edit as one grouped item. */
+export const createGroupId = (): GroupId => `g-${randomSuffix()}`
 /** Multicam layout templates (project-level and library). */
 export const createLayoutId = (): string => `lay-${randomSuffix()}`
 /** Property presets (named inspector value bundles; see presets.ts). */

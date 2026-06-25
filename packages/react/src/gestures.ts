@@ -73,20 +73,43 @@ export function applyResize(
   handle: Exclude<HandleId, 'rotate'>,
   start: GesturePoint,
   current: GesturePoint,
+  preserveAspect = false,
 ): Transform {
   const localStart = pointToLocal(obb, start)
   const localCurrent = pointToLocal(obb, current)
 
-  if (handle === 'e' || handle === 'w') {
+  if (!preserveAspect && (handle === 'e' || handle === 'w')) {
     const factor = localStart.x === 0 ? 1 : localCurrent.x / localStart.x
     return { ...base, scaleX: clampScale(base.scaleX * factor) }
   }
-  if (handle === 'n' || handle === 's') {
+  if (!preserveAspect && (handle === 'n' || handle === 's')) {
     const factor = localStart.y === 0 ? 1 : localCurrent.y / localStart.y
     return { ...base, scaleY: clampScale(base.scaleY * factor) }
   }
-  const startDistance = Math.hypot(localStart.x, localStart.y)
-  const factor = startDistance === 0 ? 1 : Math.hypot(localCurrent.x, localCurrent.y) / startDistance
+  const startDistance = preserveAspect && (handle === 'e' || handle === 'w')
+    ? Math.abs(localStart.x)
+    : preserveAspect && (handle === 'n' || handle === 's')
+      ? Math.abs(localStart.y)
+      : Math.hypot(localStart.x, localStart.y)
+  const currentDistance = preserveAspect && (handle === 'e' || handle === 'w')
+    ? Math.abs(localCurrent.x)
+    : preserveAspect && (handle === 'n' || handle === 's')
+      ? Math.abs(localCurrent.y)
+      : Math.hypot(localCurrent.x, localCurrent.y)
+  const factor = startDistance === 0 ? 1 : currentDistance / startDistance
+  if (preserveAspect) {
+    const baseScale = handle === 'n' || handle === 's'
+      ? Math.abs(base.scaleY)
+      : handle === 'e' || handle === 'w'
+        ? Math.abs(base.scaleX)
+        : Math.max(Math.abs(base.scaleX), Math.abs(base.scaleY))
+    const scale = Math.max(MIN_SCALE, baseScale * factor)
+    return {
+      ...base,
+      scaleX: (base.scaleX < 0 ? -1 : 1) * scale,
+      scaleY: (base.scaleY < 0 ? -1 : 1) * scale,
+    }
+  }
   return {
     ...base,
     scaleX: clampScale(base.scaleX * factor),

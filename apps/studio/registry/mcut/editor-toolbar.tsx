@@ -53,6 +53,7 @@ function ThemeToggle() {
 const MODES: Array<{ id: EditorMode; label: string }> = [
   { id: "edit", label: "Edit" },
   { id: "multicam", label: "Multicam" },
+  { id: "collage", label: "Collage" },
 ];
 
 /** The editing-mode switch: modes re-emphasize affordances, never the document. */

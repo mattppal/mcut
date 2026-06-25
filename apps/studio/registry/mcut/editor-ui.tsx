@@ -96,7 +96,7 @@ export type EditorTheme = "dark" | "light";
  * Editing modes are VIEWS, not document state: they re-emphasize affordances
  * (multicam = layout bank + 1–9 switching) over the same project.
  */
-export type EditorMode = "edit" | "multicam";
+export type EditorMode = "edit" | "multicam" | "collage";
 
 /**
  * Timeline pointer tools (Premiere's tool palette): select is the default

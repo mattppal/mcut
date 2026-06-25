@@ -45,6 +45,8 @@ export interface FrameTarget {
   rotation?: { value: number; set: (deg: number) => void };
   /** Smallest width/height the surface accepts (px). */
   minSize?: number;
+  /** Force W/H edits to preserve aspect and hide the unlock affordance. */
+  forceAspectLocked?: boolean;
   /** Trailing per-row controls (keyframe cluster for elements). */
   controls?: (field: FrameField) => React.ReactNode;
 }
@@ -86,18 +88,19 @@ export function alignFrame(target: FrameTarget, alignment: FrameAlignment): Part
 export function FrameFields({ target }: { target: FrameTarget }) {
   const [aspectLocked, setAspectLocked] = useState(true);
   const { rect, minSize = 1 } = target;
+  const locked = target.forceAspectLocked || aspectLocked;
   const round1 = (v: number) => Math.round(v * 10) / 10;
 
   const commitWidth = (width: number) => {
     target.setRect(
-      aspectLocked && rect.width > 0
+      locked && rect.width > 0
         ? { width, height: Math.max(minSize, (width * rect.height) / rect.width) }
         : { width },
     );
   };
   const commitHeight = (height: number) => {
     target.setRect(
-      aspectLocked && rect.height > 0
+      locked && rect.height > 0
         ? { height, width: Math.max(minSize, (height * rect.width) / rect.height) }
         : { height },
     );
@@ -146,19 +149,31 @@ export function FrameFields({ target }: { target: FrameTarget }) {
         onCommit={commitWidth}
         controls={
           <>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              title={
-                aspectLocked
-                  ? "Aspect locked — width and height resize together"
-                  : "Aspect free — width and height resize independently"
-              }
-              aria-pressed={aspectLocked}
-              onClick={() => setAspectLocked((value) => !value)}
-            >
-              {aspectLocked ? <LockIcon /> : <LockOpenIcon />}
-            </Button>
+            {target.forceAspectLocked ? (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                title="Aspect locked for grouped collage media"
+                aria-pressed
+                disabled
+              >
+                <LockIcon />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                title={
+                  aspectLocked
+                    ? "Aspect locked — width and height resize together"
+                    : "Aspect free — width and height resize independently"
+                }
+                aria-pressed={aspectLocked}
+                onClick={() => setAspectLocked((value) => !value)}
+              >
+                {aspectLocked ? <LockIcon /> : <LockOpenIcon />}
+              </Button>
+            )}
             {target.controls?.("width")}
           </>
         }

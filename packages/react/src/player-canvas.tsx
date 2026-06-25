@@ -25,6 +25,7 @@ import {
 import { getActiveMediaItems } from '@mcut/media'
 import {
   getElement,
+  getGroupedElementIds,
   getProjectDurationMs,
   hasKeyframes,
   isElementActiveAt,
@@ -79,10 +80,12 @@ export interface PlayerCanvasProps {
 interface GestureState {
   kind: 'move' | 'resize' | 'box-resize' | 'rotate'
   elementId: ElementId
+  elementIds: ElementId[]
   baseTransform: Transform
   baseOBB: OBB
   baseBox: (TextBox & { height: number; hadHeight: boolean }) | null
   handle: Exclude<HandleId, 'rotate'> | null
+  preserveAspect: boolean
   start: GesturePoint
 }
 
@@ -139,6 +142,24 @@ function applyGestureTransform(
     }
   }
   engine.dispatch({ type: 'updateElement', elementId, patch: { transform: staticTransform } })
+}
+
+function visualGroupElementIds(project: Project, elementId: ElementId): ElementId[] {
+  return getGroupedElementIds(project, elementId).filter((id) => {
+    const element = getElement(project, id)
+    return Boolean(element && 'transform' in element)
+  })
+}
+
+function applyGestureTransformToElements(
+  engine: EditorEngine,
+  elementIds: readonly ElementId[],
+  transform: Transform,
+  timelineMs: number,
+): void {
+  for (const elementId of elementIds) {
+    applyGestureTransform(engine, elementId, transform, timelineMs)
+  }
 }
 
 /**
@@ -341,10 +362,10 @@ export function PlayerCanvas({
       ctx.clearRect(0, 0, width, height)
       if (!interactive) return
 
-      const selectedId = engine.selection.elementIds[0]
-      if (!selectedId) return
-      const raw = getElement(project, selectedId)
-      if (!raw || !isElementActiveAt(raw, timeMs)) return
+      const raw = engine.selection.elementIds
+        .map((id) => getElement(project, id))
+        .find((element): element is TimelineElement => Boolean(element && isElementActiveAt(element, timeMs)))
+      if (!raw) return
       const element = resolveAnimatedElement(raw, timeMs)
       const obb = obbFor(project, element)
       if (!obb) return
@@ -469,10 +490,14 @@ export function PlayerCanvas({
     const handleHitSize = 10 * screenToProject()
 
     // 1. Handles of the current selection take priority.
-    const selectedId = engine.selection.elementIds[0]
-    if (selectedId) {
-      const raw = getElement(project, selectedId)
-      if (raw && isElementActiveAt(raw, timeMs) && 'transform' in raw) {
+    const selectedRaw = engine.selection.elementIds
+      .map((id) => getElement(project, id))
+      .find((element): element is TimelineElement => Boolean(
+        element && isElementActiveAt(element, timeMs) && 'transform' in element,
+      ))
+    if (selectedRaw) {
+      const raw = selectedRaw
+      if ('transform' in raw) {
         // Gestures start from the RESOLVED transform so armed elements are
         // grabbed where they currently are on screen.
         const element = resolveAnimatedElement(raw, timeMs)
@@ -491,10 +516,12 @@ export function PlayerCanvas({
             gestureRef.current = {
               kind: handle === 'rotate' ? 'rotate' : baseBox ? 'box-resize' : 'resize',
               elementId: element.id,
+              elementIds: visualGroupElementIds(project, element.id),
               baseTransform: element.transform,
               baseOBB: obb,
               baseBox,
               handle: handle === 'rotate' ? null : handle,
+              preserveAspect: Boolean(raw.groupId),
               start: point,
             }
             engine.beginTransaction()
@@ -517,14 +544,17 @@ export function PlayerCanvas({
         const obb = obbFor(project, element)
         if (!obb || !hitTestOBB(obb, point.x, point.y)) continue
 
-        engine.select([element.id])
+        const elementIds = visualGroupElementIds(project, element.id)
+        engine.select(getGroupedElementIds(project, element.id))
         gestureRef.current = {
           kind: 'move',
           elementId: element.id,
+          elementIds,
           baseTransform: element.transform,
           baseOBB: obb,
           baseBox: null,
           handle: null,
+          preserveAspect: Boolean(raw.groupId),
           start: point,
         }
         engine.beginTransaction()
@@ -595,6 +625,7 @@ export function PlayerCanvas({
         gesture.handle ?? 'se',
         gesture.start,
         point,
+        gesture.preserveAspect,
       )
       const width = (gesture.baseOBB.width / gesture.baseTransform.scaleX) * transform.scaleX
       const height = (gesture.baseOBB.height / gesture.baseTransform.scaleY) * transform.scaleY
@@ -634,7 +665,12 @@ export function PlayerCanvas({
     }
 
     try {
-      applyGestureTransform(engine, gesture.elementId, transform, engine.playback.state.currentTimeMs)
+      applyGestureTransformToElements(
+        engine,
+        gesture.elementIds,
+        transform,
+        engine.playback.state.currentTimeMs,
+      )
     } catch {
       // Element vanished mid-gesture (e.g. concurrent removal): cancel.
       gestureRef.current = null

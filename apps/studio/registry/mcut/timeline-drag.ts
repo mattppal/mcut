@@ -8,6 +8,7 @@ import {
   computeSlipRange,
   planAutoCrossfade,
   planDuplicateClipsToNewTracks,
+  retimeSequentialCollage,
   resolveToolMode,
   type ClipDragBase,
   type ClipDragMode,
@@ -45,6 +46,8 @@ export interface ClipDragBeginOptions {
   mode: ClipDragMode;
   /** Every element in the gesture, anchor (grabbed clip) first. */
   ids: ElementId[];
+  /** Stationary elements to exclude from snapping/collision for this gesture. */
+  ignoreIds?: ElementId[];
   /** ⌥-drag: copy the clips onto new tracks and move the copies. */
   duplicateOnDrag: boolean;
 }
@@ -111,6 +114,10 @@ function removeEmptyCreatedTracks(engine: Engine, trackIds: readonly Track["id"]
       engine.dispatch({ type: "removeTrack", trackId });
     }
   }
+}
+
+function isDirectTrimMode(mode: ClipDragMode): boolean {
+  return mode === "trim-start" || mode === "trim-end";
 }
 
 /** Scroll velocity toward whichever edge zone `pos` is inside, else 0. */
@@ -191,7 +198,7 @@ export class ClipDragController {
       duplicateOnDrag: options.duplicateOnDrag,
       duplicated: false,
       createdTrackIds: [],
-      ignore: new Set<string>(options.ids),
+      ignore: new Set<string>([...options.ids, ...(options.ignoreIds ?? [])]),
       targets: [],
       appliedDeltaMs: 0,
       rollTargetId: resolved.rollTargetId,
@@ -372,6 +379,16 @@ export class ClipDragController {
     if (gesture.active) {
       removeEmptyCreatedTracks(this.deps.engine, gesture.createdTrackIds);
       this.maybeAutoCrossfade(gesture);
+      const shouldRetimeCollage =
+        isDirectTrimMode(gesture.mode) &&
+        gesture.ids.some((id) => getElementLocation(this.deps.engine.project, id)?.element.groupId);
+      if (shouldRetimeCollage) {
+        try {
+          retimeSequentialCollage(this.deps.engine);
+        } catch {
+          // Keep the user's trim if a partial collage cannot be inferred.
+        }
+      }
       this.deps.engine.endTransaction();
       this.deps.setSnapGuideMs(null);
     }

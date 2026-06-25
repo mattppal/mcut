@@ -229,7 +229,7 @@ export class ExportFrameSource implements FrameSource {
   private states = new Map<string, ElementVideoState>()
   private images = new Map<AssetId, ImageBitmap | null>()
   private frameCache = new Map<string, CanvasImageSource>()
-  private temporaries: VideoFrame[] = []
+  private temporaries: ImageBitmap[] = []
 
   constructor(private project: Project) {}
 
@@ -251,10 +251,8 @@ export class ExportFrameSource implements FrameSource {
             request.sourceTimeMs / 1000,
           )
           if (sample) {
-            const image = sample.toCanvasImageSource()
-            if (typeof VideoFrame !== 'undefined' && image instanceof VideoFrame) {
-              this.temporaries.push(image)
-            }
+            const image = await createImageBitmap(sample.toCanvasImageSource())
+            this.temporaries.push(image)
             this.frameCache.set(frameKey(request.assetId, request.sourceTimeMs), image)
           }
         }
@@ -266,7 +264,7 @@ export class ExportFrameSource implements FrameSource {
     return this.frameCache.get(frameKey(assetId, sourceTimeMs)) ?? null
   }
 
-  /** Close per-frame `VideoFrame`s after the frame has been encoded. */
+  /** Close per-frame image snapshots after the frame has been encoded. */
   releaseFrameTemporaries(): void {
     for (const frame of this.temporaries) frame.close()
     this.temporaries = []
