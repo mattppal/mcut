@@ -2,6 +2,7 @@ import {
   animatableProperties,
   canPlace,
   createElementId,
+  createGroupId,
   createLinkId,
   createTrackId,
   findNearestFreeSlot,
@@ -9,14 +10,21 @@ import {
   getAnimatedValue,
   getElement,
   getElementLocation,
+  getGroupedElementIds,
   getLinkedElementIds,
   getKeyframes,
+  getSourceSpanMs,
   hasKeyframes,
   isOnKeyframe,
+  MIN_ELEMENT_DURATION_MS,
   type AnimatableProperty,
   type AssetRef,
   type EditorEngine,
+  type GroupId,
   type TextStyle,
+  type TimeMap,
+  type Transform,
+  type VideoElement,
   type TimelineElement,
   type TimelineElementInput,
   type Track,
@@ -102,6 +110,482 @@ export function elementForAsset(engine: EditorEngine, asset: AssetRef): Timeline
     assetId: asset.id,
     transform,
     opacity: 1,
+  }
+}
+
+export type SequentialCollageLayout = 'horizontal' | 'vertical' | 'auto'
+
+export interface SequentialVideoCollageOptions {
+  /** Natural order of playback and visual slots. */
+  assets: readonly AssetRef[]
+  /** `auto`: landscape stacks vertically; portrait/square lays out horizontally. */
+  layout?: SequentialCollageLayout
+  /** Per-video punch-in. Values >1 crop toward the center while preserving the slot size. */
+  zooms?: readonly number[]
+  /** Replace timeline tracks while keeping project assets. Default true. */
+  replaceTimeline?: boolean
+  /** Lock generated tracks against accidental clip edits. Default false. */
+  lockTracks?: boolean
+  /** Make generated tracks magnetic so their clips stay snapped left. Default false. */
+  magnetic?: boolean
+}
+
+export interface SequentialVideoCollageResult {
+  layout: Exclude<SequentialCollageLayout, 'auto'>
+  totalDurationMs: number
+  groupIds: GroupId[]
+  visualTrackIds: `t-${string}`[]
+  activeVideoElementIds: `e-${string}`[]
+  freezeElementIds: `e-${string}`[]
+  audioElementIds: `e-${string}`[]
+  trackIds: `t-${string}`[]
+  /** @deprecated Use activeVideoElementIds. */
+  videoElementIds: `e-${string}`[]
+}
+
+function assertVideoAsset(asset: AssetRef): asserts asset is AssetRef & {
+  kind: 'video'
+  width: number
+  height: number
+  durationMs: number
+} {
+  if (asset.kind !== 'video') throw new Error(`"${asset.name ?? asset.id}" is not a video`)
+  if (!asset.width || !asset.height) {
+    throw new Error(`"${asset.name ?? asset.id}" is missing video dimensions`)
+  }
+  if (!asset.durationMs) {
+    throw new Error(`"${asset.name ?? asset.id}" is missing video duration`)
+  }
+}
+
+function assertMatchingAspectRatios(assets: readonly AssetRef[]): asserts assets is Array<AssetRef & {
+  kind: 'video'
+  width: number
+  height: number
+  durationMs: number
+}> {
+  if (assets.length < 2) throw new Error('Select at least two videos')
+  for (const asset of assets) assertVideoAsset(asset)
+  const videos = assets as Array<AssetRef & {
+    kind: 'video'
+    width: number
+    height: number
+    durationMs: number
+  }>
+  const base = videos[0]!
+  const baseRatio = base.width / base.height
+  const mismatch = videos.find((asset) => Math.abs(asset.width / asset.height - baseRatio) > 0.001)
+  if (mismatch) {
+    throw new Error(
+      `All videos must use the same aspect ratio (${base.width}:${base.height} vs ` +
+        `${mismatch.width}:${mismatch.height})`,
+    )
+  }
+}
+
+function flatFreezeMap(durationMs: number, sourceOffsetMs: number): TimeMap {
+  return [
+    { timeMs: 0, value: sourceOffsetMs },
+    { timeMs: durationMs, value: sourceOffsetMs },
+  ]
+}
+
+function centeredCropForZoom(zoom: number): { x: number; y: number; w: number; h: number } | undefined {
+  if (zoom <= 1) return undefined
+  const size = 1 / zoom
+  const inset = (1 - size) / 2
+  return { x: inset, y: inset, w: size, h: size }
+}
+
+function isFlatFreezeVideo(element: TimelineElement): element is VideoElement {
+  if (element.type !== 'video' || !element.timeMap || element.timeMap.length < 2) return false
+  const value = element.timeMap[0]!.value
+  return element.timeMap.every((frame) => frame.value === value)
+}
+
+interface CollageGroupParts {
+  groupId: GroupId
+  visualTrackId: TrackId
+  active?: VideoElement
+  audio?: TimelineElement & { type: 'audio' }
+  audioTrackId?: TrackId
+  freezes: VideoElement[]
+}
+
+interface CompleteCollageGroupParts extends CollageGroupParts {
+  active: VideoElement
+  audio: TimelineElement & { type: 'audio' }
+  audioTrackId: TrackId
+}
+
+function optionalVisualProps(element: VideoElement): Partial<VideoElement> {
+  const props: Partial<VideoElement> = {}
+  if (element.crop) props.crop = element.crop
+  if (element.effects) props.effects = element.effects
+  if (element.blendMode) props.blendMode = element.blendMode
+  if (element.motionBlur) props.motionBlur = element.motionBlur
+  if (element.cornerRadius !== undefined) props.cornerRadius = element.cornerRadius
+  if (element.stroke) props.stroke = element.stroke
+  if (element.shadow) props.shadow = element.shadow
+  return props
+}
+
+function findSequentialCollageGroups(project: EditorEngine['project']): CompleteCollageGroupParts[] {
+  const byGroup = new Map<GroupId, CollageGroupParts>()
+  for (const track of project.tracks) {
+    for (const element of track.elements) {
+      if (!element.groupId) continue
+      const groupId = element.groupId
+      let parts = byGroup.get(groupId)
+      if (!parts) {
+        parts = {
+          groupId,
+          visualTrackId: track.id,
+          freezes: [],
+        }
+        byGroup.set(groupId, parts)
+      }
+      if (element.type === 'audio') {
+        parts.audio = element
+        parts.audioTrackId = track.id
+      } else if (element.type === 'video') {
+        if (isFlatFreezeVideo(element)) {
+          parts.freezes.push(element)
+        } else {
+          parts.active = element
+          parts.visualTrackId = track.id
+        }
+      }
+    }
+  }
+  return [...byGroup.values()].filter(
+    (parts): parts is CompleteCollageGroupParts =>
+      Boolean(parts.active && parts.audio && parts.audioTrackId),
+  )
+}
+
+function orderedCollageGroups(
+  project: EditorEngine['project'],
+  groupOrder?: readonly GroupId[],
+): CompleteCollageGroupParts[] {
+  const groups = findSequentialCollageGroups(project)
+  const byId = new Map(groups.map((group) => [group.groupId, group]))
+  const ordered: CompleteCollageGroupParts[] = []
+  for (const groupId of groupOrder ?? []) {
+    const group = byId.get(groupId)
+    if (!group) continue
+    ordered.push(group)
+    byId.delete(groupId)
+  }
+  ordered.push(...[...byId.values()].sort((a, b) => a.active.startMs - b.active.startMs))
+  return ordered
+}
+
+/** Fit the project canvas to the natural bounds of an equal-aspect video collage. */
+export function fitCanvasToVideoCollage(
+  engine: EditorEngine,
+  assets: readonly AssetRef[],
+  layout: Exclude<SequentialCollageLayout, 'auto'>,
+): { width: number; height: number } {
+  assertMatchingAspectRatios(assets)
+  const cellWidth = Math.max(...assets.map((asset) => asset.width))
+  const cellHeight = Math.round(cellWidth / (assets[0]!.width / assets[0]!.height))
+  const width = layout === 'horizontal' ? cellWidth * assets.length : cellWidth
+  const height = layout === 'vertical' ? cellHeight * assets.length : cellHeight
+  engine.dispatch({ type: 'updateProject', width, height })
+  return { width, height }
+}
+
+/**
+ * Build a sequential video collage from editable primitives:
+ * each visual item is a grouped freeze-before / active / freeze-after sequence,
+ * with matching audio on one shared audio lane.
+ */
+export function createSequentialVideoCollage(
+  engine: EditorEngine,
+  options: SequentialVideoCollageOptions,
+): SequentialVideoCollageResult {
+  assertMatchingAspectRatios(options.assets)
+  const assets = options.assets
+  const first = assets[0]!
+  const layout =
+    options.layout === 'horizontal' || options.layout === 'vertical'
+      ? options.layout
+      : first.width >= first.height
+        ? 'vertical'
+        : 'horizontal'
+  const totalDurationMs = assets.reduce((sum, asset) => sum + asset.durationMs, 0)
+  const cellWidth = Math.max(...assets.map((asset) => asset.width))
+  const cellHeight = Math.round(cellWidth / (first.width / first.height))
+  const lockTracks = options.lockTracks ?? false
+  const magnetic = options.magnetic ?? false
+  const replaceTimeline = options.replaceTimeline ?? true
+  const groupIds: GroupId[] = []
+  const visualTrackIds: `t-${string}`[] = []
+  const activeVideoElementIds: `e-${string}`[] = []
+  const freezeElementIds: `e-${string}`[] = []
+  const audioElementIds: `e-${string}`[] = []
+  const trackIds: `t-${string}`[] = []
+
+  engine.transact(() => {
+    if (replaceTimeline) {
+      for (const track of [...engine.project.tracks]) {
+        engine.dispatch({ type: 'removeTrack', trackId: track.id })
+      }
+    }
+
+    fitCanvasToVideoCollage(engine, assets, layout)
+
+    const audioTrackId = createTrackId()
+    trackIds.push(audioTrackId)
+    engine.dispatch({ type: 'addTrack', id: audioTrackId, name: 'Collage audio', index: 0 })
+    if (lockTracks || magnetic) {
+      engine.dispatch({ type: 'setTrackFlags', trackId: audioTrackId, locked: lockTracks, magnetic })
+    }
+
+    let cursorMs = 0
+    for (let i = 0; i < assets.length; i++) {
+      const asset = assets[i]!
+      const zoom = Math.max(1, options.zooms?.[i] ?? 1)
+      const crop = centeredCropForZoom(zoom)
+      const scale = (cellWidth / asset.width) * zoom
+      const x = layout === 'horizontal' ? -((cellWidth * (assets.length - 1)) / 2) + i * cellWidth : 0
+      const y = layout === 'vertical' ? -((cellHeight * (assets.length - 1)) / 2) + i * cellHeight : 0
+      const videoTrackId = createTrackId()
+      const groupId = createGroupId()
+      const activeVideoElementId = createElementId()
+      const audioElementId = createElementId()
+      trackIds.push(videoTrackId)
+      visualTrackIds.push(videoTrackId)
+      groupIds.push(groupId)
+      activeVideoElementIds.push(activeVideoElementId)
+      audioElementIds.push(audioElementId)
+      const transform: Transform = { x, y, scaleX: scale, scaleY: scale, rotation: 0 }
+
+      engine.dispatch({
+        type: 'addTrack',
+        id: videoTrackId,
+        name: asset.name ? `Collage ${i + 1}: ${asset.name}` : `Collage ${i + 1}`,
+      })
+      if (lockTracks || magnetic) {
+        engine.dispatch({ type: 'setTrackFlags', trackId: videoTrackId, locked: lockTracks, magnetic })
+      }
+      if (cursorMs >= MIN_ELEMENT_DURATION_MS) {
+        const freezeId = createElementId()
+        freezeElementIds.push(freezeId)
+        engine.dispatch({
+          type: 'addElement',
+          trackId: videoTrackId,
+          element: {
+            type: 'video',
+            id: freezeId,
+            groupId,
+            startMs: 0,
+            durationMs: cursorMs,
+            assetId: asset.id,
+            trimStartMs: 0,
+            timeMap: flatFreezeMap(cursorMs, 0),
+            transform,
+            ...(crop ? { crop } : {}),
+            opacity: 1,
+            volume: 0,
+            muted: true,
+          },
+        })
+      }
+      engine.dispatch({
+        type: 'addElement',
+        trackId: videoTrackId,
+        element: {
+          type: 'video',
+          id: activeVideoElementId,
+          groupId,
+          startMs: cursorMs,
+          durationMs: asset.durationMs,
+          assetId: asset.id,
+          trimStartMs: 0,
+          transform,
+          ...(crop ? { crop } : {}),
+          opacity: 1,
+          volume: 0,
+          muted: true,
+        },
+      })
+      const afterDurationMs = totalDurationMs - cursorMs - asset.durationMs
+      if (afterDurationMs >= MIN_ELEMENT_DURATION_MS) {
+        const freezeId = createElementId()
+        freezeElementIds.push(freezeId)
+        engine.dispatch({
+          type: 'addElement',
+          trackId: videoTrackId,
+          element: {
+            type: 'video',
+            id: freezeId,
+            groupId,
+            startMs: cursorMs + asset.durationMs,
+            durationMs: afterDurationMs,
+            assetId: asset.id,
+            trimStartMs: 0,
+            timeMap: flatFreezeMap(afterDurationMs, asset.durationMs),
+            transform,
+            ...(crop ? { crop } : {}),
+            opacity: 1,
+            volume: 0,
+            muted: true,
+          },
+        })
+      }
+      engine.dispatch({
+        type: 'addElement',
+        trackId: audioTrackId,
+        element: {
+          type: 'audio',
+          id: audioElementId,
+          groupId,
+          startMs: cursorMs,
+          durationMs: asset.durationMs,
+          assetId: asset.id,
+          trimStartMs: 0,
+          volume: 1,
+          muted: false,
+        },
+      })
+      cursorMs += asset.durationMs
+    }
+  }, { selection: activeVideoElementIds })
+
+  return {
+    layout,
+    totalDurationMs,
+    groupIds,
+    visualTrackIds,
+    activeVideoElementIds,
+    freezeElementIds,
+    audioElementIds,
+    trackIds,
+    videoElementIds: activeVideoElementIds,
+  }
+}
+
+/**
+ * Rebuild freeze regions and sequential audio positions around each collage
+ * group's directly editable active video clip.
+ */
+export function retimeSequentialCollage(
+  engine: EditorEngine,
+  groupOrder?: readonly GroupId[],
+): SequentialVideoCollageResult | null {
+  const groups = orderedCollageGroups(engine.project, groupOrder)
+  if (groups.length === 0) return null
+
+  const totalDurationMs = groups.reduce((sum, group) => sum + group.active.durationMs, 0)
+  const freezeElementIds: `e-${string}`[] = []
+  const activeVideoElementIds: `e-${string}`[] = groups.map((group) => group.active.id)
+  const audioElementIds: `e-${string}`[] = groups.map((group) => group.audio.id)
+  const visualTrackIds: `t-${string}`[] = groups.map((group) => group.visualTrackId)
+  const trackIds = [...new Set([...visualTrackIds, ...groups.flatMap((group) => group.audioTrackId ? [group.audioTrackId] : [])])]
+
+  engine.transact(() => {
+    for (const group of groups) {
+      for (const freeze of group.freezes) {
+        engine.dispatch({ type: 'removeElement', elementId: freeze.id })
+      }
+      if (group.audio) engine.dispatch({ type: 'removeElement', elementId: group.audio.id })
+    }
+
+    let cursorMs = 0
+    for (const group of groups) {
+      const active = getElement(engine.project, group.active.id) as VideoElement | undefined
+      if (!active) continue
+      const audioTrackId = group.audioTrackId
+      const visualProps = optionalVisualProps(active)
+      const activeSourceEndMs = getSourceSpanMs(active)
+      const activeDurationMs = active.durationMs
+
+      engine.dispatch({
+        type: 'trimElement',
+        elementId: active.id,
+        startMs: cursorMs,
+        durationMs: activeDurationMs,
+      })
+
+      if (cursorMs >= MIN_ELEMENT_DURATION_MS) {
+        const freezeId = createElementId()
+        freezeElementIds.push(freezeId)
+        engine.dispatch({
+          type: 'addElement',
+          trackId: group.visualTrackId,
+          element: {
+            type: 'video',
+            id: freezeId,
+            groupId: group.groupId,
+            startMs: 0,
+            durationMs: cursorMs,
+            assetId: active.assetId,
+            trimStartMs: active.trimStartMs,
+            timeMap: flatFreezeMap(cursorMs, 0),
+            transform: active.transform,
+            opacity: active.opacity,
+            volume: 0,
+            muted: true,
+            ...visualProps,
+          },
+        })
+      }
+
+      const afterDurationMs = totalDurationMs - cursorMs - activeDurationMs
+      if (afterDurationMs >= MIN_ELEMENT_DURATION_MS) {
+        const freezeId = createElementId()
+        freezeElementIds.push(freezeId)
+        engine.dispatch({
+          type: 'addElement',
+          trackId: group.visualTrackId,
+          element: {
+            type: 'video',
+            id: freezeId,
+            groupId: group.groupId,
+            startMs: cursorMs + activeDurationMs,
+            durationMs: afterDurationMs,
+            assetId: active.assetId,
+            trimStartMs: active.trimStartMs,
+            timeMap: flatFreezeMap(afterDurationMs, activeSourceEndMs),
+            transform: active.transform,
+            opacity: active.opacity,
+            volume: 0,
+            muted: true,
+            ...visualProps,
+          },
+        })
+      }
+
+      if (group.audio && audioTrackId) {
+        engine.dispatch({
+          type: 'addElement',
+          trackId: audioTrackId,
+          element: {
+            ...group.audio,
+            startMs: cursorMs,
+            durationMs: activeDurationMs,
+            trimStartMs: active.trimStartMs,
+            timeMap: active.timeMap,
+          },
+        })
+      }
+
+      cursorMs += activeDurationMs
+    }
+  }, { selection: activeVideoElementIds })
+
+  return {
+    layout: engine.project.width >= engine.project.height ? 'horizontal' : 'vertical',
+    totalDurationMs,
+    groupIds: groups.map((group) => group.groupId),
+    visualTrackIds,
+    activeVideoElementIds,
+    freezeElementIds,
+    audioElementIds,
+    trackIds,
+    videoElementIds: activeVideoElementIds,
   }
 }
 

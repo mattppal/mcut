@@ -1,6 +1,7 @@
 export {
   createAssetId,
   createElementId,
+  createGroupId,
   createLayoutId,
   createLinkId,
   createMarkerId,
@@ -9,6 +10,7 @@ export {
   createTrackId,
   type AssetId,
   type ElementId,
+  type GroupId,
   type MarkerId,
   type TrackId,
 } from './id'
@@ -184,6 +186,7 @@ export {
   elementIdSchema,
   elementInputSchema,
   elementSchema,
+  groupIdSchema,
   imageElementSchema,
   markerIdSchema,
   markerSchema,
@@ -254,6 +257,7 @@ export {
   getActiveElements,
   getElement,
   getElementLocation,
+  getGroupedElementIds,
   getLinkedElementIds,
   getProjectDurationMs,
   getTrack,

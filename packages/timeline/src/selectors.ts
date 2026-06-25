@@ -46,6 +46,22 @@ export function getLinkedElementIds(project: Project, elementId: ElementId): Ele
   return [elementId, ...partners]
 }
 
+/**
+ * The element plus every element sharing its `groupId`, the element itself
+ * first. Just `[elementId]` when ungrouped.
+ */
+export function getGroupedElementIds(project: Project, elementId: ElementId): ElementId[] {
+  const element = getElement(project, elementId)
+  if (!element?.groupId) return [elementId]
+  const members: ElementId[] = []
+  for (const track of project.tracks) {
+    for (const e of track.elements) {
+      if (e.groupId === element.groupId && e.id !== elementId) members.push(e.id)
+    }
+  }
+  return [elementId, ...members]
+}
+
 /** End of the last element across all tracks (0 for an empty project). */
 export function getProjectDurationMs(project: Project): number {
   let end = 0

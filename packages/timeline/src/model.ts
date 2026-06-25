@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { AssetId, ElementId, MarkerId, TrackId } from './id'
+import type { AssetId, ElementId, GroupId, MarkerId, TrackId } from './id'
 import { createProjectId, createTrackId } from './id'
 import {
   anyElementInputSchema,
@@ -55,8 +55,14 @@ const markerIdSchema = z
     'invalid marker id (expected "m-..." prefix)',
   )
   .meta({ type: 'string', pattern: '^m-[\\w-]+$' })
+const groupIdSchema = z
+  .custom<GroupId>(
+    (v) => typeof v === 'string' && /^g-[\w-]+$/.test(v),
+    'invalid group id (expected "g-..." prefix)',
+  )
+  .meta({ type: 'string', pattern: '^g-[\\w-]+$' })
 
-export { trackIdSchema, elementIdSchema, assetIdSchema, markerIdSchema }
+export { trackIdSchema, elementIdSchema, assetIdSchema, markerIdSchema, groupIdSchema }
 
 /**
  * Element position/scale/rotation. Coordinates are center-origin: (0, 0) is
@@ -164,6 +170,12 @@ const timingShape = {
    * not enforce cascading edits.
    */
   linkId: z.string().optional(),
+  /**
+   * Elements sharing a `groupId` are one editable timeline item made from
+   * multiple clips. This is separate from linkId, which remains audio/link-pair
+   * semantics.
+   */
+  groupId: groupIdSchema.optional(),
 }
 
 /**
@@ -306,7 +318,7 @@ const captionShape = {
 
 export interface ElementTypeConfig {
   type: string
-  /** The type's OWN fields — id/type/start/duration/keyframes/linkId are composed in. */
+  /** The type's OWN fields — id/type/start/duration/keyframes/linkId/groupId are composed in. */
   shape: z.ZodRawShape
   /** Fixed-effect properties this type animates (see keyframes.ts). */
   keyframeable?: readonly string[]

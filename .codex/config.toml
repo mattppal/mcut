@@ -1,7 +1,7 @@
 approval_policy = "never"
 
 [mcp_servers.mcut-live]
-url = "http://127.0.0.1:55081/mcp?token=mcut-local-dev"
+url = "http://127.0.0.1:55231/mcp?token=mcut-local-dev"
 startup_timeout_sec = 20
 tool_timeout_sec = 300
 default_tools_approval_mode = "approve"

@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import {
   DownloadIcon,
   FileVideoIcon,
+  GripVerticalIcon,
   MusicIcon,
   PlusIcon,
   SearchIcon,
@@ -15,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { getVideoThumbnailUrl } from "@mcut/media";
 import { useEditor, useProject } from "@mcut/react";
-import type { AssetRef } from "@mcut/timeline";
+import type { AssetRef, Project, TimelineElement, TrackId, VideoElement } from "@mcut/timeline";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { evictClipMediaCache, filmstripFor } from "./clip-media";
 import {
+  createSequentialVideoCollage,
   elementForAsset,
   insertElementAtPlayhead,
   insertElementOnNewTrack,
@@ -62,6 +64,33 @@ function thumbnailTimeMs(asset: AssetRef): number {
 
 function revokeThumbnail(url: string | null | undefined): void {
   if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+}
+
+function isFlatFreezeVideo(element: TimelineElement): boolean {
+  if (element.type !== "video" || !element.timeMap || element.timeMap.length < 2) return false;
+  const value = element.timeMap[0]!.value;
+  return element.timeMap.every((frame) => frame.value === value);
+}
+
+function collageStackItems(project: Project): Array<{
+  groupId: string;
+  trackId: TrackId;
+  name: string;
+}> {
+  return project.tracks.flatMap((track) => {
+    const videos = track.elements.filter(
+      (element): element is VideoElement => element.type === "video" && Boolean(element.groupId),
+    );
+    if (videos.length === 0) return [];
+    const active = videos.find((element) => !isFlatFreezeVideo(element)) ?? videos[0];
+    if (!active?.groupId) return [];
+    const asset = project.assets[active.assetId];
+    return [{
+      groupId: active.groupId,
+      trackId: track.id,
+      name: asset?.name ?? track.name,
+    }];
+  });
 }
 
 /** Video tile that scrubs through cached filmstrip frames on hover. */
@@ -275,12 +304,16 @@ export function MediaBin({
 }) {
   const engine = useEditor();
   const project = useProject();
-  const { setMode } = useEditorUI();
+  const { mode, setMode } = useEditorUI();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState("");
   const [isFileDragOver, setIsFileDragOver] = useState(false);
   /** Click-selected asset ids, in click order. */
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [draggingCollageId, setDraggingCollageId] = useState<string | null>(null);
+  const [draggingStackTrackId, setDraggingStackTrackId] = useState<TrackId | null>(null);
+  const draggingCollageIdRef = useRef<string | null>(null);
+  const draggingStackTrackIdRef = useRef<TrackId | null>(null);
   /** Pair signature ("idA+idB") whose screen/camera roles are flipped. */
   const [swappedPair, setSwappedPair] = useState("");
 
@@ -288,6 +321,53 @@ export function MediaBin({
     setSelectedIds((ids) =>
       ids.includes(assetId) ? ids.filter((id) => id !== assetId) : [...ids, assetId],
     );
+  };
+
+  const moveSelectedId = (activeId: string, overId: string) => {
+    setSelectedIds((ids) => {
+      const from = ids.indexOf(activeId);
+      const to = ids.indexOf(overId);
+      if (from === -1 || to === -1 || from === to) return ids;
+      const next = [...ids];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved!);
+      return next;
+    });
+  };
+
+  const beginCollageAssetDrag = (assetId: string) => {
+    draggingCollageIdRef.current = assetId;
+    setDraggingCollageId(assetId);
+  };
+
+  const endCollageAssetDrag = () => {
+    draggingCollageIdRef.current = null;
+    setDraggingCollageId(null);
+  };
+
+  const beginStackTrackDrag = (trackId: TrackId) => {
+    draggingStackTrackIdRef.current = trackId;
+    setDraggingStackTrackId(trackId);
+  };
+
+  const endStackTrackDrag = () => {
+    draggingStackTrackIdRef.current = null;
+    setDraggingStackTrackId(null);
+  };
+
+  const moveStackTrack = (activeTrackId: TrackId, overTrackId: TrackId) => {
+    if (activeTrackId === overTrackId) return;
+    const toIndex = project.tracks.findIndex((track) => track.id === overTrackId);
+    if (toIndex === -1) return;
+    try {
+      engine.dispatch({
+        type: "reorderTrack",
+        trackId: activeTrackId,
+        toIndex,
+      });
+    } catch {
+      // Track vanished mid-drag.
+    }
   };
 
   // Two selected videos propose a multicam: wider asset starts as the screen.
@@ -308,6 +388,7 @@ export function MediaBin({
       ? { screen: widerFirst[1]!, camera: widerFirst[0]! }
       : { screen: widerFirst[0]!, camera: widerFirst[1]! });
   const allAssets = useMemo(() => Object.values(project.assets), [project.assets]);
+  const stackItems = useMemo(() => collageStackItems(project), [project]);
 
   const createMulticamFromBin = () => {
     if (!roles) return;
@@ -325,6 +406,30 @@ export function MediaBin({
       toast.success("Multicam created — click the layout tiles (or press 1–9) to switch");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not create the multicam");
+    }
+  };
+
+  const createSequentialCollageFromBin = () => {
+    if (selectedVideos.length < 2) return;
+    const hasTimelineContent = project.tracks.some((track) => track.elements.length > 0);
+    if (
+      hasTimelineContent &&
+      !window.confirm("Replace the current timeline with a sequential collage?")
+    ) {
+      return;
+    }
+    try {
+      const result = createSequentialVideoCollage(engine, {
+        assets: selectedVideos,
+        replaceTimeline: true,
+      });
+      setSelectedIds([]);
+      setMode("collage");
+      toast.success(
+        `Collage created (${result.layout}, ${selectedVideos.length} videos)`,
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create the collage");
     }
   };
 
@@ -470,7 +575,114 @@ export function MediaBin({
         </ScrollArea>
       )}
 
-      {roles ? (
+      {mode === "collage" && (selectedVideos.length > 0 || stackItems.length > 0) ? (
+        <div data-mcut-collage-setup="" className="shrink-0 border-t p-2">
+          {selectedVideos.length > 0 && (
+            <>
+              <PanelSectionLabel>Sequential collage</PanelSectionLabel>
+              <div className="mt-1.5 flex max-h-24 flex-col gap-1 overflow-hidden text-xs">
+                {selectedVideos.map((asset, index) => (
+                  <div
+                    key={asset.id}
+                    draggable
+                    className={cn(
+                      "flex cursor-grab items-center gap-2 rounded-md px-1 py-0.5",
+                      draggingCollageId === asset.id && "bg-primary/10 text-primary",
+                    )}
+                    onDragStart={(event) => {
+                      event.stopPropagation();
+                      beginCollageAssetDrag(asset.id);
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("text/plain", asset.id);
+                    }}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const activeId = draggingCollageIdRef.current;
+                      if (activeId && activeId !== asset.id) moveSelectedId(activeId, asset.id);
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const activeId = draggingCollageIdRef.current;
+                      if (activeId && activeId !== asset.id) moveSelectedId(activeId, asset.id);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      endCollageAssetDrag();
+                    }}
+                    onDragEnd={endCollageAssetDrag}
+                  >
+                    <GripVerticalIcon className="size-3 shrink-0 text-muted-foreground" />
+                    <span className="w-5 shrink-0 font-mono text-2xs text-muted-foreground">
+                      {index + 1}
+                    </span>
+                    <span className="truncate">{asset.name ?? "video"}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-1.5">
+                <Button
+                  size="xs"
+                  disabled={selectedVideos.length < 2}
+                  onClick={createSequentialCollageFromBin}
+                >
+                  Build collage
+                </Button>
+              </div>
+            </>
+          )}
+          {stackItems.length > 0 && (
+            <div className={cn(selectedVideos.length > 0 && "mt-3 border-t pt-2")}>
+              <PanelSectionLabel>Stack order</PanelSectionLabel>
+              <div className="mt-1.5 flex max-h-28 flex-col gap-1 overflow-hidden text-xs">
+                {stackItems.map((item, index) => (
+                  <div
+                    key={item.trackId}
+                    draggable
+                    className={cn(
+                      "flex cursor-grab items-center gap-2 rounded-md px-1 py-0.5",
+                      draggingStackTrackId === item.trackId && "bg-primary/10 text-primary",
+                    )}
+                    onDragStart={(event) => {
+                      event.stopPropagation();
+                      beginStackTrackDrag(item.trackId);
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("text/plain", item.trackId);
+                    }}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const activeTrackId = draggingStackTrackIdRef.current;
+                      if (activeTrackId) moveStackTrack(activeTrackId, item.trackId);
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      event.dataTransfer.dropEffect = "move";
+                      const activeTrackId = draggingStackTrackIdRef.current;
+                      if (activeTrackId) moveStackTrack(activeTrackId, item.trackId);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      endStackTrackDrag();
+                    }}
+                    onDragEnd={endStackTrackDrag}
+                  >
+                    <GripVerticalIcon className="size-3 shrink-0 text-muted-foreground" />
+                    <span className="w-12 shrink-0 font-mono text-2xs text-muted-foreground">
+                      {index === 0 ? "Bottom" : index === stackItems.length - 1 ? "Top" : index + 1}
+                    </span>
+                    <span className="truncate">{item.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : roles ? (
         <div data-mcut-multicam-setup="" className="shrink-0 border-t p-2">
           <PanelSectionLabel>New multicam</PanelSectionLabel>
           <div className="mt-1.5 flex flex-col gap-1 text-xs">

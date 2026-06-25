@@ -7,6 +7,7 @@ import { LinkIcon } from "@/lib/hugeicons";
 import { useEditor, useEditorState } from "@mcut/react";
 import {
   getAverageSpeed,
+  getGroupedElementIds,
   getLinkedElementIds,
   listTransitionTypes,
   type AssetRef,
@@ -49,6 +50,17 @@ function clipLabel(element: TimelineElement, asset?: AssetRef): string {
     return `Multicam (${element.sources.map((s) => s.key).join(" + ")})`;
   }
   return asset?.name ?? element.type;
+}
+
+function isFlatFreezeVideo(element: TimelineElement): boolean {
+  if (element.type !== "video" || !element.timeMap || element.timeMap.length < 2) return false;
+  const value = element.timeMap[0]!.value;
+  return element.timeMap.every((frame) => frame.value === value);
+}
+
+function canTrimFromTimeline(element: TimelineElement): boolean {
+  if (!element.groupId) return true;
+  return element.type === "video" && !isFlatFreezeVideo(element);
 }
 
 // ---------------------------------------------------------------------------
@@ -211,15 +223,15 @@ export const Clip = memo(function Clip({
     // Linked partners (shared linkId, e.g. a video and its detached audio)
     // select, move, and trim as one; this clip first so it anchors gestures.
     const linkGroup = getLinkedElementIds(engine.project, element.id);
+    const groupMembers = getGroupedElementIds(engine.project, element.id);
+    const groupedIds = [
+      ...new Set(groupMembers.flatMap((id) => getLinkedElementIds(engine.project, id))),
+    ];
     if (event.shiftKey) {
-      const others = selectionIds.filter((id) => !linkGroup.includes(id));
-      engine.select(selected ? others : [...others, ...linkGroup]);
+      const others = selectionIds.filter((id) => !groupedIds.includes(id));
+      engine.select(selected ? others : [...others, ...groupedIds]);
       return;
     }
-    const ids = selected && selectionIds.length > linkGroup.length
-      ? [...linkGroup, ...selectionIds.filter((id) => !linkGroup.includes(id))]
-      : [...linkGroup];
-    if (!selected) engine.select([...linkGroup]);
 
     const rect = event.currentTarget.getBoundingClientRect();
     const offsetX = event.clientX - rect.left;
@@ -228,18 +240,33 @@ export const Clip = memo(function Clip({
     // the handles and the body do; the controller degrades unmet tool
     // gestures (no neighbor to roll/slide against, nothing to slip) back to
     // the plain trim/move.
-    const soloClip = ids.length === linkGroup.length;
     let mode: ClipDragMode = "move";
-    if (soloClip && timelineTool === "slip") mode = "slip";
-    else if (soloClip && timelineTool === "slide") mode = "slide";
-    else if (soloClip && offsetX <= TRIM_HANDLE_PX) {
+    const canTrim = canTrimFromTimeline(element);
+    if (canTrim && timelineTool === "slip") mode = "slip";
+    else if (canTrim && timelineTool === "slide") mode = "slide";
+    else if (canTrim && offsetX <= TRIM_HANDLE_PX) {
       mode =
         timelineTool === "ripple" ? "ripple-start" : timelineTool === "roll" ? "roll-start" : "trim-start";
-    } else if (soloClip && offsetX >= rect.width - TRIM_HANDLE_PX) {
+    } else if (canTrim && offsetX >= rect.width - TRIM_HANDLE_PX) {
       mode = timelineTool === "ripple" ? "ripple-end" : timelineTool === "roll" ? "roll-end" : "trim-end";
     }
+    if (element.groupId) {
+      if (mode === "roll-start" || mode === "ripple-start") mode = "trim-start";
+      if (mode === "roll-end" || mode === "ripple-end") mode = "trim-end";
+    }
+    const clipOnlyMode = mode !== "move";
+    const gestureSeedIds = clipOnlyMode ? linkGroup : groupedIds;
+    const ids = selected && !clipOnlyMode && selectionIds.length > groupedIds.length
+      ? [...groupedIds, ...selectionIds.filter((id) => !groupedIds.includes(id))]
+      : [...gestureSeedIds];
+    if (!selected) engine.select([...groupedIds]);
 
-    clipDrag.begin(event, { mode, ids, duplicateOnDrag: event.altKey && mode === "move" });
+    clipDrag.begin(event, {
+      mode,
+      ids,
+      ignoreIds: clipOnlyMode && element.groupId ? groupedIds : undefined,
+      duplicateOnDrag: event.altKey && mode === "move",
+    });
   };
 
   const playheadInside = () => {
@@ -262,6 +289,7 @@ export const Clip = memo(function Clip({
       // Rejected (overlap/bounds): timeline resyncs from state.
     }
   };
+  const showTrimHandles = canTrimFromTimeline(element);
 
   return (
     <ContextMenu>
@@ -378,34 +406,38 @@ export const Clip = memo(function Clip({
         >
           {label}
         </span>
-        {/* Trim brackets */}
-        <span
-          className={cn(
-            // w-[9px]: trim-handle hit target tuned to sit inside the clip's 10px end caps.
-            "absolute inset-y-0 left-0 z-20 flex w-[9px] cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors",
-            selected ? "bg-overlay-foreground/90" : "group-hover:bg-overlay-foreground/40",
-          )}
-        >
-          <span
-            className={cn(
-              "h-3.5 w-0.5 rounded-full",
-              selected ? "bg-overlay/70" : "bg-overlay-foreground/70",
-            )}
-          />
-        </span>
-        <span
-          className={cn(
-            "absolute inset-y-0 right-0 z-20 flex w-[9px] cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors",
-            selected ? "bg-overlay-foreground/90" : "group-hover:bg-overlay-foreground/40",
-          )}
-        >
-          <span
-            className={cn(
-              "h-3.5 w-0.5 rounded-full",
-              selected ? "bg-overlay/70" : "bg-overlay-foreground/70",
-            )}
-          />
-        </span>
+        {showTrimHandles && (
+          <>
+            {/* Trim brackets */}
+            <span
+              className={cn(
+                // w-[9px]: trim-handle hit target tuned to sit inside the clip's 10px end caps.
+                "absolute inset-y-0 left-0 z-20 flex w-[9px] cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors",
+                selected ? "bg-overlay-foreground/90" : "group-hover:bg-overlay-foreground/40",
+              )}
+            >
+              <span
+                className={cn(
+                  "h-3.5 w-0.5 rounded-full",
+                  selected ? "bg-overlay/70" : "bg-overlay-foreground/70",
+                )}
+              />
+            </span>
+            <span
+              className={cn(
+                "absolute inset-y-0 right-0 z-20 flex w-[9px] cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors",
+                selected ? "bg-overlay-foreground/90" : "group-hover:bg-overlay-foreground/40",
+              )}
+            >
+              <span
+                className={cn(
+                  "h-3.5 w-0.5 rounded-full",
+                  selected ? "bg-overlay/70" : "bg-overlay-foreground/70",
+                )}
+              />
+            </span>
+          </>
+        )}
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem
