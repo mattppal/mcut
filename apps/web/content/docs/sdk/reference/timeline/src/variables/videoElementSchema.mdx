@@ -43,6 +43,7 @@ const videoElementSchema: ZodObject<{
   effects: ZodOptional<ZodArray<ZodType<Effect, unknown, $ZodTypeInternals<Effect, unknown>>>>;
   fadeInMs: ZodOptional<ZodNumber>;
   fadeOutMs: ZodOptional<ZodNumber>;
+  groupId: ZodOptional<ZodCustom<`g-${string}`, `g-${string}`>>;
   id: ZodCustom<`e-${string}`, `e-${string}`>;
   keyframes: ZodOptional<ZodRecord<ZodEnum<{
      blur: "blur";
@@ -108,4 +109,4 @@ const videoElementSchema: ZodObject<{
 }, $strip>;
 ```
 
-Defined in: [packages/timeline/src/model.ts:339](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L339)
+Defined in: [packages/timeline/src/model.ts:351](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L351)

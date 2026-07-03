@@ -44,6 +44,7 @@ const multicamElementSchema: ZodObject<{
   effects: ZodOptional<ZodArray<ZodType<Effect, unknown, $ZodTypeInternals<Effect, unknown>>>>;
   fadeInMs: ZodOptional<ZodNumber>;
   fadeOutMs: ZodOptional<ZodNumber>;
+  groupId: ZodOptional<ZodCustom<`g-${string}`, `g-${string}`>>;
   id: ZodCustom<`e-${string}`, `e-${string}`>;
   keyframes: ZodOptional<ZodRecord<ZodEnum<{
      blur: "blur";
@@ -102,4 +103,4 @@ const multicamElementSchema: ZodObject<{
 }, $strip>;
 ```
 
-Defined in: [packages/timeline/src/model.ts:344](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L344)
+Defined in: [packages/timeline/src/model.ts:356](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L356)

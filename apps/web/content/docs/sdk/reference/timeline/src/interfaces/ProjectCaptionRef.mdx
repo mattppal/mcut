@@ -29,6 +29,16 @@ Defined in: [packages/timeline/src/project-context.ts:23](https://github.com/mat
 durationMs: number;
 ```
 
+#### groupId?
+
+```ts
+optional groupId?: `g-${string}`;
+```
+
+Elements sharing a `groupId` are one editable timeline item made from
+multiple clips. This is separate from linkId, which remains audio/link-pair
+semantics.
+
 #### id
 
 ```ts

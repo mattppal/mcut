@@ -14,6 +14,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 ```ts
 const captionElementSchema: ZodObject<{
   durationMs: ZodNumber;
+  groupId: ZodOptional<ZodCustom<`g-${string}`, `g-${string}`>>;
   id: ZodCustom<`e-${string}`, `e-${string}`>;
   keyframes: ZodOptional<ZodRecord<ZodEnum<{
      blur: "blur";
@@ -55,4 +56,4 @@ const captionElementSchema: ZodObject<{
 }, $strip>;
 ```
 
-Defined in: [packages/timeline/src/model.ts:343](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L343)
+Defined in: [packages/timeline/src/model.ts:355](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L355)
