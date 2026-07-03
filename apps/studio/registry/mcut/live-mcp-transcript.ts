@@ -16,6 +16,7 @@ import {
   type ProjectTranscriptContext,
   resolveElementAudioSource,
 } from "@mcut/timeline";
+import { isRecord } from "./guards";
 import {
   isLocalTranscriptionSupported,
   transcribeOnDevice,
@@ -57,9 +58,6 @@ const browserDeps: EnsureTranscriptDeps = {
   transcribeOnDevice,
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
 
 function parsePayload(value: unknown): EnsureTranscriptPayload {
   if (!isRecord(value)) return {};

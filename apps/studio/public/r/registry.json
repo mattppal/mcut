@@ -396,6 +396,11 @@
           "path": "registry/mcut/project-file.ts",
           "type": "registry:lib",
           "target": "components/mcut/project-file.ts"
+        },
+        {
+          "path": "registry/mcut/guards.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/guards.ts"
         }
       ],
       "cssVars": {
@@ -866,6 +871,11 @@
           "path": "registry/mcut/transcript-keywords.ts",
           "type": "registry:lib",
           "target": "components/mcut/transcript-keywords.ts"
+        },
+        {
+          "path": "registry/mcut/guards.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/guards.ts"
         }
       ],
       "cssVars": {

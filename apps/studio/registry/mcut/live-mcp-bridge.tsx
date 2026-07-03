@@ -44,7 +44,9 @@ import {
 } from "./action-registry";
 import { editorClipboard } from "./editor-clipboard";
 import { useEditorUI } from "./editor-ui";
+import { isRecord, optionalFiniteNumber } from "./guards";
 import { ensureTranscriptForBridge } from "./live-mcp-transcript";
+import { clamp } from "./math";
 import { MCP_AGENT_TOOL_NAMES, operatorToolName } from "@mcut/mcp-server/contract";
 
 interface BridgeRequest {
@@ -159,14 +161,6 @@ function searchProjectTranscript(project: Project, query: string): unknown {
   return { query, count: matches.length, matches };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function optionalFiniteNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
 function commandPayload(value: unknown): CommandPayload {
   if (!isRecord(value) || typeof value.commandName !== "string") {
     throw new Error("Invalid dispatch_command payload.");
@@ -275,10 +269,6 @@ function pickAudioActivitySource(
     candidates.find((candidate) => candidate.element.type === "audio");
   if (!source) throw new Error("Add a video or audio clip to the timeline first.");
   return source;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function audioActivityRange(source: AudioActivitySource, payload: AudioActivityPayload): SourceRange {
