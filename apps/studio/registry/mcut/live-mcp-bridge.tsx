@@ -45,7 +45,7 @@ import {
 import { editorClipboard } from "./editor-clipboard";
 import { useEditorUI } from "./editor-ui";
 import { ensureTranscriptForBridge } from "./live-mcp-transcript";
-import { MCP_AGENT_TOOL_NAMES, mcpOperatorToolName } from "./mcp-tool-contract";
+import { MCP_AGENT_TOOL_NAMES, operatorToolName } from "@mcut/mcp-server/contract";
 
 interface BridgeRequest {
   id: string;
@@ -108,7 +108,7 @@ export const LIVE_MCP_REQUEST_TYPES = [
 ] as const;
 
 export function liveMcpOperatorToolName(operatorId: string): string {
-  return mcpOperatorToolName(operatorId);
+  return operatorToolName(operatorId);
 }
 
 function viewState(engine: EditorEngine): string {

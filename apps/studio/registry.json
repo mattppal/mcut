@@ -26,7 +26,8 @@
         "@mcut/transcription-local",
         "@base-ui/react",
         "color",
-        "react-resizable-panels"
+        "react-resizable-panels",
+        "@mcut/mcp-server"
       ],
       "registryDependencies": [
         "badge",
@@ -385,11 +386,6 @@
           "path": "registry/mcut/main-menu.tsx",
           "type": "registry:component",
           "target": "components/mcut/main-menu.tsx"
-        },
-        {
-          "path": "registry/mcut/mcp-tool-contract.ts",
-          "type": "registry:lib",
-          "target": "components/mcut/mcp-tool-contract.ts"
         },
         {
           "path": "registry/mcut/media-import.ts",
