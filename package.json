@@ -13,8 +13,6 @@
     "dev": "bun run scripts/mcut-local-dev.ts dev",
     "dev:web": "turbo run dev --filter=mcut-web",
     "setup": "bun run scripts/setup-codex-mcut-env.ts",
-    "codex:setup:mcut": "bun run scripts/setup-codex-mcut-env.ts",
-    "mcut:dev": "bun run scripts/mcut-dev.ts",
     "build": "turbo run build",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
