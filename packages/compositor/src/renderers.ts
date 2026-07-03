@@ -535,4 +535,4 @@ registerElementRenderer<CaptionElement>('caption', renderCaption)
 // Audio has no visual representation.
 registerElementRenderer('audio', () => {})
 
-export { buildFont, measureWith }
+export { measureWith }

@@ -224,7 +224,7 @@ interface ElementVideoState {
  * async `prepare()` populates a per-frame cache that the synchronous
  * compositor then reads.
  */
-export class ExportFrameSource implements FrameSource {
+class ExportFrameSource implements FrameSource {
   private inputs = new Map<AssetId, { input: Input; sink: VideoSampleSink | null }>()
   private states = new Map<string, ElementVideoState>()
   private images = new Map<AssetId, ImageBitmap | null>()

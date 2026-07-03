@@ -33,7 +33,7 @@ export interface PublicPackage {
 }
 
 export const repoRoot = resolve(import.meta.dirname, '..', '..')
-export const packagesDir = join(repoRoot, 'packages')
+const packagesDir = join(repoRoot, 'packages')
 
 export async function readPackageJson(path: string): Promise<PackageManifest> {
   return JSON.parse(await readFile(path, 'utf8')) as PackageManifest

@@ -354,7 +354,6 @@ export const imageElementSchema = composeFull('image', imageShape)
 export const textElementSchema = composeFull('text', textShape)
 export const captionElementSchema = composeFull('caption', captionShape)
 export const multicamElementSchema = composeFull('multicam', multicamShape)
-export const multicamSourceRefSchema = multicamSourceSchema
 
 /**
  * Every registered element type (dynamic: includes custom registrations).
@@ -452,7 +451,7 @@ export type ImageElement = z.infer<typeof imageElementSchema>
 export type TextElement = z.infer<typeof textElementSchema>
 export type CaptionElement = z.infer<typeof captionElementSchema>
 export type MulticamElement = z.infer<typeof multicamElementSchema>
-export type MulticamSource = z.infer<typeof multicamSourceRefSchema>
+export type MulticamSource = z.infer<typeof multicamSourceSchema>
 export type AngleCutRef = MulticamElement['angles'][number]
 /**
  * Named to avoid colliding with the DOM `Element` type. Statically this is
@@ -689,9 +688,6 @@ registerTimelineElementType({
     return requests
   },
 })
-
-/** The engine-facing accessor (typed re-export of the registry lookup). */
-export { getElementType, listElementTypes } from './element-registry'
 
 export interface CreateProjectOptions {
   id?: string

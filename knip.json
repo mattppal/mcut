@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.ts"],
+      "project": ["scripts/**/*.ts"],
+      "ignoreDependencies": ["@arethetypeswrong/cli"]
+    },
+    "apps/studio": {
+      "entry": ["registry/mcut/**/*.{ts,tsx}"],
+      "ignore": ["components/ui/**", "components/kibo-ui/**", "lib/hugeicons.tsx"],
+      "ignoreDependencies": ["@types/color", "mcut-editing-skill"],
+      "ignoreBinaries": ["ffmpeg"]
+    },
+    "apps/web": {
+      "entry": ["worker/index.ts", "source.config.ts"],
+      "ignore": ["components/mdx.tsx", "lib/hugeicons.tsx"]
+    },
+    "skills/mcut-editing": {
+      "entry": ["tools/*.ts"]
+    }
+  }
+}

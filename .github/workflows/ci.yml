@@ -25,6 +25,7 @@ jobs:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
       - run: bun run release:check
+      - run: bun run knip
       - run: git diff --exit-code
       - name: Check package preview scope
         id: package_preview_scope

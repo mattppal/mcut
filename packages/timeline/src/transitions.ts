@@ -52,9 +52,6 @@ export const transitionTypeSchema = z
 
 export type TransitionType = (typeof BUILTIN_TRANSITION_TYPES)[number] | (string & {})
 
-/** @deprecated snapshot of the built-ins; prefer listTransitionTypes(). */
-export const TRANSITION_TYPES = BUILTIN_TRANSITION_TYPES
-
 export const transitionSchema = z.object({
   type: transitionTypeSchema,
   /** Total blend window, centered on the cut. */

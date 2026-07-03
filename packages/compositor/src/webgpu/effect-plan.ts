@@ -47,7 +47,7 @@ export interface EffectPlan {
 }
 
 /** Shader-side cap: ops per fused color pass (matches the WGSL array size). */
-export const MAX_COLOR_OPS = 16
+const MAX_COLOR_OPS = 16
 
 const params = (...values: number[]): number[] => values
 

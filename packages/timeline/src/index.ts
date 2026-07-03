@@ -125,7 +125,6 @@ export {
 
 export {
   BUILTIN_TRANSITION_TYPES,
-  TRANSITION_TYPES,
   listTransitionTypes,
   registerTransitionType,
   getActiveTransitionPairs,
