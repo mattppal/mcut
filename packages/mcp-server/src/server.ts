@@ -7,7 +7,11 @@
  * in the browser (WebCodecs); MCP edits the project document/state.
  */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  type Tool,
+} from '@modelcontextprotocol/sdk/types.js'
 import {
   EditorOperatorRegistry,
   OperatorError,
@@ -21,13 +25,13 @@ import {
   getProjectCaptions,
   getProjectMediaContext,
   getProjectTranscript,
-  listCommands,
+  listToolDefinitions,
   summarizeProject,
   type Project,
   type ProjectTranscriptOptions,
 } from '@mcut/timeline'
 import { searchCaptions } from '@mcut/transcription'
-import { z } from 'zod'
+import { listServerToolDefinitions, operatorToolName } from './contract'
 
 export interface McutMcpTarget {
   getSummary(): string | Promise<string>
@@ -63,192 +67,6 @@ export interface McutMcpServerForTargetOptions {
   name?: string
   version?: string
 }
-
-export const operatorToolName = (id: string) => `operator_${id.replace(/[^A-Za-z0-9_-]/g, '_')}`
-
-const toInputSchema = (schema: z.ZodType) =>
-  z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any' }) as { type: 'object' }
-
-const AUDIO_ACTIVITY_INPUT_SCHEMA = {
-  type: 'object' as const,
-  properties: {
-    elementId: {
-      type: 'string' as const,
-      description: 'Optional video/audio element id. Defaults to selected media, then first video, then first audio.',
-    },
-    includeWaveform: {
-      type: 'boolean' as const,
-      description: 'Include compact max-amplitude waveform buckets for coarse inspection.',
-    },
-    waveformBuckets: {
-      type: 'integer' as const,
-      minimum: 1,
-      description: 'Waveform bucket count when includeWaveform is true. Defaults to 128.',
-    },
-    startMs: {
-      type: 'number' as const,
-      minimum: 0,
-      description: 'Optional source start time in milliseconds. Defaults to the selected element source start.',
-    },
-    endMs: {
-      type: 'number' as const,
-      minimum: 0,
-      description: 'Optional source end time in milliseconds. Defaults to the selected element source end.',
-    },
-    frameMs: {
-      type: 'number' as const,
-      minimum: 1,
-      description: 'Analysis frame size in milliseconds. Defaults to 30.',
-    },
-    threshold: {
-      type: 'number' as const,
-      minimum: 0,
-      description: 'RMS activity threshold. Defaults to 0.004.',
-    },
-    minSoundMs: {
-      type: 'number' as const,
-      minimum: 0,
-      description: 'Sound runs shorter than this are treated as silence. Defaults to 120.',
-    },
-    minSilenceMs: {
-      type: 'number' as const,
-      minimum: 0,
-      description: 'Silence runs shorter than this are treated as sound. Defaults to 120.',
-    },
-    paddingMs: {
-      type: 'number' as const,
-      minimum: 0,
-      description: 'Trim this much from each returned silence window edge. Defaults to 0.',
-    },
-  },
-  additionalProperties: false,
-}
-
-const STATIC_TOOLS = [
-  {
-    name: 'get_summary',
-    description:
-      'A compact textual rendering of the current project: tracks (topmost first), elements ' +
-      'with ids/timing/keyframes/effects/transitions, and assets. Read this before editing, ' +
-      'then use get_media_context/get_transcript for video metadata and transcript details.',
-    inputSchema: { type: 'object' as const, properties: {}, additionalProperties: false },
-  },
-  {
-    name: 'get_project',
-    description: 'The full project document as JSON (the serializable source of truth).',
-    inputSchema: { type: 'object' as const, properties: {}, additionalProperties: false },
-  },
-  {
-    name: 'get_media_context',
-    description:
-      'Agent-friendly project/video metadata: project dimensions/fps/duration, playback, selection, ' +
-      'assets, tracks, elements, clip source ranges, markers, and transcript availability. Use this before content-aware edits.',
-    inputSchema: { type: 'object' as const, properties: {}, additionalProperties: false },
-  },
-  {
-    name: 'get_transcript',
-    description:
-      'Read the current transcript derived from caption elements. This never starts transcription. ' +
-      'If no transcript exists and speech context is needed, call ensure_transcript in live bridge mode. ' +
-      'Do not use ffmpeg or shell media analysis as a substitute for transcript-aware edits.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        includeWords: {
-          type: 'boolean' as const,
-          description: 'Include absolute word timings for precise speech-boundary edits.',
-        },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'search_transcript',
-    description:
-      'Search the caption-derived transcript and return timeline times for matches. ' +
-      'Use this to locate spoken words/phrases before cutting or annotating.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        query: { type: 'string' as const },
-      },
-      required: ['query'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'ensure_transcript',
-    description:
-      'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
-      'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
-      'Required before transcript-based silence removal when captions are missing.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        elementId: {
-          type: 'string' as const,
-          description: 'Optional video/audio element id. Defaults to selected media, then first video, then first audio.',
-        },
-        replace: {
-          type: 'boolean' as const,
-          description: 'When true, replace captions overlapping the target clip. Defaults to false.',
-        },
-        language: {
-          type: 'string' as const,
-          description: 'Optional language hint for Whisper.',
-        },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'get_audio_activity',
-    description:
-      'Live bridge only: analyze a video/audio clip and return compact source sound/silence windows. ' +
-      'Use this only through the connected browser for audio-aware inspection; do not fall back to ffmpeg. ' +
-      'For spoken-word silence removal, prefer ensure_transcript followed by the live editor action transcript.remove-silence.',
-    inputSchema: AUDIO_ACTIVITY_INPUT_SCHEMA,
-  },
-  {
-    name: 'list_operators',
-    description:
-      'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' +
-      'use raw command tools for low-level document edits.',
-    inputSchema: { type: 'object' as const, properties: {}, additionalProperties: false },
-  },
-  {
-    name: 'list_actions',
-    description:
-      'List browser editor actions available in the live editor, including menu/palette/hotkey actions. ' +
-      'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close.',
-    inputSchema: { type: 'object' as const, properties: {}, additionalProperties: false },
-  },
-  {
-    name: 'run_action',
-    description:
-      'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette. ' +
-      'Prefer high-level actions over hand-authored command sequences when available.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        actionId: { type: 'string' as const },
-        input: { type: 'object' as const, additionalProperties: true },
-      },
-      required: ['actionId'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'undo',
-    description: 'Undo the most recent edit.',
-    inputSchema: { type: 'object' as const, properties: {}, additionalProperties: false },
-  },
-  {
-    name: 'redo',
-    description: 'Redo the most recently undone edit.',
-    inputSchema: { type: 'object' as const, properties: {}, additionalProperties: false },
-  },
-]
 
 const text = (value: string) => ({ content: [{ type: 'text' as const, text: value }] })
 const failure = (value: string) => ({ ...text(value), isError: true })
@@ -376,22 +194,14 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
   const { target } = options
   const operators = options.operators ?? registerCoreOperators(createEditorOperatorRegistry())
 
-  const commandTools = listCommands().map((command) => ({
-    name: command.type,
-    description: command.description,
-    inputSchema: toInputSchema(command.payloadSchema as z.ZodType),
-  }))
-
-  const operatorIdsByTool = new Map<string, string>()
-  const operatorTools = operators.list().map((operator) => {
-    const name = operatorToolName(operator.id)
-    operatorIdsByTool.set(name, operator.id)
-    return {
-      name,
-      description: `Editor operator "${operator.id}": ${operator.description}`,
-      inputSchema: toInputSchema(operator.inputSchema as z.ZodType),
-    }
+  const tools = listServerToolDefinitions({
+    operators: operators.list(),
+    commands: listToolDefinitions(),
   })
+
+  const operatorIdsByTool = new Map<string, string>(
+    operators.list().map((operator) => [operatorToolName(operator.id), operator.id]),
+  )
 
   const server = new Server(
     { name: options.name ?? 'mcut', version: options.version ?? '0.1.0' },
@@ -399,7 +209,7 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
   )
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [...STATIC_TOOLS, ...operatorTools, ...commandTools],
+    tools: tools as unknown as Tool[],
   }))
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {

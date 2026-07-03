@@ -104,6 +104,7 @@ import { normalizeAssemblyAIResult } from '@mcut/transcription-assemblyai'
 import { planChunks } from '@mcut/transcription-local'
 import { lintProject } from '@mcut/cli'
 import { createMcutMcpServer } from '@mcut/mcp-server'
+import { MCP_AGENT_TOOL_DEFINITIONS } from '@mcut/mcp-server/contract'
 
 const project = parseProject(createProject())
 const engine = new EditorEngine(project)
@@ -121,6 +122,7 @@ if (normalizeAssemblyAIResult({ text: 'hi' }).text !== 'hi') throw new Error('as
 if (planChunks(12).length !== 1) throw new Error('local transcription chunk planner failed')
 if (!Array.isArray(lintProject(project))) throw new Error('lintProject did not return issues')
 if (!createMcutMcpServer({ engine })) throw new Error('mcp server factory failed')
+if (MCP_AGENT_TOOL_DEFINITIONS.length === 0) throw new Error('mcp contract subpath missing')
 console.log('mcut package smoke ok')
 `
 }
@@ -128,12 +130,14 @@ console.log('mcut package smoke ok')
 function browserSmokeProgram(): string {
   return `
 import { exportProject, getExportSupport } from '@mcut/media'
+import { MCP_AGENT_TOOL_DEFINITIONS } from '@mcut/mcp-server/contract'
 import { createLocalWhisperProvider, planChunks } from '@mcut/transcription-local'
 
 if (typeof exportProject !== 'function') throw new Error('exportProject missing')
 if (typeof getExportSupport !== 'function') throw new Error('getExportSupport missing')
 if (typeof createLocalWhisperProvider !== 'function') throw new Error('local whisper provider missing')
 if (planChunks(12).length !== 1) throw new Error('planChunks missing')
+if (MCP_AGENT_TOOL_DEFINITIONS.length === 0) throw new Error('mcp contract subpath not browser-safe')
 console.log('mcut browser package smoke ok')
 `
 }

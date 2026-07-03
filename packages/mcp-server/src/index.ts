@@ -1,11 +1,11 @@
 export {
   createMcutMcpServer,
   createMcutMcpServerForTarget,
-  operatorToolName,
   type McutMcpServerForTargetOptions,
   type McutMcpServerOptions,
   type McutMcpTarget,
 } from './server'
+export * from './contract'
 export {
   DEFAULT_BRIDGE_PORT,
   LiveBridgeError,
