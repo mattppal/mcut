@@ -5,9 +5,9 @@
   "license": "Apache-2.0",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "shadcn build && next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "shadcn registry validate && eslint",
     "typecheck": "tsc --noEmit",
     "test": "bun test registry/mcut",
     "e2e": "playwright test"

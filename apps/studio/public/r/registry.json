@@ -23,7 +23,10 @@
         "@hugeicons/core-free-icons",
         "sonner",
         "unicode-animations@1.0.3",
-        "@mcut/transcription-local"
+        "@mcut/transcription-local",
+        "@base-ui/react",
+        "color",
+        "react-resizable-panels"
       ],
       "registryDependencies": [
         "badge",
@@ -43,7 +46,9 @@
         "sonner",
         "switch",
         "textarea",
-        "tooltip"
+        "tooltip",
+        "input-group",
+        "select"
       ],
       "files": [
         {
@@ -345,6 +350,56 @@
           "path": "registry/mcut/local-transcription.ts",
           "type": "registry:lib",
           "target": "components/mcut/local-transcription.ts"
+        },
+        {
+          "path": "registry/mcut/agent-edit-actions.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/agent-edit-actions.ts"
+        },
+        {
+          "path": "registry/mcut/aspect-presets.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/aspect-presets.ts"
+        },
+        {
+          "path": "registry/mcut/clip-fades.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/clip-fades.tsx"
+        },
+        {
+          "path": "registry/mcut/command-palette-events.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/command-palette-events.ts"
+        },
+        {
+          "path": "registry/mcut/editor-operators.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/editor-operators.ts"
+        },
+        {
+          "path": "registry/mcut/font-picker.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/font-picker.tsx"
+        },
+        {
+          "path": "registry/mcut/main-menu.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/main-menu.tsx"
+        },
+        {
+          "path": "registry/mcut/mcp-tool-contract.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/mcp-tool-contract.ts"
+        },
+        {
+          "path": "registry/mcut/media-import.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/media-import.ts"
+        },
+        {
+          "path": "registry/mcut/project-file.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/project-file.ts"
         }
       ],
       "cssVars": {
@@ -512,7 +567,9 @@
         "@mcut/compositor",
         "@hugeicons/react",
         "@hugeicons/core-free-icons",
-        "unicode-animations@1.0.3"
+        "unicode-animations@1.0.3",
+        "@mcut/editor",
+        "@mcut/transcription"
       ],
       "registryDependencies": [
         "button",
@@ -605,6 +662,11 @@
           "path": "registry/mcut/transcript-keywords.ts",
           "type": "registry:lib",
           "target": "components/mcut/transcript-keywords.ts"
+        },
+        {
+          "path": "registry/mcut/clip-fades.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/clip-fades.tsx"
         }
       ],
       "cssVars": {
@@ -656,7 +718,9 @@
         "@tanstack/react-query",
         "@hugeicons/react",
         "@hugeicons/core-free-icons",
-        "unicode-animations@1.0.3"
+        "unicode-animations@1.0.3",
+        "@mcut/editor",
+        "sonner"
       ],
       "registryDependencies": [
         "button",
@@ -761,6 +825,51 @@
           "path": "registry/mcut/math.ts",
           "type": "registry:lib",
           "target": "components/mcut/math.ts"
+        },
+        {
+          "path": "registry/mcut/agent-edit-actions.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/agent-edit-actions.ts"
+        },
+        {
+          "path": "registry/mcut/aspect-presets.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/aspect-presets.ts"
+        },
+        {
+          "path": "registry/mcut/command-palette-events.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/command-palette-events.ts"
+        },
+        {
+          "path": "registry/mcut/editor-layout.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/editor-layout.ts"
+        },
+        {
+          "path": "registry/mcut/editor-operators.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/editor-operators.ts"
+        },
+        {
+          "path": "registry/mcut/main-menu.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/main-menu.tsx"
+        },
+        {
+          "path": "registry/mcut/media-import.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/media-import.ts"
+        },
+        {
+          "path": "registry/mcut/project-file.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/project-file.ts"
+        },
+        {
+          "path": "registry/mcut/transcript-keywords.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/transcript-keywords.ts"
         }
       ],
       "cssVars": {
@@ -907,13 +1016,15 @@
         "@hugeicons/react",
         "@hugeicons/core-free-icons",
         "sonner",
-        "unicode-animations@1.0.3"
+        "unicode-animations@1.0.3",
+        "@mcut/editor"
       ],
       "registryDependencies": [
         "badge",
         "button",
         "context-menu",
-        "input"
+        "input",
+        "scroll-area"
       ],
       "files": [
         {
@@ -965,6 +1076,11 @@
           "path": "registry/mcut/math.ts",
           "type": "registry:lib",
           "target": "components/mcut/math.ts"
+        },
+        {
+          "path": "registry/mcut/media-import.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/media-import.ts"
         }
       ],
       "cssVars": {
@@ -990,7 +1106,15 @@
         "@mcut/timeline",
         "@hugeicons/react",
         "@hugeicons/core-free-icons",
-        "unicode-animations@1.0.3"
+        "unicode-animations@1.0.3",
+        "@base-ui/react",
+        "@dnd-kit/core",
+        "@dnd-kit/sortable",
+        "@dnd-kit/utilities",
+        "@mcut/compositor",
+        "@mcut/media",
+        "color",
+        "sonner"
       ],
       "registryDependencies": [
         "button",
@@ -1003,7 +1127,8 @@
         "dropdown-menu",
         "command",
         "select",
-        "sonner"
+        "sonner",
+        "input-group"
       ],
       "files": [
         {
@@ -1080,6 +1205,41 @@
           "path": "registry/mcut/properties-layout-slot.tsx",
           "type": "registry:component",
           "target": "components/mcut/properties-layout-slot.tsx"
+        },
+        {
+          "path": "registry/mcut/aspect-presets.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/aspect-presets.ts"
+        },
+        {
+          "path": "registry/mcut/editor-ui.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/editor-ui.tsx"
+        },
+        {
+          "path": "registry/mcut/font-css.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/font-css.ts"
+        },
+        {
+          "path": "registry/mcut/font-library.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/font-library.ts"
+        },
+        {
+          "path": "registry/mcut/font-picker.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/font-picker.tsx"
+        },
+        {
+          "path": "registry/mcut/layout-slot-editor.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/layout-slot-editor.tsx"
+        },
+        {
+          "path": "registry/mcut/multicam-ui.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/multicam-ui.ts"
         }
       ],
       "cssVars": {
@@ -1115,7 +1275,8 @@
       "registryDependencies": [
         "button",
         "textarea",
-        "switch"
+        "switch",
+        "scroll-area"
       ],
       "files": [
         {
