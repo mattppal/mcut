@@ -1,16 +1,8 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
-
-interface PackageJson {
-  name?: string
-  version?: string
-  private?: boolean
-  dependencies?: Record<string, string>
-  devDependencies?: Record<string, string>
-  peerDependencies?: Record<string, string>
-}
+import { join } from 'node:path'
+import { run } from './lib/exec'
+import { discoverPublicPackages, packTarball, repoRoot, type PackageManifest } from './lib/packages'
 
 interface PackedPackage {
   name: string
@@ -19,48 +11,9 @@ interface PackedPackage {
   tarball: string
 }
 
-const root = resolve(import.meta.dirname, '..')
-const packagesDir = join(root, 'packages')
-
-function run(command: string[], cwd: string): string {
-  const proc = Bun.spawnSync(command, {
-    cwd,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  })
-  const stdout = proc.stdout.toString()
-  const stderr = proc.stderr.toString()
-  if (!proc.success) {
-    throw new Error(
-      [`Command failed in ${cwd}: ${command.join(' ')}`, stdout, stderr].filter(Boolean).join('\n'),
-    )
-  }
-  return stdout
-}
-
-async function readJson(path: string): Promise<PackageJson> {
-  return JSON.parse(await readFile(path, 'utf8')) as PackageJson
-}
-
-async function publicPackageDirs(): Promise<string[]> {
-  const entries = await readdir(packagesDir, { withFileTypes: true })
-  const dirs: string[] = []
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
-    const dir = join(packagesDir, entry.name)
-    const manifestPath = join(dir, 'package.json')
-    if (!existsSync(manifestPath)) continue
-    const manifest = await readJson(manifestPath)
-    if (manifest.private) continue
-    if (manifest.name !== 'mcut' && !manifest.name?.startsWith('@mcut/')) continue
-    dirs.push(dir)
-  }
-  return dirs.sort()
-}
-
-async function inspectPackedManifest(tarball: string): Promise<PackageJson> {
-  const json = run(['tar', '-xOf', tarball, 'package/package.json'], root)
-  const manifest = JSON.parse(json) as PackageJson
+async function inspectPackedManifest(tarball: string): Promise<PackageManifest> {
+  const json = run(['tar', '-xOf', tarball, 'package/package.json'], { cwd: repoRoot })
+  const manifest = JSON.parse(json) as PackageManifest
   const encoded = JSON.stringify({
     dependencies: manifest.dependencies,
     peerDependencies: manifest.peerDependencies,
@@ -74,19 +27,16 @@ async function inspectPackedManifest(tarball: string): Promise<PackageJson> {
 
 async function packPackages(destination: string): Promise<PackedPackage[]> {
   const packed: PackedPackage[] = []
-  for (const dir of await publicPackageDirs()) {
-    const output = run(['bun', 'pm', 'pack', '--destination', destination, '--quiet'], dir)
-    const tarball = output
-      .trim()
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .findLast((line) => line.endsWith('.tgz'))
-    if (!tarball) throw new Error(`Could not determine tarball path for ${dir}`)
-    const manifest = await inspectPackedManifest(tarball)
-    if (!manifest.name || !manifest.version) {
+  for (const { dir, manifest } of await discoverPublicPackages()) {
+    if (manifest.name !== 'mcut' && !manifest.name?.startsWith('@mcut/')) {
+      throw new Error(`${dir} is public but not in the mcut npm scope: ${manifest.name}`)
+    }
+    const tarball = packTarball(dir, destination)
+    const packedManifest = await inspectPackedManifest(tarball)
+    if (!packedManifest.name || !packedManifest.version) {
       throw new Error(`${tarball} packed without name/version`)
     }
-    packed.push({ name: manifest.name, version: manifest.version, dir, tarball })
+    packed.push({ name: packedManifest.name, version: packedManifest.version, dir, tarball })
   }
   return packed.sort((a, b) => a.name.localeCompare(b.name))
 }
@@ -104,6 +54,7 @@ import { normalizeAssemblyAIResult } from '@mcut/transcription-assemblyai'
 import { planChunks } from '@mcut/transcription-local'
 import { lintProject } from '@mcut/cli'
 import { createMcutMcpServer } from '@mcut/mcp-server'
+import { MCP_AGENT_TOOL_DEFINITIONS } from '@mcut/mcp-server/contract'
 
 const project = parseProject(createProject())
 const engine = new EditorEngine(project)
@@ -121,6 +72,7 @@ if (normalizeAssemblyAIResult({ text: 'hi' }).text !== 'hi') throw new Error('as
 if (planChunks(12).length !== 1) throw new Error('local transcription chunk planner failed')
 if (!Array.isArray(lintProject(project))) throw new Error('lintProject did not return issues')
 if (!createMcutMcpServer({ engine })) throw new Error('mcp server factory failed')
+if (MCP_AGENT_TOOL_DEFINITIONS.length === 0) throw new Error('mcp contract subpath missing')
 console.log('mcut package smoke ok')
 `
 }
@@ -128,12 +80,14 @@ console.log('mcut package smoke ok')
 function browserSmokeProgram(): string {
   return `
 import { exportProject, getExportSupport } from '@mcut/media'
+import { MCP_AGENT_TOOL_DEFINITIONS } from '@mcut/mcp-server/contract'
 import { createLocalWhisperProvider, planChunks } from '@mcut/transcription-local'
 
 if (typeof exportProject !== 'function') throw new Error('exportProject missing')
 if (typeof getExportSupport !== 'function') throw new Error('getExportSupport missing')
 if (typeof createLocalWhisperProvider !== 'function') throw new Error('local whisper provider missing')
 if (planChunks(12).length !== 1) throw new Error('planChunks missing')
+if (MCP_AGENT_TOOL_DEFINITIONS.length === 0) throw new Error('mcp contract subpath not browser-safe')
 console.log('mcut browser package smoke ok')
 `
 }
@@ -174,10 +128,12 @@ async function main(): Promise<void> {
     await writeFile(join(consumerDir, 'smoke.mjs'), smokeProgram())
     await writeFile(join(consumerDir, 'browser-smoke.ts'), browserSmokeProgram())
 
-    run(['bun', 'install'], consumerDir)
-    const output = run(['bun', 'smoke.mjs'], consumerDir)
+    run(['bun', 'install'], { cwd: consumerDir })
+    const output = run(['bun', 'smoke.mjs'], { cwd: consumerDir })
     process.stdout.write(output)
-    run(['bun', 'build', 'browser-smoke.ts', '--target=browser', '--outdir=dist-browser'], consumerDir)
+    run(['bun', 'build', 'browser-smoke.ts', '--target=browser', '--outdir=dist-browser'], {
+      cwd: consumerDir,
+    })
   } finally {
     await rm(tempRoot, { recursive: true, force: true })
   }

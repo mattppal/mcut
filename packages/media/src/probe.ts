@@ -137,7 +137,7 @@ function canDecodeNatively(file: File): Promise<boolean> {
 }
 
 /** Whether a video can use native `<video>` preview instead of decoded frames. */
-export async function hasNativeVideoPreview(file: File, mimeType?: string): Promise<boolean> {
+async function hasNativeVideoPreview(file: File, mimeType?: string): Promise<boolean> {
   if (isMatroskaLike({ name: file.name, mimeType: mimeType || file.type })) return false
   if (typeof document === 'undefined') return true
   const type = mimeType || file.type

@@ -9,7 +9,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Slider } from "@/components/ui/slider";
 import { panelSectionLabelClass } from "./editor-primitives";
 import { clamp } from "./math";
 import {
@@ -225,43 +224,6 @@ export function NumberField({
       </InputGroup>
       {controls}
     </div>
-  );
-}
-
-export function SliderField({
-  label,
-  value,
-  onCommit,
-  min = 0,
-  max = 1,
-  step = 0.01,
-  display,
-  controls,
-}: {
-  label: string;
-  value: number;
-  onCommit: (value: number) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  display?: string;
-  controls?: React.ReactNode;
-}) {
-  return (
-    <FieldRow label={label}>
-      <Slider
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        onValueChange={(v) => onCommit(Array.isArray(v) ? (v[0] ?? value) : v)}
-        className="flex-1"
-      />
-      <span className="w-9 shrink-0 text-right font-mono text-2xs text-muted-foreground">
-        {display ?? value.toFixed(2)}
-      </span>
-      {controls}
-    </FieldRow>
   );
 }
 

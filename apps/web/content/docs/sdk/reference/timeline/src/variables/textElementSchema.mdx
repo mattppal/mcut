@@ -41,6 +41,7 @@ const textElementSchema: ZodObject<{
   }, $strip>>;
   durationMs: ZodNumber;
   effects: ZodOptional<ZodArray<ZodType<Effect, unknown, $ZodTypeInternals<Effect, unknown>>>>;
+  groupId: ZodOptional<ZodCustom<`g-${string}`, `g-${string}`>>;
   id: ZodCustom<`e-${string}`, `e-${string}`>;
   keyframes: ZodOptional<ZodRecord<ZodEnum<{
      blur: "blur";
@@ -125,4 +126,4 @@ const textElementSchema: ZodObject<{
 }, $strip>;
 ```
 
-Defined in: [packages/timeline/src/model.ts:342](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L342)
+Defined in: [packages/timeline/src/model.ts:354](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L354)

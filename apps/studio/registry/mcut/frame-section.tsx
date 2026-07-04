@@ -13,6 +13,7 @@ import {
 } from "@/lib/hugeicons";
 import { Button } from "@/components/ui/button";
 import { FieldRow, NumberField } from "./inspector-fields";
+import { roundTo } from "./math";
 
 /**
  * The Figma-basics frame editor — align, X/Y, W/H with an aspect lock, and
@@ -89,7 +90,6 @@ export function FrameFields({ target }: { target: FrameTarget }) {
   const [aspectLocked, setAspectLocked] = useState(true);
   const { rect, minSize = 1 } = target;
   const locked = target.forceAspectLocked || aspectLocked;
-  const round1 = (v: number) => Math.round(v * 10) / 10;
 
   const commitWidth = (width: number) => {
     target.setRect(
@@ -126,7 +126,7 @@ export function FrameFields({ target }: { target: FrameTarget }) {
       </FieldRow>
       <NumberField
         label="X"
-        value={round1(rect.x)}
+        value={roundTo(rect.x, 1)}
         unit="px"
         scrubPerPx={1}
         onCommit={(x) => target.setRect({ x })}
@@ -134,7 +134,7 @@ export function FrameFields({ target }: { target: FrameTarget }) {
       />
       <NumberField
         label="Y"
-        value={round1(rect.y)}
+        value={roundTo(rect.y, 1)}
         unit="px"
         scrubPerPx={1}
         onCommit={(y) => target.setRect({ y })}
@@ -190,7 +190,7 @@ export function FrameFields({ target }: { target: FrameTarget }) {
       {target.rotation && (
         <NumberField
           label="Rotation"
-          value={round1(target.rotation.value)}
+          value={roundTo(target.rotation.value, 1)}
           min={-180}
           max={180}
           unit="°"

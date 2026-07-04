@@ -100,7 +100,7 @@ function sampleVolumeCurve(
   return curve
 }
 
-export function collectAudibleSegments(project: Project): AudibleSegment[] {
+function collectAudibleSegments(project: Project): AudibleSegment[] {
   const segments: AudibleSegment[] = []
   for (const track of project.tracks) {
     if (track.muted) continue

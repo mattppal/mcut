@@ -25,13 +25,14 @@ jobs:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
       - run: bun run release:check
+      - run: bun run knip
       - run: git diff --exit-code
       - name: Check package preview scope
         id: package_preview_scope
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
           git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" > "$RUNNER_TEMP/changed-files.txt"
-          if grep -Eq '^(\.changeset/|\.github/workflows/(ci|release|package-preview)\.yml|\.npmpackagejsonlintrc\.json|package\.json|packages/|scripts/|tsconfig.*\.json|turbo\.json)' "$RUNNER_TEMP/changed-files.txt"; then
+          if grep -Eq '^(\.changeset/|\.github/workflows/(ci|release)\.yml|\.npmpackagejsonlintrc\.json|package\.json|packages/|scripts/|tsconfig.*\.json|turbo\.json)' "$RUNNER_TEMP/changed-files.txt"; then
             echo "should_publish=true" >> "$GITHUB_OUTPUT"
           fi
       - run: bunx pkg-pr-new publish --bun --compact ./packages/*

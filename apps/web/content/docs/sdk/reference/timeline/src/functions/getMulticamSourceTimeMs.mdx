@@ -102,6 +102,14 @@ Audio fade-in length from the clip's start (ms). Absent = none.
 
 Audio fade-out length before the clip's end (ms). Absent = none.
 
+#### groupId?
+
+`` `g-${string}` `` = `...`
+
+Elements sharing a `groupId` are one editable timeline item made from
+multiple clips. This is separate from linkId, which remains audio/link-pair
+semantics.
+
 #### id
 
 `` `e-${string}` `` = `elementIdSchema`

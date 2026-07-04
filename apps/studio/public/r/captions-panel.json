@@ -18,7 +18,8 @@
   "registryDependencies": [
     "button",
     "textarea",
-    "switch"
+    "switch",
+    "scroll-area"
   ],
   "files": [
     {

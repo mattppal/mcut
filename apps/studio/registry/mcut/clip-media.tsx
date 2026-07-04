@@ -17,6 +17,11 @@ const resolvedFilmstrips = new Map<string, Filmstrip | null>();
 const peaksCache = new Map<string, Promise<AudioPeaks | null>>();
 const resolvedPeaks = new Map<string, AudioPeaks | null>();
 
+/** The atlas frame for a 0..1 position, clamped to the strip's range. */
+export function filmstripFrameIndex(strip: Filmstrip, ratio: number): number {
+  return Math.max(0, Math.min(strip.frameCount - 1, Math.floor(ratio * strip.frameCount)));
+}
+
 export function filmstripFor(asset: AssetRef): Promise<Filmstrip | null> {
   let cached = filmstripCache.get(asset.id);
   if (!cached) {
@@ -110,10 +115,7 @@ export function VideoFilmstrip({
       for (let x = 0; x < width; x += tileWidth) {
         // Through the time remap, so sped/frozen clips show what actually plays.
         const sourceMs = getSourceTimeMs(clip, (x / width) * durationMs);
-        const index = Math.max(
-          0,
-          Math.min(strip.frameCount - 1, Math.floor((sourceMs / assetDurationMs) * strip.frameCount)),
-        );
+        const index = filmstripFrameIndex(strip, sourceMs / assetDurationMs);
         ctx.drawImage(
           strip.canvas,
           index * strip.frameWidth,

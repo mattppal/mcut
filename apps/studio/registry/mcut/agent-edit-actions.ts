@@ -7,6 +7,7 @@ import {
   type ProjectTranscriptWordContext,
   type TimelineElement,
 } from "@mcut/timeline";
+import { isRecord, optionalBoolean, optionalFiniteNumber } from "./guards";
 
 interface SilenceActionInput {
   elementId?: string;
@@ -23,18 +24,6 @@ interface FadeActionInput {
 
 type VisualElement = TimelineElement & { type: "video" | "image" | "text" | "multicam" };
 type MediaElement = TimelineElement & { type: "video" | "audio" };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function optionalFiniteNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function optionalBoolean(value: unknown): boolean | undefined {
-  return typeof value === "boolean" ? value : undefined;
-}
 
 function parseSilenceInput(value: unknown): SilenceActionInput {
   if (!isRecord(value)) return {};

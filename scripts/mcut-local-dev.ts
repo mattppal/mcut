@@ -54,7 +54,7 @@ export function localMcpUrl(): string {
 }
 
 function spawnProcess(name: string, cmd: string[]): Bun.Subprocess {
-  console.error(`[mcut-dev] starting ${name}: ${cmd.join(' ')}`)
+  console.error(`[mcut dev] starting ${name}: ${cmd.join(' ')}`)
   return Bun.spawn(cmd, {
     cwd: process.cwd(),
     env: process.env,
@@ -77,7 +77,7 @@ async function prepareDevPackages(filters: string[]): Promise<void> {
     'build',
     ...filters.map((filter) => `--filter=${filter}`),
   ]
-  console.error(`[mcut-dev] preparing package builds: ${cmd.join(' ')}`)
+  console.error(`[mcut dev] preparing package builds: ${cmd.join(' ')}`)
   const child = spawnProcess('package builds', cmd)
   const code = await child.exited
   if (code !== 0) {
@@ -116,10 +116,10 @@ async function runDev(): Promise<void> {
 
   await prepareDevPackages(['mcut-studio-web^...'])
 
-  console.error(`[mcut-dev] Studio: http://localhost:${studioPort}`)
-  console.error(`[mcut-dev] Bridge: ws://127.0.0.1:${bridgePort}/mcut-mcp`)
-  console.error(`[mcut-dev] MCP: ${localMcpUrl()}`)
-  console.error(`[mcut-dev] Open editor: ${localEditorBridgeUrl()}`)
+  console.error(`[mcut dev] Studio: http://localhost:${studioPort}`)
+  console.error(`[mcut dev] Bridge: ws://127.0.0.1:${bridgePort}/mcut-mcp`)
+  console.error(`[mcut dev] MCP: ${localMcpUrl()}`)
+  console.error(`[mcut dev] Open editor: ${localEditorBridgeUrl()}`)
 
   const children = [
     spawnProcess('studio', [

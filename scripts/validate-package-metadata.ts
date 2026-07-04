@@ -1,30 +1,14 @@
-import { readdir, readFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
+import {
+  discoverPublicPackages,
+  repoRoot,
+  type PackageManifest,
+  type PublicPackage,
+} from './lib/packages'
 
-interface PackageJson {
-  name?: string
-  version?: string
-  private?: boolean
-  description?: string
-  license?: string
-  type?: string
-  author?: string
-  homepage?: string
-  bugs?: { url?: string }
-  keywords?: string[]
-  repository?: { type?: string; url?: string; directory?: string }
-  publishConfig?: { access?: string; provenance?: boolean }
-  files?: string[]
-  main?: string
-  types?: string
-  exports?: unknown
-  bin?: Record<string, string> | string
-}
-
-const root = resolve(import.meta.dirname, '..')
-const packagesDir = join(root, 'packages')
-const rootLicense = await readFile(join(root, 'LICENSE'), 'utf8')
+const rootLicense = await readFile(join(repoRoot, 'LICENSE'), 'utf8')
 
 function fail(message: string): never {
   throw new Error(message)
@@ -34,27 +18,7 @@ function requireField(condition: unknown, pkg: string, field: string): void {
   if (!condition) fail(`${pkg} is missing required npm metadata: ${field}`)
 }
 
-async function readJson(path: string): Promise<PackageJson> {
-  return JSON.parse(await readFile(path, 'utf8')) as PackageJson
-}
-
-async function publicPackageDirs(): Promise<string[]> {
-  const entries = await readdir(packagesDir, { withFileTypes: true })
-  const dirs: string[] = []
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
-    const dir = join(packagesDir, entry.name)
-    const manifestPath = join(dir, 'package.json')
-    if (!existsSync(manifestPath)) continue
-    const manifest = await readJson(manifestPath)
-    if (manifest.private) continue
-    if (!manifest.name) continue
-    dirs.push(dir)
-  }
-  return dirs.sort()
-}
-
-function validateBinTargets(pkg: PackageJson, dir: string): void {
+function validateBinTargets(pkg: PackageManifest, dir: string): void {
   if (!pkg.bin || typeof pkg.bin === 'string') return
   for (const [name, target] of Object.entries(pkg.bin)) {
     if (!target.startsWith('./dist/')) fail(`${pkg.name} bin ${name} must point at ./dist`)
@@ -63,10 +27,8 @@ function validateBinTargets(pkg: PackageJson, dir: string): void {
   }
 }
 
-async function validatePackage(dir: string): Promise<void> {
-  const manifestPath = join(dir, 'package.json')
-  const pkg = await readJson(manifestPath)
-  const label = pkg.name ?? manifestPath
+async function validatePackage({ dir, manifest: pkg }: PublicPackage): Promise<void> {
+  const label = pkg.name ?? join(dir, 'package.json')
 
   requireField(pkg.name, label, 'name')
   requireField(pkg.version, label, 'version')
@@ -95,8 +57,8 @@ async function validatePackage(dir: string): Promise<void> {
   validateBinTargets(pkg, dir)
 }
 
-for (const dir of await publicPackageDirs()) {
-  await validatePackage(dir)
+for (const pkg of await discoverPublicPackages()) {
+  await validatePackage(pkg)
 }
 
 console.log('package metadata ok')

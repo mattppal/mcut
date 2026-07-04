@@ -12,7 +12,7 @@
  */
 
 /** Fullscreen triangle; uv covers [0,1]² across the target. */
-export const FULLSCREEN_VERTEX = /* wgsl */ `
+const FULLSCREEN_VERTEX = /* wgsl */ `
 struct VertexOut {
   @builtin(position) position: vec4f,
   @location(0) uv: vec2f,
@@ -30,7 +30,7 @@ fn vs_main(@builtin(vertex_index) index: u32) -> VertexOut {
 `
 
 /** Blend mode ids — keep in sync with BLEND_MODE_IDS below. */
-export const BLEND_WGSL_HELPERS = /* wgsl */ `
+const BLEND_WGSL_HELPERS = /* wgsl */ `
 fn lum(c: vec3f) -> f32 {
   return dot(c, vec3f(0.3, 0.59, 0.11));
 }

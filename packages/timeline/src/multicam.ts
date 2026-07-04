@@ -8,7 +8,7 @@ import { getSourceTimeMs } from './speed'
  * switch list ({ atMs, layoutId } from each cut until the next). What
  * switches is the LAYOUT — "screen + me" vs "just me" are compositions of
  * the same sources — which keeps cuts as plain data an agent can read and
- * write. See .context/plans/mcut-multicam-zooms-thumbnails.md.
+ * write.
  */
 
 export interface AngleCut {

@@ -11,7 +11,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 # Interface: PlayerCanvasProps
 
-Defined in: [packages/react/src/player-canvas.tsx:51](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L51)
+Defined in: [packages/react/src/player-canvas.tsx:52](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L52)
 
 ## Properties
 
@@ -21,7 +21,7 @@ Defined in: [packages/react/src/player-canvas.tsx:51](https://github.com/mattppa
 optional background?: string;
 ```
 
-Defined in: [packages/react/src/player-canvas.tsx:56](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L56)
+Defined in: [packages/react/src/player-canvas.tsx:57](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L57)
 
 Project background color. Default black.
 
@@ -33,7 +33,7 @@ Project background color. Default black.
 optional className?: string;
 ```
 
-Defined in: [packages/react/src/player-canvas.tsx:52](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L52)
+Defined in: [packages/react/src/player-canvas.tsx:53](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L53)
 
 ***
 
@@ -43,7 +43,7 @@ Defined in: [packages/react/src/player-canvas.tsx:52](https://github.com/mattppa
 optional hiddenElementIds?: ReadonlySet<string>;
 ```
 
-Defined in: [packages/react/src/player-canvas.tsx:61](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L61)
+Defined in: [packages/react/src/player-canvas.tsx:62](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L62)
 
 Elements left out of the render — e.g. a text element while a DOM
 inline editor overlays it (renderFrame's skipElementIds).
@@ -56,7 +56,7 @@ inline editor overlays it (renderFrame's skipElementIds).
 optional interactive?: boolean;
 ```
 
-Defined in: [packages/react/src/player-canvas.tsx:54](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L54)
+Defined in: [packages/react/src/player-canvas.tsx:55](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L55)
 
 Enable canvas selection/move/resize/rotate. Default true.
 
@@ -68,7 +68,7 @@ Enable canvas selection/move/resize/rotate. Default true.
 optional onElementDoubleClick?: (elementId) => void;
 ```
 
-Defined in: [packages/react/src/player-canvas.tsx:63](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L63)
+Defined in: [packages/react/src/player-canvas.tsx:64](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L64)
 
 Double-click on an element (topmost hit). Hosts use it to open editors.
 
@@ -90,7 +90,7 @@ Double-click on an element (topmost hit). Hosts use it to open editors.
 optional quality?: PreviewQuality;
 ```
 
-Defined in: [packages/react/src/player-canvas.tsx:70](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L70)
+Defined in: [packages/react/src/player-canvas.tsx:71](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L71)
 
 Preview raster resolution; `'auto'` (default) matches the displayed
 size. A 4K project in an ~800px pane rasters ~20× fewer pixels per
@@ -105,7 +105,7 @@ and dropped playback on big projects.
 optional renderer?: "canvas2d" | "webgpu";
 ```
 
-Defined in: [packages/react/src/player-canvas.tsx:76](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L76)
+Defined in: [packages/react/src/player-canvas.tsx:77](https://github.com/mattppal/mcut/blob/main/packages/react/src/player-canvas.tsx#L77)
 
 Compositor backend. `'webgpu'` renders through the WebGPU pass
 pipeline (requires `navigator.gpu`; falls back to canvas2d when

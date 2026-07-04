@@ -72,21 +72,14 @@ docs, examples, and migration story are ready.
 
 ## How mcut Studio consumes SDK packages
 
-mcut Studio consumes local `@mcut/*` workspaces by default. The helper scripts are
-still useful when testing Studio against another local worktree, a pkg.pr.new
-preview build, or published packages.
+mcut Studio consumes local `@mcut/*` workspaces by default, so SDK changes show
+up in Studio without a switching step.
 
-Preview flow:
-
-1. Open or update an mcut PR and wait for pkg.pr.new to publish its package set.
-2. In this repo, run `bun run mcut:dev preview <pr-number>`.
-3. Run Studio with `bun run dev`.
-4. Return to published packages with `bun run mcut:dev published`.
-
-The preview helper updates every `@mcut/*` dependency consumed by the Studio app and
-the bundled editing skill to the same pkg.pr.new PR URL. Keep that set in
-lockstep; do not manually mix a preview `@mcut/react` with a published
-`@mcut/timeline`.
+To test a PR's package set outside this repo, use the pkg.pr.new preview builds
+CI publishes for package PRs: install the URLs from the PR comment into a
+scratch consumer, e.g. `bun add https://pkg.pr.new/@mcut/timeline@<pr-number>`.
+Install every `@mcut/*` package from the same PR number; do not mix a preview
+`@mcut/react` with a published `@mcut/timeline`.
 
 Upgrade flow:
 

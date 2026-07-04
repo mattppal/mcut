@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
-import { listMcpToolDefinitions } from "@/registry/mcut/mcp-tools";
 import {
   MCP_TOOL_PROFILES,
   parseMcpToolProfile,
   type McpToolProfile,
-} from "@/registry/mcut/mcp-tool-contract";
+} from "@mcut/mcp-server/contract";
+import { listMcpToolDefinitions } from "@/registry/mcut/mcp-tools";
 
 export const metadata: Metadata = {
   title: "mcut — MCP tools",

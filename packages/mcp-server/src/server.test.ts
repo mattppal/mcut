@@ -2,8 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { EditorEngine, parseProject } from '@mcut/timeline'
+import { createEditorOperatorRegistry, registerCoreOperators } from '@mcut/editor'
+import { EditorEngine, listToolDefinitions, parseProject } from '@mcut/timeline'
 import { WebSocket } from 'ws'
+import { listServerToolDefinitions } from './contract'
 import { LiveMcutBridge, createHttpBridgeTarget } from './live-bridge'
 import { createMcutMcpServer, createMcutMcpServerForTarget } from './server'
 
@@ -32,6 +34,16 @@ describe('createMcutMcpServer', () => {
     expect(names.some((name) => name.startsWith('operator_'))).toBe(true)
     const split = tools.find((tool) => tool.name === 'splitElement')!
     expect(split.inputSchema.properties).toHaveProperty('atMs')
+  })
+
+  test('the wire surface deep-equals the shared contract', async () => {
+    const client = await connect(new EditorEngine())
+    const { tools } = await client.listTools()
+    const expected = listServerToolDefinitions({
+      operators: registerCoreOperators(createEditorOperatorRegistry()).list(),
+      commands: listToolDefinitions(),
+    })
+    expect(JSON.parse(JSON.stringify(tools))).toEqual(JSON.parse(JSON.stringify(expected)))
   })
 
   test('dispatches commands, reports state, and persists via onChange', async () => {

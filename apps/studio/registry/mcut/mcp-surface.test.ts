@@ -5,10 +5,16 @@ import {
   operatorToolName as serverOperatorToolName,
 } from "@mcut/mcp-server";
 import {
+  MCP_AGENT_TOOL_DEFINITIONS,
+  MCP_BRIDGE_ONLY_TOOL_NAMES,
+  listServerToolDefinitions,
+} from "@mcut/mcp-server/contract";
+import {
   EditorEngine,
   createProject,
   getElementLocation,
   listCommands,
+  listToolDefinitions,
 } from "@mcut/timeline";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -69,6 +75,7 @@ describe("MCP tool manifest", () => {
     expect(response.status).toBe(200);
     expect(body.profile).toBe("agent");
     expect(tools).toEqual(listMcpToolDefinitions("agent"));
+    expect(tools).toEqual(JSON.parse(JSON.stringify(MCP_AGENT_TOOL_DEFINITIONS)));
     expect(tools.length).toBe(15);
     expect(toolNames.size).toBe(tools.length);
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true);
@@ -124,19 +131,22 @@ describe("MCP tool manifest", () => {
 });
 
 describe("Studio action/operator MCP surface", () => {
-  test("published MCP server tools include legacy static tools, operators, and commands", async () => {
+  test("published MCP server tools deep-equal the shared contract surface", async () => {
     const operators = registerCoreOperators(createEditorOperatorRegistry()).list();
     const result = await listServerTools();
-    const toolNames = new Set(result.tools.map((tool) => tool.name));
-    const legacyStaticTools = LIVE_MCP_STATIC_TOOL_REQUESTS.filter(
-      (name) => name !== "list_commands" && name !== "apply_commands" && name !== "run_operator",
-    );
+    const expected = listServerToolDefinitions({ operators, commands: listToolDefinitions() });
 
-    expect(toolNames.size).toBe(result.tools.length);
-    for (const name of legacyStaticTools) expect(toolNames.has(name)).toBe(true);
-    for (const command of listCommands()) expect(toolNames.has(command.type)).toBe(true);
+    expect(JSON.parse(JSON.stringify(result.tools))).toEqual(JSON.parse(JSON.stringify(expected)));
+
+    // Every agent tool is either registered on the server or handled by the
+    // bridge in the browser — a third category means the contract drifted.
+    const serverNames = new Set(result.tools.map((tool) => tool.name));
+    const bridgeOnly = new Set<string>(MCP_BRIDGE_ONLY_TOOL_NAMES);
+    for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) {
+      expect(bridgeOnly.has(name) || serverNames.has(name)).toBe(true);
+    }
+    expect([...bridgeOnly].filter((name) => serverNames.has(name))).toEqual([]);
     for (const operator of operators) {
-      expect(toolNames.has(serverOperatorToolName(operator.id))).toBe(true);
       expect(serverOperatorToolName(operator.id)).toBe(liveMcpOperatorToolName(operator.id));
     }
   });

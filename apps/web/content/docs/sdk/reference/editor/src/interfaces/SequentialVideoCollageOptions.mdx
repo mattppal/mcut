@@ -1,0 +1,86 @@
+---
+title: "SequentialVideoCollageOptions"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [editor/src](../index.mdx) / SequentialVideoCollageOptions
+
+# Interface: SequentialVideoCollageOptions
+
+Defined in: [packages/editor/src/timeline-operators.ts:118](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L118)
+
+## Properties
+
+### assets
+
+```ts
+assets: readonly object[];
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:120](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L120)
+
+Natural order of playback and visual slots.
+
+***
+
+### layout?
+
+```ts
+optional layout?: SequentialCollageLayout;
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:122](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L122)
+
+`auto`: landscape stacks vertically; portrait/square lays out horizontally.
+
+***
+
+### lockTracks?
+
+```ts
+optional lockTracks?: boolean;
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:128](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L128)
+
+Lock generated tracks against accidental clip edits. Default false.
+
+***
+
+### magnetic?
+
+```ts
+optional magnetic?: boolean;
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:130](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L130)
+
+Make generated tracks magnetic so their clips stay snapped left. Default false.
+
+***
+
+### replaceTimeline?
+
+```ts
+optional replaceTimeline?: boolean;
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:126](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L126)
+
+Replace timeline tracks while keeping project assets. Default true.
+
+***
+
+### zooms?
+
+```ts
+optional zooms?: readonly number[];
+```
+
+Defined in: [packages/editor/src/timeline-operators.ts:124](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L124)
+
+Per-video punch-in. Values \>1 crop toward the center while preserving the slot size.

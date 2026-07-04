@@ -3,6 +3,7 @@ export {
   planSilenceCuts,
   type SilenceCutOptions,
   type SilenceCutPlan,
+  type SilenceCutTranscript,
   type SilenceWindow,
 } from './silence'
 export { buildCaptionsCommand, type CaptionsCommandOptions } from './captions'

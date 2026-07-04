@@ -1,5 +1,5 @@
+import { parseMcpToolProfile } from "@mcut/mcp-server/contract";
 import { listMcpToolDefinitions } from "@/registry/mcut/mcp-tools";
-import { parseMcpToolProfile } from "@/registry/mcut/mcp-tool-contract";
 
 /**
  * MCP-shaped tool manifest (the `tools/list` result): static context tools,
