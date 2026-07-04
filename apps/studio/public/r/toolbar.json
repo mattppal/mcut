@@ -134,7 +134,7 @@
     },
     {
       "path": "registry/mcut/math.ts",
-      "content": "/**\n * Numeric helpers shared across editor panels and drag controllers. Pure\n * functions only — anything tied to timeline semantics (snapping, timecode)\n * lives in its own module.\n */\n\n/** Clamps `value` to `[min, max]`; either bound may be omitted. */\nexport function clamp(value: number, min?: number, max?: number): number {\n  let next = value;\n  if (min !== undefined) next = Math.max(min, next);\n  if (max !== undefined) next = Math.min(max, next);\n  return next;\n}\n\n/** Clamps `value` to the unit interval `[0, 1]`. */\nexport function clamp01(value: number): number {\n  return clamp(value, 0, 1);\n}\n",
+      "content": "/**\n * Numeric helpers shared across editor panels and drag controllers. Pure\n * functions only — anything tied to timeline semantics (snapping, timecode)\n * lives in its own module.\n */\n\n/** Clamps `value` to `[min, max]`; either bound may be omitted. */\nexport function clamp(value: number, min?: number, max?: number): number {\n  let next = value;\n  if (min !== undefined) next = Math.max(min, next);\n  if (max !== undefined) next = Math.min(max, next);\n  return next;\n}\n\n/** Rounds `value` to `decimals` decimal places. */\nexport function roundTo(value: number, decimals: number): number {\n  const factor = 10 ** decimals;\n  return Math.round(value * factor) / factor;\n}\n\n/** Clamps `value` to the unit interval `[0, 1]`. */\nexport function clamp01(value: number): number {\n  return clamp(value, 0, 1);\n}\n",
       "type": "registry:lib",
       "target": "components/mcut/math.ts"
     },

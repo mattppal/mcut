@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { evictClipMediaCache, filmstripFor } from "./clip-media";
+import { evictClipMediaCache, filmstripFor, filmstripFrameIndex } from "./clip-media";
 import {
   createSequentialVideoCollage,
   elementForAsset,
@@ -102,10 +102,7 @@ function VideoScrubThumb({ asset, thumb }: { asset: AssetRef; thumb?: string }) 
     void filmstripFor(asset).then((strip) => {
       const canvas = canvasRef.current;
       if (!strip || !canvas) return;
-      const index = Math.max(
-        0,
-        Math.min(strip.frameCount - 1, Math.floor(ratio * strip.frameCount)),
-      );
+      const index = filmstripFrameIndex(strip, ratio);
       canvas.width = strip.frameWidth;
       canvas.height = strip.frameHeight;
       const ctx = canvas.getContext("2d");

@@ -12,6 +12,12 @@ export function clamp(value: number, min?: number, max?: number): number {
   return next;
 }
 
+/** Rounds `value` to `decimals` decimal places. */
+export function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
 /** Clamps `value` to the unit interval `[0, 1]`. */
 export function clamp01(value: number): number {
   return clamp(value, 0, 1);

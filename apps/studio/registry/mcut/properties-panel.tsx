@@ -28,6 +28,7 @@ import { safeAreaRect } from "./layout-slot-editor";
 import { FontPicker } from "./font-picker";
 import { KeyframeRowControls, localPlayheadMs } from "./keyframe-controls";
 import { ChoiceRow, ColorField, FieldRow, NumberField, Section } from "./inspector-fields";
+import { roundTo } from "./math";
 import { FrameFields, type FrameRect, type FrameTarget } from "./frame-section";
 import { PresetMenu } from "./preset-menu";
 import { RadiusRow, readStylePreset, ShadowFields, StrokeFields } from "./style-fields";
@@ -448,7 +449,7 @@ export function PropertiesPanel({ className }: { className?: string }) {
             <>
               <NumberField
                 label="X"
-                value={Math.round(animValue("position.x", element.transform.x) * 10) / 10}
+                value={roundTo(animValue("position.x", element.transform.x), 1)}
                 unit="px"
                 scrubPerPx={1}
                 onCommit={animCommit("position.x", (x) => patchTransform({ x }))}
@@ -456,7 +457,7 @@ export function PropertiesPanel({ className }: { className?: string }) {
               />
               <NumberField
                 label="Y"
-                value={Math.round(animValue("position.y", element.transform.y) * 10) / 10}
+                value={roundTo(animValue("position.y", element.transform.y), 1)}
                 unit="px"
                 scrubPerPx={1}
                 onCommit={animCommit("position.y", (y) => patchTransform({ y }))}
@@ -598,7 +599,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
           const srcH = asset.height;
           const crop: Crop = element.crop ?? { x: 0, y: 0, w: 1, h: 1 };
           const isGroupedMedia = Boolean(element.groupId);
-          const round4 = (v: number) => Math.round(v * 10_000) / 10_000;
           const setCrop = (next: Crop) => {
             const w = Math.min(1, Math.max(0.01, next.w));
             const h = Math.min(1, Math.max(0.01, next.h));
@@ -606,7 +606,7 @@ export function PropertiesPanel({ className }: { className?: string }) {
             const y = Math.min(Math.max(0, next.y), 1 - h);
             const full = x === 0 && y === 0 && w === 1 && h === 1;
             patchGroupedVisuals({
-              crop: full ? undefined : { x: round4(x), y: round4(y), w: round4(w), h: round4(h) },
+              crop: full ? undefined : { x: roundTo(x, 4), y: roundTo(y, 4), w: roundTo(w, 4), h: roundTo(h, 4) },
             });
           };
           const setLockedCrop = (zoom: number, focusX: number, focusY: number) => {
@@ -624,10 +624,10 @@ export function PropertiesPanel({ className }: { className?: string }) {
               crop: full
                 ? undefined
                 : {
-                    x: round4(nextCrop.x),
-                    y: round4(nextCrop.y),
-                    w: round4(nextCrop.w),
-                    h: round4(nextCrop.h),
+                    x: roundTo(nextCrop.x, 4),
+                    y: roundTo(nextCrop.y, 4),
+                    w: roundTo(nextCrop.w, 4),
+                    h: roundTo(nextCrop.h, 4),
                   },
               transform: {
                 ...element.transform,

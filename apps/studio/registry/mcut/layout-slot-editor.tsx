@@ -6,7 +6,7 @@ import type { EditorEngine, Layout, LayoutSlot } from "@mcut/timeline";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useEditorUI } from "./editor-ui";
-import { clamp, clamp01 } from "./math";
+import { clamp, clamp01, roundTo } from "./math";
 import { findTargetMulticam } from "./multicam-ui";
 
 /**
@@ -42,10 +42,10 @@ export function safeAreaRect(width: number, height: number): LayoutSlot["rect"] 
 
 export function roundRect(rect: LayoutSlot["rect"]): LayoutSlot["rect"] {
   return {
-    x: Math.round(rect.x * 1000) / 1000,
-    y: Math.round(rect.y * 1000) / 1000,
-    w: Math.round(rect.w * 1000) / 1000,
-    h: Math.round(rect.h * 1000) / 1000,
+    x: roundTo(rect.x, 3),
+    y: roundTo(rect.y, 3),
+    w: roundTo(rect.w, 3),
+    h: roundTo(rect.h, 3),
   };
 }
 
@@ -72,8 +72,6 @@ export function saveLayoutSlot(
     // Layout vanished mid-edit.
   }
 }
-
-const round3 = (value: number) => Math.round(value * 1000) / 1000;
 
 /** Closest snap candidate to any of `positions` within `threshold`. */
 function snapAxis(
@@ -217,7 +215,7 @@ function SlotBox({
       // crop actually overflows the slot.
       const fx = drag.overflow.x > 1 ? clamp01(drag.focus.x - dxPx / drag.overflow.x) : drag.focus.x;
       const fy = drag.overflow.y > 1 ? clamp01(drag.focus.y - dyPx / drag.overflow.y) : drag.focus.y;
-      save({ focus: { x: round3(fx), y: round3(fy) } });
+      save({ focus: { x: roundTo(fx, 3), y: roundTo(fy, 3) } });
       return;
     }
 
