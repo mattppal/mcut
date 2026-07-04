@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
-    "@playwright/test": "1.60.0",
+    "@playwright/test": "1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/color": "4.2.1",
     "@types/node": "^20",
