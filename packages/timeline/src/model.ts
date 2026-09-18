@@ -123,7 +123,7 @@ export const captionWordSchema = z.object({
   text: z.string(),
   startMs: z.number().int().nonnegative(),
   endMs: z.number().int().nonnegative(),
-})
+}).refine((word) => word.endMs >= word.startMs, 'caption word endMs must be >= startMs')
 
 /** Shared by elements the compositor paints (video/image/text). */
 const visualShape = {
