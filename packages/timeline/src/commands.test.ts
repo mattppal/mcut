@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError, listCommands, listToolDefinitions } from './commands'
-import { createProject, type CaptionElement, type Project, type VideoElement } from './model'
+import { EditorEngine } from './engine'
+import { createProject, parseProject, type CaptionElement, type Project, type VideoElement } from './model'
 import {
   findNearestFreeSlot,
   getElement,
@@ -402,6 +403,58 @@ describe('element commands', () => {
     expect(left.text).toBe('hello brave')
     expect(right.words).toEqual([{ text: 'world', startMs: 200, endMs: 600 }])
     expect(right.text).toBe('world')
+  })
+
+  test('addElement rejects caption words whose endMs precedes startMs', () => {
+    const engine = new EditorEngine()
+    const inverted = {
+      type: 'addElement' as const,
+      trackId: 't-default' as const,
+      element: {
+        type: 'caption' as const,
+        text: 'hi',
+        startMs: 0,
+        durationMs: 5000,
+        words: [{ text: 'hi', startMs: 3000, endMs: 1000 }],
+      },
+    }
+    try {
+      engine.dispatch(inverted)
+      throw new Error('expected addElement to reject inverted caption words')
+    } catch (error) {
+      expect(error).toBeInstanceOf(CommandError)
+      expect((error as CommandError).code).toBe('invalid-payload')
+    }
+
+    engine.dispatch({
+      ...inverted,
+      element: { ...inverted.element, words: [{ text: 'hi', startMs: 3000, endMs: 3000 }] },
+    })
+    const accepted = engine.project.tracks[0]!.elements[0] as CaptionElement
+    expect(accepted.words).toEqual([{ text: 'hi', startMs: 3000, endMs: 3000 }])
+  })
+
+  test('rippleTrim of a caption remaps word times and still parses', () => {
+    const engine = new EditorEngine()
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: {
+        type: 'caption',
+        text: 'hi',
+        startMs: 0,
+        durationMs: 5000,
+        words: [{ text: 'hi', startMs: 3000, endMs: 4000 }],
+      },
+    })
+    const id = engine.project.tracks[0]!.elements[0]!.id
+    engine.dispatch({ type: 'rippleTrim', elementId: id, edge: 'start', deltaMs: 2000 })
+    const trimmed = engine.project.tracks[0]!.elements[0] as CaptionElement
+    expect(trimmed.words).toEqual([{ text: 'hi', startMs: 1000, endMs: 2000 }])
+    const restored = parseProject(JSON.parse(JSON.stringify(engine.project)))
+    expect((restored.tracks[0]!.elements[0] as CaptionElement).words).toEqual([
+      { text: 'hi', startMs: 1000, endMs: 2000 },
+    ])
   })
 
   test('updateElement validates the merged element', () => {
