@@ -1,8 +1,3 @@
-/**
- * Starter projects, built through the engine so they can never drift from the
- * schema. Every id is fixed: templates must be byte-stable across generate
- * runs (CI diffs them) and recipes reference these ids literally.
- */
 import { EditorEngine, createProject, type AnyCommand, type Project } from '@mcut/timeline'
 
 export interface TemplateDefinition {
@@ -18,8 +13,7 @@ function dispatchAll(project: Project, commands: AnyCommand[]): Project {
   return engine.project
 }
 
-/** The default layouts, with fixed ids (createDefaultLayouts() randomizes them). */
-const LAYOUTS = [
+const FIXED_ID_LAYOUTS = [
   {
     id: 'lay-screen-cam',
     name: 'Screen + Cam',
@@ -128,8 +122,7 @@ export const TEMPLATES: TemplateDefinition[] = [
             trackId: 't-camera',
             element: { id: 'e-camera', type: 'video', startMs: 0, durationMs: 90000, assetId: 'a-camera' },
           },
-          ...LAYOUTS.map((layout) => ({ type: 'saveLayout', layout }) as AnyCommand),
-          // Bottom layer (t-default) becomes the "screen" role, top the "camera".
+          ...FIXED_ID_LAYOUTS.map((layout) => ({ type: 'saveLayout', layout }) as AnyCommand),
           { type: 'createMulticam', elementIds: ['e-screen', 'e-camera'], multicamId: 'e-multicam' },
           { type: 'removeTrack', trackId: 't-camera' },
         ],

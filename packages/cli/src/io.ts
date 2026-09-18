@@ -11,10 +11,6 @@ export async function writeProjectFile(path: string, project: Project): Promise<
   await writeFile(path, `${JSON.stringify(project, null, 2)}\n`, 'utf8')
 }
 
-/**
- * Lenient validation for transcript JSON (providers normalize to
- * TranscriptResult, but hand-made files often carry only `words`).
- */
 export const transcriptSchema = z.object({
   text: z.string().default(''),
   language: z.string().optional(),

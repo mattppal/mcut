@@ -8,25 +8,25 @@ import {
 import { buildApplyCaptionsCommand, type TranscriptResult } from '@mcut/transcription'
 
 export interface CaptionsCommandOptions {
-  /**
-   * Scope the transcript to one video/audio element: caption only the source
-   * span the clip actually plays, positioned at the clip's timeline location.
-   * Without it the transcript is applied from timeline 0.
-   */
   elementId?: string
-  /** A preset id from CAPTION_STYLE_PRESETS (classic, karaoke, spotlight, ...). */
   styleId?: string
   maxChars?: number
   maxGapMs?: number
-  /** Clear existing captions on the target track first. */
   replace?: boolean
 }
 
-/**
- * Build an `applyCaptions` command from a transcript, with element scoping
- * and named style presets resolved. Dispatch the result (or hand it to an
- * agent) — this does not mutate the project.
- */
+function sourceWindowForClip(element: {
+  startMs: number
+  trimStartMs: number
+  durationMs: number
+}): { timeOffsetMs: number; sourceStartMs: number; sourceEndMs: number } {
+  return {
+    timeOffsetMs: element.startMs,
+    sourceStartMs: element.trimStartMs,
+    sourceEndMs: element.trimStartMs + element.durationMs,
+  }
+}
+
 export function buildCaptionsCommand(
   project: Project,
   transcript: TranscriptResult,
@@ -55,11 +55,7 @@ export function buildCaptionsCommand(
         `element "${options.elementId}" has a time remap; transcript times will not line up`,
       )
     }
-    scope = {
-      timeOffsetMs: element.startMs,
-      sourceStartMs: element.trimStartMs,
-      sourceEndMs: element.trimStartMs + element.durationMs,
-    }
+    scope = sourceWindowForClip(element)
   }
 
   return buildApplyCaptionsCommand(transcript, {

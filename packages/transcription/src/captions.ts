@@ -7,12 +7,13 @@ import {
 } from '@mcut/timeline'
 import type { TranscriptResult, TranscriptWord } from './types'
 
+const DEFAULT_CAPTION_MAX_CHARS = 36
+const DEFAULT_CAPTION_MAX_DURATION_MS = 5000
+const DEFAULT_CAPTION_MAX_GAP_MS = 800
+
 export interface GroupWordsOptions {
-  /** Soft maximum characters per caption line group. Default 36. */
   maxChars?: number
-  /** Maximum duration of one caption. Default 5000ms. */
   maxDurationMs?: number
-  /** A silence gap longer than this starts a new caption. Default 800ms. */
   maxGapMs?: number
 }
 
@@ -23,11 +24,10 @@ export interface WordGroup {
   words: TranscriptWord[]
 }
 
-/** Chunk word timings into caption-sized groups. */
 export function groupWords(words: TranscriptWord[], options: GroupWordsOptions = {}): WordGroup[] {
-  const maxChars = options.maxChars ?? 36
-  const maxDurationMs = options.maxDurationMs ?? 5000
-  const maxGapMs = options.maxGapMs ?? 800
+  const maxChars = options.maxChars ?? DEFAULT_CAPTION_MAX_CHARS
+  const maxDurationMs = options.maxDurationMs ?? DEFAULT_CAPTION_MAX_DURATION_MS
+  const maxGapMs = options.maxGapMs ?? DEFAULT_CAPTION_MAX_GAP_MS
 
   const groups: WordGroup[] = []
   let current: TranscriptWord[] = []
@@ -72,14 +72,8 @@ export interface CaptionElementInput {
 
 export interface ToCaptionElementsOptions extends GroupWordsOptions {
   style?: Partial<CaptionStyle>
-  /**
-   * Shift generated captions onto a timeline position. For example, a
-   * transcript from a clip starting at 10s should use `timeOffsetMs: 10000`.
-   */
   timeOffsetMs?: number
-  /** Ignore transcript content before this source-media timestamp. */
   sourceStartMs?: number
-  /** Ignore transcript content at or after this source-media timestamp. */
   sourceEndMs?: number
 }
 
@@ -104,11 +98,6 @@ function mapSourceTimeToCaptionTime(
   return clamped - sourceStartMs + timeOffsetMs
 }
 
-/**
- * Convert a transcript into caption elements ready for the `applyCaptions`
- * command: grouped to caption length, word timings made relative to each
- * element, overlaps clamped to satisfy the track invariant.
- */
 export function toCaptionElements(
   result: TranscriptResult,
   options: ToCaptionElementsOptions = {},
@@ -201,11 +190,9 @@ export function toCaptionElements(
 
 export interface BuildApplyCaptionsOptions extends ToCaptionElementsOptions {
   trackId?: TrackId
-  /** Replace existing captions on the target track. Default true. */
   replace?: boolean
 }
 
-/** Build the `applyCaptions` command for {@link toCaptionElements} output. */
 export function buildApplyCaptionsCommand(
   result: TranscriptResult,
   options: BuildApplyCaptionsOptions = {},

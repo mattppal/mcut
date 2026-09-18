@@ -7,10 +7,6 @@ export interface SubtitleCue {
   text: string
 }
 
-/**
- * Turn a transcript into display cues: prefers provider segments, falls back
- * to grouped words, then to one cue spanning the full duration.
- */
 export function transcriptToCues(result: TranscriptResult): SubtitleCue[] {
   if (result.segments.length > 0) {
     return result.segments.map((s) => ({ startMs: s.startMs, endMs: s.endMs, text: s.text }))

@@ -1,9 +1,3 @@
-/**
- * Regenerates everything derived from code: references/commands.md and
- * references/recipes.md, the starter templates, and the preset data assets.
- * Output is deterministic — CI rebuilds and diffs it, so the published skill
- * can never drift from the registries it documents.
- */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { PLATFORM_PRESETS } from '@mcut/cli'
@@ -24,13 +18,7 @@ async function write(relative: string, content: string): Promise<void> {
 
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`
 
-// --- references/commands.md -------------------------------------------------
-
-const EXCLUDED_COMMANDS = new Set([
-  // Studio no longer exposes the thumbnail builder. Keep the generated skill
-  // reference aligned with the product surface even while the SDK command exists.
-  'applyThumbnail',
-])
+const COMMANDS_HIDDEN_FROM_STUDIO = new Set(['applyThumbnail'])
 
 function typeLabel(schema: unknown): string {
   if (typeof schema !== 'object' || schema === null) return 'any'
@@ -50,7 +38,7 @@ function typeLabel(schema: unknown): string {
 }
 
 function commandsMarkdown(): string {
-  const tools = listToolDefinitions().filter((tool) => !EXCLUDED_COMMANDS.has(tool.name))
+  const tools = listToolDefinitions().filter((tool) => !COMMANDS_HIDDEN_FROM_STUDIO.has(tool.name))
   const lines: string[] = [
     '# Command reference',
     '',
@@ -84,8 +72,6 @@ function commandsMarkdown(): string {
   return `${lines.join('\n').trimEnd()}\n`
 }
 
-// --- references/recipes.md ----------------------------------------------------
-
 function recipesMarkdown(): string {
   const lines: string[] = [
     '# Recipes',
@@ -112,8 +98,6 @@ function recipesMarkdown(): string {
   }
   return `${lines.join('\n').trimEnd()}\n`
 }
-
-// -----------------------------------------------------------------------------
 
 await write('references/commands.md', commandsMarkdown())
 await write('references/recipes.md', recipesMarkdown())
