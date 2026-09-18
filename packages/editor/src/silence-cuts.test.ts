@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { EditorEngine, createProject, getElementLocation } from '@mcut/timeline'
+import { OperatorError } from './operators'
 import { planSilenceCuts, type SilenceCutTranscript } from './silence-cuts'
 
 function projectWithClip(options: { startMs?: number; durationMs?: number; trimStartMs?: number } = {}) {
@@ -109,11 +110,21 @@ describe('planSilenceCuts', () => {
     expect(() =>
       planSilenceCuts(engine.project, 'e-1', transcript([[0, 1000]]), {}),
     ).toThrow(/time remap/)
+    try {
+      planSilenceCuts(engine.project, 'e-1', transcript([[0, 1000]]), {})
+    } catch (error) {
+      expect((error as OperatorError).code).toBe('unsupported')
+    }
   })
 
   test('refuses when the transcript has no words in the window', () => {
     expect(() =>
       planSilenceCuts(projectWithClip(), 'e-1', transcript([[20000, 21000]]), {}),
     ).toThrow(/no words/)
+    try {
+      planSilenceCuts(projectWithClip(), 'e-1', transcript([[20000, 21000]]), {})
+    } catch (error) {
+      expect((error as OperatorError).code).toBe('invalid-payload')
+    }
   })
 })

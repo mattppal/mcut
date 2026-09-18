@@ -52,4 +52,19 @@ describe('editor operators', () => {
     const element = getElement(engine.project, result.elementId)
     expect(element?.keyframes?.opacity?.map((keyframe) => keyframe.timeMs)).toEqual([900])
   })
+
+  test('rejects a missing media-bin asset with a typed operator error', async () => {
+    const engine = new EditorEngine()
+    const registry = registerCoreOperators(createEditorOperatorRegistry())
+
+    await expect(registry.run('media.insertAssetAtPlayhead', { engine }, { assetId: 'a-missing' })).rejects.toThrow(
+      OperatorError,
+    )
+    try {
+      await registry.run('media.insertAssetAtPlayhead', { engine }, { assetId: 'a-missing' })
+    } catch (error) {
+      expect((error as OperatorError).code).toBe('unknown-asset')
+      expect((error as OperatorError).message).toBe('no asset "a-missing"')
+    }
+  })
 })
