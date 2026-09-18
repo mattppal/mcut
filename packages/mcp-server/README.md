@@ -23,8 +23,26 @@ bunx -p @mcut/mcp-server mcut-mcp project.mcut.json
 
 ## Live bridge
 
-For the primary live workflow, start the bridge and configure your MCP client to
-use the printed `http://127.0.0.1:<port>/mcp` URL:
+From the mcut repo root, `bun run dev` starts Studio and the local bridge and
+prints the Streamable HTTP MCP URL. That URL is
+`http://127.0.0.1:<port>/mcp?token=<token>`. The default port is `44737` and the
+default token is `mcut-local-dev`. Print the URL again with
+`bun run scripts/mcut-local-dev.ts mcp-url`.
+
+Point any MCP client that supports Streamable HTTP at that URL. In Cursor, add
+it to `mcp.json`.
+
+```json
+{
+  "mcpServers": {
+    "mcut": {
+      "url": "http://127.0.0.1:44737/mcp?token=mcut-local-dev"
+    }
+  }
+}
+```
+
+To start only the published bridge:
 
 ```sh
 bunx -p @mcut/mcp-server mcut-bridge start --editor-url http://localhost:3000/editor

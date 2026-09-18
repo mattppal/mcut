@@ -1,4 +1,4 @@
-# Cloudflare MCP Relay Architecture
+# Cloudflare MCP relay architecture
 
 ## Goal
 
@@ -6,14 +6,15 @@ Simplify live bridge startup for hosted mcut Studio.
 
 Today, live browser editing through MCP depends on a local bridge process and a
 browser URL with bridge query parameters. The hosted flow should remove that
-manual startup step:
+manual startup step.
 
 - Every hosted editor session automatically registers a bridge channel.
-- Codex connects through a remote MCP server.
+- Any MCP client that supports Streamable HTTP connects through a remote MCP
+  server.
 - The browser editor remains the source of truth for live project state.
 - Local bridge commands remain available for offline and development workflows.
 
-## Recommended Architecture
+## Recommended architecture
 
 Use an adjacent Cloudflare Worker backed by a Durable Object relay.
 
@@ -33,52 +34,62 @@ hibernation.
 
 ## Connection UX
 
-The primary UX should be one-time Codex setup:
+The hosted MCP endpoint is `https://app.mcut.io/mcp`. Clients authenticate with
+a `token` query parameter, the same shape the local bridge prints.
 
-```sh
-codex mcp add mcut --url https://app.mcut.io/mcp
-codex mcp login mcut
+Point any Streamable HTTP MCP client at that URL. In Cursor, add it to
+`mcp.json`.
+
+```json
+{
+  "mcpServers": {
+    "mcut": {
+      "url": "https://app.mcut.io/mcp?token=<session-token>"
+    }
+  }
+}
 ```
 
-After that, every hosted editor session is automatically available to Codex.
-The editor should expose a `Connect Codex` action with these states:
+After that, every hosted editor session is available to the connected client.
+The editor should expose a Connect MCP action with these states.
 
-- Not installed: show the `codex mcp add` and `codex mcp login` commands.
-- Installed but unauthenticated: show `codex mcp login mcut`.
-- Connected: show `Codex ready`, the active session, connected client count, and
-  a revoke action.
-- Multiple tabs open: show `Use this tab for Codex` to mark the current tab as
-  the active target.
+- Not configured. Show the endpoint URL and the `token` query parameter.
+- Configured but unauthenticated. Show how to refresh or paste a new token.
+- Connected. Show the active session, connected client count, and a revoke
+  action.
+- Multiple tabs open. Show Use this tab so the current tab is the active
+  target.
 
 MCP should default tool calls to the active editor session. Provide session
-management tools for ambiguity:
+management tools for ambiguity.
 
 - `list_sessions`
 - `get_active_session`
 - `select_session`
 
-## Runtime Flow
+## Runtime flow
 
 1. A user opens `https://app.mcut.io/editor`.
 2. The editor calls the relay to create or resume a session.
 3. The editor opens a WebSocket to the relay, for example
    `wss://app.mcut.io/bridge/sessions/:sessionId`.
 4. The editor sends the existing live bridge `hello` message with tab metadata.
-5. Codex connects to `https://app.mcut.io/mcp` using Streamable HTTP MCP.
-6. Codex authenticates through OAuth and receives access scoped to the user's
-   mcut account.
+5. An MCP client connects to `https://app.mcut.io/mcp?token=<session-token>`
+   using Streamable HTTP.
+6. The client authenticates with the token query parameter and receives access
+   scoped to that session.
 7. An MCP tool call reaches the Worker, which routes it to the correct
    `SessionDurableObject`.
 8. The Durable Object forwards the request to the active browser tab.
 9. The browser executes the request against the live editor engine and returns
    the result.
-10. The Durable Object returns the MCP response to Codex.
+10. The Durable Object returns the MCP response to the client.
 
 The existing request types should remain the wire vocabulary between relay and
 browser, including project context, transcript tools, actions, operators, raw
 commands, undo, and redo.
 
-## Durable Object Responsibilities
+## Durable Object responsibilities
 
 `SessionDurableObject` should own:
 
@@ -102,17 +113,17 @@ It should not own:
 
 ## Security
 
-Use OAuth for Codex authentication. Codex supports remote Streamable HTTP MCP
-servers and `codex mcp login` for OAuth-backed MCP servers.
+Hosted clients authenticate with a session-scoped token on the MCP URL
+(`?token=`).
 
-Keep browser session auth separate from Codex MCP auth:
+Keep browser session auth separate from MCP client auth.
 
 - Browser tabs authenticate to the relay with a session-scoped browser token.
-- Codex authenticates with OAuth and account-scoped access.
-- The relay maps authenticated Codex users to their active editor sessions.
+- MCP clients authenticate with the token query parameter on the `/mcp` URL.
+- The relay maps authenticated tokens to their active editor sessions.
 - Session tokens are high entropy, scoped, revocable, and expire on inactivity.
 
-Enforce transport protections:
+Enforce transport protections.
 
 - Use HTTPS and WSS in hosted environments.
 - Validate `Origin` for browser WebSocket upgrades.
@@ -144,7 +155,7 @@ Use these for:
 The hosted Cloudflare relay should be the default documented path for
 `app.mcut.io`, while the local bridge remains the escape hatch.
 
-## Test Plan
+## Test plan
 
 Test the Durable Object relay:
 
@@ -169,8 +180,9 @@ Test remote MCP integration:
 Test browser behavior:
 
 - Hosted editor auto-registers without `mcpBridge` query parameters.
-- `Connect Codex` UI reflects install, login, connected, and revoked states.
-- `Use this tab for Codex` updates the active session.
+- Connect MCP UI reflects configured, authenticated, connected, and revoked
+  states.
+- Use this tab updates the active session.
 
 Regression-test local fallback:
 
@@ -179,8 +191,8 @@ Regression-test local fallback:
 
 ## References
 
-- Codex MCP configuration supports Streamable HTTP servers and OAuth login:
-  https://developers.openai.com/codex/mcp
+- Cursor MCP configuration for Streamable HTTP servers lives at
+  https://cursor.com/docs/mcp
 - Cloudflare Durable Objects support stateful WebSocket coordination and
-  WebSocket Hibernation:
+  WebSocket Hibernation at
   https://developers.cloudflare.com/durable-objects/best-practices/websockets/
