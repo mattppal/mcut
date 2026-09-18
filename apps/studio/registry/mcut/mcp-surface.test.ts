@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createEditorOperatorRegistry, registerCoreOperators } from "@mcut/editor";
+import { operatorIds, type OperatorId } from "@mcut/editor";
 import {
   createMcutMcpServer,
   operatorToolName as serverOperatorToolName,
@@ -9,18 +9,11 @@ import {
   MCP_BRIDGE_ONLY_TOOL_NAMES,
   listServerToolDefinitions,
 } from "@mcut/mcp-server/contract";
-import {
-  EditorEngine,
-  createProject,
-  getElementLocation,
-  listCommands,
-  listToolDefinitions,
-} from "@mcut/timeline";
+import { EditorEngine, createProject, getElementLocation, listCommands } from "@mcut/timeline";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { GET as toolsJson, dynamic as toolsJsonDynamic } from "../../app/tools.json/route";
 import "./editor-default-actions";
-import { listEditorActions } from "./action-registry";
 import {
   LIVE_MCP_DYNAMIC_TOOL_REQUESTS,
   LIVE_MCP_REQUEST_TYPES,
@@ -63,7 +56,6 @@ describe("MCP tool manifest", () => {
   });
 
   test("/tools.json defaults to the curated agent profile", async () => {
-    const operators = registerCoreOperators(createEditorOperatorRegistry()).list();
     const response = toolsJson(toolsRequest());
     const body = (await response.json()) as {
       profile?: string;
@@ -80,9 +72,7 @@ describe("MCP tool manifest", () => {
     expect(toolNames.size).toBe(tools.length);
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true);
     for (const command of listCommands()) expect(toolNames.has(command.type)).toBe(false);
-    for (const operator of operators) {
-      expect(toolNames.has(liveMcpOperatorToolName(operator.id))).toBe(false);
-    }
+    for (const id of operatorIds) expect(toolNames.has(liveMcpOperatorToolName(id))).toBe(false);
 
     for (const tool of tools) {
       expect(tool.name).toBeTruthy();
@@ -92,7 +82,6 @@ describe("MCP tool manifest", () => {
   });
 
   test("/tools.json?profile=full exposes static tools, operators, and timeline commands", async () => {
-    const operators = registerCoreOperators(createEditorOperatorRegistry()).list();
     const response = toolsJson(toolsRequest("full"));
     const body = (await response.json()) as {
       profile?: string;
@@ -103,11 +92,10 @@ describe("MCP tool manifest", () => {
 
     expect(body.profile).toBe("full");
     expect(tools).toEqual(listMcpToolDefinitions("full"));
+    expect(tools.length).toBe(116);
     expect(toolNames.size).toBe(tools.length);
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true);
-    for (const operator of operators) {
-      expect(toolNames.has(liveMcpOperatorToolName(operator.id))).toBe(true);
-    }
+    for (const id of operatorIds) expect(toolNames.has(liveMcpOperatorToolName(id))).toBe(true);
     for (const command of listCommands()) expect(toolNames.has(command.type)).toBe(true);
 
     for (const tool of tools) {
@@ -132,9 +120,8 @@ describe("MCP tool manifest", () => {
 
 describe("Studio action/operator MCP surface", () => {
   test("published MCP server tools deep-equal the shared contract surface", async () => {
-    const operators = registerCoreOperators(createEditorOperatorRegistry()).list();
     const result = await listServerTools();
-    const expected = listServerToolDefinitions({ operators, commands: listToolDefinitions() });
+    const expected = listServerToolDefinitions();
 
     expect(JSON.parse(JSON.stringify(result.tools))).toEqual(JSON.parse(JSON.stringify(expected)));
 
@@ -146,19 +133,7 @@ describe("Studio action/operator MCP surface", () => {
       expect(bridgeOnly.has(name) || serverNames.has(name)).toBe(true);
     }
     expect([...bridgeOnly].filter((name) => serverNames.has(name))).toEqual([]);
-    for (const operator of operators) {
-      expect(serverOperatorToolName(operator.id)).toBe(liveMcpOperatorToolName(operator.id));
-    }
-  });
-
-  test("every operator-backed Studio action points at a registered SDK operator", () => {
-    const operators = registerCoreOperators(createEditorOperatorRegistry());
-    const operatorIds = new Set(operators.list().map((operator) => operator.id));
-    const missing = listEditorActions()
-      .filter((action) => action.operator && !operatorIds.has(action.operator.id))
-      .map((action) => `${action.id} -> ${action.operator!.id}`);
-
-    expect(missing).toEqual([]);
+    for (const id of operatorIds) expect(serverOperatorToolName(id)).toBe(liveMcpOperatorToolName(id));
   });
 
   test("live bridge lists SDK operators with MCP server-compatible tool names", async () => {
@@ -166,9 +141,9 @@ describe("Studio action/operator MCP surface", () => {
     const result = (await handleLiveMcpRequest(engine, {} as never, {
       id: "test",
       type: "list_operators",
-    })) as Array<{ id: string; tool: string }>;
+    })) as Array<{ id: OperatorId; tool: string }>;
 
-    expect(result.length).toBeGreaterThan(0);
+    expect(result.length).toBe(operatorIds.length);
     expect(result.find((operator) => operator.id === "playback.toggle")).toMatchObject({
       tool: "operator_playback_toggle",
     });

@@ -2,9 +2,13 @@
 
 import { useEffect } from "react";
 import {
-  createEditorOperatorRegistry,
   OperatorError,
-  registerCoreOperators,
+  applyCommands,
+  listOperators,
+  parseOperatorId,
+  runOperator,
+  summarizeEngine,
+  type OperatorId,
 } from "@mcut/editor";
 import {
   analyzeAudioActivity,
@@ -23,7 +27,6 @@ import {
   getSourceSpanMs,
   listToolDefinitions,
   parseCommand,
-  summarizeProject,
   type BuiltinCommand,
   type AssetRef,
   type AudioElement,
@@ -62,7 +65,7 @@ interface CommandPayload {
 }
 
 interface OperatorPayload {
-  operatorId: string;
+  operatorId: OperatorId;
   input?: unknown;
 }
 
@@ -97,7 +100,6 @@ type AudioActivityAnalyzer = (
   options?: AudioActivityOptions,
 ) => Promise<AudioActivity | null>;
 
-const operators = registerCoreOperators(createEditorOperatorRegistry());
 const DEFAULT_BRIDGE_PORT = "44737";
 const BRIDGE_CONFIG_STORAGE_KEY = "mcut.liveMcpBridge";
 
@@ -110,22 +112,8 @@ export const LIVE_MCP_REQUEST_TYPES = [
   ...LIVE_MCP_DYNAMIC_TOOL_REQUESTS,
 ] as const;
 
-export function liveMcpOperatorToolName(operatorId: string): string {
+export function liveMcpOperatorToolName(operatorId: OperatorId): string {
   return operatorToolName(operatorId);
-}
-
-function viewState(engine: EditorEngine): string {
-  const playback = engine.playback.state;
-  const selection = engine.selection.elementIds;
-  return (
-    `Playhead: ${(playback.currentTimeMs / 1000).toFixed(2)}s` +
-    ` (${playback.isPlaying ? "playing" : "paused"})` +
-    ` · Selection: ${selection.length > 0 ? selection.join(", ") : "none"}`
-  );
-}
-
-function summarize(engine: EditorEngine): string {
-  return `${summarizeProject(engine.project)}\n${viewState(engine)}`;
 }
 
 function transcriptOptions(value: unknown): ProjectTranscriptOptions {
@@ -186,7 +174,7 @@ function operatorPayload(value: unknown): OperatorPayload {
     throw new Error("Invalid run_operator payload.");
   }
   return {
-    operatorId: value.operatorId,
+    operatorId: parseOperatorId(value.operatorId),
     input: value.input ?? {},
   };
 }
@@ -400,7 +388,7 @@ export async function handleLiveMcpRequest(
   const context = { engine, ui, clipboard: editorClipboard };
   switch (request.type) {
     case "get_summary":
-      return summarize(engine);
+      return summarizeEngine(engine);
     case "get_project":
       return engine.toJSON();
     case "get_media_context":
@@ -420,13 +408,11 @@ export async function handleLiveMcpRequest(
       return listToolDefinitions();
     case "apply_commands": {
       const { commands } = applyCommandsPayload(request.payload);
-      engine.transact(() => {
-        for (const command of commands) engine.dispatch(command);
-      });
-      return { applied: commands.length, summary: summarize(engine) };
+      applyCommands(engine, commands);
+      return { applied: commands.length, summary: summarizeEngine(engine) };
     }
     case "list_operators":
-      return operators.listAvailable({ engine }).map((operator) => ({
+      return listOperators({ engine }).map((operator) => ({
         id: operator.id,
         label: operator.label,
         category: operator.category,
@@ -453,7 +439,7 @@ export async function handleLiveMcpRequest(
       return engine.redo();
     case "run_operator": {
       const { operatorId, input } = operatorPayload(request.payload);
-      return await operators.run(operatorId, { engine }, input);
+      return await runOperator(operatorId, { engine }, input);
     }
     case "dispatch_command": {
       const { commandName, input } = commandPayload(request.payload);

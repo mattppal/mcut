@@ -2,8 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { createEditorOperatorRegistry, registerCoreOperators } from '@mcut/editor'
-import { EditorEngine, listToolDefinitions, parseProject } from '@mcut/timeline'
+import { EditorEngine, parseProject } from '@mcut/timeline'
 import { WebSocket } from 'ws'
 import { listServerToolDefinitions } from './contract'
 import { LiveMcutBridge, createHttpBridgeTarget } from './live-bridge'
@@ -31,7 +30,7 @@ describe('createMcutMcpServer', () => {
     expect(names).toContain('list_actions')
     expect(names).toContain('run_action')
     expect(names).toContain('splitElement')
-    expect(names.some((name) => name.startsWith('operator_'))).toBe(true)
+    expect(names).toContain('operator_playback_toggle')
     const split = tools.find((tool) => tool.name === 'splitElement')!
     expect(split.inputSchema.properties).toHaveProperty('atMs')
   })
@@ -39,10 +38,7 @@ describe('createMcutMcpServer', () => {
   test('the wire surface deep-equals the shared contract', async () => {
     const client = await connect(new EditorEngine())
     const { tools } = await client.listTools()
-    const expected = listServerToolDefinitions({
-      operators: registerCoreOperators(createEditorOperatorRegistry()).list(),
-      commands: listToolDefinitions(),
-    })
+    const expected = listServerToolDefinitions()
     expect(JSON.parse(JSON.stringify(tools))).toEqual(JSON.parse(JSON.stringify(expected)))
   })
 

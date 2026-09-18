@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { editorOperators } from "./editor-operators";
+import { enabledStatus, operators, runOperator, type OperatorId } from "@mcut/editor";
 import type { EditorEngine } from "@mcut/timeline";
 import type { EditorUIValue } from "./editor-ui";
 import type { EditorClipboard } from "./editor-clipboard";
@@ -91,7 +91,7 @@ export interface EditorAction {
    * operator's payload (static or derived from the action context).
    */
   operator?: {
-    id: string;
+    id: OperatorId;
     input?: Record<string, unknown> | ((context: ActionContext) => Record<string, unknown>);
   };
   enabled?: (context: ActionContext) => boolean;
@@ -132,14 +132,11 @@ export function isActionEnabled(action: EditorAction, context: ActionContext): b
   try {
     if (action.enabled) return action.enabled(context);
     if (action.operator) {
-      const operator = editorOperators.get(action.operator.id);
-      if (!operator) return false;
-      const status = operator.enabled?.(
+      return enabledStatus(
+        operators[action.operator.id],
         { engine: context.engine },
         operatorInput(action, context),
-      );
-      if (status === undefined) return true;
-      return typeof status === "boolean" ? status : status.enabled;
+      ).enabled;
     }
     return true;
   } catch {
@@ -154,11 +151,7 @@ export function runEditorAction(idOrAction: string | EditorAction, context: Acti
   try {
     if (action.run) return action.run(context);
     else if (action.operator) {
-      void editorOperators.run(
-        action.operator.id,
-        { engine: context.engine },
-        operatorInput(action, context),
-      );
+      void runOperator(action.operator.id, { engine: context.engine }, operatorInput(action, context));
     }
   } catch (error) {
     if (context.throwOnError) throw error;

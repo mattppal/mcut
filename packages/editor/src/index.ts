@@ -1,14 +1,21 @@
 export {
-  EditorOperatorRegistry,
   OperatorError,
-  createEditorOperatorRegistry,
-  emptyInputSchema,
-  type EditorOperator,
+  enabledStatus,
   type EditorOperatorContext,
   type EnabledResult,
-  type ListedEditorOperator,
   type OperatorCategory,
+  type OperatorDefinition,
 } from './operators'
+
+export {
+  listOperators,
+  operatorIds,
+  operators,
+  parseOperatorId,
+  runOperator,
+  type ListedEditorOperator,
+  type OperatorId,
+} from './core-operators'
 
 export {
   addTextAtPlayhead,
@@ -69,7 +76,6 @@ export {
   type SilenceWindow,
 } from './silence-cuts'
 
-export { registerCoreOperators } from './core-operators'
 export { applyCommands, summarizeEngine } from './headless'
 export { lintProject, type LintIssue } from './lint'
 export { PLATFORM_PRESETS, getPlatformPreset, type PlatformPreset } from './platform-presets'

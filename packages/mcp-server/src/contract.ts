@@ -3,7 +3,7 @@
  * static tool, shared by the published MCP server, the live browser bridge,
  * and UIs that render the tool surface (e.g. Studio's /tools.json).
  *
- * Browser-safe: imports zod only — no transports, no node builtins.
+ * Browser-safe. Imports zod and the mcut SDK packages, no transports, no node builtins.
  *
  * Two overlapping catalogs, on purpose:
  * - {@link MCP_SERVER_STATIC_TOOLS} (12) is what `createMcutMcpServerForTarget`
@@ -15,6 +15,8 @@
  *   docs that mention `apply_commands` only work against the bridge today.
  */
 import { z } from 'zod'
+import { operatorIds, operators, type OperatorDefinition, type OperatorId } from '@mcut/editor'
+import { listToolDefinitions } from '@mcut/timeline'
 
 export interface McpToolDefinition {
   name: string
@@ -32,15 +34,12 @@ export function parseMcpToolProfile(value: unknown): McpToolProfile {
     : 'agent'
 }
 
-export const operatorToolName = (id: string) => `operator_${id.replace(/[^A-Za-z0-9_-]/g, '_')}`
+export const operatorToolName = (id: OperatorId) => `operator_${id.replace(/[^A-Za-z0-9_-]/g, '_')}`
 
 /** Zod schema → MCP tool `inputSchema`, with a plain-object fallback. */
 export const toToolInputSchema = (schema: z.ZodType): Record<string, unknown> => {
   try {
-    return z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any' }) as Record<
-      string,
-      unknown
-    >
+    return z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any' })
   } catch {
     return { type: 'object' }
   }
@@ -323,38 +322,26 @@ const MCP_SERVER_STATIC_TOOL_NAMES = [
 export const MCP_SERVER_STATIC_TOOLS: McpToolDefinition[] =
   MCP_SERVER_STATIC_TOOL_NAMES.map(toolDefinition)
 
-export interface OperatorToolSource {
-  id: string
-  description: string
-  inputSchema: z.ZodType
-}
-
 /** Editor operators as MCP tool definitions (`operator_<id>`). */
-export function operatorToolDefinitions(operators: OperatorToolSource[]): McpToolDefinition[] {
-  return operators.map((operator) => ({
-    name: operatorToolName(operator.id),
-    description: `Editor operator "${operator.id}": ${operator.description}`,
-    inputSchema: toToolInputSchema(operator.inputSchema),
-  }))
-}
-
-export interface McpToolSources {
-  operators: OperatorToolSource[]
-  /** Raw timeline command tools, e.g. `listToolDefinitions()` from `@mcut/timeline`. */
-  commands: McpToolDefinition[]
+function operatorToolDefinitions(): McpToolDefinition[] {
+  return operatorIds.map((id) => {
+    const operator: OperatorDefinition = operators[id]
+    return {
+      name: operatorToolName(id),
+      description: `Editor operator "${id}": ${operator.description}`,
+      inputSchema: toToolInputSchema(operator.inputSchema),
+    }
+  })
 }
 
 /** The exact tool list the published MCP server registers. */
-export function listServerToolDefinitions(sources: McpToolSources): McpToolDefinition[] {
-  return [...MCP_SERVER_STATIC_TOOLS, ...operatorToolDefinitions(sources.operators), ...sources.commands]
+export function listServerToolDefinitions(): McpToolDefinition[] {
+  return [...MCP_SERVER_STATIC_TOOLS, ...operatorToolDefinitions(), ...listToolDefinitions()]
 }
 
 /** The tool surface for a given profile, as served by Studio's /tools.json. */
-export function listMcpToolDefinitions(
-  profile: McpToolProfile,
-  sources: McpToolSources,
-): McpToolDefinition[] {
-  if (profile === 'commands') return sources.commands
+export function listMcpToolDefinitions(profile: McpToolProfile): McpToolDefinition[] {
+  if (profile === 'commands') return listToolDefinitions()
   if (profile === 'agent') return MCP_AGENT_TOOL_DEFINITIONS
-  return [...MCP_AGENT_TOOL_DEFINITIONS, ...operatorToolDefinitions(sources.operators), ...sources.commands]
+  return [...MCP_AGENT_TOOL_DEFINITIONS, ...operatorToolDefinitions(), ...listToolDefinitions()]
 }

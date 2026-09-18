@@ -1,7 +1,7 @@
 /**
- * mcut as an MCP server: every registered editor command becomes an MCP tool,
- * straight from the zod command registry — plus user-level operators from
- * @mcut/editor and a handful of static tools (summary, project, undo/redo).
+ * mcut as an MCP server: every editor command becomes an MCP tool, straight
+ * from the zod command table, plus the user-level operators from @mcut/editor
+ * and the static tools (summary, project, undo/redo).
  *
  * The target can be a local EditorEngine or a live browser tab. Export stays
  * in the browser (WebCodecs); MCP edits the project document/state.
@@ -13,10 +13,12 @@ import {
   type Tool,
 } from '@modelcontextprotocol/sdk/types.js'
 import {
-  EditorOperatorRegistry,
   OperatorError,
-  createEditorOperatorRegistry,
-  registerCoreOperators,
+  listOperators,
+  operatorIds,
+  runOperator,
+  summarizeEngine,
+  type OperatorId,
 } from '@mcut/editor'
 import {
   CommandError,
@@ -25,9 +27,7 @@ import {
   getProjectCaptions,
   getProjectMediaContext,
   getProjectTranscript,
-  listToolDefinitions,
   parseCommand,
-  summarizeProject,
   type Project,
   type ProjectTranscriptOptions,
 } from '@mcut/timeline'
@@ -47,7 +47,7 @@ export interface McutMcpTarget {
   runAction(actionId: string, input: unknown): unknown | Promise<unknown>
   undo(): boolean | Promise<boolean>
   redo(): boolean | Promise<boolean>
-  runOperator(operatorId: string, input: unknown): unknown | Promise<unknown>
+  runOperator(operatorId: OperatorId, input: unknown): unknown | Promise<unknown>
   dispatchCommand(commandName: string, input: unknown): unknown | Promise<unknown>
 }
 
@@ -55,36 +55,18 @@ export interface McutMcpServerOptions {
   engine: EditorEngine
   /** Called after every successful edit — persist the project here. */
   onChange?: () => void | Promise<void>
-  /** Defaults to the core operator set. */
-  operators?: EditorOperatorRegistry
   name?: string
   version?: string
 }
 
 export interface McutMcpServerForTargetOptions {
   target: McutMcpTarget
-  /** Defaults to the core operator set. Used for tool schema generation. */
-  operators?: EditorOperatorRegistry
   name?: string
   version?: string
 }
 
 const text = (value: string) => ({ content: [{ type: 'text' as const, text: value }] })
 const failure = (value: string) => ({ ...text(value), isError: true })
-
-function viewState(engine: EditorEngine): string {
-  const playback = engine.playback.state
-  const selection = engine.selection.elementIds
-  return (
-    `Playhead: ${(playback.currentTimeMs / 1000).toFixed(2)}s` +
-    ` (${playback.isPlaying ? 'playing' : 'paused'})` +
-    ` · Selection: ${selection.length > 0 ? selection.join(', ') : 'none'}`
-  )
-}
-
-function summarizeEngine(engine: EditorEngine): string {
-  return `${summarizeProject(engine.project)}\n${viewState(engine)}`
-}
 
 function transcriptOptions(args: unknown): ProjectTranscriptOptions {
   const input = (args ?? {}) as { includeWords?: unknown }
@@ -121,7 +103,6 @@ function searchProjectTranscript(project: Project, query: string): unknown {
 
 function createEngineTarget(
   engine: EditorEngine,
-  operators: EditorOperatorRegistry,
   onChange: () => void | Promise<void>,
 ): McutMcpTarget {
   return {
@@ -142,7 +123,7 @@ function createEngineTarget(
     },
     listActions: () => [],
     listOperators: () =>
-      operators.listAvailable({ engine }).map((operator) => ({
+      listOperators({ engine }).map((operator) => ({
         id: operator.id,
         label: operator.label,
         category: operator.category,
@@ -165,7 +146,7 @@ function createEngineTarget(
       throw new Error(`Browser action "${actionId}" is only available through a live browser bridge.`)
     },
     runOperator: async (operatorId, input) => {
-      const result = await operators.run(operatorId, { engine }, input ?? {})
+      const result = await runOperator(operatorId, { engine }, input ?? {})
       await onChange()
       return result
     },
@@ -181,10 +162,8 @@ function createEngineTarget(
  * `await createMcutMcpServer({ engine }).connect(new StdioServerTransport())`.
  */
 export function createMcutMcpServer(options: McutMcpServerOptions): Server {
-  const operators = options.operators ?? registerCoreOperators(createEditorOperatorRegistry())
   return createMcutMcpServerForTarget({
-    target: createEngineTarget(options.engine, operators, options.onChange ?? (() => {})),
-    operators,
+    target: createEngineTarget(options.engine, options.onChange ?? (() => {})),
     name: options.name,
     version: options.version,
   })
@@ -193,16 +172,8 @@ export function createMcutMcpServer(options: McutMcpServerOptions): Server {
 /** Build the same MCP tool surface around any target, including a live browser tab. */
 export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOptions): Server {
   const { target } = options
-  const operators = options.operators ?? registerCoreOperators(createEditorOperatorRegistry())
-
-  const tools = listServerToolDefinitions({
-    operators: operators.list(),
-    commands: listToolDefinitions(),
-  })
-
-  const operatorIdsByTool = new Map<string, string>(
-    operators.list().map((operator) => [operatorToolName(operator.id), operator.id]),
-  )
+  const tools = listServerToolDefinitions()
+  const operatorIdsByTool = new Map(operatorIds.map((id) => [operatorToolName(id), id]))
 
   const server = new Server(
     { name: options.name ?? 'mcut', version: options.version ?? '0.1.0' },
