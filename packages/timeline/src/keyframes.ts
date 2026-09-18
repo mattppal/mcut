@@ -327,11 +327,9 @@ export function resolveAnimatedElement<E extends TimelineElement>(
   if (blurRadius !== undefined && blurRadius > 0.01 && elementSupportsProperty(resolved, 'blur')) {
     // Appended (= applied last) so it blurs the element's styled result.
     const visual: TimelineElement = resolved
-    const effects: Effect[] = [
-      ...('effects' in visual ? (visual.effects ?? []) : []),
-      { type: 'blur', enabled: true, radius: blurRadius },
-    ]
-    return { ...resolved, effects }
+    const effects = 'effects' in visual ? (visual.effects ?? []) : []
+    const blur: Effect = { type: 'blur', enabled: true, radius: blurRadius }
+    return { ...resolved, effects: [...effects, blur] }
   }
   return resolved
 }
