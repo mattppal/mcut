@@ -12,7 +12,6 @@ const splitters = ['addElement', 'splitElement', 'trimEdge', 'rippleTrim', 'roll
 const edgeTrims = ['trimEdge', 'rippleTrim', 'rollEdit', 'slideElement']
 
 export const knownFailures: readonly KnownFailure[] = [
-  { issue: `${issues}/42`, tools: ['splitElement', 'createMulticam', 'detachAudio'], invariants: ['unique-ids'] },
   { issue: `${issues}/43`, tools: splitters, invariants: ['round-trip'], detail: /"words",\s*\d+,\s*"endMs"/ },
   { issue: `${issues}/44`, tools: splitters, invariants: ['integer-ms', 'round-trip'], detail: /trimStartMs/ },
   { issue: `${issues}/45`, tools: edgeTrims, invariants: ['round-trip'], detail: /too_big/ },
