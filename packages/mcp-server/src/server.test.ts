@@ -81,6 +81,43 @@ describe('createMcutMcpServer', () => {
     expect(content[0]!.text).toContain('CommandError')
   })
 
+  test('static tool arguments are parsed before the handler runs', async () => {
+    const client = await connect(new EditorEngine())
+
+    const wrongType = await client.callTool({
+      name: 'search_transcript',
+      arguments: { query: 42 },
+    })
+    expect(wrongType.isError).toBe(true)
+    expect(wrongType.content).toEqual([
+      {
+        type: 'text',
+        text: 'search_transcript: ✖ Invalid input: expected string, received number\n  → at arguments.query',
+      },
+    ])
+
+    const unknownKey = await client.callTool({
+      name: 'get_transcript',
+      arguments: { includeWords: true, words: true },
+    })
+    expect(unknownKey.isError).toBe(true)
+    expect(unknownKey.content).toEqual([
+      { type: 'text', text: 'get_transcript: ✖ Unrecognized key: "words"\n  → at arguments' },
+    ])
+
+    const badId = await client.callTool({
+      name: 'ensure_transcript',
+      arguments: { elementId: 'clip-1' },
+    })
+    expect(badId.isError).toBe(true)
+    expect(badId.content).toEqual([
+      {
+        type: 'text',
+        text: 'ensure_transcript: ✖ invalid element id (expected "e-..." prefix)\n  → at arguments.elementId',
+      },
+    ])
+  })
+
   test('reports media context, transcript, search results, and file-backed transcription limits', async () => {
     const engine = new EditorEngine({
       project: parseProject({
