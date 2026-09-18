@@ -1,196 +1,124 @@
 import { z } from 'zod'
+import { assertNever } from './errors'
 
-/**
- * Visual effects as data: an ordered stack of `{ type, ...params }` records
- * per element, compiled by the compositor into a canvas2d `ctx.filter`
- * string. Effect TYPES live in a registry (MLT's service + property-bag
- * pattern): each entry owns its zod params, its filter compiler, and an
- * optional primary-param descriptor that the inspector renders as a slider.
- * The built-ins register through the same API custom effects use, so a
- * custom effect parses in saved projects, validates, compiles, and gets UI
- * for free. Register at module load, before parsing projects.
- *
- * The `css` escape hatch accepts any raw CSS filter() value list, which is
- * how SVG/url() filters plug in without a new type.
- */
-
-export interface EffectTypeConfig {
-  type: string
-  /** The effect's OWN params; `type` and `enabled` are composed in. */
-  shape: z.ZodRawShape
-  /** Compile to a CSS filter() fragment ('' when inert at these params). */
-  toFilter: (effect: Record<string, unknown>) => string
-  /** Primary scrubbable param for compact one-row UI (inspector slider). */
-  param?: { key: string; min: number; max: number; unit?: string }
-}
-
-interface EffectTypeEntry extends EffectTypeConfig {
-  schema: z.ZodType
-}
-
-const effectRegistry = new Map<string, EffectTypeEntry>()
-let effectVersion = 0
-
-export function registerEffectType(config: EffectTypeConfig): void {
-  if (effectRegistry.has(config.type)) {
-    throw new Error(`effect type "${config.type}" is already registered`)
-  }
-  effectRegistry.set(config.type, {
-    ...config,
-    schema: z.object({
-      type: z.literal(config.type),
-      enabled: z.boolean().default(true),
-      ...config.shape,
-    }),
-  })
-  effectVersion += 1
-}
-
-export function getEffectType(type: string): EffectTypeEntry | undefined {
-  return effectRegistry.get(type)
-}
-
-/** Registration order = presentation order (effect pickers). */
-export function listEffectTypes(): EffectTypeEntry[] {
-  return [...effectRegistry.values()]
-}
-
-// Static built-in member types (custom effects surface as the union at
-// runtime; plugin code casts to its own params type).
-type BuiltinEffect<K extends string, P> = { type: K; enabled: boolean } & P
-export type Effect =
-  | BuiltinEffect<'blur', { radius: number }>
-  | BuiltinEffect<'brightness', { amount: number }>
-  | BuiltinEffect<'contrast', { amount: number }>
-  | BuiltinEffect<'saturate', { amount: number }>
-  | BuiltinEffect<'grayscale', { amount: number }>
-  | BuiltinEffect<'sepia', { amount: number }>
-  | BuiltinEffect<'hue-rotate', { degrees: number }>
-  | BuiltinEffect<'invert', { amount: number }>
-  | BuiltinEffect<'drop-shadow', { offsetX: number; offsetY: number; blur: number; color: string }>
-  | BuiltinEffect<'css', { filter: string }>
-export type EffectType = Effect['type']
-
-let effectUnionCache: { version: number; schema: z.ZodType } | null = null
-
-/** Every registered effect type (dynamic: custom registrations included). */
-export const effectSchema = z.any().transform((value, ctx) => {
-  if (!effectUnionCache || effectUnionCache.version !== effectVersion) {
-    effectUnionCache = {
-      version: effectVersion,
-      schema: z.discriminatedUnion(
-        'type',
-        listEffectTypes().map((e) => e.schema) as never,
-      ) as unknown as z.ZodType,
-    }
-  }
-  const result = effectUnionCache.schema.safeParse(value)
-  if (!result.success) {
-    for (const issue of result.error.issues) {
-      ctx.addIssue({ ...issue } as Parameters<typeof ctx.addIssue>[0])
-    }
-    return z.NEVER
-  }
-  return result.data
-}) as unknown as z.ZodType<Effect, unknown>
-
-export const effectsSchema = z.array(effectSchema)
-
-/**
- * Compile an effect stack to a canvas2d/CSS filter string ('' when inert).
- * Order matters: filters apply left to right, like the stack reads top down.
- */
-export function buildFilterString(effects: readonly Effect[] | undefined): string {
-  if (!effects || effects.length === 0) return ''
-  const parts: string[] = []
-  for (const effect of effects) {
-    if (!effect.enabled) continue
-    const fragment = getEffectType(effect.type)?.toFilter(effect as Record<string, unknown>) ?? ''
-    if (fragment) parts.push(fragment)
-  }
-  return parts.join(' ')
-}
-
-// ---------------------------------------------------------------------------
-// Built-in effects, registered through the same API custom effects use.
-// ---------------------------------------------------------------------------
+const effectShape = <const K extends string, S extends z.ZodRawShape>(type: K, shape: S) =>
+  z.object({ type: z.literal(type), enabled: z.boolean().default(true), ...shape })
 
 const amount01 = (defaultValue: number) => ({
   amount: z.number().min(0).max(1).default(defaultValue),
 })
 
-registerEffectType({
-  type: 'blur',
-  shape: { radius: z.number().min(0).max(200).default(8) },
-  toFilter: (e) => ((e.radius as number) > 0 ? `blur(${e.radius}px)` : ''),
-  param: { key: 'radius', min: 0, max: 100, unit: 'px' },
+const curvePointSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
 })
-registerEffectType({
-  type: 'brightness',
-  shape: { amount: z.number().min(0).max(4).default(1.1) },
-  toFilter: (e) => ((e.amount as number) !== 1 ? `brightness(${e.amount})` : ''),
-  param: { key: 'amount', min: 0, max: 3 },
-})
-registerEffectType({
-  type: 'contrast',
-  shape: { amount: z.number().min(0).max(4).default(1.1) },
-  toFilter: (e) => ((e.amount as number) !== 1 ? `contrast(${e.amount})` : ''),
-  param: { key: 'amount', min: 0, max: 3 },
-})
-registerEffectType({
-  type: 'saturate',
-  shape: { amount: z.number().min(0).max(4).default(1.25) },
-  toFilter: (e) => ((e.amount as number) !== 1 ? `saturate(${e.amount})` : ''),
-  param: { key: 'amount', min: 0, max: 3 },
-})
-registerEffectType({
-  type: 'grayscale',
-  shape: amount01(1),
-  toFilter: (e) => ((e.amount as number) > 0 ? `grayscale(${e.amount})` : ''),
-  param: { key: 'amount', min: 0, max: 1 },
-})
-registerEffectType({
-  type: 'sepia',
-  shape: amount01(1),
-  toFilter: (e) => ((e.amount as number) > 0 ? `sepia(${e.amount})` : ''),
-  param: { key: 'amount', min: 0, max: 1 },
-})
-registerEffectType({
-  type: 'hue-rotate',
-  shape: { degrees: z.number().min(-360).max(360).default(90) },
-  toFilter: (e) => ((e.degrees as number) !== 0 ? `hue-rotate(${e.degrees}deg)` : ''),
-  param: { key: 'degrees', min: -180, max: 180, unit: '°' },
-})
-registerEffectType({
-  type: 'invert',
-  shape: amount01(1),
-  toFilter: (e) => ((e.amount as number) > 0 ? `invert(${e.amount})` : ''),
-  param: { key: 'amount', min: 0, max: 1 },
-})
-registerEffectType({
-  type: 'drop-shadow',
-  shape: {
+
+export const effectSchema = z.discriminatedUnion('type', [
+  effectShape('blur', { radius: z.number().min(0).max(200).default(8) }),
+  effectShape('brightness', { amount: z.number().min(0).max(4).default(1.1) }),
+  effectShape('contrast', { amount: z.number().min(0).max(4).default(1.1) }),
+  effectShape('saturate', { amount: z.number().min(0).max(4).default(1.25) }),
+  effectShape('grayscale', amount01(1)),
+  effectShape('sepia', amount01(1)),
+  effectShape('hue-rotate', { degrees: z.number().min(-360).max(360).default(90) }),
+  effectShape('invert', amount01(1)),
+  effectShape('drop-shadow', {
     offsetX: z.number().default(0),
     offsetY: z.number().default(8),
     blur: z.number().min(0).max(100).default(16),
     color: z.string().default('rgba(0, 0, 0, 0.6)'),
-  },
-  toFilter: (e) => `drop-shadow(${e.offsetX}px ${e.offsetY}px ${e.blur}px ${e.color})`,
-  param: { key: 'blur', min: 0, max: 100, unit: 'px' },
-})
-registerEffectType({
-  type: 'css',
-  shape: { filter: z.string().min(1) },
-  toFilter: (e) => e.filter as string,
-})
+  }),
+  effectShape('css', { filter: z.string().min(1) }),
+  effectShape('chroma-key', {
+    keyColor: z.string().default('#00ff00'),
+    tolerance: z.number().min(0).max(1).default(0.25),
+    softness: z.number().min(0).max(1).default(0.1),
+    spillSuppression: z.number().min(0).max(1).default(0.5),
+  }),
+  effectShape('curves', {
+    rgb: z.array(curvePointSchema).optional(),
+    red: z.array(curvePointSchema).optional(),
+    green: z.array(curvePointSchema).optional(),
+    blue: z.array(curvePointSchema).optional(),
+  }),
+  effectShape('lut3d', {
+    lutId: z.string().min(1),
+    intensity: z.number().min(0).max(1).default(1),
+  }),
+])
 
-/** Built-in + custom effect type names (registration order). */
-export const EFFECT_TYPES = {
-  get current(): string[] {
-    return listEffectTypes().map((e) => e.type)
-  },
-}.current
-// Deprecated snapshot above for compat; prefer listEffectTypes().
+export const effectsSchema = z.array(effectSchema)
+
+export type Effect = z.infer<typeof effectSchema>
+export type EffectType = Effect['type']
+export type EffectOfType<K extends EffectType> = Extract<Effect, { type: K }>
+export type CurvePoint = z.infer<typeof curvePointSchema>
+
+export const EFFECT_TYPES: readonly EffectType[] = effectSchema.options.map(
+  (option) => option.shape.type.value,
+)
+
+export interface EffectParam<K extends EffectType = EffectType> {
+  key: Exclude<keyof EffectOfType<K>, 'type' | 'enabled'>
+  min: number
+  max: number
+  unit?: string
+}
+
+export const EFFECT_PARAMS: { readonly [K in EffectType]?: EffectParam<K> } = {
+  blur: { key: 'radius', min: 0, max: 100, unit: 'px' },
+  brightness: { key: 'amount', min: 0, max: 3 },
+  contrast: { key: 'amount', min: 0, max: 3 },
+  saturate: { key: 'amount', min: 0, max: 3 },
+  grayscale: { key: 'amount', min: 0, max: 1 },
+  sepia: { key: 'amount', min: 0, max: 1 },
+  'hue-rotate': { key: 'degrees', min: -180, max: 180, unit: '°' },
+  invert: { key: 'amount', min: 0, max: 1 },
+  'drop-shadow': { key: 'blur', min: 0, max: 100, unit: 'px' },
+  'chroma-key': { key: 'tolerance', min: 0, max: 1 },
+}
+
+export function effectToFilter(effect: Effect): string {
+  switch (effect.type) {
+    case 'blur':
+      return effect.radius > 0 ? `blur(${effect.radius}px)` : ''
+    case 'brightness':
+      return effect.amount !== 1 ? `brightness(${effect.amount})` : ''
+    case 'contrast':
+      return effect.amount !== 1 ? `contrast(${effect.amount})` : ''
+    case 'saturate':
+      return effect.amount !== 1 ? `saturate(${effect.amount})` : ''
+    case 'grayscale':
+      return effect.amount > 0 ? `grayscale(${effect.amount})` : ''
+    case 'sepia':
+      return effect.amount > 0 ? `sepia(${effect.amount})` : ''
+    case 'hue-rotate':
+      return effect.degrees !== 0 ? `hue-rotate(${effect.degrees}deg)` : ''
+    case 'invert':
+      return effect.amount > 0 ? `invert(${effect.amount})` : ''
+    case 'drop-shadow':
+      return `drop-shadow(${effect.offsetX}px ${effect.offsetY}px ${effect.blur}px ${effect.color})`
+    case 'css':
+      return effect.filter
+    case 'chroma-key':
+    case 'curves':
+    case 'lut3d':
+      return ''
+    default:
+      return assertNever(effect)
+  }
+}
+
+export function buildFilterString(effects: readonly Effect[] | undefined): string {
+  if (!effects || effects.length === 0) return ''
+  const parts: string[] = []
+  for (const effect of effects) {
+    if (!effect.enabled) continue
+    const fragment = effectToFilter(effect)
+    if (fragment) parts.push(fragment)
+  }
+  return parts.join(' ')
+}
 
 /**
  * Per-element motion blur (After Effects' layer motion blur model): the

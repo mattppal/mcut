@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { CommandError } from './errors'
-import { getElementType } from './element-registry'
 import type { AssetId, ElementId, MarkerId, TrackId } from './id'
 import { createElementId, createLinkId, createMarkerId, createTrackId } from './id'
 import {
@@ -14,6 +13,8 @@ import {
   markerIdSchema,
   trackIdSchema,
   MIN_ELEMENT_DURATION_MS,
+  splitElementAt,
+  validateElement,
   type CaptionElement,
   type Project,
   type TimelineElement,
@@ -24,7 +25,6 @@ import {
   animatablePropertySchema,
   easingSchema,
   elementSupportsProperty,
-  splitKeyframes,
   upsertKeyframe,
   type AnimatableProperty,
   type Keyframe,
@@ -35,12 +35,7 @@ import {
   expandAnimationPreset,
   MOTION_BLUR_PRESETS,
 } from './animation-presets'
-import {
-  getSourceSpanMs,
-  makeConstantSpeedMap,
-  splitTimeMap,
-  timeMapSchema,
-} from './speed'
+import { getSourceSpanMs, makeConstantSpeedMap, timeMapSchema } from './speed'
 import { blendModeSchema, effectSchema, motionBlurSchema, type Effect } from './effects'
 import { createDefaultLayouts, layoutSchema } from './layouts'
 import { propertyPresetSchema } from './presets'
@@ -51,95 +46,43 @@ import {
   THUMBNAIL_TRACK_NAME,
   thumbnailTemplateSchema,
 } from './thumbnails'
-import { splitAngles } from './multicam'
 import { applyEdgeTrim } from './edge-trim'
 import { getTransitionPair, transitionSchema } from './transitions'
 import { getElementLocation, getTrack, rangesOverlap } from './selectors'
 
 export { CommandError } from './errors'
 
-/**
- * A command definition: a serializable edit operation with a validated
- * payload and a pure reducer. Definitions double as machine-readable tool
- * descriptions, so AI integrations can expose every editor operation as a
- * tool (`schema` → tool parameters) without extra glue.
- */
-export interface CommandDefinition<TPayload = unknown> {
-  type: string
+interface CommandSpec<K extends string, Shape extends z.ZodRawShape> {
+  type: K
   description: string
-  payloadSchema: z.ZodType<TPayload, unknown>
-  reduce: (project: Project, payload: TPayload) => Project
+  payloadSchema: z.ZodObject<Shape>
+  reduce: (project: Project, payload: z.output<z.ZodObject<Shape>>) => Project
 }
 
-const registry = new Map<string, CommandDefinition<unknown>>()
-
-/** Register a custom command. Throws if `type` is already registered. */
-export function registerCommand<TPayload>(definition: CommandDefinition<TPayload>): void {
-  if (registry.has(definition.type)) {
-    throw new CommandError('duplicate-command', `command "${definition.type}" is already registered`)
-  }
-  registry.set(definition.type, definition as CommandDefinition<unknown>)
+interface CommandEntry<K extends string, Shape extends z.ZodRawShape> extends CommandSpec<K, Shape> {
+  parse: (payload: unknown) => { type: K } & z.output<z.ZodObject<Shape>>
+  apply: (project: Project, payload: unknown) => Project
 }
 
-export function getCommandDefinition(type: string): CommandDefinition<unknown> | undefined {
-  return registry.get(type)
-}
-
-/** All registered commands (built-in and custom), for docs and AI tooling. */
-export function listCommands(): CommandDefinition<unknown>[] {
-  return [...registry.values()]
-}
-
-/**
- * An MCP-shaped tool definition (a `tools/list` result entry): `type` →
- * `name`, the zod payload schema → JSON Schema `inputSchema`. Hand these to
- * an MCP server or any LLM tool-call API as-is.
- */
-export interface ToolDefinition {
-  name: string
-  description: string
-  inputSchema: Record<string, unknown>
-}
-
-/** Every registered command as an MCP-shaped tool definition. */
-export function listToolDefinitions(): ToolDefinition[] {
-  return listCommands().map(({ type, description, payloadSchema }) => {
-    let inputSchema: Record<string, unknown>
-    try {
-      inputSchema = z.toJSONSchema(payloadSchema, {
-        unrepresentable: 'any',
-        io: 'input',
-      }) as Record<string, unknown>
-    } catch {
-      inputSchema = { type: 'object' }
+function defineCommand<const K extends string, Shape extends z.ZodRawShape>(
+  spec: CommandSpec<K, Shape>,
+): CommandEntry<K, Shape> {
+  const parsePayload = (payload: unknown): z.output<z.ZodObject<Shape>> => {
+    const parsed = spec.payloadSchema.safeParse(payload)
+    if (!parsed.success) {
+      throw new CommandError(
+        'invalid-payload',
+        `invalid payload for "${spec.type}": ${parsed.error.message}`,
+        { cause: parsed.error },
+      )
     }
-    return { name: type, description, inputSchema }
-  })
-}
-
-/** A serializable command object: `{ type, ...payload }`. */
-export type AnyCommand = { type: string } & Record<string, unknown>
-
-/**
- * Validate and apply a command to a project. Pure: returns a new project,
- * never mutates. Throws {@link CommandError} on unknown commands, invalid
- * payloads, or violated invariants (unknown ids, overlapping elements, ...).
- */
-export function applyCommand(project: Project, command: AnyCommand): Project {
-  const definition = registry.get(command.type)
-  if (!definition) {
-    throw new CommandError('unknown-command', `unknown command "${command.type}"`)
+    return parsed.data
   }
-  const { type: _type, ...payload } = command
-  const parsed = definition.payloadSchema.safeParse(payload)
-  if (!parsed.success) {
-    throw new CommandError(
-      'invalid-payload',
-      `invalid payload for "${command.type}": ${parsed.error.message}`,
-      { cause: parsed.error },
-    )
+  return {
+    ...spec,
+    parse: (payload: unknown) => ({ type: spec.type, ...parsePayload(payload) }),
+    apply: (project: Project, payload: unknown) => spec.reduce(project, parsePayload(payload)),
   }
-  return definition.reduce(project, parsed.data)
 }
 
 // ---------------------------------------------------------------------------
@@ -215,11 +158,6 @@ function insertPlaced(track: Track, element: TimelineElement): TimelineElement[]
   return [...without.slice(0, index), placed, ...without.slice(index)]
 }
 
-/** Element-type validation: the registry hook is the single source of truth. */
-function validateElement(project: Project, element: TimelineElement): void {
-  getElementType(element.type)?.validate?.(project, element as Record<string, unknown>)
-}
-
 function insertSorted(elements: TimelineElement[], element: TimelineElement): TimelineElement[] {
   const index = elements.findIndex((e) => e.startMs > element.startMs)
   if (index === -1) return [...elements, element]
@@ -237,21 +175,12 @@ function compactElements(elements: TimelineElement[]): TimelineElement[] {
     })
 }
 
-function compactTimelineGaps(project: Project): Project {
+function compactAllTracks(project: Project): Project {
   return { ...project, tracks: project.tracks.map((track) => ({ ...track, elements: compactElements(track.elements) })) }
 }
 
 function compactTimelineIfMagnetic(project: Project): Project {
-  return project.tracks.some((track) => track.magnetic) ? compactTimelineGaps(project) : project
-}
-
-function defineCommand<TSchema extends z.ZodType>(definition: {
-  type: string
-  description: string
-  payloadSchema: TSchema
-  reduce: (project: Project, payload: z.output<TSchema>) => Project
-}): void {
-  registerCommand(definition as CommandDefinition<z.output<TSchema>>)
+  return project.tracks.some((track) => track.magnetic) ? compactAllTracks(project) : project
 }
 
 // ---------------------------------------------------------------------------
@@ -265,7 +194,7 @@ const addTrackSchema = z.object({
   index: z.number().int().nonnegative().optional(),
 })
 
-defineCommand({
+const addTrack = defineCommand({
   type: 'addTrack',
   description: 'Add a new track. Tracks later in the list render on top.',
   payloadSchema: addTrackSchema,
@@ -289,7 +218,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const removeTrack = defineCommand({
   type: 'removeTrack',
   description: 'Remove a track and all elements on it.',
   payloadSchema: z.object({ trackId: trackIdSchema }),
@@ -299,7 +228,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const renameTrack = defineCommand({
   type: 'renameTrack',
   description: 'Rename a track.',
   payloadSchema: z.object({ trackId: trackIdSchema, name: z.string().min(1) }),
@@ -309,7 +238,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const setTrackFlags = defineCommand({
   type: 'setTrackFlags',
   description: 'Mute (audio), hide (visuals), lock, or magnetically compact a track.',
   payloadSchema: z.object({
@@ -331,7 +260,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const compactTrackGaps = defineCommand({
   type: 'compactTrackGaps',
   description: 'Close every gap on one track by packing clips left in timeline order.',
   payloadSchema: z.object({ trackId: trackIdSchema }),
@@ -341,14 +270,14 @@ defineCommand({
   },
 })
 
-defineCommand({
+const compactTimelineGaps = defineCommand({
   type: 'compactTimelineGaps',
   description: 'Close every gap on the timeline by packing clips left on every track.',
   payloadSchema: z.object({}),
-  reduce: (project) => compactTimelineGaps(project),
+  reduce: (project) => compactAllTracks(project),
 })
 
-defineCommand({
+const reorderTrack = defineCommand({
   type: 'reorderTrack',
   description: 'Move a track to a new position in the paint order.',
   payloadSchema: z.object({ trackId: trackIdSchema, toIndex: z.number().int().nonnegative() }),
@@ -364,7 +293,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const updateProject = defineCommand({
   type: 'updateProject',
   description: 'Update project settings (name, dimensions, fps).',
   payloadSchema: z.object({
@@ -376,7 +305,7 @@ defineCommand({
   reduce: (project, payload) => ({ ...project, ...payload }),
 })
 
-defineCommand({
+const addAsset = defineCommand({
   type: 'addAsset',
   description: 'Register a media asset (video, audio, or image) for use by elements.',
   payloadSchema: z.object({ asset: assetRefSchema }),
@@ -388,7 +317,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const updateAsset = defineCommand({
   type: 'updateAsset',
   description: 'Patch asset metadata (e.g. probed duration or dimensions).',
   payloadSchema: z.object({
@@ -405,7 +334,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const removeAsset = defineCommand({
   type: 'removeAsset',
   description: 'Remove an asset and every element that references it.',
   payloadSchema: z.object({ assetId: assetIdSchema }),
@@ -540,7 +469,7 @@ function placeElement(
   }))
 }
 
-defineCommand({
+const addElement = defineCommand({
   type: 'addElement',
   description:
     'Add an element to a track. Elements on a track may not overlap in time. ' +
@@ -563,7 +492,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const removeElement = defineCommand({
   type: 'removeElement',
   description: 'Remove an element from the timeline.',
   payloadSchema: z.object({ elementId: elementIdSchema }),
@@ -576,7 +505,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const moveElement = defineCommand({
   type: 'moveElement',
   description:
     'Move an element in time and optionally to another track. editMode ' +
@@ -601,7 +530,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const trimElement = defineCommand({
   type: 'trimElement',
   description:
     'Set element timing. `startMs`/`durationMs` position it on the timeline; ' +
@@ -634,7 +563,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const splitElement = defineCommand({
   type: 'splitElement',
   description: 'Split an element at an absolute timeline time into two elements.',
   payloadSchema: z.object({
@@ -653,33 +582,9 @@ defineCommand({
           `${MIN_ELEMENT_DURATION_MS}ms long`,
       )
     }
-    const left: TimelineElement = { ...element, durationMs: offset }
-    const right: TimelineElement = {
-      ...element,
-      id: payload.rightElementId ?? createElementId(),
-      startMs: element.startMs + offset,
-      durationMs: element.durationMs - offset,
-    }
-    // A transition belongs to the cut at the clip's END; the right half owns
-    // that cut now. (The halves' own butt cut gets no transition.)
+    const { left, right } = splitElementAt(element, offset)
+    right.id = payload.rightElementId ?? createElementId()
     if ('transition' in left) delete left.transition
-    if ('keyframes' in element && element.keyframes) {
-      // Continuity across the cut: both halves get an evaluated boundary
-      // keyframe, so armed motion doesn't jump (Premiere behavior).
-      const split = splitKeyframes(element.keyframes, offset)
-      if (split.left) left.keyframes = split.left
-      else delete left.keyframes
-      if (split.right) right.keyframes = split.right
-      else delete right.keyframes
-    }
-    // Type-specific source bookkeeping (trims, timeMaps, angle lists, word
-    // timings) lives on the element type's onSplit hook.
-    getElementType(element.type)?.onSplit?.({
-      element: element as Record<string, unknown>,
-      left: left as Record<string, unknown>,
-      right: right as Record<string, unknown>,
-      offsetMs: offset,
-    })
     return replaceTrack(project, track.id, (t) => ({
       ...t,
       elements: insertSorted(
@@ -693,7 +598,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const updateElement = defineCommand({
   type: 'updateElement',
   description:
     'Patch element properties (text, style, transform, opacity, volume, ...). ' +
@@ -741,7 +646,7 @@ const applyCaptionsSchema = z.object({
   ),
 })
 
-defineCommand({
+const applyCaptions = defineCommand({
   type: 'applyCaptions',
   description:
     'Add caption elements (e.g. from a transcription) to a caption track, ' +
@@ -837,7 +742,7 @@ function withKeyframes(
   }))
 }
 
-defineCommand({
+const setKeyframe = defineCommand({
   type: 'setKeyframe',
   description:
     'Add or update a keyframe on a fixed-effect property (position.x/y, scale.x/y, ' +
@@ -861,7 +766,7 @@ defineCommand({
     ),
 })
 
-defineCommand({
+const removeKeyframe = defineCommand({
   type: 'removeKeyframe',
   description: 'Remove the keyframe at an exact element-local time. Removing the last one disarms the property.',
   payloadSchema: z.object({
@@ -881,7 +786,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const moveKeyframe = defineCommand({
   type: 'moveKeyframe',
   description: 'Retime a keyframe (drag a diamond), preserving its value and easing.',
   payloadSchema: z.object({
@@ -912,7 +817,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const setKeyframeEasing = defineCommand({
   type: 'setKeyframeEasing',
   description:
     'Set temporal interpolation toward the next keyframe: linear, hold, easeIn, easeOut, ' +
@@ -936,7 +841,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const clearKeyframes = defineCommand({
   type: 'clearKeyframes',
   description:
     'Remove all keyframes for one property (stopwatch off) or for the whole element. ' +
@@ -964,7 +869,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const applyAnimationPreset = defineCommand({
   type: 'applyAnimationPreset',
   description:
     'Apply an animation preset that EXPANDS into editable keyframes, built on ' +
@@ -1039,7 +944,7 @@ function mustGetEffects(element: VisualElement, index: number): Effect[] {
   return [...effects]
 }
 
-defineCommand({
+const addEffect = defineCommand({
   type: 'addEffect',
   description:
     'Append a visual effect to an element\'s effect stack (or insert at `index`). ' +
@@ -1060,7 +965,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const updateEffect = defineCommand({
   type: 'updateEffect',
   description:
     'Patch the parameters of the effect at `index` in an element\'s stack ' +
@@ -1089,7 +994,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const removeEffect = defineCommand({
   type: 'removeEffect',
   description: 'Remove the effect at `index` from an element\'s effect stack.',
   payloadSchema: z.object({
@@ -1107,7 +1012,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const reorderEffect = defineCommand({
   type: 'reorderEffect',
   description: 'Move an effect within an element\'s stack (stack order = apply order).',
   payloadSchema: z.object({
@@ -1125,7 +1030,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const setBlendMode = defineCommand({
   type: 'setBlendMode',
   description:
     'Set how a visual element composites against the layers below ' +
@@ -1143,7 +1048,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const setMotionBlur = defineCommand({
   type: 'setMotionBlur',
   description:
     'Set per-element motion blur (After Effects layer model: sub-frame ' +
@@ -1163,7 +1068,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const setTransition = defineCommand({
   type: 'setTransition',
   description:
     'Set (or clear with null) the transition from an element into the NEXT ' +
@@ -1214,7 +1119,7 @@ function mustBeTimeMappable(element: TimelineElement): asserts element is Timeli
   }
 }
 
-defineCommand({
+const setElementSpeed = defineCommand({
   type: 'setElementSpeed',
   description:
     'Set a constant playback speed on a video/audio element (2 = twice as fast). ' +
@@ -1242,7 +1147,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const setTimeMap = defineCommand({
   type: 'setTimeMap',
   description:
     'Set or clear a time remap curve on a video/audio element: keyframes from ' +
@@ -1302,7 +1207,7 @@ function adjacentPrevious(track: Track, element: TimelineElement): TimelineEleme
   )
 }
 
-defineCommand({
+const trimEdge = defineCommand({
   type: 'trimEdge',
   description:
     'Trim ONE edge of a clip while its content stays anchored: reversed ' +
@@ -1329,7 +1234,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const slipElement = defineCommand({
   type: 'slipElement',
   description:
     'Slip a clip: shift WHICH part of the source plays without moving the clip ' +
@@ -1371,7 +1276,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const rollEdit = defineCommand({
   type: 'rollEdit',
   description:
     'Roll the cut between a clip and its exactly-adjacent NEXT clip: the ' +
@@ -1401,7 +1306,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const slideElement = defineCommand({
   type: 'slideElement',
   description:
     'Slide a clip along its exactly-adjacent neighbors: the clip moves by ' +
@@ -1436,7 +1341,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const rippleTrim = defineCommand({
   type: 'rippleTrim',
   description:
     'Trim a clip edge AND ripple: everything downstream of the edit shifts by ' +
@@ -1523,7 +1428,7 @@ function mustGetLayout(project: Project, layoutId: string) {
   return layout
 }
 
-defineCommand({
+const saveLayout = defineCommand({
   type: 'saveLayout',
   description:
     'Add or replace a multicam layout in the project (slots position sources ' +
@@ -1540,7 +1445,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const removeLayout = defineCommand({
   type: 'removeLayout',
   description: 'Remove a project layout. Fails while any multicam cut still uses it.',
   payloadSchema: z.object({ layoutId: z.string().min(1) }),
@@ -1558,7 +1463,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const savePreset = defineCommand({
   type: 'savePreset',
   description:
     'Add or replace a property preset: a named bundle of inspector values ' +
@@ -1576,7 +1481,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const removePreset = defineCommand({
   type: 'removePreset',
   description: 'Remove a property preset from the project.',
   payloadSchema: z.object({ presetId: z.string().min(1) }),
@@ -1588,7 +1493,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const createMulticam = defineCommand({
   type: 'createMulticam',
   description:
     'Combine 1+ video elements into one multicam clip: sources are synced by ' +
@@ -1669,7 +1574,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const addAngleCut = defineCommand({
   type: 'addAngleCut',
   description:
     'Cut a multicam to a layout at an element-local time: the layout is ' +
@@ -1692,7 +1597,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const moveAngleCut = defineCommand({
   type: 'moveAngleCut',
   description: 'Retime a multicam cut (drag its tick). Clamped between its neighbors.',
   payloadSchema: z.object({
@@ -1720,7 +1625,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const removeAngleCut = defineCommand({
   type: 'removeAngleCut',
   description: 'Remove a multicam cut; the previous layout extends over its span.',
   payloadSchema: z.object({
@@ -1736,7 +1641,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const setAngleLayout = defineCommand({
   type: 'setAngleLayout',
   description:
     'Change which layout a multicam span uses without cutting (the paused ' +
@@ -1761,7 +1666,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const setMulticamAudio = defineCommand({
   type: 'setMulticamAudio',
   description: 'Choose which multicam source supplies the audio (null mutes all sources).',
   payloadSchema: z.object({
@@ -1780,7 +1685,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const setMulticamSourceTrim = defineCommand({
   type: 'setMulticamSourceTrim',
   description:
     "Nudge one multicam source's sync: its media time at the multicam's start (ms).",
@@ -1803,7 +1708,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const setMulticamAngleTransition = defineCommand({
   type: 'setMulticamAngleTransition',
   description:
     'Standardize the cut style of a multicam: one transition blended at ' +
@@ -1823,7 +1728,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const setMulticamSourceKey = defineCommand({
   type: 'setMulticamSourceKey',
   description:
     "Reassign a multicam source's role key ('screen', 'camera', …) — the key " +
@@ -1859,7 +1764,7 @@ defineCommand({
     }),
 })
 
-defineCommand({
+const flattenMulticam = defineCommand({
   type: 'flattenMulticam',
   description:
     'Explode a multicam into plain clips: one video element per cut-span slot ' +
@@ -1972,7 +1877,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const detachAudio = defineCommand({
   type: 'detachAudio',
   description:
     'Detach a video element\'s audio onto its own audio element. The video is ' +
@@ -2049,7 +1954,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const applyThumbnail = defineCommand({
   type: 'applyThumbnail',
   description:
     'Compose a cover over the first five frames: expands a thumbnail ' +
@@ -2083,7 +1988,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const applyZoomPreset = defineCommand({
   type: 'applyZoomPreset',
   description:
     'Apply a saved zoom (relative keyframe pattern: scale multipliers + ' +
@@ -2123,7 +2028,7 @@ function mustGetMarker(project: Project, markerId: MarkerId) {
 const sortMarkers = (markers: Project['markers']) =>
   [...markers].sort((a, b) => a.timeMs - b.timeMs)
 
-defineCommand({
+const addMarker = defineCommand({
   type: 'addMarker',
   description: 'Add a timeline marker at an absolute time. Omit `id` to have one generated.',
   payloadSchema: z.object({
@@ -2147,7 +2052,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const updateMarker = defineCommand({
   type: 'updateMarker',
   description: 'Retime, relabel, or recolor a timeline marker.',
   payloadSchema: z.object({
@@ -2175,7 +2080,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const removeMarker = defineCommand({
   type: 'removeMarker',
   description: 'Remove a timeline marker.',
   payloadSchema: z.object({ markerId: markerIdSchema }),
@@ -2185,7 +2090,7 @@ defineCommand({
   },
 })
 
-defineCommand({
+const rippleDelete = defineCommand({
   type: 'rippleDelete',
   description:
     'Remove elements AND close the gaps they leave: later clips on the same ' +
@@ -2213,3 +2118,128 @@ defineCommand({
     return compactTimelineIfMagnetic({ ...project, tracks })
   },
 })
+
+function commandTable<T extends { [K in keyof T]: { type: K } }>(table: T): T {
+  return table
+}
+
+const commandDefinitions = commandTable({
+  addTrack,
+  removeTrack,
+  renameTrack,
+  setTrackFlags,
+  compactTrackGaps,
+  compactTimelineGaps,
+  reorderTrack,
+  updateProject,
+  addAsset,
+  updateAsset,
+  removeAsset,
+  addElement,
+  removeElement,
+  moveElement,
+  trimElement,
+  splitElement,
+  updateElement,
+  applyCaptions,
+  setKeyframe,
+  removeKeyframe,
+  moveKeyframe,
+  setKeyframeEasing,
+  clearKeyframes,
+  applyAnimationPreset,
+  addEffect,
+  updateEffect,
+  removeEffect,
+  reorderEffect,
+  setBlendMode,
+  setMotionBlur,
+  setTransition,
+  setElementSpeed,
+  setTimeMap,
+  trimEdge,
+  slipElement,
+  rollEdit,
+  slideElement,
+  rippleTrim,
+  saveLayout,
+  removeLayout,
+  savePreset,
+  removePreset,
+  createMulticam,
+  addAngleCut,
+  moveAngleCut,
+  removeAngleCut,
+  setAngleLayout,
+  setMulticamAudio,
+  setMulticamSourceTrim,
+  setMulticamAngleTransition,
+  setMulticamSourceKey,
+  flattenMulticam,
+  detachAudio,
+  applyThumbnail,
+  applyZoomPreset,
+  addMarker,
+  updateMarker,
+  removeMarker,
+  rippleDelete,
+})
+
+type CommandDefinitions = typeof commandDefinitions
+
+export type CommandType = keyof CommandDefinitions
+
+export type BuiltinCommand = {
+  [K in CommandType]: { type: K } & z.input<CommandDefinitions[K]['payloadSchema']>
+}[CommandType]
+
+export type CommandOfType<K extends CommandType> = Extract<BuiltinCommand, { type: K }>
+
+export interface CommandDefinition {
+  type: CommandType
+  description: string
+  payloadSchema: z.ZodObject
+}
+
+export function listCommands(): CommandDefinition[] {
+  return Object.values(commandDefinitions)
+}
+
+export interface ToolDefinition {
+  name: CommandType
+  description: string
+  inputSchema: z.core.JSONSchema.BaseSchema
+}
+
+export function listToolDefinitions(): ToolDefinition[] {
+  return listCommands().map(({ type, description, payloadSchema }) => ({
+    name: type,
+    description,
+    inputSchema: z.toJSONSchema(payloadSchema, { unrepresentable: 'any', io: 'input' }),
+  }))
+}
+
+function isCommandType(value: string): value is CommandType {
+  return Object.hasOwn(commandDefinitions, value)
+}
+
+function splitCommand(value: unknown): { type: CommandType; payload: unknown } {
+  if (typeof value !== 'object' || value === null || !('type' in value) || typeof value.type !== 'string') {
+    throw new CommandError('invalid-payload', 'a command is an object with a string "type"')
+  }
+  const { type, ...payload } = value
+  if (!isCommandType(type)) {
+    throw new CommandError('unknown-command', `unknown command "${type}"`)
+  }
+  return { type, payload }
+}
+
+export function parseCommand(value: unknown): BuiltinCommand {
+  const { type, payload } = splitCommand(value)
+  return commandDefinitions[type].parse(payload)
+}
+
+export function applyCommand(project: Project, command: unknown): Project {
+  const { type, payload } = splitCommand(command)
+  return commandDefinitions[type].apply(project, payload)
+}

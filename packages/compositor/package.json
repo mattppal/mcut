@@ -28,8 +28,7 @@
     "directory": "packages/compositor"
   },
   "dependencies": {
-    "@mcut/timeline": "workspace:*",
-    "zod": "4.4.3"
+    "@mcut/timeline": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

@@ -138,7 +138,7 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
     try {
       engine.dispatch({
         type: "updateElement",
-        elementId: patch.captionId,
+        elementId: caption.id,
         patch: { text: patch.text, words: patch.words ?? [] },
       });
     } catch {
@@ -153,10 +153,12 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
     if (patches.length === 0) return;
     engine.transact(() => {
       for (const patch of patches) {
+        const caption = captions.find((c) => c.id === patch.captionId);
+        if (!caption) continue;
         try {
           engine.dispatch({
             type: "updateElement",
-            elementId: patch.captionId,
+            elementId: caption.id,
             patch: { text: patch.text, words: patch.words ?? [] },
           });
         } catch {

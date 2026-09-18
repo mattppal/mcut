@@ -10,8 +10,8 @@ import {
 } from '@mcut/timeline'
 import { Canvas2DBackend, createElementContext, type RenderBackend } from './backend'
 import { renderElementWithMotionBlur } from './motion-blur'
-import { getElementRenderer } from './renderers'
-import { getTransitionRenderer, type TransitionRenderContext } from './transition-renderers'
+import { renderElementLayer } from './renderers'
+import { transitionRenderers, type TransitionRenderContext } from './transition-renderers'
 import type { Canvas2D, RenderFrameOptions } from './types'
 
 /**
@@ -79,30 +79,18 @@ function renderElement(
   timeMs: number,
   options: RenderFrameOptions,
 ): void {
-  const renderer = getElementRenderer(element.type)
-  if (!renderer) return
-  // Per-element motion blur accumulates sub-frame passes; falls through to
-  // the plain single-sample render when it does not apply.
-  if (renderElementWithMotionBlur(backend, project, track, element, timeMs, options, renderer)) {
+  if (
+    renderElementWithMotionBlur(backend, project, track, element, timeMs, options, renderElementLayer)
+  ) {
     return
   }
   // Keyframed properties resolve here, so preview AND export animate.
-  renderer(
+  renderElementLayer(
     resolveAnimatedElement(element, timeMs),
     createElementContext(backend, project, track, timeMs, options.source),
   )
 }
 
-/**
- * Blend a transition pair at `timeMs` via its registered renderer. Unknown
- * types degrade to a hard cut (left before the cut, right after) so a
- * project from a plugin you don't have still plays.
- *
- * The mix manipulates canvas2d state (alpha, clips, translations) around the
- * pair's draws, so the whole window renders inside a raster scope — on GPU
- * backends both sides rasterize into the shared scratch and composite as one
- * layer, which is exactly the canvas2d-correct result.
- */
 function renderTransition(
   backend: RenderBackend,
   project: Project,
@@ -124,10 +112,7 @@ function renderTransition(
       drawLeft: () => renderElement(backend, project, track, pair.left, timeMs, options),
       drawRight: () => renderElement(backend, project, track, pair.right, timeMs, options),
     }
-    const renderer = getTransitionRenderer(pair.type)
-    if (renderer) renderer(context)
-    else if (timeMs < pair.cutMs) context.drawLeft()
-    else context.drawRight()
+    transitionRenderers[pair.type](context)
   } finally {
     backend.popRasterScope()
   }

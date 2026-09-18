@@ -21,7 +21,7 @@ import {
   type AssetId,
   type Project,
 } from '@mcut/timeline'
-import { getContainerFormat, type ContainerFormatEntry } from './container-formats'
+import { containerFormats, type ContainerFormat } from './container-formats'
 import { ensureFallbackAudioEncoders } from './encoders'
 import { inputFor } from './probe'
 import {
@@ -37,12 +37,8 @@ import {
  * pre-rendered as planar PCM and is encoded via `AudioSampleSource`.
  */
 
-export function resolveContainerFormat(id: ContainerFormatId = 'mp4'): ContainerFormatEntry {
-  const entry = getContainerFormat(id)
-  if (!entry) {
-    throw new Error(`unknown container format "${id}" (register it with registerContainerFormat)`)
-  }
-  return entry
+export function resolveContainerFormat(id: ContainerFormatId = 'mp4'): ContainerFormat {
+  return containerFormats[id]
 }
 
 /** Can this browser encode video (and audio) for the given format? */

@@ -31,8 +31,6 @@ export {
   type RenderBackend,
 } from './backend'
 
-export { registerGpuEffectTypes } from './gpu-effects'
-
 export {
   isWebGPUSupported,
   WebGPUBackend,
@@ -49,18 +47,12 @@ export {
 } from './webgpu/effect-plan'
 
 export {
-  getTransitionRenderer,
-  registerTransitionRenderer,
+  transitionRenderers,
   type TransitionRenderContext,
   type TransitionRenderer,
 } from './transition-renderers'
 
-export {
-  getElementRenderer,
-  getImageSize,
-  measureWith,
-  registerElementRenderer,
-} from './renderers'
+export { elementRenderers, getImageSize, measureWith, renderElementLayer } from './renderers'
 
 export {
   applyTextTransform,

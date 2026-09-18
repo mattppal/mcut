@@ -22,8 +22,9 @@ import {
   getProjectTranscript,
   getSourceSpanMs,
   listToolDefinitions,
+  parseCommand,
   summarizeProject,
-  type AnyCommand,
+  type BuiltinCommand,
   type AssetRef,
   type AudioElement,
   type EditorEngine,
@@ -71,7 +72,7 @@ interface ActionPayload {
 }
 
 interface ApplyCommandsPayload {
-  commands: AnyCommand[];
+  commands: BuiltinCommand[];
 }
 
 interface AudioActivityPayload extends AudioActivityOptions {
@@ -175,12 +176,7 @@ function applyCommandsPayload(value: unknown): ApplyCommandsPayload {
   if (!isRecord(value) || !Array.isArray(value.commands)) {
     throw new Error("Invalid apply_commands payload.");
   }
-  const commands = value.commands.map((command) => {
-    if (!isRecord(command) || typeof command.type !== "string") {
-      throw new Error("apply_commands requires commands with a string type.");
-    }
-    return command as AnyCommand;
-  });
+  const commands = value.commands.map(parseCommand);
   if (commands.length === 0) throw new Error("apply_commands requires at least one command.");
   return { commands };
 }
@@ -461,7 +457,7 @@ export async function handleLiveMcpRequest(
     }
     case "dispatch_command": {
       const { commandName, input } = commandPayload(request.payload);
-      engine.dispatch({ type: commandName, ...input });
+      engine.dispatch(parseCommand({ ...input, type: commandName }));
       return null;
     }
     case "run_action": {

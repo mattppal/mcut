@@ -23,8 +23,9 @@ import {
   getKeyframes,
   getAnimatedValue,
   listCommands,
+  parseCommand,
   summarizeProject,
-  type AnyCommand,
+  type BuiltinCommand,
 } from '@mcut/timeline'
 
 // ---------------------------------------------------------------------------
@@ -85,7 +86,7 @@ function commandTools() {
         inputSchema: command.payloadSchema as never,
         execute: async (input: Record<string, unknown>) => {
           try {
-            engine.dispatch({ type: command.type, ...input })
+            engine.dispatch(parseCommand({ ...input, type: command.type }))
             return { ok: true }
           } catch (error) {
             // Typed CommandErrors go back to the model so it can correct itself.
@@ -128,7 +129,7 @@ if (liveModel) {
   console.log('— no AI_GATEWAY_API_KEY: replaying a recorded agent session —')
   // These are real tool calls captured from a live run of the prompt above;
   // the replay goes through the exact same dispatch path a model would use.
-  const recorded: AnyCommand[] = [
+  const recorded: BuiltinCommand[] = [
     { type: 'setKeyframe', elementId: titleId, property: 'opacity', timeMs: 0, value: 0, easing: 'easeOut' },
     { type: 'setKeyframe', elementId: titleId, property: 'opacity', timeMs: 600, value: 1 },
     { type: 'applyAnimationPreset', elementId: photoId, preset: 'ken-burns', options: { intensity: 0.8 } },

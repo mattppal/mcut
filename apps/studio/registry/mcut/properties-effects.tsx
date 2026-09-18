@@ -16,11 +16,15 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVerticalIcon, PlusIcon, Trash2Icon, XIcon } from "@/lib/hugeicons";
 import { useEditor, usePlayback } from "@mcut/react";
 import {
-  getEffectType,
-  listEffectTypes,
+  EFFECT_PARAMS,
+  EFFECT_TYPES,
   getAnimatedValue,
   hasKeyframes,
+  type BuiltinCommand,
   type Effect,
+  type EffectOfType,
+  type EffectType,
+  type ElementId,
   type TimelineElement,
 } from "@mcut/timeline";
 import { toast } from "sonner";
@@ -52,12 +56,19 @@ const BLEND_MODES = [
   "exclusion",
 ] as const;
 
+function primaryParamValue<K extends EffectType>(type: K, effect: EffectOfType<K>): number {
+  const param = EFFECT_PARAMS[type];
+  if (!param) return 0;
+  const value: unknown = effect[param.key];
+  return typeof value === "number" ? value : 0;
+}
+
 function EffectRow({
   elementId,
   effect,
   index,
 }: {
-  elementId: string;
+  elementId: ElementId;
   effect: Effect;
   index: number;
 }) {
@@ -65,7 +76,7 @@ function EffectRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: String(index),
   });
-  const dispatch = (command: Record<string, unknown> & { type: string }) => {
+  const dispatch = (command: BuiltinCommand) => {
     try {
       engine.dispatch(command);
     } catch (error) {
@@ -73,9 +84,8 @@ function EffectRow({
       toast.error(error instanceof Error ? error.message : "Edit failed");
     }
   };
-  // The effect type declares its own primary scrubbable param.
-  const param = getEffectType(effect.type)?.param;
-  const value = param ? ((effect as unknown as Record<string, number>)[param.key] ?? 0) : 0;
+  const param = EFFECT_PARAMS[effect.type];
+  const value = primaryParamValue(effect.type, effect);
   return (
     <div
       ref={setNodeRef}
@@ -232,10 +242,7 @@ export function EffectsSection({ element }: { element: TimelineElement }) {
               <SelectValue placeholder="Choose an effect…" />
             </SelectTrigger>
             <SelectContent>
-              {listEffectTypes()
-                .map((e) => e.type)
-                .filter((type) => type !== "css")
-                .map((type) => (
+              {EFFECT_TYPES.filter((type) => type !== "css").map((type) => (
                   <SelectItem key={type} value={type} className="text-xs capitalize">
                     {type.replace("-", " ")}
                   </SelectItem>

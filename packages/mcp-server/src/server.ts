@@ -26,6 +26,7 @@ import {
   getProjectMediaContext,
   getProjectTranscript,
   listToolDefinitions,
+  parseCommand,
   summarizeProject,
   type Project,
   type ProjectTranscriptOptions,
@@ -169,7 +170,7 @@ function createEngineTarget(
       return result
     },
     dispatchCommand: async (commandName, input) => {
-      engine.dispatch({ type: commandName, ...((input ?? {}) as Record<string, unknown>) })
+      engine.dispatch(parseCommand(Object.assign({}, input, { type: commandName })))
       await onChange()
     },
   }

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Effect } from './effects'
-import { getElementType } from './element-registry'
+import { assertNever } from './errors'
 import type { TimelineElement } from './model'
 
 /**
@@ -149,15 +149,32 @@ export function interpolateTrack(track: readonly Keyframe[], localMs: number): n
 // Property access + element resolution
 // ---------------------------------------------------------------------------
 
-/**
- * Which fixed-effect properties exist on this element type — declared by the
- * type's registry entry (unknown strings are filtered defensively).
- */
+const MOTION_PROPERTIES: readonly AnimatableProperty[] = [
+  'position.x',
+  'position.y',
+  'scale.x',
+  'scale.y',
+  'rotation',
+  'opacity',
+  'blur',
+]
+
 export function animatableProperties(element: TimelineElement): AnimatableProperty[] {
-  const declared = getElementType(element.type)?.keyframeable ?? []
-  return declared.filter((p): p is AnimatableProperty =>
-    (ANIMATABLE_PROPERTIES as readonly string[]).includes(p),
-  )
+  switch (element.type) {
+    case 'video':
+    case 'multicam':
+      return [...MOTION_PROPERTIES, 'volume']
+    case 'audio':
+      return ['volume']
+    case 'image':
+      return [...MOTION_PROPERTIES]
+    case 'text':
+      return [...MOTION_PROPERTIES, 'letterSpacing']
+    case 'caption':
+      return []
+    default:
+      return assertNever(element)
+  }
 }
 
 export function elementSupportsProperty(

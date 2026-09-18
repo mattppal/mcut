@@ -1,16 +1,59 @@
-import { getElementType } from './element-registry'
+import { assertNever } from './errors'
 import { animatableProperties, getKeyframes } from './keyframes'
-import type { Project, TimelineElement } from './model'
+import type { AudioElement, ImageElement, MulticamElement, Project, TimelineElement, VideoElement } from './model'
 import { getProjectDurationMs } from './selectors'
+import { getAverageSpeed } from './speed'
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(2)}s`
 
+function describeAssetClip(project: Project, element: VideoElement | AudioElement | ImageElement): string {
+  const asset = project.assets[element.assetId]
+  let what = `${element.type} ${asset?.name ?? element.assetId}`
+  if ('trimStartMs' in element && element.trimStartMs > 0) {
+    what += ` (trim-in ${seconds(element.trimStartMs)})`
+  }
+  if ('timeMap' in element && element.timeMap) {
+    const speed = getAverageSpeed(element)
+    what += element.timeMap.length > 2 ? ` (speed ramp, avg ${speed.toFixed(2)}x)` : ` (speed ${speed.toFixed(2)}x)`
+  }
+  if ('reversed' in element && element.reversed) what += ' (reversed)'
+  return what
+}
+
+function describeMulticam(project: Project, element: MulticamElement): string {
+  const cuts = element.angles
+    .map((a) => {
+      const layout = project.layouts.find((l) => l.id === a.layoutId)
+      return `${seconds(a.atMs)}→${layout?.name ?? a.layoutId}`
+    })
+    .join(', ')
+  return (
+    `multicam [${element.sources.map((src) => src.key).join(' + ')}]` +
+    ` cuts: ${cuts}` +
+    (element.audioSource ? ` (audio: ${element.audioSource})` : '')
+  )
+}
+
+function describeContent(project: Project, element: TimelineElement): string {
+  switch (element.type) {
+    case 'video':
+    case 'audio':
+    case 'image':
+      return describeAssetClip(project, element)
+    case 'text':
+      return `text "${element.text.slice(0, 40)}"`
+    case 'caption':
+      return `caption "${element.text.slice(0, 40)}"`
+    case 'multicam':
+      return describeMulticam(project, element)
+    default:
+      return assertNever(element)
+  }
+}
+
 function describeElement(project: Project, element: TimelineElement): string {
   const range = `${seconds(element.startMs)}–${seconds(element.startMs + element.durationMs)}`
-  // Each element type describes itself (registry hook); fallback = its name.
-  const what =
-    getElementType(element.type)?.describe?.(element as Record<string, unknown>, project) ??
-    element.type
+  const what = describeContent(project, element)
   const armed = animatableProperties(element)
     .map((property) => {
       const track = getKeyframes(element, property)

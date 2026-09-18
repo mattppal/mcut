@@ -1,13 +1,5 @@
-import type { Project, TransitionPair } from '@mcut/timeline'
+import type { Project, TransitionPair, TransitionType } from '@mcut/timeline'
 import type { Canvas2D } from './types'
-
-/**
- * The renderer half of the transition registry (pair it with
- * registerTransitionType in @mcut/timeline). A transition is a pure mixer:
- * given draw thunks for both sides of a cut and the blend completion, paint
- * the in-between frame. The same renderers serve clip-to-clip transitions
- * (render-frame.ts) and multicam angle-cut transitions (renderers.ts).
- */
 
 /** Everything a transition renderer needs to blend its pair. */
 export interface TransitionRenderContext {
@@ -25,35 +17,13 @@ export interface TransitionRenderContext {
 
 export type TransitionRenderer = (context: TransitionRenderContext) => void
 
-const transitionRenderers = new Map<string, TransitionRenderer>()
-
-/**
- * Register the renderer half of a transition type. Built-ins register below
- * through the same call; re-registering overrides (e.g. to restyle a
- * built-in wipe).
- */
-export function registerTransitionRenderer(type: string, renderer: TransitionRenderer): void {
-  transitionRenderers.set(type, renderer)
-}
-
-/** The registered renderer for `type`, or undefined (degrade to a hard cut). */
-export function getTransitionRenderer(type: string): TransitionRenderer | undefined {
-  return transitionRenderers.get(type)
-}
-
-// ---------------------------------------------------------------------------
-// Built-in transitions (~Diffusion Studio's playbook: dissolve = alpha,
-// fades = a veil peaking at the cut, slides = eased translate, wipes = a
-// growing clip rect), registered through the same API custom ones use.
-// ---------------------------------------------------------------------------
-
-registerTransitionRenderer('dissolve', ({ ctx, completion, drawLeft, drawRight }) => {
+const dissolve: TransitionRenderer = ({ ctx, completion, drawLeft, drawRight }) => {
   drawLeft()
   ctx.save()
   ctx.globalAlpha *= completion
   drawRight()
   ctx.restore()
-})
+}
 
 const fade =
   (color: string): TransitionRenderer =>
@@ -69,8 +39,6 @@ const fade =
       ctx.restore()
     }
   }
-registerTransitionRenderer('fade-black', fade('#000000'))
-registerTransitionRenderer('fade-white', fade('#ffffff'))
 
 const slide =
   (direction: 1 | -1): TransitionRenderer =>
@@ -83,8 +51,6 @@ const slide =
     drawRight()
     ctx.restore()
   }
-registerTransitionRenderer('slide-left', slide(1))
-registerTransitionRenderer('slide-right', slide(-1))
 
 const wipe =
   (fromLeft: boolean): TransitionRenderer =>
@@ -99,5 +65,13 @@ const wipe =
     drawRight()
     ctx.restore()
   }
-registerTransitionRenderer('wipe-right', wipe(true))
-registerTransitionRenderer('wipe-left', wipe(false))
+
+export const transitionRenderers: { readonly [K in TransitionType]: TransitionRenderer } = {
+  dissolve,
+  'fade-black': fade('#000000'),
+  'fade-white': fade('#ffffff'),
+  'slide-left': slide(1),
+  'slide-right': slide(-1),
+  'wipe-left': wipe(false),
+  'wipe-right': wipe(true),
+}

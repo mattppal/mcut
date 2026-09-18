@@ -5,6 +5,7 @@ import { useEditor } from "@mcut/react";
 import {
   getKeyframes,
   type AnimatableProperty,
+  type BuiltinCommand,
   type Easing,
   type Keyframe,
   type TimelineElement,
@@ -127,7 +128,7 @@ export function EasingGraph({
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
 
-  const dispatch = (command: Record<string, unknown> & { type: string }) => {
+  const dispatch = (command: BuiltinCommand) => {
     try {
       engine.dispatch(command);
     } catch {

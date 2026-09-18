@@ -13,26 +13,7 @@ import { isElementActiveAt } from './selectors'
  * render time, so moving either clip simply disables the blend rather than
  * corrupting anything.
  */
-const transitionRegistry = new Map<string, { type: string; label?: string }>()
-
-/**
- * Register a transition type name (the document-vocabulary half; pair it
- * with registerTransitionRenderer in @mcut/compositor). Built-ins register
- * below through the same call.
- */
-export function registerTransitionType(entry: { type: string; label?: string }): void {
-  if (transitionRegistry.has(entry.type)) {
-    throw new Error(`transition type "${entry.type}" is already registered`)
-  }
-  transitionRegistry.set(entry.type, entry)
-}
-
-/** Registration order = presentation order (transition pickers). */
-export function listTransitionTypes(): string[] {
-  return [...transitionRegistry.keys()]
-}
-
-export const BUILTIN_TRANSITION_TYPES = [
+export const transitionTypeSchema = z.enum([
   'dissolve',
   'fade-black',
   'fade-white',
@@ -40,17 +21,11 @@ export const BUILTIN_TRANSITION_TYPES = [
   'slide-right',
   'wipe-left',
   'wipe-right',
-] as const
-for (const type of BUILTIN_TRANSITION_TYPES) registerTransitionType({ type })
+])
 
-/** Dynamic: any registered transition type (custom included). */
-export const transitionTypeSchema = z
-  .string()
-  .refine((type) => transitionRegistry.has(type), {
-    message: 'unregistered transition type',
-  })
+export type TransitionType = z.infer<typeof transitionTypeSchema>
 
-export type TransitionType = (typeof BUILTIN_TRANSITION_TYPES)[number] | (string & {})
+export const TRANSITION_TYPES: readonly TransitionType[] = transitionTypeSchema.options
 
 export const transitionSchema = z.object({
   type: transitionTypeSchema,

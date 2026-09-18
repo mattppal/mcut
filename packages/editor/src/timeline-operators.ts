@@ -20,6 +20,7 @@ import {
   type AnimatableProperty,
   type AssetRef,
   type EditorEngine,
+  type ElementId,
   type GroupId,
   type TextStyle,
   type TimeMap,
@@ -45,7 +46,7 @@ function isCaptionTrack(track: Track): boolean {
  * Insert an element at the playhead on the topmost unlocked track with room,
  * creating a new track when none fits. Returns the new element's id.
  */
-export function insertElementAtPlayhead(engine: EditorEngine, element: TimelineElementInput): string {
+export function insertElementAtPlayhead(engine: EditorEngine, element: TimelineElementInput): ElementId {
   const startMs = quantizeMsToFrame(engine.playback.state.currentTimeMs, engine.project.fps)
   const id = element.id ?? createElementId()
   engine.transact(
@@ -664,7 +665,7 @@ export function removeSelection(engine: EditorEngine): void {
 }
 
 /** Insert a default text element at the playhead. */
-export function addTextAtPlayhead(engine: EditorEngine, text = 'Your text'): string {
+export function addTextAtPlayhead(engine: EditorEngine, text = 'Your text'): ElementId {
   return insertElementAtPlayhead(engine, {
     type: 'text',
     startMs: 0,
@@ -695,7 +696,7 @@ export function insertElementOnTrack(
   element: TimelineElementInput,
   startMs: number,
   editMode: 'normal' | 'overwrite' | 'insert' = 'normal',
-): string {
+): ElementId {
   const id = element.id ?? createElementId()
   const track = engine.project.tracks.find((t) => t.id === trackId)
   const placedStartMs =
@@ -719,7 +720,7 @@ export function insertElementOnNewTrack(
   engine: EditorEngine,
   element: TimelineElementInput,
   startMs: number,
-): string {
+): ElementId {
   const id = element.id ?? createElementId()
   const trackId = createTrackId()
   engine.transact(
@@ -737,8 +738,8 @@ export function insertElementOnNewTrack(
 }
 
 /** Duplicate an element right after itself on the same track. */
-export function duplicateElement(engine: EditorEngine, elementId: string): string | null {
-  const location = getElementLocation(engine.project, elementId as `e-${string}`)
+export function duplicateElement(engine: EditorEngine, elementId: ElementId): ElementId | null {
+  const location = getElementLocation(engine.project, elementId)
   if (!location) return null
   const { track, element } = location
   const id = createElementId()

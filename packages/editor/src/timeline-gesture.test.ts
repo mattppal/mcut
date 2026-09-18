@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { applyCommand, createProject, type AnyCommand, type Project, type VideoElement } from '@mcut/timeline'
+import { applyCommand, createProject, type BuiltinCommand, type Project, type VideoElement } from '@mcut/timeline'
 import {
   collectClipDragBases,
   computeSlipRange,
@@ -8,7 +8,7 @@ import {
   resolveToolMode,
 } from './timeline-gesture'
 
-function applyCommands(project: Project, commands: readonly AnyCommand[]): Project {
+function applyCommands(project: Project, commands: readonly BuiltinCommand[]): Project {
   return commands.reduce((next, command) => applyCommand(next, command), project)
 }
 
