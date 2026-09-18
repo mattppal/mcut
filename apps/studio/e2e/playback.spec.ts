@@ -49,15 +49,18 @@ test.beforeAll(() => {
       ]));
 });
 
+interface MediaRecord {
+  tag: string;
+  el: HTMLMediaElement;
+  seeks: number;
+  events: Array<[string, number]>;
+}
+
 declare global {
   interface Window {
     __mediaStats: {
-      elements: Array<{
-        tag: string;
-        el: HTMLMediaElement;
-        seeks: number;
-        events: Array<[string, number]>;
-      }>;
+      elements: MediaRecord[];
+      poolVideo: () => MediaRecord | undefined;
     };
   }
 }
@@ -65,7 +68,14 @@ declare global {
 /** Count seeks/events on the pool's detached media elements (created pre-app). */
 async function instrument(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const stats = (window.__mediaStats = { elements: [] as Window["__mediaStats"]["elements"] });
+    const elements: Window["__mediaStats"]["elements"] = [];
+    const stats = (window.__mediaStats = {
+      elements,
+      poolVideo: () =>
+        elements.find(
+          (rec) => rec.tag === "video" && rec.events.some(([name]) => name === "playing"),
+        ),
+    });
     const desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "currentTime")!;
     const origCreate = Document.prototype.createElement;
     Document.prototype.createElement = function (
@@ -144,13 +154,11 @@ test("playback advances content at near-source fps without seek churn", async ({
   await page.getByRole("button", { name: "Play", exact: true }).click();
 
   const measured = await page.evaluate(async () => {
-    // Skip detached capability probes (canPlayType): the pool's element has a src.
-    const findPoolVideo = () =>
-      window.__mediaStats.elements.find((rec) => rec.tag === "video" && rec.el.src);
+    const { poolVideo } = window.__mediaStats;
     await new Promise<void>((resolve, reject) => {
-      const deadline = setTimeout(() => reject(new Error("video never started")), 10_000);
+      const deadline = setTimeout(() => reject(new Error("pool video never started")), 10_000);
       const check = () => {
-        const rec = findPoolVideo();
+        const rec = poolVideo();
         if (rec && !rec.el.paused && rec.el.readyState >= 2) {
           clearTimeout(deadline);
           resolve();
@@ -158,19 +166,36 @@ test("playback advances content at near-source fps without seek churn", async ({
       };
       check();
     });
-    const video = findPoolVideo()!;
+    const rec = poolVideo();
+    const canvas = document.querySelector<HTMLCanvasElement>("[data-mcut-player] canvas");
+    const sample = document.createElement("canvas");
+    sample.width = 64;
+    sample.height = 36;
+    const sampleCtx = sample.getContext("2d", { willReadFrequently: true });
+    if (!rec || !(rec.el instanceof HTMLVideoElement) || !canvas || !sampleCtx) {
+      throw new Error("preview canvas or pool video missing");
+    }
+    const video = rec.el;
 
-    const canvas = document.querySelector<HTMLCanvasElement>("[data-mcut-player] canvas")!;
-    const ctx = canvas.getContext("2d")!;
     let distinct = 0;
     let lastHash = "";
-    const seeksBefore = video.seeks;
-    const done = performance.now() + 5000;
+    let firstPresented = -1;
+    let lastPresented = -1;
+    const seeksBefore = rec.seeks;
+    const start = performance.now();
+    const done = start + 5000;
+    const onVideoFrame = (_now: number, metadata: VideoFrameCallbackMetadata) => {
+      if (firstPresented < 0) firstPresented = metadata.presentedFrames;
+      lastPresented = metadata.presentedFrames;
+      if (performance.now() < done) video.requestVideoFrameCallback(onVideoFrame);
+    };
+    video.requestVideoFrameCallback(onVideoFrame);
     await new Promise<void>((resolve) => {
       const tick = () => {
-        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        sampleCtx.drawImage(canvas, 0, 0, sample.width, sample.height);
+        const data = sampleCtx.getImageData(0, 0, sample.width, sample.height).data;
         let hash = 0;
-        for (let i = 0; i < data.length; i += 4096) hash = (hash * 31 + data[i]!) | 0;
+        for (let i = 0; i < data.length; i += 4) hash = (hash * 31 + (data[i] ?? 0)) | 0;
         const key = String(hash);
         if (key !== lastHash) distinct++;
         lastHash = key;
@@ -179,12 +204,23 @@ test("playback advances content at near-source fps without seek churn", async ({
       };
       requestAnimationFrame(tick);
     });
-    return { contentFps: distinct / 5, seeksDuringPlayback: video.seeks - seeksBefore };
+    const elapsedS = (performance.now() - start) / 1000;
+    return {
+      presentedFps: (lastPresented - firstPresented) / elapsedS,
+      contentFps: distinct / elapsedS,
+      seeksDuringPlayback: rec.seeks - seeksBefore,
+    };
   });
 
-  // 30fps source: smooth playback shows ≥ 24 distinct frames/s, no re-seeks.
-  expect(measured.contentFps).toBeGreaterThan(24);
   expect(measured.seeksDuringPlayback).toBeLessThan(3);
+  expect(
+    measured.presentedFps,
+    "frames the pool's <video> handed to the compositor per second, from a 30 fps source",
+  ).toBeGreaterThan(24);
+  expect(
+    measured.contentFps,
+    "distinct preview frames per second; ScrubFrameCache frames sit 90 ms apart, so a cache-fed preview tops out at 11",
+  ).toBeGreaterThan(15);
 });
 
 test("skip-ahead on a long-GOP file recovers without a seek spiral", async ({ page }) => {
@@ -209,15 +245,14 @@ test("skip-ahead on a long-GOP file recovers without a seek spiral", async ({ pa
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
 
   const report = await page.evaluate(() => {
-    const video = window.__mediaStats.elements.find(
-      (rec) => rec.tag === "video" && rec.el.src,
-    )!;
+    const video = window.__mediaStats.poolVideo();
+    if (!video) throw new Error("pool video never played");
     return { seeks: video.seeks, currentTime: video.el.currentTime };
   });
 
   // The broken pool issued 35+ seeks here (one every drift-tolerance tick,
   // each aborting the last); a healthy one converges in a couple.
-  expect(report.seeks).toBeLessThan(5);
+  expect(report.seeks, "seeks on the pool's <video>, not the filmstrip's").toBeLessThan(5);
   // And playback actually progressed past the skip target afterwards.
   expect(report.currentTime).toBeGreaterThan(4);
 });
