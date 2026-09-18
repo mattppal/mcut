@@ -51,7 +51,7 @@ function isEnglishOnlyWhisperModel(model: string): boolean {
 function whisperLanguageTaskOptions(
   multilingual: boolean,
   language: string | undefined,
-): Record<string, unknown> {
+): { task?: string; language?: string } {
   if (!multilingual) return {}
   return { task: 'transcribe', ...(language ? { language } : {}) }
 }
