@@ -66,7 +66,8 @@ export function canPlaceIgnoring(
   durationMs: number,
   ignore: ReadonlySet<string>,
 ): boolean {
-  return canPlace({ ...track, elements: track.elements.filter((e) => !ignore.has(e.id)) }, startMs, durationMs)
+  const others = track.elements.filter((e) => !ignore.has(e.id))
+  return canPlace({ ...track, elements: others }, startMs, durationMs)
 }
 
 export function collectClipDragBases(

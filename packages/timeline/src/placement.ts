@@ -21,15 +21,15 @@ export function rangesOverlap(
   return aStartMs < bStartMs + bDurationMs && bStartMs < aStartMs + aDurationMs
 }
 
+const withoutId = (elements: TimelineElement[], elementId: ElementId): TimelineElement[] =>
+  elements.filter((e) => e.id !== elementId)
+
 function findConflict(
-  track: Track,
+  elements: TimelineElement[],
   startMs: number,
   durationMs: number,
-  ignoreElementId?: ElementId,
 ): TimelineElement | undefined {
-  return track.elements.find(
-    (e) => e.id !== ignoreElementId && rangesOverlap(startMs, durationMs, e.startMs, e.durationMs),
-  )
+  return elements.find((e) => rangesOverlap(startMs, durationMs, e.startMs, e.durationMs))
 }
 
 export function canPlace(
@@ -39,11 +39,10 @@ export function canPlace(
   ignoreElementId?: ElementId,
 ): boolean {
   if (startMs < 0) return false
-  return findConflict(track, startMs, durationMs, ignoreElementId) === undefined
+  const others =
+    ignoreElementId === undefined ? track.elements : withoutId(track.elements, ignoreElementId)
+  return findConflict(others, startMs, durationMs) === undefined
 }
-
-const withoutId = (elements: TimelineElement[], elementId: ElementId): TimelineElement[] =>
-  elements.filter((e) => e.id !== elementId)
 
 function insertAtSlot(elements: TimelineElement[], element: TimelineElement): TimelineElement[] {
   const index = elements.findIndex((e) => e.startMs >= element.startMs)
@@ -90,7 +89,11 @@ const gapped: PlacementPolicy = {
   remove: (track, elementId) => withoutId(track.elements, elementId),
   editMode: (requested) => requested,
   assertCanPlace: (track, element) => {
-    const conflict = findConflict(track, element.startMs, element.durationMs, element.id)
+    const conflict = findConflict(
+      withoutId(track.elements, element.id),
+      element.startMs,
+      element.durationMs,
+    )
     if (conflict) {
       throw new CommandError(
         'overlap',
