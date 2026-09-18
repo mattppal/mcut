@@ -64,12 +64,6 @@ function externalTextureSource(image: CanvasImageSource): HTMLVideoElement | Vid
   return null
 }
 
-// SVGImageElement is not a GPUCopyExternalImageSource, see https://www.w3.org/TR/webgpu/#typedefdef-gpucopyexternalimagesource
-function copyableImageSource(image: CanvasImageSource): GPUCopyExternalImageSource {
-  if ('href' in image) throw new Error('SVG images cannot be copied to a GPU texture')
-  return image
-}
-
 function curvesToRgba8(curves: { r: Float32Array; g: Float32Array; b: Float32Array }): Uint8Array {
   const bytes = new Uint8Array(256 * 4)
   for (const [channel, lut] of [curves.r, curves.g, curves.b].entries()) {
@@ -498,7 +492,7 @@ export class WebGPUBackend implements RenderBackend {
       const sh = Math.max(1, ih)
       const staging = this.acquireTexture(sw, sh)
       this.device.queue.copyExternalImageToTexture(
-        { source: copyableImageSource(quad.image) },
+        { source: quad.image as GPUCopyExternalImageSource },
         { texture: staging, premultipliedAlpha: true },
         { width: sw, height: sh },
       )
