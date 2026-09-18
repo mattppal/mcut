@@ -48,7 +48,15 @@ import {
 } from './thumbnails'
 import { applyEdgeTrim } from './edge-trim'
 import { getTransitionPair, transitionSchema } from './transitions'
-import { getElementLocation, getTrack, rangesOverlap } from './selectors'
+import { getElementLocation, getTrack } from './selectors'
+import {
+  compactAllTracks,
+  compactElements,
+  compactTimelineIfMagnetic,
+  isTimelineMagnetic,
+  placementFor,
+  rangesOverlap,
+} from './placement'
 
 export { CommandError } from './errors'
 
@@ -109,78 +117,10 @@ function replaceTrack(project: Project, trackId: TrackId, update: (track: Track)
   return compactTimelineIfMagnetic(next)
 }
 
-function assertNoOverlap(track: Track, element: TimelineElement, ignoreId?: ElementId): void {
-  // Magnetic tracks have no overlap invariant — ORDER is the invariant, and
-  // compaction re-packs after every edit. Requested positions only choose a
-  // slot (see placeMagnetic).
-  if (track.magnetic) return
-  const conflict = track.elements.find(
-    (e) =>
-      e.id !== ignoreId &&
-      e.id !== element.id &&
-      rangesOverlap(element.startMs, element.durationMs, e.startMs, e.durationMs),
-  )
-  if (conflict) {
-    throw new CommandError(
-      'overlap',
-      `element would overlap "${conflict.id}" on track "${track.id}" ` +
-        `(use findNearestFreeSlot to clamp before dispatching)`,
-    )
-  }
-}
-
-/**
- * Slot placement for magnetic tracks (the sortable-list rule): the element's
- * requested LEFT EDGE picks its slot — it sorts before the first neighbor
- * whose slot midpoint it hasn't passed. Stable and reversible mid-drag: the
- * other clips' mutual order never changes during a gesture, so their packed
- * boundaries are constant and the chosen index depends only on the pointer.
- * Returns the element with `startMs` rewritten to its slot boundary so
- * compaction agrees with the chosen order.
- */
-function placeMagnetic(track: Track, element: TimelineElement): TimelineElement {
-  const others = track.elements.filter((e) => e.id !== element.id)
-  let boundary = 0
-  for (const other of others) {
-    if (element.startMs < boundary + other.durationMs / 2) break
-    boundary += other.durationMs
-  }
-  return { ...element, startMs: boundary }
-}
-
-/** Insert keeping sort order; on magnetic tracks the slot rule places it. */
-function insertPlaced(track: Track, element: TimelineElement): TimelineElement[] {
-  const placed = track.magnetic ? placeMagnetic(track, element) : element
-  const without = track.elements.filter((e) => e.id !== element.id)
-  // Ties at a slot boundary: the placed element comes first (it claimed the slot).
-  const index = without.findIndex((e) => e.startMs >= placed.startMs)
-  if (index === -1) return [...without, placed]
-  return [...without.slice(0, index), placed, ...without.slice(index)]
-}
-
 function insertSorted(elements: TimelineElement[], element: TimelineElement): TimelineElement[] {
   const index = elements.findIndex((e) => e.startMs > element.startMs)
   if (index === -1) return [...elements, element]
   return [...elements.slice(0, index), element, ...elements.slice(index)]
-}
-
-function compactElements(elements: TimelineElement[]): TimelineElement[] {
-  let cursorMs = 0
-  return [...elements]
-    .sort((a, b) => a.startMs - b.startMs)
-    .map((element) => {
-      const startMs = cursorMs
-      cursorMs += element.durationMs
-      return element.startMs === startMs ? element : { ...element, startMs }
-    })
-}
-
-function compactAllTracks(project: Project): Project {
-  return { ...project, tracks: project.tracks.map((track) => ({ ...track, elements: compactElements(track.elements) })) }
-}
-
-function compactTimelineIfMagnetic(project: Project): Project {
-  return project.tracks.some((track) => track.magnetic) ? compactAllTracks(project) : project
 }
 
 // ---------------------------------------------------------------------------
@@ -199,14 +139,13 @@ const addTrack = defineCommand({
   description: 'Add a new track. Tracks later in the list render on top.',
   payloadSchema: addTrackSchema,
   reduce: (project, payload) => {
-    const timelineMagnetEnabled = project.tracks.some((t) => t.magnetic)
     const track: Track = {
       id: payload.id ?? createTrackId(),
       name: payload.name ?? `Track ${project.tracks.length + 1}`,
       muted: false,
       hidden: false,
       locked: false,
-      magnetic: timelineMagnetEnabled,
+      magnetic: isTimelineMagnetic(project),
       elements: [],
     }
     if (project.tracks.some((t) => t.id === track.id)) {
@@ -454,18 +393,18 @@ function placeElement(
   element: TimelineElement,
   editMode: z.output<typeof editModeSchema>,
 ): Project {
-  const track = mustGetTrack(project, trackId)
-  const mode = track.magnetic ? 'normal' : editMode
+  const policy = placementFor(mustGetTrack(project, trackId))
+  const mode = policy.editMode(editMode)
   let next = project
   if (mode === 'overwrite') {
     next = carveOverwriteRange(next, trackId, element.startMs, element.durationMs)
   } else if (mode === 'insert') {
     next = rippleOpenGap(next, trackId, element.startMs, element.durationMs)
   }
-  assertNoOverlap(mustGetTrack(next, trackId), element)
+  policy.assertCanPlace(mustGetTrack(next, trackId), element)
   return replaceTrack(next, trackId, (t) => ({
     ...t,
-    elements: insertPlaced(t, element),
+    elements: policy.place(t, element),
   }))
 }
 
@@ -500,7 +439,7 @@ const removeElement = defineCommand({
     const { track } = mustLocate(project, payload.elementId)
     return replaceTrack(project, track.id, (t) => ({
       ...t,
-      elements: t.elements.filter((e) => e.id !== payload.elementId),
+      elements: placementFor(t).remove(t, payload.elementId),
     }))
   },
 })
@@ -524,7 +463,7 @@ const moveElement = defineCommand({
     const moved: TimelineElement = { ...element, startMs: payload.startMs }
     const removed = replaceTrack(project, fromTrack.id, (t) => ({
       ...t,
-      elements: t.elements.filter((e) => e.id !== element.id),
+      elements: placementFor(t).remove(t, element.id),
     }))
     return placeElement(removed, targetTrackId, moved, payload.editMode)
   },
@@ -555,10 +494,11 @@ const trimElement = defineCommand({
       trimmed.trimStartMs = payload.trimStartMs
     }
     validateElement(project, trimmed)
-    assertNoOverlap(track, trimmed, element.id)
+    const policy = placementFor(track)
+    policy.assertCanPlace(track, trimmed)
     return replaceTrack(project, track.id, (t) => ({
       ...t,
-      elements: insertPlaced(t, trimmed),
+      elements: policy.place(t, trimmed),
     }))
   },
 })
@@ -621,10 +561,11 @@ const updateElement = defineCommand({
       )
     }
     validateElement(project, merged.data)
-    assertNoOverlap(track, merged.data, element.id)
+    const policy = placementFor(track)
+    policy.assertCanPlace(track, merged.data)
     return replaceTrack(project, track.id, (t) => ({
       ...t,
-      elements: insertPlaced(t, merged.data),
+      elements: policy.place(t, merged.data),
     }))
   },
 })
@@ -665,7 +606,6 @@ const applyCaptions = defineCommand({
         trackId = existing.id
       } else {
         trackId = createTrackId()
-        const timelineMagnetEnabled = next.tracks.some((t) => t.magnetic)
         next = {
           ...next,
           tracks: [
@@ -676,7 +616,7 @@ const applyCaptions = defineCommand({
               muted: false,
               hidden: false,
               locked: false,
-              magnetic: timelineMagnetEnabled,
+              magnetic: isTimelineMagnetic(next),
               elements: [],
             },
           ],
@@ -697,7 +637,7 @@ const applyCaptions = defineCommand({
         type: 'caption',
       }
       const track = mustGetTrack(next, finalTrackId)
-      assertNoOverlap(track, element)
+      placementFor(track).assertCanPlace(track, element)
       next = replaceTrack(next, finalTrackId, (t) => ({
         ...t,
         elements: insertSorted(t.elements, element),
@@ -1139,10 +1079,11 @@ const setElementSpeed = defineCommand({
     if (Math.abs(payload.speed - 1) < 1e-9) delete next.timeMap
     else next.timeMap = makeConstantSpeedMap(durationMs, sourceSpanMs / durationMs)
     validateElement(project, next)
-    assertNoOverlap(track, next, element.id)
+    const policy = placementFor(track)
+    policy.assertCanPlace(track, next)
     return replaceTrack(project, track.id, (t) => ({
       ...t,
-      elements: insertPlaced(t, next),
+      elements: policy.place(t, next),
     }))
   },
 })
@@ -1179,21 +1120,6 @@ const setTimeMap = defineCommand({
 const sortByStart = (elements: TimelineElement[]): TimelineElement[] =>
   [...elements].sort((a, b) => a.startMs - b.startMs)
 
-/** Pairwise overlap check after multi-element edits (skips magnetic tracks). */
-function assertTrackHasNoOverlaps(track: Track): void {
-  if (track.magnetic) return
-  for (let i = 1; i < track.elements.length; i++) {
-    const previous = track.elements[i - 1]!
-    const current = track.elements[i]!
-    if (previous.startMs + previous.durationMs > current.startMs) {
-      throw new CommandError(
-        'overlap',
-        `edit would overlap "${previous.id}" and "${current.id}" on track "${track.id}"`,
-      )
-    }
-  }
-}
-
 /** The exactly-adjacent clip after `element` on its track, if any. */
 function adjacentNext(track: Track, element: TimelineElement): TimelineElement | undefined {
   const cutMs = element.startMs + element.durationMs
@@ -1226,10 +1152,11 @@ const trimEdge = defineCommand({
     if (payload.deltaMs === 0) return project
     const next = applyEdgeTrim(element, payload.edge, payload.deltaMs)
     validateElement(project, next)
-    assertNoOverlap(track, next, element.id)
+    const policy = placementFor(track)
+    policy.assertCanPlace(track, next)
     return replaceTrack(project, track.id, (t) => ({
       ...t,
-      elements: insertPlaced(t, next),
+      elements: policy.place(t, next),
     }))
   },
 })
@@ -1389,7 +1316,7 @@ const rippleTrim = defineCommand({
         }),
       )
       const next = { ...t, elements }
-      assertTrackHasNoOverlaps(next)
+      placementFor(t).assertNoOverlaps(next)
       return next
     })
     return compactTimelineIfMagnetic({ ...project, tracks })
@@ -1566,10 +1493,11 @@ const createMulticam = defineCommand({
       tracks: next.tracks.map((t) => ({ ...t, elements: t.elements.filter((e) => !ids.has(e.id)) })),
     }
     const targetTrack = mustGetTrack(next, located[0]!.track.id)
-    assertNoOverlap(targetTrack, element)
+    const policy = placementFor(targetTrack)
+    policy.assertCanPlace(targetTrack, element)
     return replaceTrack(next, targetTrack.id, (t) => ({
       ...t,
-      elements: insertPlaced(t, element),
+      elements: policy.place(t, element),
     }))
   },
 })
@@ -1934,10 +1862,11 @@ const detachAudio = defineCommand({
 
     if (payload.toTrackId) {
       const target = mustGetTrack(next, payload.toTrackId)
-      assertNoOverlap(target, audio)
+      const policy = placementFor(target)
+      policy.assertCanPlace(target, audio)
       return replaceTrack(next, target.id, (t) => ({
         ...t,
-        elements: insertPlaced(t, audio),
+        elements: policy.place(t, audio),
       }))
     }
     const audioTrack: Track = {
@@ -1946,7 +1875,7 @@ const detachAudio = defineCommand({
       muted: false,
       hidden: false,
       locked: false,
-      magnetic: next.tracks.some((track) => track.magnetic),
+      magnetic: isTimelineMagnetic(next),
       elements: [audio],
     }
     // Bottom of the paint order: audio has no visuals to occlude.

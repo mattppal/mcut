@@ -245,8 +245,9 @@ export {
   type TransactionOptions,
 } from './engine'
 
+export { canPlace, rangesOverlap } from './placement'
+
 export {
-  canPlace,
   findNearestFreeSlot,
   getActiveElements,
   getElement,
@@ -256,7 +257,6 @@ export {
   getProjectDurationMs,
   getTrack,
   isElementActiveAt,
-  rangesOverlap,
   type ActiveElement,
   type ElementLocation,
 } from './selectors'
