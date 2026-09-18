@@ -114,6 +114,14 @@ test('one stdio server answers an edit, a typed rejection, and a static untyped 
   expect(['addTrack', 'operator_edit_undo', 'undo'].map(toolFamily)).toEqual(['command', 'operator', 'static'])
 })
 
+test('operator_media_insertAssetAtPlayhead rejects a missing asset as a typed OperatorError', async () => {
+  await withServer(async (server) => {
+    const reply = await server.call('operator_media_insertAssetAtPlayhead', { assetId: 'a-missing' })
+    expect(classifyReply(reply)).toBe('typed-error')
+    expect(reply.text).toBe('OperatorError (unknown-asset): no asset "a-missing"')
+  })
+})
+
 test('seed 1 always yields the same second step over the stdio tool list', () => {
   const plan = generatePlan({ seed: 1, tools, length: 2, overrides: commandOverrides })
   expect(plan.steps[1]).toEqual({
