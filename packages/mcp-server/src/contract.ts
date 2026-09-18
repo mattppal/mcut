@@ -1,17 +1,3 @@
-/**
- * The MCP tool contract: names, descriptions, and input schemas for every
- * static tool, shared by the published MCP server, the live browser bridge,
- * and UIs that render the tool surface (e.g. Studio's /tools.json).
- *
- * Two overlapping catalogs, on purpose:
- * - {@link MCP_SERVER_STATIC_TOOLS} (12) is what `createMcutMcpServerForTarget`
- *   registers. Raw commands and operators are exposed as their own tools
- *   (command type names and `operator_*`), not through a generic dispatcher.
- * - {@link MCP_BRIDGE_ONLY_TOOLS} (3) — `list_commands`, `apply_commands`,
- *   `run_operator` — are the live bridge's RPC vocabulary, handled by the
- *   browser editor. The published MCP server does not register them; agent
- *   docs that mention `apply_commands` only work against the bridge today.
- */
 import { elementIdSchema } from '@mcut/timeline'
 import { z } from 'zod'
 
