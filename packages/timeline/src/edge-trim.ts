@@ -31,6 +31,12 @@ export function applyEdgeTrim(
 ): TimelineElement {
   if (deltaMs === 0) return element
   const newDurationMs = edge === 'end' ? element.durationMs + deltaMs : element.durationMs - deltaMs
+  if (!Number.isSafeInteger(newDurationMs)) {
+    throw new CommandError(
+      'out-of-bounds',
+      `trimming "${element.id}" to ${newDurationMs}ms exceeds the safe integer range`,
+    )
+  }
   if (newDurationMs < MIN_ELEMENT_DURATION_MS) {
     throw new CommandError(
       'out-of-bounds',
