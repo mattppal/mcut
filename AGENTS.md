@@ -12,7 +12,7 @@ the whole repository.
 per page. `packages/` has one page per published package. `recipes/` gives the
 steps for one task. `reference/` documents the CLI, the MCP server, the browser
 bridge, commands, and operators. `sdk/` holds the API reference.
-`contributing/` covers contributing and the dev environment.
+`contributing/` holds the contributor guide and the dev environment page.
 
 `docs/` holds maintainer docs on publishing, releases, and the MCP relay.
 `packages/*/README.md` gives each package's install command and entry points.
@@ -21,7 +21,8 @@ bridge, commands, and operators. `sdk/` holds the API reference.
 
 Each package imports only from the layers below it. `@mcut/timeline` imports
 nothing from this repository. `@mcut/react` is the only package that imports
-React. Examples and apps consume packages, and nothing consumes them.
+React. Examples and apps consume packages. Nothing consumes an example or an
+app.
 
 | Layer | Package | Owns |
 | --- | --- | --- |
@@ -32,12 +33,12 @@ React. Examples and apps consume packages, and nothing consumes them.
 | 3 | `@mcut/media` | Media probing, preview pools, filmstrips, audio peaks, browser export, container formats |
 | 3 | `@mcut/transcription-local`, `@mcut/transcription-ai-sdk`, `@mcut/transcription-assemblyai` | One transcription provider each |
 | 3 | `@mcut/cli`, `@mcut/mcp-server` | The `mcut` binary and the MCP server, both tools over commands and operators |
-| 4 | `@mcut/react` | `EditorProvider`, hooks, `PlayerCanvas`, gestures. Logic stays in the pure packages |
+| 4 | `@mcut/react` | `EditorProvider`, hooks, `PlayerCanvas`, gestures. Logic stays in the packages below |
 | app | `apps/studio`, `apps/web`, `examples/*` | Studio, the docs site, and runnable integrations over the packages |
 
 Every project mutation is a command in `@mcut/timeline`. A command is
-serializable, zod validated, and undoable. Operators and apps change project
-state through `engine.dispatch` and `engine.transact` and in no other way.
+serializable, validated by zod, and undoable. Operators and apps change project
+state only through `engine.dispatch` and `engine.transact`.
 
 Package `exports` resolve to `dist/`. Build before you test a consumer of a
 package you edited. `bun run build` rebuilds every package. `bun dev` keeps

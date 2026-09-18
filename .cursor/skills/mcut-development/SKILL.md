@@ -29,9 +29,9 @@ bunx changeset
 ```
 
 Pick `minor` for a new public capability and `patch` for a fix. Write the
-summary for a consumer of the package. Say what changes for them, not what the
-diff does. Do not edit package versions by hand. The release workflow bumps
-versions from merged changesets. `docs/RELEASES.md` describes it.
+summary for a consumer of the package. Say what changes for the consumer, not
+what the diff does. Do not edit package versions by hand. The release workflow bumps
+versions from merged changesets. `docs/RELEASES.md` describes that workflow.
 
 ## Run one package's tests
 
@@ -43,11 +43,8 @@ cd packages/timeline && bun test
 cd packages/editor && bun test src/timeline-operators.test.ts
 ```
 
-A test in one package runs against the last build of the packages it imports.
-Run `bun run build` after you edit a dependency, or keep `bun dev` running.
-
 Tests sit beside the source as `*.test.ts`. A reducer change gets a test in
 `packages/timeline`. An operator change gets one in `packages/editor`. CLI
-behavior is tested in `packages/cli/src/*.test.ts` and MCP behavior in
+tests live in `packages/cli/src/*.test.ts` and MCP tests in
 `packages/mcp-server/src/*.test.ts`. A media or compositor test asserts
 deterministic output without a downstream app.
