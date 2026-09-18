@@ -23,11 +23,11 @@ export const transcriptResultSchema = z.object({
   segments: z.array(transcriptSegmentSchema),
 })
 
-export type TranscriptWord = z.infer<typeof transcriptWordSchema>
+export interface TranscriptWord extends z.infer<typeof transcriptWordSchema> {}
 
-export type TranscriptSegment = z.infer<typeof transcriptSegmentSchema>
+export interface TranscriptSegment extends z.infer<typeof transcriptSegmentSchema> {}
 
-export type TranscriptResult = z.infer<typeof transcriptResultSchema>
+export interface TranscriptResult extends z.infer<typeof transcriptResultSchema> {}
 
 export interface TranscribeInput {
   /** Audio payload: a Blob/File, raw bytes, or a URL the provider can fetch. */

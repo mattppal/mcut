@@ -11,9 +11,11 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 # Interface: TranscriptResult
 
-Defined in: [packages/transcription/src/types.ts:17](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L17)
+Defined in: [packages/transcription/src/types.ts:30](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L30)
 
-Normalized transcription output, regardless of provider.
+## Extends
+
+- `output`\<*typeof* [`transcriptResultSchema`](../variables/transcriptResultSchema.mdx)\>
 
 ## Properties
 
@@ -25,6 +27,12 @@ optional durationMs?: number;
 
 Defined in: [packages/transcription/src/types.ts:21](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L21)
 
+#### Inherited from
+
+```ts
+z.infer.durationMs
+```
+
 ***
 
 ### language?
@@ -35,19 +43,51 @@ optional language?: string;
 
 Defined in: [packages/transcription/src/types.ts:20](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L20)
 
-ISO-639-1 code when detected.
+#### Inherited from
+
+```ts
+z.infer.language
+```
 
 ***
 
 ### segments
 
 ```ts
-segments: TranscriptSegment[];
+segments: object[];
 ```
 
-Defined in: [packages/transcription/src/types.ts:25](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L25)
+Defined in: [packages/transcription/src/types.ts:23](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L23)
 
-Sentence/utterance-level timings; may be empty.
+#### endMs
+
+```ts
+endMs: number;
+```
+
+#### speaker?
+
+```ts
+optional speaker?: string;
+```
+
+#### startMs
+
+```ts
+startMs: number;
+```
+
+#### text
+
+```ts
+text: string;
+```
+
+#### Inherited from
+
+```ts
+z.infer.segments
+```
 
 ***
 
@@ -57,16 +97,56 @@ Sentence/utterance-level timings; may be empty.
 text: string;
 ```
 
-Defined in: [packages/transcription/src/types.ts:18](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L18)
+Defined in: [packages/transcription/src/types.ts:19](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L19)
+
+#### Inherited from
+
+```ts
+z.infer.text
+```
 
 ***
 
 ### words
 
 ```ts
-words: TranscriptWord[];
+words: object[];
 ```
 
-Defined in: [packages/transcription/src/types.ts:23](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L23)
+Defined in: [packages/transcription/src/types.ts:22](https://github.com/mattppal/mcut/blob/main/packages/transcription/src/types.ts#L22)
 
-Word-level timings; may be empty for providers without word granularity.
+#### confidence?
+
+```ts
+optional confidence?: number;
+```
+
+#### endMs
+
+```ts
+endMs: number;
+```
+
+#### speaker?
+
+```ts
+optional speaker?: string;
+```
+
+#### startMs
+
+```ts
+startMs: number;
+```
+
+#### text
+
+```ts
+text: string;
+```
+
+#### Inherited from
+
+```ts
+z.infer.words
+```
