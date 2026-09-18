@@ -45,7 +45,7 @@
       "top": 0.1,
       "bottom": 0.25
     },
-    "notes": "Vertical. Hook in the first 1–2s; 21–34s is the engagement sweet spot. Keep captions and faces inside the middle band — the right rail and bottom description bar overlap the frame."
+    "notes": "Vertical. Hook in the first 1-2s; 21-34s is the engagement sweet spot. Keep captions and faces inside the middle band. The right rail and bottom description bar overlap the frame."
   },
   {
     "id": "reels",
@@ -57,7 +57,7 @@
       "top": 0.1,
       "bottom": 0.25
     },
-    "notes": "Vertical, 90s max. The feed crops a 4:5 preview from the center — keep the subject centered vertically so the crop still works."
+    "notes": "Vertical, 90s max. The feed crops a 4:5 preview from the center. Keep the subject centered vertically so the crop still works."
   },
   {
     "id": "square",

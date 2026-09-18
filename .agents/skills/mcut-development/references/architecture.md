@@ -1,4 +1,4 @@
-# Architecture Map
+# Architecture map
 
 ## Workspaces
 
@@ -26,7 +26,7 @@ Turbo runs `build`, `typecheck`, `test`, `lint`, and `dev` across workspaces.
 | `@mcut/cli` | `mcut` binary for scaffold, validate, summarize, batch edit, silence cuts, captions | `@mcut/timeline`, `@mcut/transcription`, `zod` |
 | `@mcut/mcp-server` | MCP server exposing commands, operators, project summary, undo/redo, and live bridge tools | `@mcut/timeline`, `@mcut/editor`, `@mcut/transcription`, MCP SDK |
 
-## Dependency Graph
+## Dependency graph
 
 Arrows mean "depends on".
 
@@ -50,7 +50,7 @@ Rules derived from the graph:
 - CLI and MCP are integration surfaces. Shared behavior belongs in
   `@mcut/timeline`, `@mcut/editor`, or `@mcut/transcription` first.
 
-## Key Paths
+## Key paths
 
 Engine core:
 
@@ -86,7 +86,7 @@ Agent and developer surfaces:
 - `examples/agentic-editing/index.ts` - AI SDK command tools.
 - `examples/mcp-server/index.ts` - minimal MCP launcher.
 
-## Engine Invariants
+## Engine invariants
 
 Reducers and tests should keep these true:
 

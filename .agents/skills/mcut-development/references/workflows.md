@@ -8,7 +8,7 @@
 - TypeScript: strict config from `tsconfig.base.json`.
 - Versioning and publishing: Changesets.
 
-## Dist Resolution
+## Dist resolution
 
 Published package `exports` point at `./dist/index.js`. Workspace symlinks resolve
 to the package directory, but consumers import built output. After editing a
@@ -83,7 +83,7 @@ bunx changeset
 ```
 
 Use `minor` for new public capabilities and `patch` for fixes. The summary should
-explain why the change matters to consumers, not just restate the diff.
+explain why the change matters to consumers, rather than restate the diff.
 
 Do not hand-edit package versions. The release workflow handles version bumps from
 changesets.

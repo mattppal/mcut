@@ -1,6 +1,6 @@
-# Dev Recipes
+# Dev recipes
 
-## Add or Change an Engine Command
+## Add or change an engine command
 
 1. Edit `packages/timeline/src/commands.ts`.
 2. Keep input serializable: IDs, numbers, strings, booleans, arrays, and plain
@@ -11,7 +11,7 @@
 5. Run package tests, then root verification.
 6. Add a changeset if public behavior changed.
 
-## Add or Change an Editor Operator
+## Add or change an editor operator
 
 1. Edit the relevant file in `packages/editor/src/`.
 2. Compose commands through `engine.dispatch()` or `engine.transact()`; do not
@@ -22,7 +22,7 @@
    `operators.test.ts`.
 6. Add a changeset for `@mcut/editor` if public behavior changed.
 
-## Add or Change CLI Behavior
+## Add or change CLI behavior
 
 1. Keep shared edit logic in packages below `@mcut/cli` first.
 2. Wire parsing and command dispatch in `packages/cli/src/cli.ts` or a focused
@@ -31,7 +31,7 @@
 4. Run `cd packages/cli && bun test`, then root verification.
 5. Add a changeset for `@mcut/cli` if the public CLI behavior changed.
 
-## Add or Change MCP Behavior
+## Add or change MCP behavior
 
 1. Prefer exposing existing commands/operators from `@mcut/timeline` and
    `@mcut/editor`.
@@ -40,7 +40,7 @@
 4. Add tests in `packages/mcp-server/src/*.test.ts`.
 5. Add a changeset for `@mcut/mcp-server` if public tool behavior changed.
 
-## Add a New Package
+## Add a new package
 
 Only add a package when the boundary is real. Otherwise extend an existing layer.
 
@@ -53,7 +53,7 @@ Only add a package when the boundary is real. Otherwise extend an existing layer
 5. Run root verification.
 6. Add an initial changeset if it will be published.
 
-## Fix an Engine Bug
+## Fix an engine bug
 
 1. Reproduce headlessly first with a failing test in the owning package.
 2. Fix the lowest layer that owns the behavior.
@@ -63,7 +63,7 @@ Only add a package when the boundary is real. Otherwise extend an existing layer
 5. Add a patch changeset for the affected package when user-visible behavior
    changes.
 
-## Update Examples
+## Update examples
 
 1. Keep examples as consumers of public APIs.
 2. Do not import package internals from `src/`.
@@ -71,7 +71,7 @@ Only add a package when the boundary is real. Otherwise extend an existing layer
 4. Run the example's `start` or `typecheck` command if available, then root
    verification when the public API changes.
 
-## Verify Like CI
+## Verify like CI
 
 ```sh
 bun install --frozen-lockfile

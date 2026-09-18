@@ -1,9 +1,9 @@
 import type { TranscriptResult } from '@mcut/transcription'
 
 /**
- * A fake voiceover for the talking-head template's 90s camera clip: ~30s of
- * speech with deliberate dead air — leading silence before the first word,
- * a long pause mid-way, and trailing room tone — so the captions and
+ * A fake voiceover for the talking-head template's 90s camera clip. About 30s of
+ * speech with deliberate dead air. Leading silence before the first word,
+ * a long pause mid-way, and trailing room tone, so the captions and
  * silence-cut recipes have something real to chew on.
  */
 function words(
