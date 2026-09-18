@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { commandOverrides, generatePlan, type FuzzTool, type StepTemplate } from '../../timeline/src/fuzz/plan'
 import { minimizeSteps } from '../../timeline/src/fuzz/minimize'
-import { mcpKnownFailures } from './fuzz/known-failures'
+import { knownFailures } from '../../timeline/src/fuzz/known-failures'
 import {
   addTallies,
   classifyReply,
@@ -33,7 +33,7 @@ const seeds =
   onlySeed === undefined || onlySeed === ''
     ? Array.from({ length: sequences }, (_, i) => BASE_SEED + i)
     : [envInt('MCUT_FUZZ_SEED', BASE_SEED)]
-const known = onlySeed ? [] : mcpKnownFailures
+const known = onlySeed ? [] : knownFailures
 
 let projectDir = ''
 let spawned = 0
