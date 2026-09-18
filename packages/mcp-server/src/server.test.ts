@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { EditorEngine, parseProject } from '@mcut/timeline'
+import { EditorEngine, getProjectCaptions, parseProject } from '@mcut/timeline'
 import { WebSocket } from 'ws'
 import { listServerToolDefinitions } from './contract'
 import { LiveMcutBridge, createHttpBridgeTarget } from './live-bridge'
@@ -16,6 +16,50 @@ async function connect(engine: EditorEngine, onChange?: () => void) {
   return client
 }
 
+function contentText(result: Awaited<ReturnType<Client['callTool']>>): string {
+  const content = 'content' in result && Array.isArray(result.content) ? result.content : []
+  const first = content[0]
+  return first?.type === 'text' ? first.text : ''
+}
+
+const talkProject = () =>
+  parseProject({
+    id: 'p-talk',
+    name: 'Talk',
+    width: 1920,
+    height: 1080,
+    fps: 30,
+    assets: {
+      'a-video': {
+        id: 'a-video',
+        kind: 'video',
+        src: 'blob:video',
+        name: 'talk.mp4',
+        durationMs: 10000,
+        width: 1920,
+        height: 1080,
+      },
+    },
+    tracks: [
+      {
+        id: 't-video',
+        name: 'Video',
+        elements: [
+          { id: 'e-video', type: 'video', assetId: 'a-video', startMs: 0, durationMs: 10000 },
+        ],
+      },
+    ],
+  })
+
+const talkTranscript = {
+  text: 'hello world',
+  words: [
+    { text: 'hello', startMs: 0, endMs: 3000 },
+    { text: 'world', startMs: 7000, endMs: 10000 },
+  ],
+  segments: [],
+}
+
 describe('createMcutMcpServer', () => {
   test('lists static, operator, and command tools', async () => {
     const client = await connect(new EditorEngine())
@@ -27,12 +71,19 @@ describe('createMcutMcpServer', () => {
     expect(names).toContain('search_transcript')
     expect(names).toContain('ensure_transcript')
     expect(names).toContain('get_audio_activity')
+    expect(names).toContain('apply_captions')
+    expect(names).toContain('apply_silence_cuts')
+    expect(names).toContain('lint_project')
+    expect(names).toContain('list_presets')
     expect(names).toContain('list_actions')
     expect(names).toContain('run_action')
     expect(names).toContain('splitElement')
     expect(names).toContain('operator_playback_toggle')
     const split = tools.find((tool) => tool.name === 'splitElement')!
     expect(split.inputSchema.properties).toHaveProperty('atMs')
+    const captions = tools.find((tool) => tool.name === 'apply_captions')
+    expect(captions?.inputSchema.properties).toHaveProperty('transcript')
+    expect(captions?.inputSchema.properties).toHaveProperty('styleId')
   })
 
   test('the wire surface deep-equals the shared contract', async () => {
@@ -40,6 +91,54 @@ describe('createMcutMcpServer', () => {
     const { tools } = await client.listTools()
     const expected = listServerToolDefinitions()
     expect(JSON.parse(JSON.stringify(tools))).toEqual(JSON.parse(JSON.stringify(expected)))
+  })
+
+  test('lints, lists presets, and applies silence cuts and captions from one transcript', async () => {
+    const engine = new EditorEngine({ project: talkProject() })
+    let persisted = 0
+    const client = await connect(engine, () => {
+      persisted++
+    })
+
+    const presets = await client.callTool({ name: 'list_presets', arguments: {} })
+    expect(contentText(presets)).toContain('"id": "youtube"')
+
+    const clean = await client.callTool({ name: 'lint_project', arguments: {} })
+    expect(JSON.parse(contentText(clean))).toEqual([])
+
+    const cuts = await client.callTool({
+      name: 'apply_silence_cuts',
+      arguments: { elementId: 'e-video', transcript: talkTranscript, paddingMs: 0 },
+    })
+    expect(cuts.isError).toBeFalsy()
+    expect(contentText(cuts)).toContain('"removedMs": 4000')
+    expect(persisted).toBe(1)
+    expect(engine.project.tracks[0]?.elements).toEqual([
+      expect.objectContaining({ id: 'e-video', startMs: 0, durationMs: 3000 }),
+      expect.objectContaining({ startMs: 3000, trimStartMs: 7000, durationMs: 3000 }),
+    ])
+
+    const captions = await client.callTool({
+      name: 'apply_captions',
+      arguments: { transcript: talkTranscript, styleId: 'classic' },
+    })
+    expect(captions.isError).toBeFalsy()
+    expect(contentText(captions)).toContain('OK: 2 caption(s) applied.')
+    expect(persisted).toBe(2)
+    expect(getProjectCaptions(engine.project).map((ref) => ref.caption.text)).toEqual(['hello', 'world'])
+
+    const linted = await client.callTool({ name: 'lint_project', arguments: {} })
+    expect(JSON.parse(contentText(linted))).toEqual([])
+
+    expect(engine.undo()).toBe(true)
+    expect(getProjectCaptions(engine.project)).toEqual([])
+
+    const rejected = await client.callTool({
+      name: 'apply_silence_cuts',
+      arguments: { elementId: 'video', transcript: talkTranscript },
+    })
+    expect(rejected.isError).toBe(true)
+    expect(contentText(rejected)).toContain('elementId')
   })
 
   test('dispatches commands, reports state, and persists via onChange', async () => {

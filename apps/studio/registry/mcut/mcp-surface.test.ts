@@ -68,7 +68,7 @@ describe("MCP tool manifest", () => {
     expect(body.profile).toBe("agent");
     expect(tools).toEqual(listMcpToolDefinitions("agent"));
     expect(tools).toEqual(JSON.parse(JSON.stringify(MCP_AGENT_TOOL_DEFINITIONS)));
-    expect(tools.length).toBe(15);
+    expect(tools.length).toBe(19);
     expect(toolNames.size).toBe(tools.length);
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true);
     for (const command of listCommands()) expect(toolNames.has(command.type)).toBe(false);
@@ -92,7 +92,7 @@ describe("MCP tool manifest", () => {
 
     expect(body.profile).toBe("full");
     expect(tools).toEqual(listMcpToolDefinitions("full"));
-    expect(tools.length).toBe(116);
+    expect(tools.length).toBe(120);
     expect(toolNames.size).toBe(tools.length);
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true);
     for (const id of operatorIds) expect(toolNames.has(liveMcpOperatorToolName(id))).toBe(true);
@@ -384,6 +384,10 @@ describe("Studio action/operator MCP surface", () => {
       "ensure_transcript",
       "list_commands",
       "apply_commands",
+      "apply_captions",
+      "apply_silence_cuts",
+      "lint_project",
+      "list_presets",
       "list_operators",
       "run_operator",
       "list_actions",

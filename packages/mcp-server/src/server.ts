@@ -1,7 +1,8 @@
 /**
  * mcut as an MCP server: every editor command becomes an MCP tool, straight
  * from the zod command table, plus the user-level operators from @mcut/editor
- * and the static tools (summary, project, undo/redo).
+ * and the static tools (summary, project, captions, silence cuts, lint,
+ * presets, undo/redo).
  *
  * The target can be a local EditorEngine or a live browser tab. Export stays
  * in the browser (WebCodecs); MCP edits the project document/state.
@@ -14,8 +15,12 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import {
   OperatorError,
+  PLATFORM_PRESETS,
+  applyCommands,
+  lintProject,
   listOperators,
   operatorIds,
+  planSilenceCuts,
   runOperator,
   summarizeEngine,
   type OperatorId,
@@ -28,11 +33,19 @@ import {
   getProjectMediaContext,
   getProjectTranscript,
   parseCommand,
+  parseProject,
+  type BuiltinCommand,
   type Project,
   type ProjectTranscriptOptions,
 } from '@mcut/timeline'
-import { searchCaptions } from '@mcut/transcription'
-import { listServerToolDefinitions, operatorToolName } from './contract'
+import { buildCaptionsCommand, searchCaptions } from '@mcut/transcription'
+import { z } from 'zod'
+import {
+  applyCaptionsInputSchema,
+  applySilenceCutsInputSchema,
+  listServerToolDefinitions,
+  operatorToolName,
+} from './contract'
 
 export interface McutMcpTarget {
   getSummary(): string | Promise<string>
@@ -49,6 +62,7 @@ export interface McutMcpTarget {
   redo(): boolean | Promise<boolean>
   runOperator(operatorId: OperatorId, input: unknown): unknown | Promise<unknown>
   dispatchCommand(commandName: string, input: unknown): unknown | Promise<unknown>
+  applyCommands(commands: BuiltinCommand[]): unknown | Promise<unknown>
 }
 
 export interface McutMcpServerOptions {
@@ -67,6 +81,9 @@ export interface McutMcpServerForTargetOptions {
 
 const text = (value: string) => ({ content: [{ type: 'text' as const, text: value }] })
 const failure = (value: string) => ({ ...text(value), isError: true })
+
+const targetProject = async (target: McutMcpTarget): Promise<Project> =>
+  parseProject(await target.getProject())
 
 function transcriptOptions(args: unknown): ProjectTranscriptOptions {
   const input = (args ?? {}) as { includeWords?: unknown }
@@ -154,6 +171,10 @@ function createEngineTarget(
       engine.dispatch(parseCommand(Object.assign({}, input, { type: commandName })))
       await onChange()
     },
+    applyCommands: async (commands) => {
+      applyCommands(engine, commands)
+      await onChange()
+    },
   }
 }
 
@@ -214,6 +235,31 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
         case 'get_audio_activity': {
           if (!target.getAudioActivity) return failure('get_audio_activity is not available on this target.')
           return text(JSON.stringify(await target.getAudioActivity(args ?? {}), null, 2))
+        }
+        case 'lint_project':
+          return text(JSON.stringify(lintProject(await targetProject(target)), null, 2))
+        case 'list_presets':
+          return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
+        case 'apply_captions': {
+          const input = applyCaptionsInputSchema.safeParse(args ?? {})
+          if (!input.success) return failure(`apply_captions: ${z.prettifyError(input.error)}`)
+          const { transcript, ...options } = input.data
+          const command = buildCaptionsCommand(await targetProject(target), transcript, options)
+          await target.applyCommands([command])
+          return text(`OK: ${command.captions.length} caption(s) applied.\n\n${await target.getSummary()}`)
+        }
+        case 'apply_silence_cuts': {
+          const input = applySilenceCutsInputSchema.safeParse(args ?? {})
+          if (!input.success) return failure(`apply_silence_cuts: ${z.prettifyError(input.error)}`)
+          const { elementId, transcript, ...options } = input.data
+          const plan = planSilenceCuts(await targetProject(target), elementId, transcript, options)
+          if (plan.silences.length === 0) return text('No silences found, nothing to cut.')
+          await target.applyCommands(plan.commands)
+          const result = { silences: plan.silences, removedMs: plan.removedMs }
+          return text(
+            `OK: ${plan.silences.length} silence(s) cut.\n\nResult:\n${JSON.stringify(result, null, 2)}` +
+              `\n\n${await target.getSummary()}`,
+          )
         }
         case 'list_operators':
           return text(JSON.stringify(await target.listOperators(), null, 2))

@@ -6,7 +6,7 @@
  * Browser-safe. Imports zod and the mcut SDK packages, no transports, no node builtins.
  *
  * Two overlapping catalogs, on purpose:
- * - {@link MCP_SERVER_STATIC_TOOLS} (12) is what `createMcutMcpServerForTarget`
+ * - {@link MCP_SERVER_STATIC_TOOLS} (16) is what `createMcutMcpServerForTarget`
  *   registers. Raw commands and operators are exposed as their own tools
  *   (command type names and `operator_*`), not through a generic dispatcher.
  * - {@link MCP_BRIDGE_ONLY_TOOLS} (3) — `list_commands`, `apply_commands`,
@@ -15,8 +15,15 @@
  *   docs that mention `apply_commands` only work against the bridge today.
  */
 import { z } from 'zod'
-import { operatorIds, operators, type OperatorDefinition, type OperatorId } from '@mcut/editor'
-import { listToolDefinitions } from '@mcut/timeline'
+import {
+  operatorIds,
+  operators,
+  silenceCutOptionsSchema,
+  type OperatorDefinition,
+  type OperatorId,
+} from '@mcut/editor'
+import { elementIdSchema, listToolDefinitions } from '@mcut/timeline'
+import { captionsCommandOptionsSchema, transcriptResultSchema } from '@mcut/transcription'
 
 export interface McpToolDefinition {
   name: string
@@ -117,6 +124,10 @@ export const MCP_AGENT_TOOL_NAMES = [
   'ensure_transcript',
   'list_commands',
   'apply_commands',
+  'apply_captions',
+  'apply_silence_cuts',
+  'lint_project',
+  'list_presets',
   'list_operators',
   'run_operator',
   'list_actions',
@@ -126,6 +137,19 @@ export const MCP_AGENT_TOOL_NAMES = [
 ] as const
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
+
+const transcriptInputSchema = transcriptResultSchema.describe(
+  'Transcript JSON with word timings in source-media milliseconds, the same shape `mcut captions` reads.',
+)
+
+export const applyCaptionsInputSchema = captionsCommandOptionsSchema.extend({
+  transcript: transcriptInputSchema,
+})
+
+export const applySilenceCutsInputSchema = silenceCutOptionsSchema.extend({
+  elementId: elementIdSchema.describe('The video/audio element to cut. It must play at 1x, with no time remap.'),
+  transcript: transcriptInputSchema,
+})
 
 const TOOL_DETAILS: Record<McpAgentToolName, Omit<McpToolDefinition, 'name'>> = {
   get_summary: {
@@ -236,6 +260,30 @@ const TOOL_DETAILS: Record<McpAgentToolName, Omit<McpToolDefinition, 'name'>> = 
       additionalProperties: false,
     },
   },
+  apply_captions: {
+    description:
+      'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
+      'Pass elementId to caption only the source span one video/audio clip plays, at its timeline position. ' +
+      'styleId picks a caption style preset. Returns the updated project summary.',
+    inputSchema: toToolInputSchema(applyCaptionsInputSchema),
+  },
+  apply_silence_cuts: {
+    description:
+      'Cut transcript silence out of one video/audio element (splits, ripple deletes, and edge trims) ' +
+      'as one undoable edit. Returns the removed silence windows in source-media time and the updated project summary.',
+    inputSchema: toToolInputSchema(applySilenceCutsInputSchema),
+  },
+  lint_project: {
+    description:
+      'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
+      'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',
+    inputSchema: EMPTY_SCHEMA,
+  },
+  list_presets: {
+    description:
+      'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',
+    inputSchema: EMPTY_SCHEMA,
+  },
   list_operators: {
     description:
       'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' +
@@ -311,6 +359,10 @@ const MCP_SERVER_STATIC_TOOL_NAMES = [
   'search_transcript',
   'ensure_transcript',
   'get_audio_activity',
+  'apply_captions',
+  'apply_silence_cuts',
+  'lint_project',
+  'list_presets',
   'list_operators',
   'list_actions',
   'run_action',
