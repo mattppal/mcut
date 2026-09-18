@@ -218,6 +218,7 @@
       "version": "0.1.0-alpha.0",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
+        "zod": "4.4.3",
       },
     },
     "packages/transcription-ai-sdk": {

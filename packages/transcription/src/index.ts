@@ -1,10 +1,11 @@
-export type {
-  TranscribeInput,
-  TranscribeOptions,
-  TranscriptionProvider,
-  TranscriptResult,
-  TranscriptSegment,
-  TranscriptWord,
+export {
+  transcriptResultSchema,
+  type TranscribeInput,
+  type TranscribeOptions,
+  type TranscriptionProvider,
+  type TranscriptResult,
+  type TranscriptSegment,
+  type TranscriptWord,
 } from './types'
 
 export {
@@ -16,10 +17,13 @@ export {
 
 export {
   buildApplyCaptionsCommand,
+  buildCaptionsCommand,
+  captionsCommandOptionsSchema,
   groupWords,
   toCaptionElements,
   type BuildApplyCaptionsOptions,
   type CaptionElementInput,
+  type CaptionsCommandOptions,
   type GroupWordsOptions,
   type ToCaptionElementsOptions,
   type WordGroup,

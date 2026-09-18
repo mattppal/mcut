@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 export interface TranscriptWord {
   text: string
   startMs: number
@@ -24,6 +26,33 @@ export interface TranscriptResult {
   /** Sentence/utterance-level timings; may be empty. */
   segments: TranscriptSegment[]
 }
+
+export const transcriptResultSchema = z.object({
+  text: z.string().default(''),
+  language: z.string().optional(),
+  durationMs: z.number().optional(),
+  words: z
+    .array(
+      z.object({
+        text: z.string(),
+        startMs: z.number(),
+        endMs: z.number(),
+        confidence: z.number().optional(),
+        speaker: z.string().optional(),
+      }),
+    )
+    .default([]),
+  segments: z
+    .array(
+      z.object({
+        text: z.string(),
+        startMs: z.number(),
+        endMs: z.number(),
+        speaker: z.string().optional(),
+      }),
+    )
+    .default([]),
+})
 
 export interface TranscribeInput {
   /** Audio payload: a Blob/File, raw bytes, or a URL the provider can fetch. */

@@ -6,6 +6,10 @@ export {
   type SilenceCutTranscript,
   type SilenceWindow,
 } from './silence'
-export { buildCaptionsCommand, type CaptionsCommandOptions } from './captions'
+export {
+  buildCaptionsCommand,
+  captionsCommandOptionsSchema,
+  type CaptionsCommandOptions,
+} from './captions'
 export { PLATFORM_PRESETS, getPlatformPreset, type PlatformPreset } from './presets'
-export { readProjectFile, readTranscriptFile, transcriptSchema, writeProjectFile } from './io'
+export { readProjectFile, readTranscriptFile, writeProjectFile } from './io'

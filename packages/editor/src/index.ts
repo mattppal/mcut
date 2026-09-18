@@ -62,6 +62,7 @@ export {
 
 export {
   planSilenceCuts,
+  silenceCutOptionsSchema,
   type SilenceCutOptions,
   type SilenceCutPlan,
   type SilenceCutTranscript,
@@ -69,3 +70,6 @@ export {
 } from './silence-cuts'
 
 export { registerCoreOperators } from './core-operators'
+export { applyCommands, summarizeEngine } from './headless'
+export { lintProject, type LintIssue } from './lint'
+export { PLATFORM_PRESETS, getPlatformPreset, type PlatformPreset } from './platform-presets'
