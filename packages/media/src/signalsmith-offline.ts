@@ -110,8 +110,14 @@ export function renderStretchOffline(
   tempo: number,
   outputFrames: number,
 ): Promise<Float32Array[]> {
-  const run = renderQueue.then(() => doRender(channels, sampleRate, tempo, outputFrames))
-  renderQueue = run.catch(() => {})
+  const run = renderQueue.then(
+    () => doRender(channels, sampleRate, tempo, outputFrames),
+    () => doRender(channels, sampleRate, tempo, outputFrames),
+  )
+  renderQueue = run.then(
+    () => undefined,
+    () => undefined,
+  )
   return run
 }
 
