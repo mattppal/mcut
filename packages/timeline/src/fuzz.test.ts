@@ -27,7 +27,7 @@ const known = onlySeed ? [] : knownFailures
 
 test(
   `${seeds.length} random command sequences of ${length} steps keep every engine invariant`,
-  () => {
+  async () => {
     const tools = listToolDefinitions()
     let applied = 0
     let rejected = 0
@@ -41,7 +41,7 @@ test(
       if (result.failure) {
         const stillFails = (subset: typeof plan.steps) =>
           runCommandPlan({ seed, steps: subset }, { known }).failure !== undefined
-        const steps = minimizeSteps(plan.steps, stillFails)
+        const steps = await minimizeSteps(plan.steps, stillFails)
         const minimized = runCommandPlan({ seed, steps }, { known })
         console.log(formatFailure({ seed, steps }, minimized))
         const failure = minimized.failure ?? result.failure
