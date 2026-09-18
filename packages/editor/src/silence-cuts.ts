@@ -2,14 +2,19 @@ import {
   EditorEngine,
   MIN_ELEMENT_DURATION_MS,
   createElementId,
+  elementIdSchema,
   getElementLocation,
   type BuiltinCommand,
-  type ElementId,
   type Project,
   type TimelineElement,
 } from '@mcut/timeline'
 
 type ClipElement = TimelineElement & { type: 'video' | 'audio' }
+
+interface WordTiming {
+  startMs: number
+  endMs: number
+}
 
 export interface SilenceCutTranscript {
   words: Array<{ startMs: number; endMs: number }>
@@ -61,7 +66,8 @@ export function planSilenceCuts(
   const minKeepMs = Math.max(options.minKeepMs ?? 250, MIN_ELEMENT_DURATION_MS)
   const trimEnds = options.trimEnds ?? true
 
-  const location = getElementLocation(project, elementId as ElementId)
+  const parsedId = elementIdSchema.safeParse(elementId)
+  const location = parsedId.success ? getElementLocation(project, parsedId.data) : undefined
   if (!location) throw new Error(`no element "${elementId}" in project`)
   const element = location.element
   const id = element.id
@@ -78,17 +84,17 @@ export function planSilenceCuts(
   const windowStart = element.trimStartMs
   const windowEnd = element.trimStartMs + element.durationMs
 
-  const words = transcript.words
+  const [firstWord, ...restWords] = transcript.words
     .filter((word) => word.endMs > windowStart && word.startMs < windowEnd)
     .sort((a, b) => a.startMs - b.startMs)
-  if (words.length === 0) {
+  if (!firstWord) {
     throw new Error(
       `transcript has no words inside the element's source window ` +
         `(${windowStart}-${windowEnd}ms); refusing to remove silence without word timings`,
     )
   }
 
-  const silences = findSilences(words, windowStart, windowEnd, {
+  const silences = findSilences([firstWord, ...restWords], windowStart, windowEnd, {
     minGapMs,
     paddingMs,
     minKeepMs,
@@ -161,25 +167,26 @@ interface FindOptions {
 }
 
 function findSilences(
-  words: Array<{ startMs: number; endMs: number }>,
+  words: readonly [WordTiming, ...WordTiming[]],
   windowStart: number,
   windowEnd: number,
   { minGapMs, paddingMs, minKeepMs, trimEnds }: FindOptions,
 ): SilenceWindow[] {
   const raw: SilenceWindow[] = []
 
-  const first = words[0]!
+  const [first, ...rest] = words
   if (trimEnds && first.startMs - windowStart > minGapMs) {
     raw.push({ startMs: windowStart, endMs: first.startMs - paddingMs })
   }
-  for (let i = 0; i < words.length - 1; i++) {
-    const gapStart = words[i]!.endMs
-    const gapEnd = words[i + 1]!.startMs
+  let last = first
+  for (const word of rest) {
+    const gapStart = last.endMs
+    const gapEnd = word.startMs
     if (gapEnd - gapStart > minGapMs) {
       raw.push({ startMs: gapStart + paddingMs, endMs: gapEnd - paddingMs })
     }
+    last = word
   }
-  const last = words[words.length - 1]!
   if (trimEnds && windowEnd - last.endMs > minGapMs) {
     raw.push({ startMs: last.endMs + paddingMs, endMs: windowEnd })
   }

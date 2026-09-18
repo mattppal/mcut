@@ -12,7 +12,6 @@ import {
   toOtioJson,
   trackIdSchema,
 } from '@mcut/timeline'
-import type { AnimatableProperty } from '@mcut/timeline'
 import { emptyInputSchema, type EditorOperatorRegistry } from './operators'
 import {
   addTextAtPlayhead,
@@ -412,14 +411,15 @@ export function registerCoreOperators(registry: EditorOperatorRegistry): EditorO
     run: ({ engine }, { elementId, timeMs, values }) => {
       const element = getElement(engine.project, elementId)
       if (!element) return
-      const allowed = new Set<AnimatableProperty>(animatableProperties(element))
+      const allowed = animatableProperties(element)
       engine.transact(() => {
         for (const [property, value] of Object.entries(values)) {
-          if (!allowed.has(property as AnimatableProperty) || value === undefined) continue
+          const animatable = allowed.find((candidate) => candidate === property)
+          if (!animatable || value === undefined) continue
           engine.dispatch({
             type: 'setKeyframe',
             elementId,
-            property: property as AnimatableProperty,
+            property: animatable,
             timeMs,
             value,
           })
