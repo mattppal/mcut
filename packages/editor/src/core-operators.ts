@@ -296,7 +296,7 @@ export const operators = {
     inputSchema: z.object({ assetId: assetIdSchema }),
     run: ({ engine }, { assetId }) => {
       const asset = engine.project.assets[assetId]
-      if (!asset) throw new Error(`no asset "${assetId}"`)
+      if (!asset) throw new OperatorError('unknown-asset', `no asset "${assetId}"`)
       return { elementId: insertElementAtPlayhead(engine, elementForAsset(engine, asset)) }
     },
   }),
