@@ -68,7 +68,82 @@ Defined in: [packages/compositor/src/backend.ts:34](https://github.com/mattppal/
 ### effects?
 
 ```ts
-optional effects?: readonly Effect[];
+optional effects?: readonly (
+  | {
+  enabled: boolean;
+  radius: number;
+  type: "blur";
+}
+  | {
+  amount: number;
+  enabled: boolean;
+  type: "brightness";
+}
+  | {
+  amount: number;
+  enabled: boolean;
+  type: "contrast";
+}
+  | {
+  amount: number;
+  enabled: boolean;
+  type: "saturate";
+}
+  | {
+  amount: number;
+  enabled: boolean;
+  type: "grayscale";
+}
+  | {
+  amount: number;
+  enabled: boolean;
+  type: "sepia";
+}
+  | {
+  degrees: number;
+  enabled: boolean;
+  type: "hue-rotate";
+}
+  | {
+  amount: number;
+  enabled: boolean;
+  type: "invert";
+}
+  | {
+  blur: number;
+  color: string;
+  enabled: boolean;
+  offsetX: number;
+  offsetY: number;
+  type: "drop-shadow";
+}
+  | {
+  enabled: boolean;
+  filter: string;
+  type: "css";
+}
+  | {
+  enabled: boolean;
+  keyColor: string;
+  softness: number;
+  spillSuppression: number;
+  tolerance: number;
+  type: "chroma-key";
+}
+  | {
+  blue?: object[];
+  enabled: boolean;
+  green?: object[];
+  red?: object[];
+  rgb?: object[];
+  type: "curves";
+}
+  | {
+  enabled: boolean;
+  intensity: number;
+  lutId: string;
+  type: "lut3d";
+})[];
 ```
 
 Defined in: [packages/compositor/src/backend.ts:41](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/backend.ts#L41)

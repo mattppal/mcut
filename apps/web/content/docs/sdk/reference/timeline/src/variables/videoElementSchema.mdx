@@ -40,7 +40,19 @@ const videoElementSchema: ZodObject<{
      y: ZodNumber;
   }, $strip>>;
   durationMs: ZodNumber;
-  effects: ZodOptional<ZodArray<ZodType<Effect, unknown, $ZodTypeInternals<Effect, unknown>>>>;
+  effects: ZodOptional<ZodArray<ZodDiscriminatedUnion<[ZodObject<{
+     enabled: ZodDefault<ZodBoolean>;
+     radius: ZodDefault<ZodNumber>;
+     type: ZodLiteral<"blur">;
+   }, $strip>, ZodObject<{
+     amount: ZodDefault<ZodNumber>;
+     enabled: ZodDefault<ZodBoolean>;
+     type: ZodLiteral<"brightness">;
+   }, $strip>, ZodObject<{
+     amount: ZodDefault<ZodNumber>;
+     enabled: ZodDefault<ZodBoolean>;
+     type: ZodLiteral<"contrast">;
+  }, $strip>], "type">>>;
   fadeInMs: ZodOptional<ZodNumber>;
   fadeOutMs: ZodOptional<ZodNumber>;
   groupId: ZodOptional<ZodCustom<`g-${string}`, `g-${string}`>>;
@@ -101,7 +113,15 @@ const videoElementSchema: ZodObject<{
   }, $strip>>;
   transition: ZodOptional<ZodObject<{
      durationMs: ZodDefault<ZodNumber>;
-     type: ZodString;
+     type: ZodEnum<{
+        dissolve: "dissolve";
+        fade-black: "fade-black";
+        fade-white: "fade-white";
+        slide-left: "slide-left";
+        slide-right: "slide-right";
+        wipe-left: "wipe-left";
+        wipe-right: "wipe-right";
+     }>;
   }, $strip>>;
   trimStartMs: ZodDefault<ZodNumber>;
   type: ZodLiteral<"video">;
@@ -109,4 +129,4 @@ const videoElementSchema: ZodObject<{
 }, $strip>;
 ```
 
-Defined in: [packages/timeline/src/model.ts:351](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L351)
+Defined in: [packages/timeline/src/model.ts:302](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L302)

@@ -11,7 +11,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 # Interface: AutoCrossfadePlanInput
 
-Defined in: [packages/editor/src/timeline-gesture.ts:52](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L52)
+Defined in: [packages/editor/src/timeline-gesture.ts:53](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L53)
 
 ## Properties
 
@@ -21,7 +21,7 @@ Defined in: [packages/editor/src/timeline-gesture.ts:52](https://github.com/matt
 desiredStartMs: number;
 ```
 
-Defined in: [packages/editor/src/timeline-gesture.ts:54](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L54)
+Defined in: [packages/editor/src/timeline-gesture.ts:55](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L55)
 
 ***
 
@@ -31,7 +31,7 @@ Defined in: [packages/editor/src/timeline-gesture.ts:54](https://github.com/matt
 elementId: `e-${string}`;
 ```
 
-Defined in: [packages/editor/src/timeline-gesture.ts:53](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L53)
+Defined in: [packages/editor/src/timeline-gesture.ts:54](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L54)
 
 ***
 
@@ -41,7 +41,7 @@ Defined in: [packages/editor/src/timeline-gesture.ts:53](https://github.com/matt
 optional maxAttemptedOverlapMs?: number;
 ```
 
-Defined in: [packages/editor/src/timeline-gesture.ts:56](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L56)
+Defined in: [packages/editor/src/timeline-gesture.ts:57](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L57)
 
 ***
 
@@ -51,7 +51,7 @@ Defined in: [packages/editor/src/timeline-gesture.ts:56](https://github.com/matt
 optional maxDurationMs?: number;
 ```
 
-Defined in: [packages/editor/src/timeline-gesture.ts:58](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L58)
+Defined in: [packages/editor/src/timeline-gesture.ts:59](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L59)
 
 ***
 
@@ -61,7 +61,7 @@ Defined in: [packages/editor/src/timeline-gesture.ts:58](https://github.com/matt
 optional minAttemptedOverlapMs?: number;
 ```
 
-Defined in: [packages/editor/src/timeline-gesture.ts:55](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L55)
+Defined in: [packages/editor/src/timeline-gesture.ts:56](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L56)
 
 ***
 
@@ -71,14 +71,21 @@ Defined in: [packages/editor/src/timeline-gesture.ts:55](https://github.com/matt
 optional minDurationMs?: number;
 ```
 
-Defined in: [packages/editor/src/timeline-gesture.ts:57](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L57)
+Defined in: [packages/editor/src/timeline-gesture.ts:58](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L58)
 
 ***
 
 ### transitionType?
 
 ```ts
-optional transitionType?: string;
+optional transitionType?:
+  | "dissolve"
+  | "fade-black"
+  | "fade-white"
+  | "slide-left"
+  | "slide-right"
+  | "wipe-left"
+  | "wipe-right";
 ```
 
-Defined in: [packages/editor/src/timeline-gesture.ts:59](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L59)
+Defined in: [packages/editor/src/timeline-gesture.ts:60](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-gesture.ts#L60)

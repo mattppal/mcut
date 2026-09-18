@@ -11,7 +11,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 # Interface: TransitionPair
 
-Defined in: [packages/timeline/src/transitions.ts:63](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L63)
+Defined in: [packages/timeline/src/transitions.ts:38](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L38)
 
 ## Properties
 
@@ -21,7 +21,7 @@ Defined in: [packages/timeline/src/transitions.ts:63](https://github.com/mattppa
 cutMs: number;
 ```
 
-Defined in: [packages/timeline/src/transitions.ts:67](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L67)
+Defined in: [packages/timeline/src/transitions.ts:42](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L42)
 
 Absolute timeline time of the cut.
 
@@ -33,7 +33,7 @@ Absolute timeline time of the cut.
 durationMs: number;
 ```
 
-Defined in: [packages/timeline/src/transitions.ts:68](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L68)
+Defined in: [packages/timeline/src/transitions.ts:43](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L43)
 
 ***
 
@@ -43,7 +43,7 @@ Defined in: [packages/timeline/src/transitions.ts:68](https://github.com/mattppa
 left: TimelineElement;
 ```
 
-Defined in: [packages/timeline/src/transitions.ts:64](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L64)
+Defined in: [packages/timeline/src/transitions.ts:39](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L39)
 
 ***
 
@@ -53,14 +53,21 @@ Defined in: [packages/timeline/src/transitions.ts:64](https://github.com/mattppa
 right: TimelineElement;
 ```
 
-Defined in: [packages/timeline/src/transitions.ts:65](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L65)
+Defined in: [packages/timeline/src/transitions.ts:40](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L40)
 
 ***
 
 ### type
 
 ```ts
-type: TransitionType;
+type:
+  | "dissolve"
+  | "fade-black"
+  | "fade-white"
+  | "slide-left"
+  | "slide-right"
+  | "wipe-left"
+  | "wipe-right";
 ```
 
-Defined in: [packages/timeline/src/transitions.ts:69](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L69)
+Defined in: [packages/timeline/src/transitions.ts:44](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L44)

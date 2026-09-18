@@ -11,7 +11,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 # Class: WebGPUBackend
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:78](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L78)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:77](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L77)
 
 ## Implements
 
@@ -25,7 +25,7 @@ Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:78](https://github
 readonly height: number;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:81](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L81)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:80](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L80)
 
 #### Implementation of
 
@@ -39,7 +39,7 @@ Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:81](https://github
 readonly kind: "webgpu" = 'webgpu';
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:79](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L79)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:78](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L78)
 
 #### Implementation of
 
@@ -53,7 +53,7 @@ Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:79](https://github
 readonly width: number;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:80](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L80)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:79](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L79)
 
 #### Implementation of
 
@@ -67,7 +67,7 @@ Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:80](https://github
 acquireRaster(): Canvas2D;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:284](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L284)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:283](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L283)
 
 The frame-space canvas2d context for raster content. Acquiring it marks
 the raster surface dirty so the backend composites it in z-order;
@@ -90,7 +90,7 @@ renderers that only need it for text measurement still go through here
 beginFrame(backgroundColor): void;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:233](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L233)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:232](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L232)
 
 #### Parameters
 
@@ -114,7 +114,7 @@ Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:233](https://githu
 dispose(): void;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:322](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L322)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:321](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L321)
 
 Free GPU resources. The backend is unusable afterwards.
 
@@ -130,7 +130,7 @@ Free GPU resources. The backend is unusable afterwards.
 drawImageQuad(quad, chrome): void;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:297](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L297)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:296](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L296)
 
 Composite a media quad with chrome — the GPU fast path. Backends without
 one (or layers a backend cannot run, e.g. raw `css` filters on WebGPU)
@@ -162,7 +162,7 @@ draw it through the raster context instead.
 endFrame(): void;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:251](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L251)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:250](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L250)
 
 #### Returns
 
@@ -180,7 +180,7 @@ Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:251](https://githu
 popRasterScope(): void;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:293](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L293)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:292](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L292)
 
 #### Returns
 
@@ -198,7 +198,7 @@ Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:293](https://githu
 pushRasterScope(): void;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:289](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L289)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:288](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L288)
 
 While a raster scope is open, every draw — including image quads — lands
 on the raster context, so canvas2d state (clips, alpha, transforms) set
@@ -224,7 +224,7 @@ registerLut3D(
    data): void;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:198](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L198)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:197](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L197)
 
 Register a 3D LUT for `lut3d` effects: `data` is size³ RGB triples
 (0..1, red fastest), flattened to a (size² × size) 2D texture.
@@ -255,7 +255,7 @@ Register a 3D LUT for `lut3d` effects: `data` is size³ RGB triples
 static create(options): Promise<WebGPUBackend>;
 ```
 
-Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:114](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L114)
+Defined in: [packages/compositor/src/webgpu/webgpu-backend.ts:113](https://github.com/mattppal/mcut/blob/main/packages/compositor/src/webgpu/webgpu-backend.ts#L113)
 
 #### Parameters
 

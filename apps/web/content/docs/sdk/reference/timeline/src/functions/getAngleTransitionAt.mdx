@@ -17,7 +17,7 @@ function getAngleTransitionAt(element, localMs):
   | null;
 ```
 
-Defined in: [packages/timeline/src/multicam.ts:104](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L104)
+Defined in: [packages/timeline/src/multicam.ts:105](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L105)
 
 The angle-cut transition window containing element-local `localMs`, or
 null (no `angleTransition`, or between windows). Each window is centered
@@ -37,7 +37,13 @@ requests, and export must all enumerate through this to agree.
 
 \{
   `durationMs`: `number`;
-  `type`: `string`;
+  `type`:   \| `"dissolve"`
+     \| `"fade-black"`
+     \| `"fade-white"`
+     \| `"slide-left"`
+     \| `"slide-right"`
+     \| `"wipe-left"`
+     \| `"wipe-right"`;
 \} = `...`
 
 Uniform transition blended at EVERY angle cut (omit = hard jump cuts).
@@ -52,7 +58,13 @@ Total blend window, centered on the cut.
 
 #### angleTransition.type
 
-`string` = `transitionTypeSchema`
+  \| `"dissolve"`
+  \| `"fade-black"`
+  \| `"fade-white"`
+  \| `"slide-left"`
+  \| `"slide-right"`
+  \| `"wipe-left"`
+  \| `"wipe-right"` = `transitionTypeSchema`
 
 #### audioSource?
 
@@ -87,7 +99,82 @@ Compositing blend mode against the layers below. Absent = normal.
 
 #### effects?
 
-[`Effect`](../type-aliases/Effect.mdx)[] = `...`
+(
+  \| \{
+  `enabled`: `boolean`;
+  `radius`: `number`;
+  `type`: `"blur"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"brightness"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"contrast"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"saturate"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"grayscale"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"sepia"`;
+\}
+  \| \{
+  `degrees`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"hue-rotate"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"invert"`;
+\}
+  \| \{
+  `blur`: `number`;
+  `color`: `string`;
+  `enabled`: `boolean`;
+  `offsetX`: `number`;
+  `offsetY`: `number`;
+  `type`: `"drop-shadow"`;
+\}
+  \| \{
+  `enabled`: `boolean`;
+  `filter`: `string`;
+  `type`: `"css"`;
+\}
+  \| \{
+  `enabled`: `boolean`;
+  `keyColor`: `string`;
+  `softness`: `number`;
+  `spillSuppression`: `number`;
+  `tolerance`: `number`;
+  `type`: `"chroma-key"`;
+\}
+  \| \{
+  `blue?`: `object`[];
+  `enabled`: `boolean`;
+  `green?`: `object`[];
+  `red?`: `object`[];
+  `rgb?`: `object`[];
+  `type`: `"curves"`;
+\}
+  \| \{
+  `enabled`: `boolean`;
+  `intensity`: `number`;
+  `lutId`: `string`;
+  `type`: `"lut3d"`;
+\})[] = `...`
 
 Ordered effect stack, compiled to a canvas filter. See `effects.ts`.
 
@@ -216,7 +303,13 @@ Time remap (speed) for the whole multicam; see `speed.ts`.
 
 \{
   `durationMs`: `number`;
-  `type`: `string`;
+  `type`:   \| `"dissolve"`
+     \| `"fade-black"`
+     \| `"fade-white"`
+     \| `"slide-left"`
+     \| `"slide-right"`
+     \| `"wipe-left"`
+     \| `"wipe-right"`;
 \} = `...`
 
 Transition INTO the next exactly-adjacent clip on the same track; this
@@ -230,7 +323,13 @@ Total blend window, centered on the cut.
 
 #### transition.type
 
-`string` = `transitionTypeSchema`
+  \| `"dissolve"`
+  \| `"fade-black"`
+  \| `"fade-white"`
+  \| `"slide-left"`
+  \| `"slide-right"`
+  \| `"wipe-left"`
+  \| `"wipe-right"` = `transitionTypeSchema`
 
 #### type
 

@@ -11,11 +11,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 # Interface: ToolDefinition
 
-Defined in: [packages/timeline/src/commands.ts:98](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L98)
-
-An MCP-shaped tool definition (a `tools/list` result entry): `type` →
-`name`, the zod payload schema → JSON Schema `inputSchema`. Hand these to
-an MCP server or any LLM tool-call API as-is.
+Defined in: [packages/timeline/src/commands.ts:2208](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L2208)
 
 ## Properties
 
@@ -25,24 +21,83 @@ an MCP server or any LLM tool-call API as-is.
 description: string;
 ```
 
-Defined in: [packages/timeline/src/commands.ts:100](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L100)
+Defined in: [packages/timeline/src/commands.ts:2210](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L2210)
 
 ***
 
 ### inputSchema
 
 ```ts
-inputSchema: Record<string, unknown>;
+inputSchema: JSONSchema;
 ```
 
-Defined in: [packages/timeline/src/commands.ts:101](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L101)
+Defined in: [packages/timeline/src/commands.ts:2211](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L2211)
 
 ***
 
 ### name
 
 ```ts
-name: string;
+name:
+  | "addTrack"
+  | "removeTrack"
+  | "renameTrack"
+  | "setTrackFlags"
+  | "compactTrackGaps"
+  | "compactTimelineGaps"
+  | "reorderTrack"
+  | "updateProject"
+  | "addAsset"
+  | "updateAsset"
+  | "removeAsset"
+  | "addElement"
+  | "removeElement"
+  | "moveElement"
+  | "trimElement"
+  | "splitElement"
+  | "updateElement"
+  | "applyCaptions"
+  | "setKeyframe"
+  | "removeKeyframe"
+  | "moveKeyframe"
+  | "setKeyframeEasing"
+  | "clearKeyframes"
+  | "applyAnimationPreset"
+  | "addEffect"
+  | "updateEffect"
+  | "removeEffect"
+  | "reorderEffect"
+  | "setBlendMode"
+  | "setMotionBlur"
+  | "setTransition"
+  | "setElementSpeed"
+  | "setTimeMap"
+  | "trimEdge"
+  | "slipElement"
+  | "rollEdit"
+  | "slideElement"
+  | "rippleTrim"
+  | "saveLayout"
+  | "removeLayout"
+  | "savePreset"
+  | "removePreset"
+  | "createMulticam"
+  | "addAngleCut"
+  | "moveAngleCut"
+  | "removeAngleCut"
+  | "setAngleLayout"
+  | "setMulticamAudio"
+  | "setMulticamSourceTrim"
+  | "setMulticamAngleTransition"
+  | "setMulticamSourceKey"
+  | "flattenMulticam"
+  | "detachAudio"
+  | "applyThumbnail"
+  | "applyZoomPreset"
+  | "addMarker"
+  | "updateMarker"
+  | "removeMarker"
+  | "rippleDelete";
 ```
 
-Defined in: [packages/timeline/src/commands.ts:99](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L99)
+Defined in: [packages/timeline/src/commands.ts:2209](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/commands.ts#L2209)

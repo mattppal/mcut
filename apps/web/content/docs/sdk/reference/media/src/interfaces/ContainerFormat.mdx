@@ -1,0 +1,70 @@
+---
+title: "ContainerFormat"
+description: Generated TypeScript API reference for the public mcut SDK.
+---
+
+[**mcut SDK**](../../../index.mdx)
+
+***
+
+[mcut SDK](../../../index.mdx) / [media/src](../index.mdx) / ContainerFormat
+
+# Interface: ContainerFormat
+
+Defined in: [packages/media/src/container-formats.ts:3](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L3)
+
+## Extended by
+
+- [`ContainerFormatEntry`](ContainerFormatEntry.mdx)
+
+## Properties
+
+### createOutputFormat
+
+```ts
+createOutputFormat: () => OutputFormat;
+```
+
+Defined in: [packages/media/src/container-formats.ts:11](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L11)
+
+Build a fresh Mediabunny output format for one export.
+
+#### Returns
+
+[`OutputFormat`](https://mediabunny.dev/)
+
+***
+
+### extension
+
+```ts
+extension: string;
+```
+
+Defined in: [packages/media/src/container-formats.ts:7](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L7)
+
+Suggested file extension, without the dot.
+
+***
+
+### label
+
+```ts
+label: string;
+```
+
+Defined in: [packages/media/src/container-formats.ts:5](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L5)
+
+UI label (e.g. `'MP4'`).
+
+***
+
+### mimeType
+
+```ts
+mimeType: string;
+```
+
+Defined in: [packages/media/src/container-formats.ts:9](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L9)
+
+Output MIME type (e.g. `'video/mp4'`).

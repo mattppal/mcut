@@ -12,9 +12,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 # Type Alias: TransitionType
 
 ```ts
-type TransitionType =
-  | typeof BUILTIN_TRANSITION_TYPES[number]
-  | string & object;
+type TransitionType = z.infer<typeof transitionTypeSchema>;
 ```
 
-Defined in: [packages/timeline/src/transitions.ts:53](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L53)
+Defined in: [packages/timeline/src/transitions.ts:26](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L26)

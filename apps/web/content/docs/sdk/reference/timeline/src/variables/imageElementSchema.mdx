@@ -40,7 +40,19 @@ const imageElementSchema: ZodObject<{
      y: ZodNumber;
   }, $strip>>;
   durationMs: ZodNumber;
-  effects: ZodOptional<ZodArray<ZodType<Effect, unknown, $ZodTypeInternals<Effect, unknown>>>>;
+  effects: ZodOptional<ZodArray<ZodDiscriminatedUnion<[ZodObject<{
+     enabled: ZodDefault<ZodBoolean>;
+     radius: ZodDefault<ZodNumber>;
+     type: ZodLiteral<"blur">;
+   }, $strip>, ZodObject<{
+     amount: ZodDefault<ZodNumber>;
+     enabled: ZodDefault<ZodBoolean>;
+     type: ZodLiteral<"brightness">;
+   }, $strip>, ZodObject<{
+     amount: ZodDefault<ZodNumber>;
+     enabled: ZodDefault<ZodBoolean>;
+     type: ZodLiteral<"contrast">;
+  }, $strip>], "type">>>;
   groupId: ZodOptional<ZodCustom<`g-${string}`, `g-${string}`>>;
   id: ZodCustom<`e-${string}`, `e-${string}`>;
   keyframes: ZodOptional<ZodRecord<ZodEnum<{
@@ -84,10 +96,18 @@ const imageElementSchema: ZodObject<{
   }, $strip>>;
   transition: ZodOptional<ZodObject<{
      durationMs: ZodDefault<ZodNumber>;
-     type: ZodString;
+     type: ZodEnum<{
+        dissolve: "dissolve";
+        fade-black: "fade-black";
+        fade-white: "fade-white";
+        slide-left: "slide-left";
+        slide-right: "slide-right";
+        wipe-left: "wipe-left";
+        wipe-right: "wipe-right";
+     }>;
   }, $strip>>;
   type: ZodLiteral<"image">;
 }, $strip>;
 ```
 
-Defined in: [packages/timeline/src/model.ts:353](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L353)
+Defined in: [packages/timeline/src/model.ts:304](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L304)

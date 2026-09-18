@@ -11,7 +11,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 # Interface: AngleTransitionWindow
 
-Defined in: [packages/timeline/src/multicam.ts:87](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L87)
+Defined in: [packages/timeline/src/multicam.ts:88](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L88)
 
 An angle-cut blend window active at some element-local time.
 
@@ -23,7 +23,7 @@ An angle-cut blend window active at some element-local time.
 cutMs: number;
 ```
 
-Defined in: [packages/timeline/src/multicam.ts:92](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L92)
+Defined in: [packages/timeline/src/multicam.ts:93](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L93)
 
 Element-local time of the cut the window centers on.
 
@@ -35,7 +35,7 @@ Element-local time of the cut the window centers on.
 durationMs: number;
 ```
 
-Defined in: [packages/timeline/src/multicam.ts:90](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L90)
+Defined in: [packages/timeline/src/multicam.ts:91](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L91)
 
 Effective window length: the configured duration, clamped per cut.
 
@@ -47,7 +47,7 @@ Effective window length: the configured duration, clamped per cut.
 fromLayoutId: string;
 ```
 
-Defined in: [packages/timeline/src/multicam.ts:93](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L93)
+Defined in: [packages/timeline/src/multicam.ts:94](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L94)
 
 ***
 
@@ -57,14 +57,21 @@ Defined in: [packages/timeline/src/multicam.ts:93](https://github.com/mattppal/m
 toLayoutId: string;
 ```
 
-Defined in: [packages/timeline/src/multicam.ts:94](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L94)
+Defined in: [packages/timeline/src/multicam.ts:95](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L95)
 
 ***
 
 ### type
 
 ```ts
-type: string;
+type:
+  | "dissolve"
+  | "fade-black"
+  | "fade-white"
+  | "slide-left"
+  | "slide-right"
+  | "wipe-left"
+  | "wipe-right";
 ```
 
-Defined in: [packages/timeline/src/multicam.ts:88](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L88)
+Defined in: [packages/timeline/src/multicam.ts:89](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/multicam.ts#L89)

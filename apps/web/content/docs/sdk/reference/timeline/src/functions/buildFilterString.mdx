@@ -15,16 +15,89 @@ description: Generated TypeScript API reference for the public mcut SDK.
 function buildFilterString(effects): string;
 ```
 
-Defined in: [packages/timeline/src/effects.ts:103](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L103)
-
-Compile an effect stack to a canvas2d/CSS filter string ('' when inert).
-Order matters: filters apply left to right, like the stack reads top down.
+Defined in: [packages/timeline/src/effects.ts:112](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/effects.ts#L112)
 
 ## Parameters
 
 ### effects
 
-readonly [`Effect`](../type-aliases/Effect.mdx)[] \| `undefined`
+  \| readonly (
+  \| \{
+  `enabled`: `boolean`;
+  `radius`: `number`;
+  `type`: `"blur"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"brightness"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"contrast"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"saturate"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"grayscale"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"sepia"`;
+\}
+  \| \{
+  `degrees`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"hue-rotate"`;
+\}
+  \| \{
+  `amount`: `number`;
+  `enabled`: `boolean`;
+  `type`: `"invert"`;
+\}
+  \| \{
+  `blur`: `number`;
+  `color`: `string`;
+  `enabled`: `boolean`;
+  `offsetX`: `number`;
+  `offsetY`: `number`;
+  `type`: `"drop-shadow"`;
+\}
+  \| \{
+  `enabled`: `boolean`;
+  `filter`: `string`;
+  `type`: `"css"`;
+\}
+  \| \{
+  `enabled`: `boolean`;
+  `keyColor`: `string`;
+  `softness`: `number`;
+  `spillSuppression`: `number`;
+  `tolerance`: `number`;
+  `type`: `"chroma-key"`;
+\}
+  \| \{
+  `blue?`: `object`[];
+  `enabled`: `boolean`;
+  `green?`: `object`[];
+  `red?`: `object`[];
+  `rgb?`: `object`[];
+  `type`: `"curves"`;
+\}
+  \| \{
+  `enabled`: `boolean`;
+  `intensity`: `number`;
+  `lutId`: `string`;
+  `type`: `"lut3d"`;
+\})[]
+  \| `undefined`
 
 ## Returns
 

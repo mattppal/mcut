@@ -11,14 +11,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 
 # Interface: FrameRequest
 
-Defined in: [packages/timeline/src/frame-requests.ts:12](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/frame-requests.ts#L12)
-
-The exact (asset, source-time) pairs an element needs to paint at a given
-timeline time. THE seam between render and decode: the compositor's
-renderers, the export frame source, and the preview pool all enumerate
-through this so a frame prepared by one is the frame requested by the
-others (cache keys must match to the millisecond). Declared per element
-type via its registry entry.
+Defined in: [packages/timeline/src/frame-requests.ts:7](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/frame-requests.ts#L7)
 
 ## Properties
 
@@ -28,7 +21,7 @@ type via its registry entry.
 assetId: string;
 ```
 
-Defined in: [packages/timeline/src/frame-requests.ts:13](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/frame-requests.ts#L13)
+Defined in: [packages/timeline/src/frame-requests.ts:8](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/frame-requests.ts#L8)
 
 ***
 
@@ -38,6 +31,6 @@ Defined in: [packages/timeline/src/frame-requests.ts:13](https://github.com/matt
 sourceTimeMs: number;
 ```
 
-Defined in: [packages/timeline/src/frame-requests.ts:15](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/frame-requests.ts#L15)
+Defined in: [packages/timeline/src/frame-requests.ts:10](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/frame-requests.ts#L10)
 
 Source media time in ms, clamped ≥ 0 (matches renderer clamping).

@@ -21,9 +21,4 @@ type TimelineElement =
   | MulticamElement;
 ```
 
-Defined in: [packages/timeline/src/model.ts:462](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L462)
-
-Named to avoid colliding with the DOM `Element` type. Statically this is
-the union of BUILT-IN types; custom registered types parse at runtime and
-surface as this union (consumers narrowing on `type` fall through their
-default branches; plugin code casts to its own type).
+Defined in: [packages/timeline/src/model.ts:316](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/model.ts#L316)

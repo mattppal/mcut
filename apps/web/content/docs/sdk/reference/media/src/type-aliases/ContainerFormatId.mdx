@@ -12,9 +12,7 @@ description: Generated TypeScript API reference for the public mcut SDK.
 # Type Alias: ContainerFormatId
 
 ```ts
-type ContainerFormatId = "mp4" | "webm" | "mkv" | string & object;
+type ContainerFormatId = keyof typeof containerFormats;
 ```
 
-Defined in: [packages/media/src/export-types.ts:10](https://github.com/mattppal/mcut/blob/main/packages/media/src/export-types.ts#L10)
-
-A registered container format id (built-ins: mp4, webm, mkv).
+Defined in: [packages/media/src/container-formats.ts:35](https://github.com/mattppal/mcut/blob/main/packages/media/src/container-formats.ts#L35)

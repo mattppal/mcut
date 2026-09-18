@@ -14,8 +14,16 @@ description: Generated TypeScript API reference for the public mcut SDK.
 ```ts
 const transitionSchema: ZodObject<{
   durationMs: ZodDefault<ZodNumber>;
-  type: ZodString;
+  type: ZodEnum<{
+     dissolve: "dissolve";
+     fade-black: "fade-black";
+     fade-white: "fade-white";
+     slide-left: "slide-left";
+     slide-right: "slide-right";
+     wipe-left: "wipe-left";
+     wipe-right: "wipe-right";
+  }>;
 }, $strip>;
 ```
 
-Defined in: [packages/timeline/src/transitions.ts:55](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L55)
+Defined in: [packages/timeline/src/transitions.ts:30](https://github.com/mattppal/mcut/blob/main/packages/timeline/src/transitions.ts#L30)

@@ -17,10 +17,10 @@ function insertElementOnTrack(
    trackId,
    element,
    startMs,
-   editMode?): string;
+   editMode?): `e-${string}`;
 ```
 
-Defined in: [packages/editor/src/timeline-operators.ts:692](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L692)
+Defined in: [packages/editor/src/timeline-operators.ts:693](https://github.com/mattppal/mcut/blob/main/packages/editor/src/timeline-operators.ts#L693)
 
 Place an element on a specific track near `startMs`. In `normal` mode the
 position clamps to free space; `overwrite` and `insert` keep the requested
@@ -50,4 +50,4 @@ position and let the engine carve or ripple (see addElement's editMode).
 
 ## Returns
 
-`string`
+`` `e-${string}` ``
