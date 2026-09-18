@@ -27,8 +27,10 @@
     "package:metadata": "bun run scripts/validate-package-metadata.ts",
     "package:json-lint": "npmPkgJsonLint --configFile .npmpackagejsonlintrc.json packages --quiet",
     "package:lint": "bun run package:metadata && bun run package:json-lint && bun run scripts/package-lint.ts",
-    "release:check": "bun run build && bun run typecheck && bun run test && bun run lint && bun run smoke:packages && bun run package:lint",
+    "release:check": "bun run build && bun run typecheck && bun run test && bun run lint && bun run smoke:packages && bun run package:lint && bun run standards",
     "release:publish": "changeset publish --tag alpha",
+    "standards": "bun scripts/standards/measure.ts --base origin/main",
+    "standards:strip": "bun scripts/standards/strip-comments.ts",
     "knip": "knip"
   },
   "devDependencies": {
