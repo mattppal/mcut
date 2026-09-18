@@ -1,0 +1,194 @@
+---
+title: "Audio and multicam"
+description: "Volume and fade helpers, audio source resolution, multicam angles, and frame requests."
+---
+
+## Types
+
+### FadeableElement
+
+```ts
+interface FadeableElement {
+  durationMs: number
+  fadeInMs?: number | undefined
+  fadeOutMs?: number | undefined
+}
+```
+
+The duration and fade fields of an element that can carry audio fades.
+
+### ElementAudioSource
+
+```ts
+interface ElementAudioSource {
+  elementId: ElementId
+  elementType: ElementAudioSourceType
+  assetId: AssetId
+  asset: AssetRef
+  timelineStartMs: number
+  timelineDurationMs: number
+  sourceStartMs: number
+  sourceEndMs: number
+  sourceSpanMs: number
+  timeMap?: TimeMap
+  reversed: boolean
+  multicamSourceKey?: string
+}
+```
+
+The asset and source range an element plays audio from, with its timeline placement, time map, reversal, and the multicam source key when relevant.
+
+### ElementAudioSourceType
+
+```ts
+type ElementAudioSourceType = 'video' | 'audio' | 'multicam'
+```
+
+The element types that can play audio, `'video'`, `'audio'`, and `'multicam'`.
+
+### AngleCut
+
+```ts
+interface AngleCut {
+  atMs: number
+  layoutId: string
+}
+```
+
+One entry in a multicam element's angle list, the element-local time a layout takes over and its layout id.
+
+### AngleTransitionWindow
+
+```ts
+interface AngleTransitionWindow {
+  type: string
+  durationMs: number
+  cutMs: number
+  fromLayoutId: string
+  toLayoutId: string
+}
+```
+
+A blend window around an angle cut, with the transition type, the clamped duration, the cut time, and the layouts on each side.
+
+### FrameRequest
+
+```ts
+interface FrameRequest {
+  assetId: string
+  sourceTimeMs: number
+}
+```
+
+One asset and the source time an element needs from it to paint a frame.
+
+## Functions
+
+### getEffectiveVolume
+
+```ts
+function getEffectiveVolume(element: TimelineElement, timelineMs: number): number
+```
+
+Returns the volume that plays at a timeline time, the animated or static volume scaled by the fade gain, or 0 for elements without a volume.
+
+### getFadeGain
+
+```ts
+function getFadeGain(element: FadeableElement, localMs: number): number
+```
+
+Returns the fade multiplier from 0 to 1 at an element-local time, ramping linearly over `fadeInMs` and `fadeOutMs` and taking the lower value where the ramps overlap.
+
+### hasFades
+
+```ts
+function hasFades(element: FadeableElement): boolean
+```
+
+Returns `true` when the element has a fade in or fade out longer than 0 ms.
+
+### resolveElementAudioSource
+
+```ts
+function resolveElementAudioSource(
+  project: Project,
+  elementId: ElementId,
+): ElementAudioSource | null
+```
+
+Returns the audio source of a video, audio, or multicam element, or `null` when the element, its asset, or the multicam audio source is missing.
+
+### getActiveAngleIndex
+
+```ts
+function getActiveAngleIndex(angles: readonly AngleCut[], localMs: number): number
+```
+
+Returns the index of the angle cut active at an element-local time, or 0 before the first cut.
+
+### getActiveLayout
+
+```ts
+function getActiveLayout(
+  project: Project,
+  element: MulticamElement,
+  timelineMs: number,
+): Layout | null
+```
+
+Returns the layout active in a multicam element at a timeline time, or `null` when the layout id does not resolve.
+
+### getAngleTransitionAt
+
+```ts
+function getAngleTransitionAt(
+  element: MulticamElement,
+  localMs: number,
+): AngleTransitionWindow | null
+```
+
+Returns the angle transition window that contains an element-local time, where each window is centered on its cut and clamped so neighbors never overlap, or `null`.
+
+### getMulticamAudioSource
+
+```ts
+function getMulticamAudioSource(element: MulticamElement): MulticamSource | null
+```
+
+Returns the multicam source whose key matches `audioSource`, or `null` when none is set or found.
+
+### getMulticamSourceTimeMs
+
+```ts
+function getMulticamSourceTimeMs(
+  element: MulticamElement,
+  source: MulticamSource,
+  timelineMs: number,
+): number
+```
+
+Returns the source media time of one multicam source at a timeline time, applying the element time map first and the source trim second, clamped to 0 or more.
+
+### splitAngles
+
+```ts
+function splitAngles(
+  angles: readonly AngleCut[],
+  offsetMs: number,
+): { left: AngleCut[]; right: AngleCut[] }
+```
+
+Splits an angle list at an element-local offset, keeping earlier cuts on the left and starting the right with the active layout at 0 followed by the rebased later cuts.
+
+### getFrameRequests
+
+```ts
+function getFrameRequests(
+  project: Project,
+  element: TimelineElement,
+  timelineMs: number,
+): FrameRequest[]
+```
+
+Returns the frame requests an element makes at a timeline time by calling the `frameRequests` hook of its registered type, or an empty array.

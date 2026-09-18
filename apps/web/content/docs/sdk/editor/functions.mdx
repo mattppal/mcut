@@ -1,0 +1,362 @@
+---
+title: "Functions"
+description: "Functions and constants exported by @mcut/editor."
+---
+
+## Constants
+
+### TEXT_PRESETS
+
+```ts
+const TEXT_PRESETS: TextPreset[]
+```
+
+Built-in text presets, a title, a subtitle, a lower third, and a pop label.
+
+## Functions
+
+### createEditorOperatorRegistry
+
+```ts
+function createEditorOperatorRegistry(): EditorOperatorRegistry
+```
+
+Returns a new empty `EditorOperatorRegistry`.
+
+### addTextAtPlayhead
+
+```ts
+function addTextAtPlayhead(engine: EditorEngine, text = 'Your text'): string
+```
+
+Inserts a default text element at the playhead through `insertElementAtPlayhead` and returns its id.
+
+### allElementIds
+
+```ts
+function allElementIds(engine: EditorEngine): `e-${string}`[]
+```
+
+Returns every element id in the project across all tracks.
+
+### clipEdges
+
+```ts
+function clipEdges(engine: EditorEngine): number[]
+```
+
+Returns every clip start and end time plus zero, sorted ascending.
+
+### createSequentialVideoCollage
+
+```ts
+function createSequentialVideoCollage(
+  engine: EditorEngine,
+  options: SequentialVideoCollageOptions,
+): SequentialVideoCollageResult
+```
+
+Builds a collage where each video plays in turn in its own slot, with frozen frames before and after its active clip and its audio on one shared lane.
+
+### duplicateElement
+
+```ts
+function duplicateElement(engine: EditorEngine, elementId: string): string | null
+```
+
+Adds a copy of the element in the nearest free slot after it on the same track, selects the copy, and returns its id or `null`.
+
+### duplicateSelection
+
+```ts
+function duplicateSelection(engine: EditorEngine): void
+```
+
+Duplicates every selected element after itself in one transaction, skipping elements with no room, and selects the copies.
+
+### elementForAsset
+
+```ts
+function elementForAsset(engine: EditorEngine, asset: AssetRef): TimelineElementInput
+```
+
+Returns the default timeline element for a media bin asset, sized to fit the project canvas.
+
+### elementForTextPreset
+
+```ts
+function elementForTextPreset(engine: EditorEngine, preset: TextPreset): TimelineElementInput
+```
+
+Returns a text element input built from a `TextPreset`, with a box 70 percent of the project width and the preset's style and vertical offset.
+
+### fitCanvasToVideoCollage
+
+```ts
+function fitCanvasToVideoCollage(
+  engine: EditorEngine,
+  assets: readonly AssetRef[],
+  layout: Exclude<SequentialCollageLayout, 'auto'>,
+): { width: number; height: number }
+```
+
+Resizes the project canvas to hold the given equal-aspect videos side by side or stacked, and returns the new size.
+
+### insertElementAtPlayhead
+
+```ts
+function insertElementAtPlayhead(engine: EditorEngine, element: TimelineElementInput): string
+```
+
+Inserts an element at the playhead on the topmost unlocked track with room, adds a track when none fits, and returns the new element id.
+
+### insertElementOnNewTrack
+
+```ts
+function insertElementOnNewTrack(
+  engine: EditorEngine,
+  element: TimelineElementInput,
+  startMs: number,
+): string
+```
+
+Adds a new topmost track, places the element on it at `startMs`, and returns the new element id.
+
+### insertElementOnTrack
+
+```ts
+function insertElementOnTrack(
+  engine: EditorEngine,
+  trackId: TrackId,
+  element: TimelineElementInput,
+  startMs: number,
+  editMode: 'normal' | 'overwrite' | 'insert' = 'normal',
+): string
+```
+
+Places an element on a track near `startMs`, clamping to free space in normal mode and keeping the requested position in overwrite and insert modes.
+
+### isSoloTrack
+
+```ts
+function isSoloTrack(engine: EditorEngine, trackId: TrackId): boolean
+```
+
+Returns `true` when the track is unmuted and every other track is muted.
+
+### keyframeTimes
+
+```ts
+function keyframeTimes(element: TimelineElement): number[]
+```
+
+Returns the unique element-local keyframe times across every animatable property, sorted ascending.
+
+### moveKeyframesAtTime
+
+```ts
+function moveKeyframesAtTime(
+  engine: EditorEngine,
+  elementId: `e-${string}`,
+  fromTimeMs: number,
+  toTimeMs: number,
+  properties?: AnimatableProperty[],
+): void
+```
+
+Moves the keyframes at `fromTimeMs` to `toTimeMs` on the given properties, or on all animatable properties, in one transaction.
+
+### removeKeyframesAtTime
+
+```ts
+function removeKeyframesAtTime(
+  engine: EditorEngine,
+  elementId: `e-${string}`,
+  timeMs: number,
+  properties?: AnimatableProperty[],
+): void
+```
+
+Removes the keyframes at `timeMs` on the given properties, or on all animatable properties, in one transaction.
+
+### removeSelection
+
+```ts
+function removeSelection(engine: EditorEngine): void
+```
+
+Removes every selected element in one transaction and clears the selection.
+
+### retimeSequentialCollage
+
+```ts
+function retimeSequentialCollage(
+  engine: EditorEngine,
+  groupOrder?: readonly GroupId[],
+): SequentialVideoCollageResult | null
+```
+
+Rebuilds the freeze frames and audio positions of an existing collage around each group's active video clip, or returns `null` when no collage groups exist.
+
+### selectTrackElements
+
+```ts
+function selectTrackElements(engine: EditorEngine, trackId: TrackId): void
+```
+
+Selects every element on one track.
+
+### shuttle
+
+```ts
+function shuttle(engine: EditorEngine, direction: -1 | 0 | 1): void
+```
+
+Implements J, K, and L transport, where 0 pauses and resets the rate and a direction plays at 1x or doubles the current rate up to 8x.
+
+### splitAllAtPlayhead
+
+```ts
+function splitAllAtPlayhead(engine: EditorEngine): void
+```
+
+Splits every clip under the playhead on every unlocked track at the frame-quantized playhead time.
+
+### splitSelectionAtPlayhead
+
+```ts
+function splitSelectionAtPlayhead(engine: EditorEngine): void
+```
+
+Splits every selected element the playhead crosses, splits linked partners with it, and re-pairs the right halves under a new link id.
+
+### toggleMasterKeyframe
+
+```ts
+function toggleMasterKeyframe(engine: EditorEngine): void
+```
+
+Removes the keyframes at the playhead on the selected element's visual properties when one exists there, and otherwise adds keyframes at the current values.
+
+### toggleSoloTrack
+
+```ts
+function toggleSoloTrack(engine: EditorEngine, trackId: TrackId): void
+```
+
+Mutes every other track so the given track plays alone, or unmutes all tracks when it is already soloed.
+
+### trackOfSelection
+
+```ts
+function trackOfSelection(engine: EditorEngine): Track | undefined
+```
+
+Returns the track that holds the first selected element, or `undefined`.
+
+### trimSelectionToPlayhead
+
+```ts
+function trimSelectionToPlayhead(engine: EditorEngine, edge: 'start' | 'end'): void
+```
+
+Trims the start or end of every selected clip the playhead crosses to the frame-quantized playhead time.
+
+### unlinkElements
+
+```ts
+function unlinkElements(engine: EditorEngine, elementId: `e-${string}`): void
+```
+
+Clears the `linkId` on an element and every element linked to it.
+
+### canPlaceIgnoring
+
+```ts
+function canPlaceIgnoring(
+  track: Track,
+  startMs: number,
+  durationMs: number,
+  ignore: ReadonlySet<string>,
+): boolean
+```
+
+Returns `true` when a clip at `startMs` with `durationMs` would not overlap any element on the track outside the ignored ids.
+
+### collectClipDragBases
+
+```ts
+function collectClipDragBases(
+  project: Project,
+  ids: readonly ElementId[],
+): Map<ElementId, ClipDragBase>
+```
+
+Returns the starting position, duration, trim, reversal, time map presence, and track index for each element id found in the project.
+
+### computeSlipRange
+
+```ts
+function computeSlipRange(
+  project: Project,
+  ids: readonly ElementId[],
+): { minMs: number; maxMs: number }
+```
+
+Returns how far the slippable elements can slip earlier and later without running past their source media.
+
+### planAutoCrossfade
+
+```ts
+function planAutoCrossfade(
+  project: Project,
+  input: AutoCrossfadePlanInput,
+): AnyCommand | null
+```
+
+Returns a `setTransition` command when dragging a clip into its neighbor by an overlap within the attempted range, or `null` when no crossfade applies.
+
+### planDuplicateClipsToNewTracks
+
+```ts
+function planDuplicateClipsToNewTracks(
+  project: Project,
+  ids: readonly ElementId[],
+  options: DuplicateClipsToNewTracksOptions = {},
+): DuplicateClipsToNewTracksPlan | null
+```
+
+Returns commands that add one new track per source track and copy the given elements onto them, or `null` when no element is found.
+
+### resolveToolMode
+
+```ts
+function resolveToolMode(
+  project: Project,
+  mode: ClipDragMode,
+  ids: readonly ElementId[],
+): ResolvedClipDragMode
+```
+
+Downgrades a drag mode to one whose structural requirements the anchor element meets, and names the roll partner when rolling.
+
+### planSilenceCuts
+
+```ts
+function planSilenceCuts(
+  project: Project,
+  elementId: string,
+  transcript: SilenceCutTranscript,
+  options: SilenceCutOptions = {},
+): SilenceCutPlan
+```
+
+Cuts the silences between transcript words out of one clip playing at 1x, applying splits and ripple deletes last to first, and returns the commands and resulting project.
+
+### registerCoreOperators
+
+```ts
+function registerCoreOperators(registry: EditorOperatorRegistry): EditorOperatorRegistry
+```
+
+Registers the built-in playback, selection, edit, track, keyframe, marker, media, and multicam operators on the registry and returns it.

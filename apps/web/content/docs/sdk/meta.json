@@ -1,10 +1,18 @@
 {
   "title": "SDK Reference",
-  "description": "Generated TypeScript API reference.",
+  "description": "Hand-written TypeScript API reference.",
   "root": true,
   "defaultOpen": false,
   "pages": [
     "index",
-    "...reference"
+    "timeline",
+    "editor",
+    "react",
+    "compositor",
+    "media",
+    "transcription",
+    "transcription-ai-sdk",
+    "transcription-assemblyai",
+    "transcription-local"
   ]
 }
