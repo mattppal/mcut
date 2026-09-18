@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { CommandError } from '../errors'
-import { createElementId, createLinkId, createTrackId } from '../id'
+import { createLinkId, createTrackId } from '../id'
 import { createDefaultLayouts } from '../layouts'
 import {
   captionStyleSchema,
@@ -13,9 +13,8 @@ import {
   type Track,
 } from '../model'
 import { isTimelineMagnetic, placementFor } from '../placement'
-import { getElementLocation } from '../selectors'
 import { applyThumbnailTemplate, thumbnailTemplateSchema } from '../thumbnails'
-import { defineCommand, insertSorted, mustGetTrack, mustLocate, replaceTrack } from './shared'
+import { defineCommand, insertSorted, mintElementId, mustGetTrack, mustLocate, replaceTrack } from './shared'
 
 const applyCaptionsSchema = z.object({
   /** Target track; when omitted, a "Captions" track is created on top. */
@@ -80,7 +79,7 @@ export const applyCaptions = defineCommand({
     for (const caption of payload.captions) {
       const element: CaptionElement = {
         ...caption,
-        id: caption.id ?? createElementId(),
+        id: mintElementId(next, caption.id),
         type: 'caption',
       }
       const track = mustGetTrack(next, finalTrackId)
@@ -147,7 +146,7 @@ export const createMulticam = defineCommand({
 
     const audioKey = keys.includes('camera') ? 'camera' : keys[0]!
     const element: TimelineElement = {
-      id: payload.multicamId ?? createElementId(),
+      id: mintElementId(project, payload.multicamId),
       type: 'multicam',
       startMs,
       durationMs: endMs - startMs,
@@ -202,7 +201,7 @@ export const detachAudio = defineCommand({
     const volumeKeyframes = element.keyframes?.volume
 
     const audio: TimelineElement = {
-      id: payload.audioElementId ?? createElementId(),
+      id: mintElementId(project, payload.audioElementId),
       type: 'audio',
       startMs: element.startMs,
       durationMs: element.durationMs,
@@ -214,10 +213,6 @@ export const detachAudio = defineCommand({
       ...(element.timeMap ? { timeMap: element.timeMap } : {}),
       ...(volumeKeyframes ? { keyframes: { volume: volumeKeyframes } } : {}),
     }
-    if (getElementLocation(project, audio.id)) {
-      throw new CommandError('duplicate-element', `element "${audio.id}" already exists`)
-    }
-
     const video: TimelineElement = { ...element, muted: true, volume: 1, linkId }
     if (video.type === 'video' && video.keyframes?.volume) {
       const keyframes = { ...video.keyframes }

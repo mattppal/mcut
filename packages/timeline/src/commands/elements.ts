@@ -14,10 +14,10 @@ import {
   type TimelineElement,
 } from '../model'
 import { compactTimelineIfMagnetic, placementFor, rangesOverlap } from '../placement'
-import { getElementLocation } from '../selectors'
 import {
   defineCommand,
   insertSorted,
+  mintElementId,
   mustGetTrack,
   mustLocate,
   replaceTrack,
@@ -153,10 +153,7 @@ export const addElement = defineCommand({
   }),
   reduce: (project, payload) => {
     mustGetTrack(project, payload.trackId)
-    const element = { ...payload.element, id: payload.element.id ?? createElementId() }
-    if (getElementLocation(project, element.id)) {
-      throw new CommandError('duplicate-element', `element "${element.id}" already exists`)
-    }
+    const element = { ...payload.element, id: mintElementId(project, payload.element.id) }
     validateElement(project, element)
     return placeElement(project, payload.trackId, element, payload.editMode)
   },
@@ -254,7 +251,7 @@ export const splitElement = defineCommand({
       )
     }
     const { left, right } = splitElementAt(element, offset)
-    right.id = payload.rightElementId ?? createElementId()
+    right.id = mintElementId(project, payload.rightElementId)
     if ('transition' in left) delete left.transition
     return replaceTrack(project, track.id, (t) => ({
       ...t,
