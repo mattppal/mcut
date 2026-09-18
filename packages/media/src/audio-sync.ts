@@ -1,5 +1,6 @@
 import { AudioBufferSink } from 'mediabunny'
 import { inputFor, type MediaSourceLike } from './probe'
+import { valueAt } from './value-at'
 
 /**
  * Audio-waveform autosync for multicam: two recordings of the same room
@@ -41,9 +42,7 @@ export function crossCorrelateEnvelopes(
     let mean = 0
     for (const v of env) mean += v
     mean /= env.length || 1
-    const out = new Float32Array(env.length)
-    for (let i = 0; i < env.length; i++) out[i] = env[i]! - mean
-    return out
+    return env.map((v) => v - mean)
   }
   const ca = center(a)
   const cb = center(b)
@@ -58,9 +57,11 @@ export function crossCorrelateEnvelopes(
     for (let i = 0; i < ca.length; i++) {
       const j = i + lag
       if (j < 0 || j >= cb.length) continue
-      dot += ca[i]! * cb[j]!
-      na += ca[i]! * ca[i]!
-      nb += cb[j]! * cb[j]!
+      const x = valueAt(ca, i)
+      const y = valueAt(cb, j)
+      dot += x * y
+      na += x * x
+      nb += y * y
     }
     const score = na > 0 && nb > 0 ? dot / Math.sqrt(na * nb) : 0
     if (score > best) {
@@ -98,15 +99,15 @@ export async function extractEnvelope(
         const t = timestamp + i / sampleRate
         const bucket = Math.floor(t * rateHz)
         if (bucket < 0 || bucket >= buckets) continue
-        sums[bucket]! += data[i]! * data[i]!
-        counts[bucket]! += 1
+        const sample = valueAt(data, i)
+        sums[bucket] = valueAt(sums, bucket) + sample * sample
+        counts[bucket] = valueAt(counts, bucket) + 1
       }
     }
-    const envelope = new Float32Array(buckets)
-    for (let i = 0; i < buckets; i++) {
-      envelope[i] = counts[i]! > 0 ? Math.sqrt(sums[i]! / counts[i]!) : 0
-    }
-    return envelope
+    return Float32Array.from(sums, (sum, i) => {
+      const count = valueAt(counts, i)
+      return count > 0 ? Math.sqrt(sum / count) : 0
+    })
   } finally {
     input.dispose()
   }

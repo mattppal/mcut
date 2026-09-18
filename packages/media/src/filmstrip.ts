@@ -1,5 +1,5 @@
 import { CanvasSink } from 'mediabunny'
-import { getNativeVideoFilmstrip } from './native-video'
+import { createCanvasSurface, getNativeVideoFilmstrip, type CanvasSurface } from './native-video'
 import { inputFor, type MediaSourceLike } from './probe'
 
 export interface FilmstripOptions {
@@ -20,16 +20,6 @@ export interface Filmstrip {
   frameCount: number
   /** Source timestamp of each frame, in ms. */
   timestampsMs: number[]
-}
-
-function createCanvas(width: number, height: number): HTMLCanvasElement | OffscreenCanvas {
-  if (typeof document !== 'undefined') {
-    const canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
-    return canvas
-  }
-  return new OffscreenCanvas(width, height)
 }
 
 /**
@@ -57,23 +47,21 @@ async function getCanvasSinkFilmstrip(
     )
     const sink = new CanvasSink(track, { width: frameWidth, fit: 'cover' })
 
-    let strip: HTMLCanvasElement | OffscreenCanvas | null = null
-    let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null
+    let strip: CanvasSurface | null = null
     let frameHeight = 0
     let index = 0
     for await (const wrapped of sink.canvasesAtTimestamps(timestampsMs.map((ms) => ms / 1000))) {
       if (wrapped) {
         if (!strip) {
           frameHeight = wrapped.canvas.height
-          strip = createCanvas(frameWidth * frameCount, frameHeight)
-          ctx = strip.getContext('2d') as CanvasRenderingContext2D | null
+          strip = createCanvasSurface(frameWidth * frameCount, frameHeight)
         }
-        ctx?.drawImage(wrapped.canvas, index * frameWidth, 0)
+        strip.ctx?.drawImage(wrapped.canvas, index * frameWidth, 0)
       }
       index++
     }
     if (!strip) return null
-    return { canvas: strip, frameWidth, frameHeight, frameCount, timestampsMs }
+    return { canvas: strip.canvas, frameWidth, frameHeight, frameCount, timestampsMs }
   } finally {
     input.dispose()
   }

@@ -167,20 +167,23 @@ async function doRender(
     await call('addBuffers', channels)
     await call('schedule', { active: true, input: 0, output: 0, rate: tempo })
 
-    const out = channels.map(() => new Float32Array(outputFrames))
-    const block = channels.map(() => new Float32Array(BLOCK_FRAMES))
+    const lanes = channels.map(() => ({
+      out: new Float32Array(outputFrames),
+      block: new Float32Array(BLOCK_FRAMES),
+    }))
+    const block = lanes.map((lane) => lane.block)
     let written = 0
     while (written < outputFrames) {
       globals.currentTime = written / sampleRate
       instance.process([[]], [block], {})
       const take = Math.min(BLOCK_FRAMES, outputFrames - written)
-      for (let c = 0; c < channels.length; c++) {
-        const source = take === BLOCK_FRAMES ? block[c]! : block[c]!.subarray(0, take)
-        out[c]!.set(source, written)
+      for (const lane of lanes) {
+        const source = take === BLOCK_FRAMES ? lane.block : lane.block.subarray(0, take)
+        lane.out.set(source, written)
       }
       written += take
     }
-    return out
+    return lanes.map((lane) => lane.out)
   } finally {
     if (hadSampleRate) globals.sampleRate = previousSampleRate
     else delete globals.sampleRate

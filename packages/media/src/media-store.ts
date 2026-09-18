@@ -79,8 +79,7 @@ export async function pruneMediaBlobs(keep: ReadonlySet<string>): Promise<number
   let removed = 0
   try {
     const names: string[] = []
-    // OPFS directories are async-iterable of [name, handle].
-    for await (const [name] of dir as unknown as AsyncIterable<[string, unknown]>) {
+    for await (const [name] of dir) {
       if (!keep.has(name)) names.push(name)
     }
     for (const name of names) {

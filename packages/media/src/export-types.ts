@@ -1,3 +1,4 @@
+import type { Project } from '@mcut/timeline'
 import type { Quality } from 'mediabunny'
 import type { ContainerFormatId } from './container-formats'
 
@@ -51,8 +52,8 @@ export const AUDIO_SAMPLE_RATE = 48_000
 
 /** Planar stereo PCM, the transferable form of the main-thread audio mix. */
 export interface MixedAudioData {
-  left: Float32Array
-  right: Float32Array
+  left: Float32Array<ArrayBuffer>
+  right: Float32Array<ArrayBuffer>
   sampleRate: number
 }
 
@@ -69,7 +70,7 @@ export interface WorkerExportOptions {
 export interface ExportWorkerStartMessage {
   type: 'start'
   /** Plain serializable project data (engine projects already are). */
-  project: unknown
+  project: Project
   options: WorkerExportOptions
   mixedAudio: MixedAudioData | null
   fonts: ExportFontFaceInit[]

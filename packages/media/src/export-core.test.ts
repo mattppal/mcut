@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { planarAudioChunks } from './export-core'
 import type { MixedAudioData } from './export-types'
 
-function ramp(length: number, offset = 0): Float32Array {
+function ramp(length: number, offset = 0): Float32Array<ArrayBuffer> {
   const data = new Float32Array(length)
   for (let i = 0; i < length; i++) data[i] = offset + i
   return data

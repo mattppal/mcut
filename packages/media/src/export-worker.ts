@@ -61,7 +61,7 @@ async function resolveAssets(project: Project): Promise<{ project: Project; revo
     if (!blob) continue
     const src = URL.createObjectURL(blob)
     urls.push(src)
-    assets[id as keyof typeof assets] = { ...asset, src }
+    assets[id] = { ...asset, src }
   }
   return {
     project: { ...project, assets },
@@ -74,7 +74,7 @@ scope.onmessage = async (event: MessageEvent<ExportWorkerRequest>) => {
   if (message.type !== 'start') return
   try {
     await registerFonts(message.fonts)
-    const { project, revoke } = await resolveAssets(message.project as Project)
+    const { project, revoke } = await resolveAssets(message.project)
     try {
       const result = await runExportPipeline(project, {
         ...(message.options.format ? { format: message.options.format } : {}),
