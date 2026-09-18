@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Effect } from './effects'
 import { assertNever } from './errors'
 import type { TimelineElement } from './model'
+import { valueAt } from './value-at'
 
 /**
  * Keyframes on CapCut/Premiere primitives: per-clip "fixed effect" properties
@@ -38,6 +39,12 @@ export type AnimatableProperty = z.infer<typeof animatablePropertySchema>
 
 export const ANIMATABLE_PROPERTIES = animatablePropertySchema.options
 
+const ANIMATABLE_PROPERTY_NAMES: ReadonlySet<string> = new Set(ANIMATABLE_PROPERTIES)
+
+function isAnimatableProperty(value: string): value is AnimatableProperty {
+  return ANIMATABLE_PROPERTY_NAMES.has(value)
+}
+
 /**
  * Temporal interpolation toward the NEXT keyframe (Premiere's interpolation
  * menu / CapCut's curve presets). Named easings are cubic-bezier aliases;
@@ -69,7 +76,9 @@ export type KeyframeMap = z.infer<typeof keyframesSchema>
 // Easing evaluation
 // ---------------------------------------------------------------------------
 
-const NAMED_BEZIERS: Record<string, [number, number, number, number]> = {
+type NamedBezierEasing = Exclude<Extract<Easing, string>, 'linear' | 'hold'>
+
+const NAMED_BEZIERS: Record<NamedBezierEasing, readonly [number, number, number, number]> = {
   easeIn: [0.42, 0, 1, 1],
   easeOut: [0, 0, 0.58, 1],
   easeInOut: [0.42, 0, 0.58, 1],
@@ -112,7 +121,7 @@ export function evaluateEasing(easing: Easing | undefined, t: number): number {
   if (!easing || easing === 'linear') return t
   if (easing === 'hold') return 0
   if (typeof easing === 'object') return cubicBezierAt(easing.cubicBezier, t)
-  return cubicBezierAt(NAMED_BEZIERS[easing]!, t)
+  return cubicBezierAt(NAMED_BEZIERS[easing], t)
 }
 
 // ---------------------------------------------------------------------------
@@ -124,21 +133,21 @@ export function evaluateEasing(easing: Easing | undefined, t: number): number {
  * before the first keyframe → first value; after the last → last value.
  */
 export function interpolateTrack(track: readonly Keyframe[], localMs: number): number {
-  if (track.length === 0) return NaN
-  const first = track[0]!
+  const first = track[0]
+  if (first === undefined) return NaN
   if (localMs <= first.timeMs) return first.value
-  const last = track[track.length - 1]!
+  const last = valueAt(track, track.length - 1)
   if (localMs >= last.timeMs) return last.value
   // Binary search for the segment containing localMs.
   let lo = 0
   let hi = track.length - 1
   while (hi - lo > 1) {
     const mid = (lo + hi) >> 1
-    if (track[mid]!.timeMs <= localMs) lo = mid
+    if (valueAt(track, mid).timeMs <= localMs) lo = mid
     else hi = mid
   }
-  const from = track[lo]!
-  const to = track[hi]!
+  const from = valueAt(track, lo)
+  const to = valueAt(track, hi)
   const span = to.timeMs - from.timeMs
   const progress = span <= 0 ? 1 : (localMs - from.timeMs) / span
   const eased = evaluateEasing(from.easing, progress)
@@ -278,9 +287,8 @@ export function resolveAnimatedElement<E extends TimelineElement>(
     transform = { ...transform, ...patch }
   }
 
-  for (const [property, track] of Object.entries(keyframes) as Array<
-    [AnimatableProperty, Keyframe[] | undefined]
-  >) {
+  for (const property of ANIMATABLE_PROPERTIES) {
+    const track = keyframes[property]
     if (!track || track.length === 0) continue
     const value = interpolateTrack(track, localMs)
     switch (property) {
@@ -318,8 +326,12 @@ export function resolveAnimatedElement<E extends TimelineElement>(
   if (transform && 'transform' in resolved) resolved.transform = transform
   if (blurRadius !== undefined && blurRadius > 0.01 && elementSupportsProperty(resolved, 'blur')) {
     // Appended (= applied last) so it blurs the element's styled result.
-    const visual = resolved as E & { effects?: Effect[] }
-    visual.effects = [...(visual.effects ?? []), { type: 'blur', enabled: true, radius: blurRadius }]
+    const visual: TimelineElement = resolved
+    const effects: Effect[] = [
+      ...('effects' in visual ? (visual.effects ?? []) : []),
+      { type: 'blur', enabled: true, radius: blurRadius },
+    ]
+    return { ...resolved, effects }
   }
   return resolved
 }
@@ -350,9 +362,8 @@ export function splitKeyframes(
   if (!keyframes) return { left: undefined, right: undefined }
   const left: KeyframeMap = {}
   const right: KeyframeMap = {}
-  for (const [property, track] of Object.entries(keyframes) as Array<
-    [AnimatableProperty, Keyframe[] | undefined]
-  >) {
+  for (const property of Object.keys(keyframes).filter(isAnimatableProperty)) {
+    const track = keyframes[property]
     if (!track || track.length === 0) continue
     const boundaryValue = interpolateTrack(track, offsetMs)
     // Easing of the segment the cut lands in: the right boundary keyframe

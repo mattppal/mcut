@@ -16,11 +16,9 @@ export function getElementLocation(
   project: Project,
   elementId: ElementId,
 ): ElementLocation | undefined {
-  for (let trackIndex = 0; trackIndex < project.tracks.length; trackIndex++) {
-    const track = project.tracks[trackIndex]!
-    const elementIndex = track.elements.findIndex((e) => e.id === elementId)
-    if (elementIndex !== -1) {
-      return { track, trackIndex, element: track.elements[elementIndex]!, elementIndex }
+  for (const [trackIndex, track] of project.tracks.entries()) {
+    for (const [elementIndex, element] of track.elements.entries()) {
+      if (element.id === elementId) return { track, trackIndex, element, elementIndex }
     }
   }
   return undefined
@@ -89,8 +87,7 @@ export interface ActiveElement {
  */
 export function getActiveElements(project: Project, timeMs: number): ActiveElement[] {
   const active: ActiveElement[] = []
-  for (let trackIndex = 0; trackIndex < project.tracks.length; trackIndex++) {
-    const track = project.tracks[trackIndex]!
+  for (const [trackIndex, track] of project.tracks.entries()) {
     for (const element of track.elements) {
       if (element.startMs > timeMs) break // elements are sorted by startMs
       if (isElementActiveAt(element, timeMs)) active.push({ track, trackIndex, element })
