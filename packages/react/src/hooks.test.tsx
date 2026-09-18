@@ -69,9 +69,11 @@ describe('editor hooks', () => {
     act(() => {
       engine.select(['e-title'])
     })
-    expect(result.current?.element.id).toBe('e-title')
-    expect(result.current?.track.id).toBe('t-clips')
-    expect(result.current?.trackIndex).toBe(1)
+    const selected = result.current
+    if (!selected) throw new Error('missing selected element')
+    expect(selected.element.id).toBe('e-title')
+    expect(selected.track.id).toBe('t-clips')
+    expect(selected.trackIndex).toBe(1)
   })
 
   test('useEditor hands back the engine the provider was given', () => {

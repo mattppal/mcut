@@ -686,7 +686,7 @@ function PlayerCanvasView({
       }}
       data-mcut-player=""
     >
-      {/* A canvas holds one context kind for its lifetime, so the renderer keys it: https://html.spec.whatwg.org/multipage/canvas.html#dom-canvas-getcontext */}
+      {/* A canvas keeps its first context kind for life (https://html.spec.whatwg.org/multipage/canvas.html#dom-canvas-getcontext), so the renderer keys it. */}
       <canvas
         key={effectiveRenderer}
         ref={attachRenderCanvas}
