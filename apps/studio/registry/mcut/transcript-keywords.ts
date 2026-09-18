@@ -74,23 +74,23 @@ export function useTranscriptKeywords(projectId: string): string[] {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Find-in-transcript event (⌘F): the shell switches to the transcript tab,
-// the panel focuses its search box — split so neither imports the other.
-// ---------------------------------------------------------------------------
-
-export const TRANSCRIPT_FIND_EVENT = "mcut:transcript-find";
-
+let searchInput: HTMLInputElement | null = null;
 let pendingFocus = false;
 
-export function requestTranscriptFind(): void {
-  pendingFocus = true;
-  window.dispatchEvent(new Event(TRANSCRIPT_FIND_EVENT));
+function focusSearch(input: HTMLInputElement): void {
+  input.focus();
+  input.select();
 }
 
-/** The panel calls this on mount to honor a find request that arrived while unmounted. */
-export function consumePendingTranscriptFind(): boolean {
-  const was = pendingFocus;
-  pendingFocus = false;
-  return was;
+export function focusTranscriptSearch(): void {
+  if (searchInput) focusSearch(searchInput);
+  else pendingFocus = true;
+}
+
+export function attachTranscriptSearch(input: HTMLInputElement | null): void {
+  searchInput = input;
+  if (input && pendingFocus) {
+    pendingFocus = false;
+    focusSearch(input);
+  }
 }

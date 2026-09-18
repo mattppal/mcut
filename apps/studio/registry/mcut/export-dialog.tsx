@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { DownloadIcon, TriangleAlertIcon } from "@/lib/hugeicons";
 import {
@@ -62,13 +62,10 @@ export function ExportDialog() {
     staleTime: Infinity,
   });
 
-  const abortRef = useRef<AbortController | null>(null);
   const exportMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (controller: AbortController) => {
       setProgress({ progress: 0, phase: "audio" });
       engine.pause();
-      const controller = new AbortController();
-      abortRef.current = controller;
       // Text frames render with whatever face is loaded — make sure every
       // referenced font is in document.fonts (main-thread fallback path) and
       // collect the faces the export worker registers in its own scope.
@@ -86,9 +83,6 @@ export function ExportDialog() {
       setProgress(null);
     },
     onError: () => setProgress(null),
-    onSettled: () => {
-      abortRef.current = null;
-    },
   });
   const exportError =
     exportMutation.isError && !(exportMutation.error instanceof DOMException && exportMutation.error.name === "AbortError")
@@ -168,7 +162,7 @@ export function ExportDialog() {
 
           <DialogFooter>
             {busy ? (
-              <Button variant="ghost" onClick={() => abortRef.current?.abort()}>
+              <Button variant="ghost" onClick={() => exportMutation.variables?.abort()}>
                 Cancel
               </Button>
             ) : (
@@ -176,7 +170,10 @@ export function ExportDialog() {
                 Close
               </Button>
             )}
-            <Button disabled={busy || unsupported || durationMs === 0} onClick={() => exportMutation.mutate()}>
+            <Button
+              disabled={busy || unsupported || durationMs === 0}
+              onClick={() => exportMutation.mutate(new AbortController())}
+            >
               {busy ? <Spinner /> : <DownloadIcon />}
               {busy ? "Exporting…" : `Export ${formatLabel}`}
             </Button>

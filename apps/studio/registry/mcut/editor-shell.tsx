@@ -1,15 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { usePanelRef, type GroupProps } from "react-resizable-panels";
+import { useCallback, useMemo, useState, useSyncExternalStore, type RefObject } from "react";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { usePanelRef, type GroupProps, type PanelImperativeHandle } from "react-resizable-panels";
 import { CaptionsIcon, FolderOpenIcon, SearchIcon, SparklesIcon, TypeIcon } from "@/lib/hugeicons";
 import { toast } from "sonner";
 import { isWebGPUSupported } from "@mcut/compositor";
-import { EditorProvider, PlayerCanvas, useEditor, useEditorState } from "@mcut/react";
+import {
+  EditorProvider,
+  PlayerCanvas,
+  useDocumentRootAttribute,
+  useDocumentRootClass,
+  useEditor,
+  useEditorState,
+  useEngineSubscription,
+  useWindowEvent,
+} from "@mcut/react";
 import { getElement, type Project } from "@mcut/timeline";
 import type { TranscriptResult } from "@mcut/transcription";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -24,14 +34,13 @@ import { editorClipboard } from "./editor-clipboard";
 import { AnimationsPanel } from "./animations-panel";
 import { CaptionsPanel } from "./captions-panel";
 import { TranscriptPanel } from "./transcript-panel";
-import { TRANSCRIPT_FIND_EVENT } from "./transcript-keywords";
 import { CommandPalette } from "./command-palette";
 import { EditorDnd } from "./editor-dnd";
-import { EDITOR_LAYOUT_KEYS, EDITOR_LAYOUT_RESET_EVENT } from "./editor-layout";
+import { EDITOR_LAYOUT_KEYS } from "./editor-layout";
 import { PanelCard, PanelHeader, PanelSectionLabel } from "./editor-primitives";
 import { EditorToolbar } from "./editor-toolbar";
 import { CurveEditorHost } from "./easing-editor";
-import { EditorUIProvider, useEditorUI } from "./editor-ui";
+import { EditorUIProvider, useEditorUI, type EditorTheme, type LeftTab } from "./editor-ui";
 import { useProjectFontLoader } from "./font-library";
 import { LayoutBank } from "./layout-bank";
 import { LayoutSlotEditor } from "./layout-slot-editor";
@@ -54,7 +63,7 @@ import { TransportBar } from "./transport-bar";
 // Hotkeys
 // ---------------------------------------------------------------------------
 
-function isTypingTarget(target: EventTarget | null): boolean {
+function isTypingTarget(target: EventTarget | null): target is HTMLElement {
   if (!(target instanceof HTMLElement)) return false;
   return (
     target instanceof HTMLInputElement ||
@@ -72,40 +81,26 @@ function ProjectFontLoader() {
 function EditorHotkeys() {
   const engine = useEditor();
   const ui = useEditorUI();
-  const uiRef = useRef(ui);
-  useEffect(() => {
-    uiRef.current = ui;
-  }, [ui]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      // Esc layers: blur a focused input first; only then touch selection.
-      if (isTypingTarget(event.target)) {
-        if (event.key === "Escape") (event.target as HTMLElement).blur();
-        return;
-      }
-      if (event.key === "Escape") {
-        engine.clearSelection();
-        return;
-      }
-      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        toast("Autosaved — projects persist in this browser");
-        return;
-      }
-      const action = actionForEvent(event);
-      if (!action) return;
-      event.preventDefault(); // stops browser ⌘A/⌘D/⌘S-adjacent defaults
-      const context: ActionContext = {
-        engine,
-        ui: uiRef.current,
-        clipboard: editorClipboard,
-      };
-      if (isActionEnabled(action, context)) runEditorAction(action, context);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [engine]);
+  useWindowEvent("keydown", (event) => {
+    if (isTypingTarget(event.target)) {
+      if (event.key === "Escape") event.target.blur();
+      return;
+    }
+    if (event.key === "Escape") {
+      engine.clearSelection();
+      return;
+    }
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      toast("Autosaved — projects persist in this browser");
+      return;
+    }
+    const action = actionForEvent(event);
+    if (!action) return;
+    event.preventDefault();
+    const context: ActionContext = { engine, ui, clipboard: editorClipboard };
+    if (isActionEnabled(action, context)) runEditorAction(action, context);
+  });
   return null;
 }
 
@@ -113,62 +108,74 @@ function EditorHotkeys() {
 // Autosave + restore
 // ---------------------------------------------------------------------------
 
+let persistenceRequested = false;
+
+function isProjectEmpty(project: Project): boolean {
+  return (
+    Object.keys(project.assets).length === 0 &&
+    project.tracks.every((track) => track.elements.length === 0)
+  );
+}
+
 function SessionPersistence() {
   const engine = useEditor();
-  const promptedRef = useRef(false);
+  const projectEmpty = useEditorState((s) => isProjectEmpty(s.project));
+  const [dismissed, setDismissed] = useState(false);
+  const saved = useQuery({
+    queryKey: ["mcut", "saved-session"],
+    queryFn: loadSavedSession,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+  });
 
-  useEffect(() => {
-    if (promptedRef.current) return;
-    promptedRef.current = true;
-    loadSavedSession()
-      .then((saved) => {
-        if (!saved) return;
-        const current = engine.project;
-        const isEmpty =
-          Object.keys(current.assets).length === 0 &&
-          current.tracks.every((t) => t.elements.length === 0);
-        if (!isEmpty) return;
-        toast("Restore previous session?", {
-          duration: 12_000,
-          action: {
-            label: "Restore",
-            onClick: () => {
-              engine.loadProject(saved.project);
-              if (saved.missingAssetIds.length > 0) {
-                toast.warning(
-                  `${saved.missingAssetIds.length} media file(s) could not be restored — re-import them.`,
-                );
-              }
-            },
-          },
-          cancel: { label: "Discard", onClick: () => void clearSavedSession() },
-        });
-      })
-      .catch(() => {});
-  }, [engine]);
+  useEngineSubscription(
+    engine.store,
+    () => {
+      if (!persistenceRequested) {
+        persistenceRequested = true;
+        void requestPersistentStorage();
+      }
+      saveProjectSnapshot(engine.project).catch(() => {});
+    },
+    { debounceMs: 800 },
+  );
 
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let persistenceRequested = false;
-    const subscription = engine.store.subscribe(() => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        if (!persistenceRequested) {
-          persistenceRequested = true;
-          // Opt out of best-effort eviction so the browser doesn't silently
-          // delete the project library and media under storage pressure.
-          void requestPersistentStorage();
-        }
-        saveProjectSnapshot(engine.project).catch(() => {});
-      }, 800);
-    });
-    return () => {
-      if (timer) clearTimeout(timer);
-      subscription.unsubscribe();
-    };
-  }, [engine]);
-
-  return null;
+  const session = saved.data;
+  if (dismissed || !projectEmpty || !session) return null;
+  return (
+    <div
+      role="dialog"
+      aria-label="Restore previous session"
+      className="fixed right-4 bottom-4 z-50 flex items-center gap-3 rounded-lg border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg"
+    >
+      <span>Restore previous session?</span>
+      <Button
+        size="xs"
+        onClick={() => {
+          engine.loadProject(session.project);
+          if (session.missingAssetIds.length > 0) {
+            toast.warning(
+              `${session.missingAssetIds.length} media file(s) could not be restored — re-import them.`,
+            );
+          }
+          setDismissed(true);
+        }}
+      >
+        Restore
+      </Button>
+      <Button
+        size="xs"
+        variant="ghost"
+        onClick={() => {
+          void clearSavedSession();
+          setDismissed(true);
+        }}
+      >
+        Discard
+      </Button>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -228,8 +235,6 @@ function useHasHydrated(): boolean {
     serverHydrationSnapshot,
   );
 }
-
-type LeftTab = "media" | "text" | "animate" | "captions" | "transcript";
 
 const LEFT_TABS: Array<{ id: LeftTab; label: string; icon: typeof FolderOpenIcon }> = [
   { id: "media", label: "Media", icon: FolderOpenIcon },
@@ -345,18 +350,9 @@ function usePreviewRenderer(): "canvas2d" | "webgpu" {
   return renderer;
 }
 
-function EditorDocumentTheme({ theme }: { theme: ReturnType<typeof useEditorUI>["theme"] }) {
-  useEffect(() => {
-    const root = document.documentElement;
-    const hadDark = root.classList.contains("dark");
-    const hadEditorTheme = root.hasAttribute("data-editor");
-    root.setAttribute("data-editor", "");
-    root.classList.toggle("dark", theme === "dark");
-    return () => {
-      if (!hadEditorTheme) root.removeAttribute("data-editor");
-      root.classList.toggle("dark", hadDark);
-    };
-  }, [theme]);
+function EditorDocumentTheme({ theme }: { theme: EditorTheme }) {
+  useDocumentRootAttribute("data-editor", "");
+  useDocumentRootClass("dark", theme === "dark");
   return null;
 }
 
@@ -443,32 +439,17 @@ export interface EditorShellProps {
  * editor windows — left panel, preview, inspector, timeline — which float as
  * rounded cards separated by gaps instead of divider lines.
  */
-function Shell({ transcribe }: Pick<EditorShellProps, "transcribe">) {
-  const { theme } = useEditorUI();
+function Shell({
+  transcribe,
+  leftPanelRef,
+}: Pick<EditorShellProps, "transcribe"> & {
+  leftPanelRef: RefObject<PanelImperativeHandle | null>;
+}) {
+  const { theme, leftTab: tab, setLeftTab: setTab, layoutResetToken } = useEditorUI();
   const panelsReady = useHasHydrated();
-  const [layoutResetToken, setLayoutResetToken] = useState(0);
   const verticalLayout = usePersistedLayout(EDITOR_LAYOUT_KEYS.vertical, layoutResetToken);
   const horizontalLayout = usePersistedLayout(EDITOR_LAYOUT_KEYS.horizontal, layoutResetToken);
-  useEffect(() => {
-    const onReset = () => setLayoutResetToken((value) => value + 1);
-    window.addEventListener(EDITOR_LAYOUT_RESET_EVENT, onReset);
-    return () => window.removeEventListener(EDITOR_LAYOUT_RESET_EVENT, onReset);
-  }, []);
-
-  const [tab, setTab] = useState<LeftTab>("media");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const leftPanelRef = usePanelRef();
-
-  // ⌘F (transcript find): reveal the transcript tab; the panel focuses its
-  // search box off the same event once mounted.
-  useEffect(() => {
-    const onFind = () => {
-      leftPanelRef.current?.expand();
-      setTab("transcript");
-    };
-    window.addEventListener(TRANSCRIPT_FIND_EVENT, onFind);
-    return () => window.removeEventListener(TRANSCRIPT_FIND_EVENT, onFind);
-  }, [leftPanelRef]);
 
   const onRailSelect = (next: LeftTab) => {
     const panel = leftPanelRef.current;
@@ -570,12 +551,13 @@ function Shell({ transcribe }: Pick<EditorShellProps, "transcribe">) {
  */
 export function EditorShell({ project, transcribe }: EditorShellProps) {
   const [queryClient] = useState(() => new QueryClient());
+  const leftPanelRef = usePanelRef();
   return (
     <QueryClientProvider client={queryClient}>
       <EditorProvider {...(project ? { project } : {})}>
-        <EditorUIProvider>
+        <EditorUIProvider leftPanelRef={leftPanelRef}>
           <TooltipProvider>
-            <Shell transcribe={transcribe} />
+            <Shell transcribe={transcribe} leftPanelRef={leftPanelRef} />
           </TooltipProvider>
         </EditorUIProvider>
       </EditorProvider>
