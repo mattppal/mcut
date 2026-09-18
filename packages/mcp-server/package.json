@@ -30,7 +30,8 @@
     "dev": "tsdown --watch --no-clean",
     "bridge": "bun ../../scripts/mcut-local-dev.ts bridge",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "fuzz": "bun test src/mcp-fuzz.test.ts"
   },
   "repository": {
     "type": "git",
