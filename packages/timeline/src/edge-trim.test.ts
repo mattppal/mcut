@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError } from './commands'
 import { applyEdgeTrim, getEdgeTrimRange } from './edge-trim'
-import { createProject, type Project, type TimelineElement, type VideoElement } from './model'
+import { EditorEngine } from './engine'
+import { createProject, parseProject, type Project, type TimelineElement, type VideoElement } from './model'
 import { getElement, getTrack } from './selectors'
 import { getSourceTimeMs, makeConstantSpeedMap } from './speed'
 
@@ -488,6 +489,42 @@ describe('rippleTrim', () => {
     const left = getElement(project, 'e-2')!
     const right = getElement(project, 'e-3')!
     expect(left.startMs + left.durationMs).toBe(right.startMs)
+  })
+
+  test('rejects a start-edge rippleTrim whose duration leaves the safe integer range', () => {
+    const engine = new EditorEngine()
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
+    })
+    const elementId = engine.project.tracks[0]!.elements[0]!.id
+    const trim = {
+      type: 'rippleTrim' as const,
+      elementId,
+      edge: 'start' as const,
+      deltaMs: -9007199254740991,
+    }
+    expect(() => engine.dispatch(trim)).toThrow(CommandError)
+    try {
+      engine.dispatch(trim)
+    } catch (error) {
+      expect((error as CommandError).code).toBe('out-of-bounds')
+    }
+    expect(getElement(engine.project, elementId)).toMatchObject({ startMs: 1000, durationMs: 1000 })
+    expect(parseProject(JSON.parse(JSON.stringify(engine.project)))).toEqual(engine.project)
+  })
+
+  test('start-edge rippleTrim still grows a text element in range', () => {
+    const engine = new EditorEngine()
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
+    })
+    const elementId = engine.project.tracks[0]!.elements[0]!.id
+    engine.dispatch({ type: 'rippleTrim', elementId, edge: 'start', deltaMs: -500 })
+    expect(getElement(engine.project, elementId)).toMatchObject({ startMs: 1000, durationMs: 1500 })
   })
 })
 
