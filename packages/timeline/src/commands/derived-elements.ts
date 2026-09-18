@@ -14,12 +14,7 @@ import {
 } from '../model'
 import { isTimelineMagnetic, placementFor } from '../placement'
 import { getElementLocation } from '../selectors'
-import {
-  expandThumbnailTemplate,
-  findThumbnailTrack,
-  THUMBNAIL_TRACK_NAME,
-  thumbnailTemplateSchema,
-} from '../thumbnails'
+import { applyThumbnailTemplate, thumbnailTemplateSchema } from '../thumbnails'
 import { defineCommand, insertSorted, mustGetTrack, mustLocate, replaceTrack } from './shared'
 
 const applyCaptionsSchema = z.object({
@@ -263,32 +258,9 @@ export const applyThumbnail = defineCommand({
   type: 'applyThumbnail',
   description:
     'Compose a cover over the first five frames: expands a thumbnail ' +
-    "template's text items into elements on the topmost \"Thumbnail\" track " +
-    '(created locked when missing, replaced when present). Unlike a metadata ' +
-    'cover, this is baked into the exported video.',
+    "template's text items into one locked topmost \"Thumbnail\" track per " +
+    'text layer (existing thumbnail text is replaced; image layers stay). ' +
+    'Unlike a metadata cover, this is baked into the exported video.',
   payloadSchema: z.object({ template: thumbnailTemplateSchema }),
-  reduce: (project, payload) => {
-    const elements = expandThumbnailTemplate(project, payload.template)
-    const existing = findThumbnailTrack(project)
-    if (existing) {
-      return {
-        ...project,
-        tracks: project.tracks.map((t) =>
-          t.id === existing.id
-            ? { ...t, elements: [...t.elements.filter((e) => e.type === 'image'), ...elements] }
-            : t,
-        ),
-      }
-    }
-    const track: Track = {
-      id: createTrackId(),
-      name: THUMBNAIL_TRACK_NAME,
-      muted: false,
-      hidden: false,
-      locked: true,
-      magnetic: false,
-      elements,
-    }
-    return { ...project, tracks: [...project.tracks, track] }
-  },
+  reduce: (project, payload) => applyThumbnailTemplate(project, payload.template),
 })

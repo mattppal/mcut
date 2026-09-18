@@ -4,6 +4,7 @@ import { createProject, type TimelineElement } from './model'
 import {
   captureThumbnailTemplate,
   expandThumbnailTemplate,
+  findThumbnailTracks,
   THUMBNAIL_TEMPLATES,
   thumbnailDurationMs,
 } from './thumbnails'
@@ -37,7 +38,7 @@ describe('thumbnails', () => {
     let project = createProject({ fps: 30 })
     project = applyCommand(project, { type: 'applyThumbnail', template: THUMBNAIL_TEMPLATES[0]! })
     expect(project.tracks.map((t) => t.name)).toEqual(['Track 1', 'Thumbnail', 'Thumbnail'])
-    const layers = project.tracks.slice(1)
+    const layers = findThumbnailTracks(project)
     expect(layers.map((t) => t.locked)).toEqual([true, true])
     expect(layers.map((t) => t.elements.map(textOf))).toEqual([['BIG TITLE'], ['episode label']])
     expect(layers.map((t) => t.elements[0]!.startMs)).toEqual([0, 0])

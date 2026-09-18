@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { createElementId } from './id'
+import { createElementId, createTrackId } from './id'
 import { frameToMs } from './time'
 import {
   MIN_ELEMENT_DURATION_MS,
@@ -8,14 +8,16 @@ import {
   type TextElement,
   type TextStyle,
   type TimelineElement,
+  type Track,
 } from './model'
 
 /**
  * Thumbnails: a composition recipe for the video's FIRST FIVE FRAMES — real
- * elements on a dedicated topmost "Thumbnail" track, so unlike CapCut's
- * cover (project metadata that vanishes on export) the cover is baked into
- * the exported video by construction, remains hand-editable on the canvas,
- * and can be re-captured as a reusable template.
+ * elements on locked topmost "Thumbnail" tracks, one per layer (layers are
+ * simultaneous, and a track never holds overlapping elements), so unlike
+ * CapCut's cover (project metadata that vanishes on export) the cover is
+ * baked into the exported video by construction, remains hand-editable on
+ * the canvas, and can be re-captured as a reusable template.
  *
  * Template geometry is normalized (0..1 rects, font sizes relative to 1080p)
  * so one template fits any project size — louisville's draft pattern.
@@ -88,7 +90,7 @@ function scaleTextStyle(style: TextStyle, scale: number): TextStyle {
 }
 
 /**
- * Expand a template's TEXT items into elements for the Thumbnail track.
+ * Expand a template's TEXT items into elements, one per Thumbnail track.
  * Slots are panel affordances (filled with image elements by the UI), so
  * they expand to nothing here.
  */
@@ -131,11 +133,9 @@ export function captureThumbnailTemplate(
   project: Project,
   name: string,
 ): ThumbnailTemplate | null {
-  const track = findThumbnailTrack(project)
-  if (!track || track.elements.length === 0) return null
   const fontScale = 1080 / project.height
   const items: ThumbnailItem[] = []
-  for (const element of track.elements) {
+  for (const element of findThumbnailTracks(project).flatMap((track) => track.elements)) {
     if (element.type === 'text') {
       const w = (element.box?.width ?? project.width * 0.4) / project.width
       const h = ((element.box?.height ?? element.style.fontSize * 1.4) / project.height) || 0.12
@@ -174,8 +174,34 @@ export function captureThumbnailTemplate(
 
 export const THUMBNAIL_TRACK_NAME = 'Thumbnail'
 
-export function findThumbnailTrack(project: Project) {
-  return [...project.tracks].reverse().find((t) => t.name === THUMBNAIL_TRACK_NAME) ?? null
+/** Every Thumbnail track in paint order (bottom layer first). */
+export function findThumbnailTracks(project: Project): Track[] {
+  return project.tracks.filter((track) => track.name === THUMBNAIL_TRACK_NAME)
+}
+
+/**
+ * Replace the cover's text layers with a template: one locked Thumbnail
+ * track per text item on top of the timeline. Image layers the UI placed
+ * keep their tracks; a Thumbnail track left empty is dropped.
+ */
+export function applyThumbnailTemplate(project: Project, template: ThumbnailTemplate): Project {
+  const kept = project.tracks.flatMap((track) => {
+    if (track.name !== THUMBNAIL_TRACK_NAME) return [track]
+    const elements = track.elements.filter((element) => element.type !== 'text')
+    return elements.length === 0 ? [] : [{ ...track, elements }]
+  })
+  const layers = expandThumbnailTemplate(project, template).map(
+    (element): Track => ({
+      id: createTrackId(),
+      name: THUMBNAIL_TRACK_NAME,
+      muted: false,
+      hidden: false,
+      locked: true,
+      magnetic: false,
+      elements: [element],
+    }),
+  )
+  return { ...project, tracks: [...kept, ...layers] }
 }
 
 const title = (overrides: Partial<z.input<typeof textStyleSchema>> = {}) =>
