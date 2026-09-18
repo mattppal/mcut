@@ -6,12 +6,13 @@
 
 ```sh
 bun run standards
+bun scripts/standards/measure.ts --base origin/main
 bun scripts/standards/measure.ts --json out.json
 bun run standards:strip --check packages/timeline/src
 bun run standards:strip packages/timeline/src
 ```
 
-`bun run standards` prints the markdown report for HEAD, then compares HEAD with the merge base of HEAD and `origin/main`. It exports that merge base with `git worktree add --detach` into a temp directory and removes it afterwards. When `origin/main` is missing locally, run `git fetch origin main` first.
+`bun run standards` passes `--quiet` and `--base origin/main`. It prints only the comparison outcome. Run `bun scripts/standards/measure.ts --base origin/main` to print the markdown report first, then the comparison. It exports that merge base with `git worktree add --detach` into a temp directory and removes it afterwards. When `origin/main` is missing locally, run `git fetch origin main` first.
 
 ## What is measured
 
@@ -23,7 +24,7 @@ Directive comments (`eslint-`, `@ts-`, `prettier-ignore`) and shebangs are not c
 
 ## Growth rule
 
-Every metric except `loc` is gated. The check fails with exit 1 when any gated metric in any area and bucket is higher at HEAD than at the merge base. Each failure prints one line in the form `growth area/bucket metric base -> head` followed by the files that grew. A clean run prints `no growth`.
+Census-only metrics are `loc` and `switchStmt`. They appear in the report and never fail the growth check. The list is the `censusOnly` constant in `measure.ts`. Adding another census metric is one entry in that list. Every other metric is gated. The check fails with exit 1 when any gated metric in any area and bucket is higher at HEAD than at the merge base. Each failure prints one line in the form `growth area/bucket metric base -> head` followed by the files that grew. A clean run prints `no growth`.
 
 ## Bans
 

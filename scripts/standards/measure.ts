@@ -52,7 +52,7 @@ const bans: readonly Ban[] = [
   { metric: 'todo', bucket: 'code' },
 ]
 
-const sizeMetrics: ReadonlySet<MetricId> = new Set(['loc'])
+const censusOnly: readonly MetricId[] = ['loc', 'switchStmt']
 
 interface Area { name: string; roots: readonly string[] }
 
@@ -236,14 +236,14 @@ function grownFiles(base: Measurement | undefined, head: Measurement, finding: O
     .slice(0, topGrownFiles)
 }
 
-function compare(base: Measurement, head: Measurement): Outcome {
+export function compare(base: Measurement, head: Measurement): Outcome {
   const growths: Finding[] = []
   const banHits: Finding[] = []
   for (const [area, headArea] of head.perArea) {
     const baseArea = base.perArea.get(area)
     for (const bucket of buckets) {
       for (const metric of metricIds) {
-        if (sizeMetrics.has(metric)) continue
+        if (censusOnly.includes(metric)) continue
         const before = baseArea?.counts[bucket].get(metric) ?? 0
         const after = headArea.counts[bucket].get(metric) ?? 0
         const finding = { area, bucket, metric, base: before, head: after }
@@ -356,8 +356,9 @@ async function main(argv: readonly string[]): Promise<number> {
     console.error(`Cannot resolve ${baseRef}. Run git fetch origin main and retry.`)
     return 1
   }
+  const quiet = argv.includes('--quiet')
   const head = measureTree(repoRoot)
-  process.stdout.write(renderReport(head))
+  if (!quiet) process.stdout.write(renderReport(head))
   const jsonPath = optionValue(argv, '--json')
   if (jsonPath !== undefined) await writeFile(jsonPath, JSON.stringify(toJson(head), null, 2))
   if (baseRef === undefined) return 0
