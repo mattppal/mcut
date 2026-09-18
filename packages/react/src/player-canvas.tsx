@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  useEffect,
+  useCallback,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
@@ -20,19 +20,19 @@ import {
   WebGPUBackend,
   type HandleId,
   type OBB,
-  type SizeHelpers,
+  type RenderFrameOptions,
 } from '@mcut/compositor'
 import { getActiveMediaItems } from '@mcut/media'
 import {
   getElement,
   getGroupedElementIds,
-  getProjectDurationMs,
   hasKeyframes,
   isElementActiveAt,
   resolveAnimatedElement,
   type AnimatableProperty,
   type EditorEngine,
   type ElementId,
+  type PlaybackState,
   type Project,
   type TextBox,
   type TimelineElement,
@@ -40,6 +40,7 @@ import {
 } from '@mcut/timeline'
 import { useEditorContext } from './context'
 import { applyBoxResize, applyMove, applyResize, applyRotate, type GesturePoint } from './gestures'
+import { usePlaybackLoop } from './use-playback-loop'
 
 /**
  * Preview raster resolution. `'auto'` renders at the displayed size,
@@ -77,28 +78,58 @@ export interface PlayerCanvasProps {
   renderer?: 'canvas2d' | 'webgpu'
 }
 
-interface GestureState {
-  kind: 'move' | 'resize' | 'box-resize' | 'rotate'
+type Renderer = NonNullable<PlayerCanvasProps['renderer']>
+type ResizeHandle = Exclude<HandleId, 'rotate'>
+type TransformableElement = Extract<TimelineElement, { transform: Transform }>
+
+interface GestureFeedback {
+  guideVertical: boolean
+  guideHorizontal: boolean
+  label: string | null
+}
+
+interface GestureBase {
   elementId: ElementId
   elementIds: ElementId[]
   baseTransform: Transform
   baseOBB: OBB
-  baseBox: (TextBox & { height: number; hadHeight: boolean }) | null
-  handle: Exclude<HandleId, 'rotate'> | null
-  preserveAspect: boolean
   start: GesturePoint
+  feedback: GestureFeedback | null
 }
 
-interface GestureFeedback {
-  /** Element snapped to the canvas center on this axis: draw the guide. */
-  guideVertical: boolean
-  guideHorizontal: boolean
-  /** Live readout ("1280×720", "45.0°") drawn under the element. */
-  label: string | null
+type GestureState = GestureBase &
+  (
+    | { kind: 'move' }
+    | { kind: 'rotate' }
+    | { kind: 'resize'; handle: ResizeHandle; preserveAspect: boolean }
+    | {
+        kind: 'box-resize'
+        handle: ResizeHandle
+        baseBox: TextBox & { height: number; hadHeight: boolean }
+      }
+  )
+
+interface GestureStep {
+  transform: Transform
+  box: TextBox | null
+  feedback: GestureFeedback
 }
 
-/** Snap-to-center threshold in screen px while moving an element. */
+interface RenderTarget {
+  canvas: HTMLCanvasElement
+  gpu: WebGPUSlot
+}
+
+interface OverlayView {
+  project: Project
+  timeMs: number
+  interactive: boolean
+  selectedIds: readonly ElementId[]
+  gesture: GestureState | null
+}
+
 const CENTER_SNAP_PX = 10
+const NO_GUIDES = { guideVertical: false, guideHorizontal: false }
 
 const GESTURE_PROPERTIES: Array<[AnimatableProperty, keyof Transform]> = [
   ['position.x', 'x'],
@@ -151,22 +182,203 @@ function visualGroupElementIds(project: Project, elementId: ElementId): ElementI
   })
 }
 
-function applyGestureTransformToElements(
-  engine: EditorEngine,
-  elementIds: readonly ElementId[],
-  transform: Transform,
-  timelineMs: number,
-): void {
-  for (const elementId of elementIds) {
-    applyGestureTransform(engine, elementId, transform, timelineMs)
+let measureContext: CanvasRenderingContext2D | null = null
+
+function elementOBB(project: Project, element: TimelineElement): OBB | null {
+  return getElementOBB(project, element, {
+    getAssetSize: (assetId) => {
+      const asset = project.assets[assetId]
+      return asset?.width && asset?.height ? { width: asset.width, height: asset.height } : null
+    },
+    measureText: (text, style, box, runs) => {
+      measureContext ??= document.createElement('canvas').getContext('2d')
+      if (!measureContext) return { width: 0, height: 0 }
+      const layout = layoutTextBlock(measureWith(measureContext), text, style, {
+        box,
+        ...(runs ? { runs } : {}),
+      })
+      return { width: layout.width, height: layout.height }
+    },
+  })
+}
+
+function selectedTransformable(
+  project: Project,
+  selectedIds: readonly ElementId[],
+  timeMs: number,
+): TransformableElement | null {
+  for (const id of selectedIds) {
+    const element = getElement(project, id)
+    if (element && isElementActiveAt(element, timeMs) && 'transform' in element) return element
+  }
+  return null
+}
+
+function topmostElementAt(
+  project: Project,
+  point: GesturePoint,
+  timeMs: number,
+): { element: TransformableElement; obb: OBB } | null {
+  for (const track of project.tracks.toReversed()) {
+    if (track.hidden || track.locked) continue
+    for (const raw of track.elements.toReversed()) {
+      if (!isElementActiveAt(raw, timeMs) || !('transform' in raw)) continue
+      const element = resolveAnimatedElement(raw, timeMs)
+      const obb = elementOBB(project, element)
+      if (obb && hitTestOBB(obb, point.x, point.y)) return { element, obb }
+    }
+  }
+  return null
+}
+
+function gestureAt(
+  project: Project,
+  selectedIds: readonly ElementId[],
+  point: GesturePoint,
+  timeMs: number,
+  handleHitSize: number,
+): GestureState | null {
+  const selected = selectedTransformable(project, selectedIds, timeMs)
+  if (selected) {
+    const element = resolveAnimatedElement(selected, timeMs)
+    const obb = elementOBB(project, element)
+    const handle = obb ? hitTestHandles(obb, point.x, point.y, handleHitSize) : null
+    if (obb && handle) {
+      const base: GestureBase = {
+        elementId: element.id,
+        elementIds: visualGroupElementIds(project, element.id),
+        baseTransform: element.transform,
+        baseOBB: obb,
+        start: point,
+        feedback: null,
+      }
+      if (handle === 'rotate') return { ...base, kind: 'rotate' }
+      if (element.type === 'text' && element.box) {
+        return {
+          ...base,
+          kind: 'box-resize',
+          handle,
+          baseBox: {
+            ...element.box,
+            height: element.box.height ?? obb.height / element.transform.scaleY,
+            hadHeight: element.box.height !== undefined,
+          },
+        }
+      }
+      return { ...base, kind: 'resize', handle, preserveAspect: Boolean(element.groupId) }
+    }
+  }
+  const hit = topmostElementAt(project, point, timeMs)
+  if (!hit) return null
+  return {
+    kind: 'move',
+    elementId: hit.element.id,
+    elementIds: visualGroupElementIds(project, hit.element.id),
+    baseTransform: hit.element.transform,
+    baseOBB: hit.obb,
+    start: point,
+    feedback: null,
   }
 }
 
-/**
- * The preview player: renders the project through the shared compositor on
- * every animation frame, advances the playback clock, keeps the media pool
- * in sync, and hosts the selection overlay (drag / resize / rotate).
- */
+function resolveGesture(
+  gesture: GestureState,
+  point: GesturePoint,
+  altKey: boolean,
+  screenToProject: number,
+): GestureStep {
+  switch (gesture.kind) {
+    case 'move': {
+      const moved = applyMove(gesture.baseTransform, gesture.start, point)
+      const threshold = CENTER_SNAP_PX * screenToProject
+      const guideVertical = !altKey && Math.abs(moved.x) < threshold
+      const guideHorizontal = !altKey && Math.abs(moved.y) < threshold
+      return {
+        transform: { ...moved, x: guideVertical ? 0 : moved.x, y: guideHorizontal ? 0 : moved.y },
+        box: null,
+        feedback: { guideVertical, guideHorizontal, label: null },
+      }
+    }
+    case 'rotate': {
+      const transform = applyRotate(gesture.baseTransform, gesture.baseOBB, gesture.start, point)
+      return {
+        transform,
+        box: null,
+        feedback: { ...NO_GUIDES, label: `${transform.rotation.toFixed(1)}°` },
+      }
+    }
+    case 'resize': {
+      const transform = applyResize(
+        gesture.baseTransform,
+        gesture.baseOBB,
+        gesture.handle,
+        gesture.start,
+        point,
+        gesture.preserveAspect,
+      )
+      const width = (gesture.baseOBB.width / gesture.baseTransform.scaleX) * transform.scaleX
+      const height = (gesture.baseOBB.height / gesture.baseTransform.scaleY) * transform.scaleY
+      return {
+        transform,
+        box: null,
+        feedback: { ...NO_GUIDES, label: `${Math.round(width)}×${Math.round(height)}` },
+      }
+    }
+    case 'box-resize': {
+      const result = applyBoxResize(
+        gesture.baseTransform,
+        gesture.baseOBB,
+        gesture.handle,
+        point,
+        12 * screenToProject,
+      )
+      const resizesHeight = gesture.handle.includes('n') || gesture.handle.includes('s')
+      const height = Math.max(1, Math.round(result.displayHeight / gesture.baseTransform.scaleY))
+      return {
+        transform: result.transform,
+        box: {
+          width: Math.max(1, Math.round(result.displayWidth / gesture.baseTransform.scaleX)),
+          overflow: gesture.baseBox.overflow,
+          ...(gesture.baseBox.hadHeight || resizesHeight ? { height } : {}),
+        },
+        feedback: {
+          ...NO_GUIDES,
+          label: `${Math.round(result.displayWidth)}×${Math.round(result.displayHeight)}`,
+        },
+      }
+    }
+  }
+}
+
+class WebGPUSlot {
+  private entry: { key: string; backend: WebGPUBackend | null } | null = null
+  private readonly canvas: HTMLCanvasElement
+  private readonly onUnavailable: () => void
+
+  constructor(canvas: HTMLCanvasElement, onUnavailable: () => void) {
+    this.canvas = canvas
+    this.onUnavailable = onUnavailable
+  }
+
+  backendFor(width: number, height: number): WebGPUBackend | null {
+    const key = `${width}x${height}`
+    if (this.entry?.key === key) return this.entry.backend
+    this.release()
+    const created: { key: string; backend: WebGPUBackend | null } = { key, backend: null }
+    this.entry = created
+    void WebGPUBackend.create({ canvas: this.canvas, width, height }).then((backend) => {
+      if (this.entry === created) created.backend = backend
+      else backend.dispose()
+    }, this.onUnavailable)
+    return null
+  }
+
+  release(): void {
+    this.entry?.backend?.dispose()
+    this.entry = null
+  }
+}
+
 /**
  * The raster scale for one preview frame: displayed size for `'auto'`
  * (quantized so sub-pixel layout jitter doesn't reallocate the canvas),
@@ -188,279 +400,194 @@ function getRenderScale(
   return Math.min(1, (Math.ceil(displayWidth / 64) * 64) / project.width)
 }
 
-export function PlayerCanvas({
+function renderPreview(
+  target: RenderTarget,
+  renderer: Renderer,
+  project: Project,
+  timeMs: number,
+  scale: number,
+  options: RenderFrameOptions,
+): void {
+  const { canvas } = target
+  const width = Math.max(1, Math.round(project.width * scale))
+  const height = Math.max(1, Math.round(project.height * scale))
+  if (canvas.width !== width) canvas.width = width
+  if (canvas.height !== height) canvas.height = height
+  if (renderer === 'webgpu' && isWebGPUSupported()) {
+    const backend = target.gpu.backendFor(project.width, project.height)
+    if (backend) renderFrameWith(backend, project, timeMs, options)
+    return
+  }
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.setTransform(scale, 0, 0, scale, 0, 0)
+  renderFrame(ctx, project, timeMs, options)
+}
+
+function drawOverlay(
+  overlay: HTMLCanvasElement | null,
+  container: HTMLElement | null,
+  view: OverlayView,
+): void {
+  if (!overlay || !container) return
+  const dpr = window.devicePixelRatio || 1
+  const width = Math.max(1, Math.round(container.clientWidth * dpr))
+  const height = Math.max(1, Math.round(container.clientHeight * dpr))
+  if (overlay.width !== width) overlay.width = width
+  if (overlay.height !== height) overlay.height = height
+  const ctx = overlay.getContext('2d')
+  if (!ctx) return
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.clearRect(0, 0, width, height)
+  if (!view.interactive) return
+
+  const { project, timeMs } = view
+  const selected = selectedTransformable(project, view.selectedIds, timeMs)
+  if (!selected) return
+  const obb = elementOBB(project, resolveAnimatedElement(selected, timeMs))
+  if (!obb) return
+
+  const scale = width / project.width
+  ctx.setTransform(scale, 0, 0, scale, 0, 0)
+  const px = (value: number) => value / scale
+
+  ctx.save()
+  ctx.translate(obb.cx, obb.cy)
+  ctx.rotate((obb.rotation * Math.PI) / 180)
+  ctx.strokeStyle = '#3b82f6'
+  ctx.lineWidth = px(1.5)
+  ctx.setLineDash([px(6), px(4)])
+  ctx.strokeRect(-obb.width / 2, -obb.height / 2, obb.width, obb.height)
+  ctx.restore()
+
+  ctx.setLineDash([])
+  for (const handle of getHandles(obb)) {
+    const size = px(handle.id === 'rotate' ? 10 : 8)
+    ctx.fillStyle = '#ffffff'
+    ctx.strokeStyle = '#3b82f6'
+    ctx.lineWidth = px(1.5)
+    if (handle.id === 'rotate') {
+      ctx.beginPath()
+      ctx.arc(handle.x, handle.y, size / 2, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+    } else {
+      ctx.fillRect(handle.x - size / 2, handle.y - size / 2, size, size)
+      ctx.strokeRect(handle.x - size / 2, handle.y - size / 2, size, size)
+    }
+  }
+
+  const feedback = view.gesture?.feedback
+  if (!feedback) return
+  if (feedback.guideVertical || feedback.guideHorizontal) {
+    ctx.strokeStyle = '#e879f9'
+    ctx.lineWidth = px(1)
+    ctx.setLineDash([px(5), px(4)])
+    ctx.beginPath()
+    if (feedback.guideVertical) {
+      ctx.moveTo(project.width / 2, 0)
+      ctx.lineTo(project.width / 2, project.height)
+    }
+    if (feedback.guideHorizontal) {
+      ctx.moveTo(0, project.height / 2)
+      ctx.lineTo(project.width, project.height / 2)
+    }
+    ctx.stroke()
+    ctx.setLineDash([])
+  }
+  if (feedback.label) {
+    const fontPx = px(11)
+    ctx.font = `${fontPx}px ui-monospace, monospace`
+    const metrics = ctx.measureText(feedback.label)
+    const padding = px(5)
+    const labelY = obb.cy + obb.height / 2 + px(18)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'
+    ctx.beginPath()
+    ctx.roundRect(
+      obb.cx - metrics.width / 2 - padding,
+      labelY - fontPx / 2 - padding,
+      metrics.width + padding * 2,
+      fontPx + padding * 2,
+      px(4),
+    )
+    ctx.fill()
+    ctx.fillStyle = '#ffffff'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(feedback.label, obb.cx, labelY)
+    ctx.textAlign = 'left'
+  }
+}
+
+export function PlayerCanvas({ renderer = 'webgpu', ...props }: PlayerCanvasProps) {
+  return <PlayerCanvasView key={renderer} renderer={renderer} {...props} />
+}
+
+function PlayerCanvasView({
   className,
   interactive = true,
   background,
   quality = 'auto',
   hiddenElementIds,
   onElementDoubleClick,
-  renderer = 'webgpu',
-}: PlayerCanvasProps) {
+  renderer,
+}: Omit<PlayerCanvasProps, 'renderer'> & { renderer: Renderer }) {
   const { engine, pool } = useEditorContext()
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const renderCanvasRef = useRef<HTMLCanvasElement | null>(null)
-  const gpuRef = useRef<{ key: string; backend: WebGPUBackend | null; pending: boolean } | null>(
-    null,
-  )
-  const [webgpuUnavailable, setWebgpuUnavailable] = useState(false)
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null)
-  const measureCtxRef = useRef<CanvasRenderingContext2D | null>(null)
-  const gestureRef = useRef<GestureState | null>(null)
-  const feedbackRef = useRef<GestureFeedback>({
-    guideVertical: false,
-    guideHorizontal: false,
-    label: null,
-  })
+  const [target, setTarget] = useState<RenderTarget | null>(null)
+  const [webgpuUnavailable, setWebgpuUnavailable] = useState(false)
+  const [gesture, setGesture] = useState<GestureState | null>(null)
+  const effectiveRenderer: Renderer =
+    renderer === 'webgpu' && !webgpuUnavailable ? 'webgpu' : 'canvas2d'
 
-  const sizeHelpers = (project: Project): SizeHelpers => ({
-    getAssetSize: (assetId) => {
-      const asset = project.assets[assetId]
-      return asset?.width && asset?.height ? { width: asset.width, height: asset.height } : null
-    },
-    measureText: (text, style, box, runs) => {
-      if (!measureCtxRef.current) {
-        measureCtxRef.current = document.createElement('canvas').getContext('2d')
-      }
-      const ctx = measureCtxRef.current
-      if (!ctx) return { width: 0, height: 0 }
-      const layout = layoutTextBlock(measureWith(ctx), text, style, {
-        box,
-        ...(runs ? { runs } : {}),
-      })
-      return { width: layout.width, height: layout.height }
-    },
-  })
-
-  const obbFor = (project: Project, element: TimelineElement): OBB | null =>
-    getElementOBB(project, element, sizeHelpers(project))
-
-  const effectiveRenderer = renderer === 'webgpu' && !webgpuUnavailable ? 'webgpu' : 'canvas2d'
-
-  useEffect(() => {
-    if (renderer === 'canvas2d') setWebgpuUnavailable(false)
-  }, [renderer])
-
-  // ---- render loop ---------------------------------------------------------
-
-  useEffect(() => {
-    let raf = 0
-    let lastNow = performance.now()
-
-    const loop = () => {
-      const now = performance.now()
-      const playback = engine.playback.state
-      let project = engine.project
-
-      if (playback.isPlaying) {
-        const durationMs = getProjectDurationMs(project)
-        const next = playback.currentTimeMs + (now - lastNow) * playback.playbackRate
-        if (durationMs > 0 && next >= durationMs && playback.playbackRate > 0) {
-          engine.seek(durationMs)
-          engine.pause()
-        } else if (next <= 0 && playback.playbackRate < 0) {
-          // Reverse shuttle (J) hit the start of the timeline.
-          engine.seek(0)
-          engine.pause()
-        } else {
-          engine.seek(next)
-        }
-      }
-      lastNow = now
-
-      project = engine.project
-      const { currentTimeMs, isPlaying, playbackRate, volume, muted } = engine.playback.state
-
-      pool.sync(getActiveMediaItems(project, currentTimeMs), {
-        isPlaying,
-        playbackRate,
-        masterVolume: volume,
-        muted,
-      })
-
-      const canvas = renderCanvasRef.current
-      if (canvas) {
-        const scale = getRenderScale(project, quality, containerRef.current)
-        const width = Math.max(1, Math.round(project.width * scale))
-        const height = Math.max(1, Math.round(project.height * scale))
-        if (canvas.width !== width) canvas.width = width
-        if (canvas.height !== height) canvas.height = height
-        const renderOptions = {
-          source: pool,
-          ...(background ? { backgroundColor: background } : {}),
-          ...(hiddenRef.current && hiddenRef.current.size > 0
-            ? { skipElementIds: hiddenRef.current }
-            : {}),
-        }
-        if (effectiveRenderer === 'webgpu' && isWebGPUSupported()) {
-          // The backend composites at project resolution and its present
-          // pass stretches onto the (possibly downscaled) backing store.
-          // Creation is async: frames skip until the device is ready. If
-          // setup fails, the canvas remounts on the canvas2d backend.
-          const key = `${project.width}x${project.height}`
-          let gpu = gpuRef.current
-          if (gpu && gpu.key !== key && gpu.backend) {
-            gpu.backend.dispose()
-            gpu = null
-          }
-          if (!gpu) {
-            const created: { key: string; backend: WebGPUBackend | null; pending: boolean } = {
-              key,
-              backend: null,
-              pending: true,
-            }
-            gpuRef.current = created
-            gpu = created
-            void WebGPUBackend.create({ canvas, width: project.width, height: project.height })
-              .then((backend) => {
-                if (gpuRef.current === created) {
-                  created.backend = backend
-                  created.pending = false
-                } else {
-                  backend.dispose()
-                }
-              })
-              .catch(() => {
-                if (gpuRef.current === created) {
-                  created.pending = false
-                  gpuRef.current = null
-                }
-                setWebgpuUnavailable(true)
-              })
-          }
-          if (gpu.backend) {
-            renderFrameWith(gpu.backend, project, currentTimeMs, renderOptions)
-          }
-        } else {
-          const ctx = canvas.getContext('2d')
-          if (ctx) {
-            // renderFrame draws in project coordinates; the transform maps
-            // them onto the (possibly downscaled) backing store.
-            ctx.setTransform(scale, 0, 0, scale, 0, 0)
-            renderFrame(ctx, project, currentTimeMs, renderOptions)
-          }
-        }
-      }
-
-      drawOverlay(project, currentTimeMs)
-      raf = requestAnimationFrame(loop)
+  const attachRenderCanvas = useCallback((canvas: HTMLCanvasElement | null) => {
+    if (!canvas) return
+    const attached: RenderTarget = {
+      canvas,
+      gpu: new WebGPUSlot(canvas, () => setWebgpuUnavailable(true)),
     }
-
-    const drawOverlay = (project: Project, timeMs: number) => {
-      const overlay = overlayCanvasRef.current
-      const container = containerRef.current
-      if (!overlay || !container) return
-      const dpr = window.devicePixelRatio || 1
-      const width = Math.max(1, Math.round(container.clientWidth * dpr))
-      const height = Math.max(1, Math.round(container.clientHeight * dpr))
-      if (overlay.width !== width) overlay.width = width
-      if (overlay.height !== height) overlay.height = height
-      const ctx = overlay.getContext('2d')
-      if (!ctx) return
-
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.clearRect(0, 0, width, height)
-      if (!interactive) return
-
-      const raw = engine.selection.elementIds
-        .map((id) => getElement(project, id))
-        .find((element): element is TimelineElement => Boolean(element && isElementActiveAt(element, timeMs)))
-      if (!raw) return
-      const element = resolveAnimatedElement(raw, timeMs)
-      const obb = obbFor(project, element)
-      if (!obb) return
-
-      const scale = width / project.width
-      ctx.setTransform(scale, 0, 0, scale, 0, 0)
-      const px = (value: number) => value / scale // constant screen-px sizes
-
-      ctx.save()
-      ctx.translate(obb.cx, obb.cy)
-      ctx.rotate((obb.rotation * Math.PI) / 180)
-      ctx.strokeStyle = '#3b82f6'
-      ctx.lineWidth = px(1.5)
-      ctx.setLineDash([px(6), px(4)])
-      ctx.strokeRect(-obb.width / 2, -obb.height / 2, obb.width, obb.height)
-      ctx.restore()
-
-      ctx.setLineDash([])
-      for (const handle of getHandles(obb)) {
-        const size = px(handle.id === 'rotate' ? 10 : 8)
-        ctx.fillStyle = '#ffffff'
-        ctx.strokeStyle = '#3b82f6'
-        ctx.lineWidth = px(1.5)
-        if (handle.id === 'rotate') {
-          ctx.beginPath()
-          ctx.arc(handle.x, handle.y, size / 2, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.stroke()
-        } else {
-          ctx.fillRect(handle.x - size / 2, handle.y - size / 2, size, size)
-          ctx.strokeRect(handle.x - size / 2, handle.y - size / 2, size, size)
-        }
-      }
-
-      // Gesture feedback: center alignment guides + live readout.
-      const feedback = feedbackRef.current
-      if (gestureRef.current) {
-        if (feedback.guideVertical || feedback.guideHorizontal) {
-          ctx.strokeStyle = '#e879f9'
-          ctx.lineWidth = px(1)
-          ctx.setLineDash([px(5), px(4)])
-          ctx.beginPath()
-          if (feedback.guideVertical) {
-            ctx.moveTo(project.width / 2, 0)
-            ctx.lineTo(project.width / 2, project.height)
-          }
-          if (feedback.guideHorizontal) {
-            ctx.moveTo(0, project.height / 2)
-            ctx.lineTo(project.width, project.height / 2)
-          }
-          ctx.stroke()
-          ctx.setLineDash([])
-        }
-        if (feedback.label) {
-          const fontPx = px(11)
-          ctx.font = `${fontPx}px ui-monospace, monospace`
-          const metrics = ctx.measureText(feedback.label)
-          const padding = px(5)
-          const labelY = obb.cy + obb.height / 2 + px(18)
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'
-          ctx.beginPath()
-          ctx.roundRect(
-            obb.cx - metrics.width / 2 - padding,
-            labelY - fontPx / 2 - padding,
-            metrics.width + padding * 2,
-            fontPx + padding * 2,
-            px(4),
-          )
-          ctx.fill()
-          ctx.fillStyle = '#ffffff'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(feedback.label, obb.cx, labelY)
-          ctx.textAlign = 'left'
-        }
-      }
-    }
-
-    raf = requestAnimationFrame(loop)
+    setTarget(attached)
     return () => {
-      cancelAnimationFrame(raf)
-      gpuRef.current?.backend?.dispose()
-      gpuRef.current = null
+      attached.gpu.release()
+      setTarget((current) => (current === attached ? null : current))
     }
-    // The loop reads engine/pool state directly each frame.
-  }, [engine, pool, background, interactive, quality, effectiveRenderer])
+  }, [])
 
-  // The render loop reads these through refs so toggling them doesn't
-  // restart the loop (it depends on engine/pool/quality only).
-  const hiddenRef = useRef<ReadonlySet<string> | undefined>(hiddenElementIds)
-  hiddenRef.current = hiddenElementIds
-  const doubleClickRef = useRef<typeof onElementDoubleClick>(onElementDoubleClick)
-  doubleClickRef.current = onElementDoubleClick
-
-  // ---- pointer interactions ------------------------------------------------
+  usePlaybackLoop(engine, {
+    onFrame: (project, playback) => {
+      pool.sync(getActiveMediaItems(project, playback.currentTimeMs), {
+        isPlaying: playback.isPlaying,
+        playbackRate: playback.playbackRate,
+        masterVolume: playback.volume,
+        muted: playback.muted,
+      })
+      if (target) {
+        renderPreview(
+          target,
+          effectiveRenderer,
+          project,
+          playback.currentTimeMs,
+          getRenderScale(project, quality, containerRef.current),
+          {
+            source: pool,
+            ...(background ? { backgroundColor: background } : {}),
+            ...(hiddenElementIds && hiddenElementIds.size > 0
+              ? { skipElementIds: hiddenElementIds }
+              : {}),
+          },
+        )
+      }
+      drawOverlay(overlayCanvasRef.current, containerRef.current, {
+        project,
+        timeMs: playback.currentTimeMs,
+        interactive,
+        selectedIds: engine.selection.elementIds,
+        gesture,
+      })
+    },
+  })
 
   const toProjectPoint = (event: { clientX: number; clientY: number }): GesturePoint | null => {
     const overlay = overlayCanvasRef.current
@@ -481,208 +608,70 @@ export function PlayerCanvas({
     return rect.width === 0 ? 1 : engine.project.width / rect.width
   }
 
+  const closeGesture = () => {
+    setGesture(null)
+    engine.endTransaction()
+  }
+
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!interactive) return
     const point = toProjectPoint(event)
     if (!point) return
     const project = engine.project
-    const timeMs = engine.playback.state.currentTimeMs
-    const handleHitSize = 10 * screenToProject()
-
-    // 1. Handles of the current selection take priority.
-    const selectedRaw = engine.selection.elementIds
-      .map((id) => getElement(project, id))
-      .find((element): element is TimelineElement => Boolean(
-        element && isElementActiveAt(element, timeMs) && 'transform' in element,
-      ))
-    if (selectedRaw) {
-      const raw = selectedRaw
-      if ('transform' in raw) {
-        // Gestures start from the RESOLVED transform so armed elements are
-        // grabbed where they currently are on screen.
-        const element = resolveAnimatedElement(raw, timeMs)
-        const obb = obbFor(project, element)
-        if (obb) {
-          const handle = hitTestHandles(obb, point.x, point.y, handleHitSize)
-          if (handle) {
-            const baseBox =
-              handle !== 'rotate' && element.type === 'text' && element.box
-                ? {
-                    ...element.box,
-                    height: element.box.height ?? obb.height / element.transform.scaleY,
-                    hadHeight: element.box.height !== undefined,
-                  }
-                : null
-            gestureRef.current = {
-              kind: handle === 'rotate' ? 'rotate' : baseBox ? 'box-resize' : 'resize',
-              elementId: element.id,
-              elementIds: visualGroupElementIds(project, element.id),
-              baseTransform: element.transform,
-              baseOBB: obb,
-              baseBox,
-              handle: handle === 'rotate' ? null : handle,
-              preserveAspect: Boolean(raw.groupId),
-              start: point,
-            }
-            engine.beginTransaction()
-            event.currentTarget.setPointerCapture(event.pointerId)
-            return
-          }
-        }
-      }
+    const next = gestureAt(
+      project,
+      engine.selection.elementIds,
+      point,
+      engine.playback.state.currentTimeMs,
+      10 * screenToProject(),
+    )
+    if (!next) {
+      engine.clearSelection()
+      return
     }
-
-    // 2. Hit-test elements top-down (topmost track first, latest element first).
-    for (let trackIndex = project.tracks.length - 1; trackIndex >= 0; trackIndex--) {
-      const track = project.tracks[trackIndex]!
-      if (track.hidden || track.locked) continue
-      for (let i = track.elements.length - 1; i >= 0; i--) {
-        const raw = track.elements[i]!
-        if (!isElementActiveAt(raw, timeMs)) continue
-        if (!('transform' in raw)) continue
-        const element = resolveAnimatedElement(raw, timeMs)
-        const obb = obbFor(project, element)
-        if (!obb || !hitTestOBB(obb, point.x, point.y)) continue
-
-        const elementIds = visualGroupElementIds(project, element.id)
-        engine.select(getGroupedElementIds(project, element.id))
-        gestureRef.current = {
-          kind: 'move',
-          elementId: element.id,
-          elementIds,
-          baseTransform: element.transform,
-          baseOBB: obb,
-          baseBox: null,
-          handle: null,
-          preserveAspect: Boolean(raw.groupId),
-          start: point,
-        }
-        engine.beginTransaction()
-        event.currentTarget.setPointerCapture(event.pointerId)
-        return
-      }
-    }
-
-    engine.clearSelection()
+    if (next.kind === 'move') engine.select(getGroupedElementIds(project, next.elementId))
+    setGesture(next)
+    engine.beginTransaction()
+    event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   const handleDoubleClick = (event: ReactMouseEvent<HTMLCanvasElement>) => {
-    if (!interactive || !doubleClickRef.current) return
+    if (!interactive || !onElementDoubleClick) return
     const point = toProjectPoint(event)
     if (!point) return
-    const project = engine.project
-    const timeMs = engine.playback.state.currentTimeMs
-    for (let trackIndex = project.tracks.length - 1; trackIndex >= 0; trackIndex--) {
-      const track = project.tracks[trackIndex]!
-      if (track.hidden || track.locked) continue
-      for (let i = track.elements.length - 1; i >= 0; i--) {
-        const raw = track.elements[i]!
-        if (!isElementActiveAt(raw, timeMs)) continue
-        if (!('transform' in raw)) continue
-        const element = resolveAnimatedElement(raw, timeMs)
-        const obb = obbFor(project, element)
-        if (!obb || !hitTestOBB(obb, point.x, point.y)) continue
-        doubleClickRef.current(element.id)
-        return
-      }
-    }
+    const hit = topmostElementAt(engine.project, point, engine.playback.state.currentTimeMs)
+    if (hit) onElementDoubleClick(hit.element.id)
   }
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    const gesture = gestureRef.current
     if (!gesture) return
     const point = toProjectPoint(event)
     if (!point) return
-
-    let transform: Transform
-    const feedback = feedbackRef.current
-    if (gesture.kind === 'move') {
-      transform = applyMove(gesture.baseTransform, gesture.start, point)
-      // Magnetic canvas center (hold Alt to bypass).
-      const threshold = CENTER_SNAP_PX * screenToProject()
-      feedback.guideVertical = false
-      feedback.guideHorizontal = false
-      if (!event.altKey) {
-        if (Math.abs(transform.x) < threshold) {
-          transform = { ...transform, x: 0 }
-          feedback.guideVertical = true
-        }
-        if (Math.abs(transform.y) < threshold) {
-          transform = { ...transform, y: 0 }
-          feedback.guideHorizontal = true
+    const step = resolveGesture(gesture, point, event.altKey, screenToProject())
+    const timeMs = engine.playback.state.currentTimeMs
+    try {
+      if (step.box) {
+        applyGestureTransform(engine, gesture.elementId, step.transform, timeMs)
+        engine.dispatch({
+          type: 'updateElement',
+          elementId: gesture.elementId,
+          patch: { box: step.box },
+        })
+      } else {
+        for (const elementId of gesture.elementIds) {
+          applyGestureTransform(engine, elementId, step.transform, timeMs)
         }
       }
-      feedback.label = null
-    } else if (gesture.kind === 'rotate') {
-      transform = applyRotate(gesture.baseTransform, gesture.baseOBB, gesture.start, point)
-      feedback.label = `${transform.rotation.toFixed(1)}°`
-      feedback.guideVertical = false
-      feedback.guideHorizontal = false
-    } else if (gesture.kind === 'resize') {
-      transform = applyResize(
-        gesture.baseTransform,
-        gesture.baseOBB,
-        gesture.handle ?? 'se',
-        gesture.start,
-        point,
-        gesture.preserveAspect,
-      )
-      const width = (gesture.baseOBB.width / gesture.baseTransform.scaleX) * transform.scaleX
-      const height = (gesture.baseOBB.height / gesture.baseTransform.scaleY) * transform.scaleY
-      feedback.label = `${Math.round(width)}×${Math.round(height)}`
-      feedback.guideVertical = false
-      feedback.guideHorizontal = false
-    } else {
-      const baseBox = gesture.baseBox
-      if (!baseBox || !gesture.handle) return
-      const result = applyBoxResize(
-        gesture.baseTransform,
-        gesture.baseOBB,
-        gesture.handle,
-        point,
-        12 * screenToProject(),
-      )
-      transform = result.transform
-      const nextWidth = Math.max(1, Math.round(result.displayWidth / gesture.baseTransform.scaleX))
-      const nextHeight = Math.max(1, Math.round(result.displayHeight / gesture.baseTransform.scaleY))
-      const resizesHeight = gesture.handle.includes('n') || gesture.handle.includes('s')
-      const box: TextBox = {
-        width: nextWidth,
-        overflow: baseBox.overflow,
-        ...(baseBox.hadHeight || resizesHeight ? { height: nextHeight } : {}),
-      }
-      try {
-        applyGestureTransform(engine, gesture.elementId, transform, engine.playback.state.currentTimeMs)
-        engine.dispatch({ type: 'updateElement', elementId: gesture.elementId, patch: { box } })
-      } catch {
-        gestureRef.current = null
-        engine.endTransaction()
-      }
-      feedback.label = `${Math.round(result.displayWidth)}×${Math.round(result.displayHeight)}`
-      feedback.guideVertical = false
-      feedback.guideHorizontal = false
+    } catch {
+      closeGesture()
       return
     }
-
-    try {
-      applyGestureTransformToElements(
-        engine,
-        gesture.elementIds,
-        transform,
-        engine.playback.state.currentTimeMs,
-      )
-    } catch {
-      // Element vanished mid-gesture (e.g. concurrent removal): cancel.
-      gestureRef.current = null
-      engine.endTransaction()
-    }
+    setGesture({ ...gesture, feedback: step.feedback })
   }
 
   const endGesture = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (!gestureRef.current) return
-    gestureRef.current = null
-    feedbackRef.current = { guideVertical: false, guideHorizontal: false, label: null }
-    engine.endTransaction()
+    if (!gesture) return
+    closeGesture()
     event.currentTarget.releasePointerCapture(event.pointerId)
   }
 
@@ -697,10 +686,10 @@ export function PlayerCanvas({
       }}
       data-mcut-player=""
     >
-      {/* Keyed by renderer: a canvas can only ever hold one context type. */}
+      {/* A canvas holds one context kind for its lifetime, so the renderer keys it: https://html.spec.whatwg.org/multipage/canvas.html#dom-canvas-getcontext */}
       <canvas
         key={effectiveRenderer}
-        ref={renderCanvasRef}
+        ref={attachRenderCanvas}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       />
       <canvas
