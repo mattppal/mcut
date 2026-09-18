@@ -11,6 +11,22 @@ const NAMED: Record<string, [number, number, number, number]> = {
   transparent: [0, 0, 0, 0],
 }
 
+function hexChannels(hex: string, width: 1 | 2): [number, number, number, number] | null {
+  const count = hex.length / width
+  if (count !== 3 && count !== 4) return null
+  const channelAt = (index: number): number => {
+    const digits = hex.slice(index * width, (index + 1) * width)
+    return Number.parseInt(width === 1 ? digits + digits : digits, 16) / 255
+  }
+  const channels: [number, number, number, number] = [
+    channelAt(0),
+    channelAt(1),
+    channelAt(2),
+    count === 4 ? channelAt(3) : 1,
+  ]
+  return channels.every((p) => Number.isFinite(p)) ? channels : null
+}
+
 /**
  * Parse the CSS colors the compositor actually meets (#hex, rgb()/rgba(),
  * a few names). Unknown input falls back to opaque black — the same color
@@ -23,32 +39,19 @@ export function parseCssColor(input: string): [number, number, number, number] {
 
   if (value.startsWith('#')) {
     const hex = value.slice(1)
-    if (hex.length === 3 || hex.length === 4) {
-      const parts = [...hex].map((c) => Number.parseInt(c + c, 16))
-      if (parts.every((p) => Number.isFinite(p))) {
-        return [parts[0]! / 255, parts[1]! / 255, parts[2]! / 255, hex.length === 4 ? parts[3]! / 255 : 1]
-      }
-    }
-    if (hex.length === 6 || hex.length === 8) {
-      const parts = [0, 2, 4, 6]
-        .slice(0, hex.length / 2)
-        .map((i) => Number.parseInt(hex.slice(i, i + 2), 16))
-      if (parts.every((p) => Number.isFinite(p))) {
-        return [parts[0]! / 255, parts[1]! / 255, parts[2]! / 255, hex.length === 8 ? parts[3]! / 255 : 1]
-      }
-    }
+    const channels = hexChannels(hex, 1) ?? hexChannels(hex, 2)
+    if (channels) return channels
   }
 
-  const fn = value.match(/^rgba?\(([^)]+)\)$/)
-  if (fn) {
-    const parts = fn[1]!.split(/[\s,/]+/).filter(Boolean)
-    if (parts.length >= 3) {
+  const inner = value.match(/^rgba?\(([^)]+)\)$/)?.[1]
+  if (inner !== undefined) {
+    const [rawR, rawG, rawB, rawA] = inner.split(/[\s,/]+/).filter(Boolean)
+    if (rawR !== undefined && rawG !== undefined && rawB !== undefined) {
       const channel = (raw: string): number =>
         raw.endsWith('%') ? (Number.parseFloat(raw) / 100) * 255 : Number.parseFloat(raw)
-      const r = channel(parts[0]!)
-      const g = channel(parts[1]!)
-      const b = channel(parts[2]!)
-      const rawA = parts[3]
+      const r = channel(rawR)
+      const g = channel(rawG)
+      const b = channel(rawB)
       const a = rawA === undefined ? 1 : rawA.endsWith('%') ? Number.parseFloat(rawA) / 100 : Number.parseFloat(rawA)
       if ([r, g, b, a].every((p) => Number.isFinite(p))) {
         return [
