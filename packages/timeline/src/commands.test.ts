@@ -9,7 +9,10 @@ import {
   getProjectDurationMs,
   getTrack,
 } from './selectors'
-import { mustFind } from './test-helpers'
+import { mustFind, thrownBy } from './test-helpers'
+
+const captionWords = (project: Project) =>
+  project.tracks.flatMap((track) => track.elements.flatMap((e) => (e.type === 'caption' ? [e.words] : [])))
 
 function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
   let project = createProject({ name: 'test' })
@@ -407,31 +410,17 @@ describe('element commands', () => {
 
   test('addElement rejects caption words whose endMs precedes startMs', () => {
     const engine = new EditorEngine()
-    const inverted = {
+    const caption = (words: CaptionElement['words']) => ({
       type: 'addElement' as const,
       trackId: 't-default' as const,
-      element: {
-        type: 'caption' as const,
-        text: 'hi',
-        startMs: 0,
-        durationMs: 5000,
-        words: [{ text: 'hi', startMs: 3000, endMs: 1000 }],
-      },
-    }
-    try {
-      engine.dispatch(inverted)
-      throw new Error('expected addElement to reject inverted caption words')
-    } catch (error) {
-      expect(error).toBeInstanceOf(CommandError)
-      expect((error as CommandError).code).toBe('invalid-payload')
-    }
-
-    engine.dispatch({
-      ...inverted,
-      element: { ...inverted.element, words: [{ text: 'hi', startMs: 3000, endMs: 3000 }] },
+      element: { type: 'caption' as const, text: 'hi', startMs: 0, durationMs: 5000, words },
     })
-    const accepted = engine.project.tracks[0]!.elements[0] as CaptionElement
-    expect(accepted.words).toEqual([{ text: 'hi', startMs: 3000, endMs: 3000 }])
+    const thrown = thrownBy(() => engine.dispatch(caption([{ text: 'hi', startMs: 3000, endMs: 1000 }])))
+    expect(thrown).toBeInstanceOf(CommandError)
+    expect(thrown).toMatchObject({ code: 'invalid-payload' })
+
+    engine.dispatch(caption([{ text: 'hi', startMs: 3000, endMs: 3000 }]))
+    expect(captionWords(engine.project)).toEqual([[{ text: 'hi', startMs: 3000, endMs: 3000 }]])
   })
 
   test('rippleTrim of a caption remaps word times and still parses', () => {
@@ -440,6 +429,7 @@ describe('element commands', () => {
       type: 'addElement',
       trackId: 't-default',
       element: {
+        id: 'e-caption',
         type: 'caption',
         text: 'hi',
         startMs: 0,
@@ -447,14 +437,10 @@ describe('element commands', () => {
         words: [{ text: 'hi', startMs: 3000, endMs: 4000 }],
       },
     })
-    const id = engine.project.tracks[0]!.elements[0]!.id
-    engine.dispatch({ type: 'rippleTrim', elementId: id, edge: 'start', deltaMs: 2000 })
-    const trimmed = engine.project.tracks[0]!.elements[0] as CaptionElement
-    expect(trimmed.words).toEqual([{ text: 'hi', startMs: 1000, endMs: 2000 }])
+    engine.dispatch({ type: 'rippleTrim', elementId: 'e-caption', edge: 'start', deltaMs: 2000 })
+    expect(captionWords(engine.project)).toEqual([[{ text: 'hi', startMs: 1000, endMs: 2000 }]])
     const restored = parseProject(JSON.parse(JSON.stringify(engine.project)))
-    expect((restored.tracks[0]!.elements[0] as CaptionElement).words).toEqual([
-      { text: 'hi', startMs: 1000, endMs: 2000 },
-    ])
+    expect(captionWords(restored)).toEqual([[{ text: 'hi', startMs: 1000, endMs: 2000 }]])
   })
 
   test('updateElement validates the merged element', () => {
