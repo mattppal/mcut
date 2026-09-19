@@ -28,12 +28,12 @@ function readArgs(argv: string[]): Args {
     } else if (arg === '--editor-url') {
       args.editorUrl = argv[++i] ?? args.editorUrl
     } else if (arg === '--help' || arg === '-h') {
-      console.error(
-        [
+      process.stderr.write(
+        `${[
           'Usage: mcut-mcp-live [--port 54319] [--editor-url http://localhost:3000/editor]',
           '',
           'Starts a stdio MCP server that forwards mcut tools to a live browser editor tab.',
-        ].join('\n'),
+        ].join('\n')}\n`,
       )
       process.exit(0)
     }
@@ -46,8 +46,8 @@ async function main(): Promise<void> {
   const bridge = new LiveMcutBridge({ token: args.token, editorUrl: args.editorUrl })
   const port = await bridge.listen(args.port)
 
-  console.error(
-    [
+  process.stderr.write(
+    `${[
       `mcut live MCP server ready — bridge: ws://127.0.0.1:${port}/mcut-mcp`,
       `Open editor: ${bridge.getOpenEditorUrl() ?? args.editorUrl}`,
       '',
@@ -74,7 +74,7 @@ async function main(): Promise<void> {
         null,
         2,
       ),
-    ].join('\n'),
+    ].join('\n')}\n`,
   )
 
   const server = createMcutMcpServerForTarget({
@@ -95,6 +95,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error))
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
   process.exit(1)
 })

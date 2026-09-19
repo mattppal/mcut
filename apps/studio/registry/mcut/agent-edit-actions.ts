@@ -1,5 +1,6 @@
 import { planSilenceCuts } from "@mcut/editor";
 import {
+  elementIdSchema,
   getElementLocation,
   getProjectTranscript,
   type EditorEngine,
@@ -7,41 +8,28 @@ import {
   type ProjectTranscriptWordContext,
   type TimelineElement,
 } from "@mcut/timeline";
-import { isRecord, optionalBoolean, optionalFiniteNumber } from "./guards";
+import { z } from "zod";
 
-interface SilenceActionInput {
-  elementId?: string;
-  minGapMs?: number;
-  paddingMs?: number;
-  minKeepMs?: number;
-  trimEnds?: boolean;
-}
+const silenceActionInputSchema = z.strictObject({
+  elementId: elementIdSchema.optional(),
+  minGapMs: z.number().min(0).optional(),
+  paddingMs: z.number().min(0).optional(),
+  minKeepMs: z.number().min(0).optional(),
+  trimEnds: z.boolean().optional(),
+});
 
-interface FadeActionInput {
-  elementId?: string;
-  durationMs?: number;
-}
+const fadeActionInputSchema = z.strictObject({
+  elementId: elementIdSchema.optional(),
+  durationMs: z.number().min(10).optional(),
+});
 
 type VisualElement = TimelineElement & { type: "video" | "image" | "text" | "multicam" };
 type MediaElement = TimelineElement & { type: "video" | "audio" };
 
-function parseSilenceInput(value: unknown): SilenceActionInput {
-  if (!isRecord(value)) return {};
-  return {
-    ...(typeof value.elementId === "string" ? { elementId: value.elementId } : {}),
-    ...(optionalFiniteNumber(value.minGapMs) !== undefined ? { minGapMs: optionalFiniteNumber(value.minGapMs) } : {}),
-    ...(optionalFiniteNumber(value.paddingMs) !== undefined ? { paddingMs: optionalFiniteNumber(value.paddingMs) } : {}),
-    ...(optionalFiniteNumber(value.minKeepMs) !== undefined ? { minKeepMs: optionalFiniteNumber(value.minKeepMs) } : {}),
-    ...(optionalBoolean(value.trimEnds) !== undefined ? { trimEnds: optionalBoolean(value.trimEnds) } : {}),
-  };
-}
-
-function parseFadeInput(value: unknown): FadeActionInput {
-  if (!isRecord(value)) return {};
-  return {
-    ...(typeof value.elementId === "string" ? { elementId: value.elementId } : {}),
-    ...(optionalFiniteNumber(value.durationMs) !== undefined ? { durationMs: optionalFiniteNumber(value.durationMs) } : {}),
-  };
+function parseActionInput<Schema extends z.ZodType>(schema: Schema, value: unknown): z.output<Schema> {
+  const parsed = schema.safeParse(value ?? {});
+  if (parsed.success) return parsed.data;
+  throw new Error(z.prettifyError(parsed.error));
 }
 
 function isMediaElement(element: TimelineElement): element is MediaElement {
@@ -59,12 +47,12 @@ function isVisualElement(element: TimelineElement): element is VisualElement {
 
 function pickElement<T extends TimelineElement>(
   engine: EditorEngine,
-  explicitId: string | undefined,
+  explicitId: ElementId | undefined,
   predicate: (element: TimelineElement) => element is T,
   emptyMessage: string,
 ): T {
   if (explicitId) {
-    const location = getElementLocation(engine.project, explicitId as ElementId);
+    const location = getElementLocation(engine.project, explicitId);
     if (!location || !predicate(location.element)) {
       throw new Error(`Element "${explicitId}" is not a supported target.`);
     }
@@ -106,7 +94,7 @@ function transcriptWordsForElement(
 }
 
 export function removeTranscriptSilence(engine: EditorEngine, value: unknown): unknown {
-  const input = parseSilenceInput(value);
+  const input = parseActionInput(silenceActionInputSchema, value);
   const element = pickElement(
     engine,
     input.elementId,
@@ -150,7 +138,7 @@ export function removeTranscriptSilence(engine: EditorEngine, value: unknown): u
 }
 
 export function applyOpeningClosingFades(engine: EditorEngine, value: unknown): unknown {
-  const input = parseFadeInput(value);
+  const input = parseActionInput(fadeActionInputSchema, value);
   const element = pickElement(
     engine,
     input.elementId,

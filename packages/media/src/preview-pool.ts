@@ -550,9 +550,6 @@ export class PreviewMediaPool implements FrameSource {
         const track = await input.getPrimaryVideoTrack()
         if (!track || !(await track.canDecode())) {
           state.failed = true
-          console.warn(
-            `[mcut] no WebCodecs decoder for "${asset.name ?? asset.id}" (${track?.codec ?? 'no video track'}); preview frames unavailable`,
-          )
           input.dispose()
           return null
         }
