@@ -94,7 +94,8 @@ async function exportWebm(page: Page, downloads: Downloads): Promise<ExportOutco
   await page.locator('[data-mcut-export-trigger]').click()
   await page.getByRole('button', { name: 'WebM', exact: true }).click()
   const failure = page.getByText(/^Export failed:/)
-  const download = downloads.next(EXPORT_TIMEOUT_MS).then(
+  const wait = await downloads.next(EXPORT_TIMEOUT_MS)
+  const download = wait.file.then(
     (file) => ({ kind: 'download' as const, file }),
     () => ({ kind: 'timeout' as const }),
   )
@@ -105,6 +106,7 @@ async function exportWebm(page: Page, downloads: Downloads): Promise<ExportOutco
   await page.getByRole('button', { name: 'Export WebM' }).click()
   const first = await Promise.race([download, failed])
   if (first.kind === 'download') return { kind: 'file', bytes: readFileSync(first.file) }
+  await wait.cancel()
   if (first.kind === 'failed') return { kind: 'failed', detail: (await failure.textContent()) ?? 'Export failed' }
   return { kind: 'failed', detail: `neither a download nor an export error within ${EXPORT_TIMEOUT_MS} ms` }
 }

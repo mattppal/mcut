@@ -20,9 +20,9 @@ test('export renders a webm in the worker and downloads it', async ({ page, edit
   await page.locator('[data-mcut-export-trigger]').click()
   await page.getByRole('button', { name: 'WebM', exact: true }).click()
 
-  const downloadPromise = downloads.next(90_000)
+  const download = await downloads.next(90_000)
   await page.getByRole('button', { name: 'Export WebM' }).click()
-  const file = await downloadPromise
+  const file = await download.file
 
   expect(path.basename(file)).toMatch(/\.webm$/)
   expect((await stat(file)).size).toBeGreaterThan(10_000)
