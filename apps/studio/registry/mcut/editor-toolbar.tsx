@@ -1,6 +1,6 @@
 "use client";
 
-import { MoonIcon, Redo2Icon, SunIcon, Undo2Icon } from "@/lib/hugeicons";
+import { MoonIcon, Redo2Icon, SunIcon, Undo2Icon } from "@/lib/icons";
 import { useEditor, useEditorState } from "@mcut/react";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";

@@ -17,7 +17,7 @@ import {
   Volume2Icon,
   VolumeXIcon,
   XIcon,
-} from "@/lib/hugeicons";
+} from "@/lib/icons";
 import { useEditor, useEditorState } from "@mcut/react";
 import { type Track } from "@mcut/timeline";
 import { cn } from "@/lib/utils";

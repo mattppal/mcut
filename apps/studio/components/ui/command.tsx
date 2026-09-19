@@ -15,7 +15,7 @@ import {
   InputGroup,
   InputGroupAddon,
 } from "@/components/ui/input-group"
-import { SearchIcon, CheckIcon } from "@/lib/hugeicons"
+import { SearchIcon, CheckIcon } from "@/lib/icons"
 
 function Command({
   className,

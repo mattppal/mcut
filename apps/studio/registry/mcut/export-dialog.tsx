@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { DownloadIcon, TriangleAlertIcon } from "@/lib/hugeicons";
+import { DownloadIcon, TriangleAlertIcon } from "@/lib/icons";
 import {
   exportProject,
   getExportSupport,

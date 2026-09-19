@@ -9,7 +9,7 @@ import {
   type TimelineElement,
   type Track,
 } from "@mcut/timeline";
-import { Trash2Icon } from "@/lib/hugeicons";
+import { Trash2Icon } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import {
   Select,

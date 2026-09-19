@@ -11,7 +11,7 @@ import {
   SearchIcon,
   TypeIcon,
   UploadIcon,
-} from "@/lib/hugeicons";
+} from "@/lib/icons";
 import { toast } from "sonner";
 import { createProject, getProjectDurationMs, toOtioJson } from "@mcut/timeline";
 import { findTargetMulticam, switchToLayout } from "./multicam-ui";
