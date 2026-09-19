@@ -74,7 +74,9 @@ const endEvent = z.object({
 
 const errorEvent = z.object({ type: z.literal('error'), message: z.string() })
 
-const eventSchema = z.discriminatedUnion('type', [toolCallEvent, toolUpdateEvent, textEvent, endEvent, errorEvent])
+const maxTurnsEvent = z.object({ type: z.literal('max_turns_reached') })
+
+const eventSchema = z.discriminatedUnion('type', [toolCallEvent, toolUpdateEvent, textEvent, endEvent, errorEvent, maxTurnsEvent])
 
 const doctorSchema = z.object({
   servers: z.array(
@@ -101,6 +103,7 @@ interface Transcript {
   text: string[]
   end: EndEvent | undefined
   error: string | undefined
+  maxTurns: boolean
 }
 
 export function findGrokBinary(): string | undefined {
@@ -215,6 +218,9 @@ function observe(transcript: Transcript, event: z.infer<typeof eventSchema>): vo
     case 'error':
       transcript.error = event.message
       break
+    case 'max_turns_reached':
+      transcript.maxTurns = true
+      break
   }
 }
 
@@ -227,7 +233,9 @@ function stopOf(transcript: Transcript, exit: { code: number | null; signal: str
     return { stoppedBy: 'error', detail: `grok exited with ${how} before its end event.\n${exit.stderr.join('\n')}` }
   }
   if (end.stopReason === 'end_turn') return { stoppedBy: 'model', detail: transcript.text.join('') }
-  if (end.stopReason.includes('turn')) return { stoppedBy: 'step-cap', detail: `grok stopped with ${end.stopReason}` }
+  if (transcript.maxTurns || end.stopReason.includes('turn')) {
+    return { stoppedBy: 'step-cap', detail: `hit the ${end.num_turns} turn cap, grok stopped with ${end.stopReason}` }
+  }
   return { stoppedBy: 'error', detail: `grok stopped with ${end.stopReason}` }
 }
 
@@ -261,7 +269,7 @@ export async function runGrokBuildTask(task: E2ETask, session: McpSession, optio
   const promptFile = join(options.runDir, `${task.id}.prompt.md`)
   writeFileSync(promptFile, `${prompt.user}\n`, 'utf8')
   const events = createWriteStream(join(options.runDir, `${task.id}.grok.ndjson`))
-  const transcript: Transcript = { calls: [], text: [], end: undefined, error: undefined }
+  const transcript: Transcript = { calls: [], text: [], end: undefined, error: undefined, maxTurns: false }
   const stderr: string[] = []
 
   const proc = Bun.spawn(grokArgs(options, promptFile, `${prompt.system} ${GROK_RULES}`), {
