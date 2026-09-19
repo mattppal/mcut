@@ -18,6 +18,7 @@
     "lint": "turbo run lint",
     "smoke:packages": "bun run scripts/smoke-packages.ts",
     "fixtures": "bun scripts/fixtures/generate-media.ts --mutate",
+    "fuzz:mcp:bridge": "bun scripts/agent-e2e/fuzz-bridge.ts",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "bun run release:check && bun run release:publish",
