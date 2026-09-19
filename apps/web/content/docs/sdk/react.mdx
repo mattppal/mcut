@@ -221,6 +221,14 @@ function useSelection(): SelectionState
 
 Returns the current `SelectionState` from editor state.
 
+### useLatest
+
+```ts
+function useLatest<T>(value: T): { readonly current: T }
+```
+
+Returns a ref whose `current` is the value from the latest committed render, so a long-lived callback can read fresh props without resubscribing.
+
 ### useWindowEvent
 
 ```ts
