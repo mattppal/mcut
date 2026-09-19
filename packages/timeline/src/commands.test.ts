@@ -475,6 +475,72 @@ describe('applyCaptions', () => {
   })
 })
 
+describe('caller-supplied ids', () => {
+  function projectWithTwoVideos() {
+    const { project, trackId } = projectWithVideo()
+    let next = applyCommand(project, {
+      type: 'addElement',
+      trackId,
+      element: { id: 'e-one', type: 'video', assetId: 'a-vid', startMs: 0, durationMs: 2000 },
+    })
+    next = applyCommand(next, {
+      type: 'addElement',
+      trackId,
+      element: { id: 'e-two', type: 'video', assetId: 'a-vid', startMs: 3000, durationMs: 1000 },
+    })
+    return { project: next, trackId }
+  }
+
+  const allIds = (project: Project) => project.tracks.flatMap((t) => t.elements.map((e) => e.id))
+
+  test('splitElement rejects a rightElementId that already exists', () => {
+    const { project } = projectWithTwoVideos()
+    expect(() =>
+      applyCommand(project, { type: 'splitElement', elementId: 'e-one', atMs: 1000, rightElementId: 'e-two' }),
+    ).toThrow('element "e-two" already exists')
+    const split = applyCommand(project, {
+      type: 'splitElement',
+      elementId: 'e-one',
+      atMs: 1000,
+      rightElementId: 'e-right',
+    })
+    expect(allIds(split)).toEqual(['e-one', 'e-right', 'e-two'])
+  })
+
+  test('createMulticam rejects a multicamId that already exists', () => {
+    const { project } = projectWithTwoVideos()
+    expect(() =>
+      applyCommand(project, { type: 'createMulticam', elementIds: ['e-one'], multicamId: 'e-two' }),
+    ).toThrow('element "e-two" already exists')
+    const multicam = applyCommand(project, { type: 'createMulticam', elementIds: ['e-one'], multicamId: 'e-mc' })
+    expect(allIds(multicam)).toEqual(['e-mc', 'e-two'])
+  })
+
+  test('detachAudio rejects an audioElementId that already exists', () => {
+    const { project } = projectWithTwoVideos()
+    expect(() =>
+      applyCommand(project, { type: 'detachAudio', elementId: 'e-one', audioElementId: 'e-two' }),
+    ).toThrow('element "e-two" already exists')
+    const detached = applyCommand(project, { type: 'detachAudio', elementId: 'e-one', audioElementId: 'e-aud' })
+    expect(allIds(detached)).toEqual(['e-aud', 'e-one', 'e-two'])
+  })
+
+  test('applyCaptions rejects a caption id that already exists', () => {
+    const { project } = projectWithTwoVideos()
+    expect(() =>
+      applyCommand(project, {
+        type: 'applyCaptions',
+        captions: [{ id: 'e-two', startMs: 0, durationMs: 1000, text: 'dup' }],
+      }),
+    ).toThrow('element "e-two" already exists')
+    const captioned = applyCommand(project, {
+      type: 'applyCaptions',
+      captions: [{ id: 'e-cap', startMs: 0, durationMs: 1000, text: 'ok' }],
+    })
+    expect(allIds(captioned)).toEqual(['e-one', 'e-two', 'e-cap'])
+  })
+})
+
 describe('selectors', () => {
   test('getProjectDurationMs and findNearestFreeSlot', () => {
     let { project, trackId } = projectWithVideo()
