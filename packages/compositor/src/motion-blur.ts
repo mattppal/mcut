@@ -57,7 +57,7 @@ function isMovingBetween(element: TimelineElement, t0: number, t1: number): bool
 }
 
 /** Cached accumulation surface; cleared before every use, so reuse is safe. */
-let cachedScratch: Canvas2D | null = null
+let cachedScratch: OffscreenCanvasRenderingContext2D | null = null
 
 function acquireScratch(
   width: number,
@@ -66,11 +66,11 @@ function acquireScratch(
 ): Canvas2D | null {
   if (options.createScratchContext) return options.createScratchContext(width, height)
   if (typeof OffscreenCanvas === 'undefined') return null
-  const cachedCanvas = cachedScratch?.canvas as OffscreenCanvas | undefined
+  const cachedCanvas = cachedScratch?.canvas
   if (!cachedScratch || cachedCanvas?.width !== width || cachedCanvas?.height !== height) {
     const ctx = new OffscreenCanvas(width, height).getContext('2d')
     if (!ctx) return null
-    cachedScratch = ctx as Canvas2D
+    cachedScratch = ctx
   }
   return cachedScratch
 }

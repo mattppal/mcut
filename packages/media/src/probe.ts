@@ -33,6 +33,11 @@ function finiteDurationMs(duration: number): number | null {
   return Number.isFinite(duration) && duration > 0 ? Math.round(duration * 1000) : null
 }
 
+function trackListLength(trackList: unknown): number | undefined {
+  if (typeof trackList !== 'object' || trackList === null || !('length' in trackList)) return undefined
+  return typeof trackList.length === 'number' ? trackList.length : undefined
+}
+
 function loadNativeMetadata(
   tag: 'video' | 'audio',
   src: string,
@@ -57,8 +62,7 @@ function loadNativeMetadata(
       const video = media instanceof HTMLVideoElement ? media : null
       const width = video?.videoWidth ?? 0
       const height = video?.videoHeight ?? 0
-      const audioTracks = (media as HTMLMediaElement & { audioTracks?: { length: number } })
-        .audioTracks?.length
+      const audioTracks = 'audioTracks' in media ? trackListLength(media.audioTracks) : undefined
       settle({
         durationMs,
         ...(width > 0 && height > 0 ? { width, height } : {}),

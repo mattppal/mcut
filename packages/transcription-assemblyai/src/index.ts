@@ -6,7 +6,6 @@ import type {
   TranscriptResult,
 } from '@mcut/transcription'
 
-/** The fields of an AssemblyAI transcript this package consumes (ms-native). */
 export interface AssemblyAITranscriptLike {
   text?: string | null
   words?:
@@ -22,16 +21,14 @@ export interface AssemblyAITranscriptLike {
     | Array<{ text: string; start: number; end: number; speaker?: string | null }>
     | null
   language_code?: string | null
-  /** Seconds. */
   audio_duration?: number | null
 }
 
-/**
- * Normalize an AssemblyAI transcript to mcut's `TranscriptResult`.
- * AssemblyAI timestamps are already integer milliseconds; words carry
- * confidence and (with `speaker_labels`) speaker tags, and utterances map
- * to sentence-level segments.
- */
+function millisecondsFromAssemblyAiDurationSeconds(audioDurationS: number): number {
+  // word.start/end are milliseconds; audio_duration is seconds. https://www.assemblyai.com/docs/pre-recorded-audio/api-reference/transcripts/submit
+  return Math.round(audioDurationS * 1000)
+}
+
 export function normalizeAssemblyAIResult(transcript: AssemblyAITranscriptLike): TranscriptResult {
   const words = (transcript.words ?? []).map((word) => ({
     text: word.text,
@@ -50,7 +47,7 @@ export function normalizeAssemblyAIResult(transcript: AssemblyAITranscriptLike):
     text: transcript.text ?? '',
     ...(transcript.language_code != null ? { language: transcript.language_code } : {}),
     ...(transcript.audio_duration != null
-      ? { durationMs: Math.round(transcript.audio_duration * 1000) }
+      ? { durationMs: millisecondsFromAssemblyAiDurationSeconds(transcript.audio_duration) }
       : {}),
     words,
     segments,
@@ -58,15 +55,10 @@ export function normalizeAssemblyAIResult(transcript: AssemblyAITranscriptLike):
 }
 
 export interface AssemblyAIProviderOptions {
-  /** AssemblyAI API key. Keep server-side; never expose to the browser. */
   apiKey?: string
-  /** Bring your own configured client instead of `apiKey`. */
   client?: AssemblyAI
-  /** Label speakers (populates `speaker` on words/segments). Default true. */
   speakerLabels?: boolean
-  /** Extra AssemblyAI request params (model, custom vocabulary, ...). */
   params?: Partial<Omit<TranscribeParams, 'audio'>>
-  /** Provider id for diagnostics. Default `'assemblyai'`. */
   id?: string
 }
 
@@ -77,17 +69,6 @@ async function toAudioArg(audio: TranscribeInput['audio']): Promise<string | Uin
   return audio
 }
 
-/**
- * mcut's flagship transcription provider: native AssemblyAI with word-level
- * timestamps, per-word confidence, and speaker labels — everything caption
- * editing wants. Server-side only (the API key must stay secret); browsers
- * should POST audio to a route that runs this provider.
- *
- * ```ts
- * const provider = createAssemblyAIProvider({ apiKey: process.env.ASSEMBLYAI_API_KEY! })
- * const transcript = await provider.transcribe({ audio: wavBlob })
- * ```
- */
 export function createAssemblyAIProvider(
   options: AssemblyAIProviderOptions = {},
 ): TranscriptionProvider {

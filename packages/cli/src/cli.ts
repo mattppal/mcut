@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-/**
- * mcut on the command line. Every subcommand operates on a project document
- * (JSON) the way the editor does: parse → dispatch commands → persist. Export
- * stays in the browser (WebCodecs); this tool edits the document.
- */
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { parseArgs } from 'node:util'

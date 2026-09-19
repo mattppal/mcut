@@ -21,7 +21,7 @@ export type {
 
 /** How the last `exportProject` call ran — observability for tests/debugging. */
 function noteExportMode(mode: 'worker' | 'local'): void {
-  ;(globalThis as Record<string, unknown>).__mcutLastExportMode = mode
+  Reflect.set(globalThis, '__mcutLastExportMode', mode)
 }
 
 /** Worker spawn → first message budget (dev bundlers compile on demand). */
@@ -183,8 +183,8 @@ function collectTransfers(
 ): Transferable[] {
   const transfers = new Set<Transferable>()
   if (mixedAudio) {
-    transfers.add(mixedAudio.left.buffer as ArrayBuffer)
-    transfers.add(mixedAudio.right.buffer as ArrayBuffer)
+    transfers.add(mixedAudio.left.buffer)
+    transfers.add(mixedAudio.right.buffer)
   }
   for (const font of fonts ?? []) {
     if (typeof font.source !== 'string') transfers.add(font.source)

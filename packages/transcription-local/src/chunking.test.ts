@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { mergeChunkSegments, mergeChunkWords, planChunks } from './chunking'
+import { MIN_OVERLAP_PAUSE_MS, mergeChunkSegments, mergeChunkWords, planChunks } from './chunking'
 import type { TranscriptSegment, TranscriptWord } from '@mcut/transcription'
 
 const word = (text: string, startMs: number, endMs: number): TranscriptWord => ({
@@ -53,16 +53,14 @@ describe('mergeChunkWords', () => {
       },
       {
         chunk: { startS: 25, endS: 55 },
-        // Big pause before "three" at 27.5s: that's where the cut lands.
         words: [word('two', 26_050, 26_450), word('three', 27_500, 27_900), word('four', 31_000, 31_400)],
       },
     ])
     expect(merged.map((w) => w.text)).toEqual(['one', 'two', 'three', 'four'])
-    // "two" came from the outgoing chunk, "drift" was dropped past the cut.
     expect(merged[1]!.startMs).toBe(26_000)
   })
 
-  test('falls back to the overlap midpoint without a clear pause', () => {
+  test(`gaps below ${MIN_OVERLAP_PAUSE_MS}ms cut at the overlap midpoint`, () => {
     const merged = mergeChunkWords([
       {
         chunk: { startS: 0, endS: 30 },
@@ -70,7 +68,6 @@ describe('mergeChunkWords', () => {
       },
       {
         chunk: { startS: 25, endS: 55 },
-        // Continuous speech: every gap is below the 120ms pause threshold.
         words: [
           word('b', 27_010, 27_960),
           word('tail', 28_010, 28_960),
@@ -78,7 +75,6 @@ describe('mergeChunkWords', () => {
         ],
       },
     ])
-    // Midpoint of [25s, 30s] = 27.5s: 'a'+'b' from the left, rest from the right.
     expect(merged.map((w) => w.text)).toEqual(['a', 'b', 'tail', 'next'])
     expect(merged[2]!.startMs).toBe(28_010)
   })

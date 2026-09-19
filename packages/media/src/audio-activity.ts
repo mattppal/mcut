@@ -158,15 +158,16 @@ function frameSamples(samples: Float32Array, sampleRate: number, options: Normal
 }
 
 function frameRuns(frames: readonly FrameStats[]): Run[] {
-  if (frames.length === 0) return []
+  const first = frames[0]
+  if (!first) return []
   const runs: Run[] = []
   let startFrame = 0
-  let active = frames[0]!.active
-  for (let i = 1; i < frames.length; i++) {
-    if (frames[i]!.active === active) continue
+  let active = first.active
+  for (const [i, frame] of frames.entries()) {
+    if (frame.active === active) continue
     runs.push({ startFrame, endFrame: i, active })
     startFrame = i
-    active = frames[i]!.active
+    active = frame.active
   }
   runs.push({ startFrame, endFrame: frames.length, active })
   return runs
@@ -182,11 +183,11 @@ function runDurationMs(run: Run, frames: readonly FrameStats[]): number {
 function smoothRuns(frames: FrameStats[], options: NormalizedOptions): void {
   for (const run of frameRuns(frames)) {
     if (!run.active || runDurationMs(run, frames) >= options.minSoundMs) continue
-    for (let i = run.startFrame; i < run.endFrame; i++) frames[i]!.active = false
+    for (const frame of frames.slice(run.startFrame, run.endFrame)) frame.active = false
   }
   for (const run of frameRuns(frames)) {
     if (run.active || runDurationMs(run, frames) >= options.minSilenceMs) continue
-    for (let i = run.startFrame; i < run.endFrame; i++) frames[i]!.active = true
+    for (const frame of frames.slice(run.startFrame, run.endFrame)) frame.active = true
   }
 }
 
@@ -217,7 +218,7 @@ function windowFromRun(
   }
 
   let peakRms = 0
-  for (let i = run.startFrame; i < run.endFrame; i++) peakRms = Math.max(peakRms, frames[i]!.rms)
+  for (const frame of frames.slice(run.startFrame, run.endFrame)) peakRms = Math.max(peakRms, frame.rms)
 
   const sampleCount = Math.max(1, endSample - startSample)
   return {

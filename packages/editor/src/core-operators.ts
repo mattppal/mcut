@@ -296,7 +296,7 @@ export const operators = {
     inputSchema: z.object({ assetId: assetIdSchema }),
     run: ({ engine }, { assetId }) => {
       const asset = engine.project.assets[assetId]
-      if (!asset) throw new Error(`no asset "${assetId}"`)
+      if (!asset) throw new OperatorError('unknown-asset', `no asset "${assetId}"`)
       return { elementId: insertElementAtPlayhead(engine, elementForAsset(engine, asset)) }
     },
   }),
@@ -389,14 +389,15 @@ export const operators = {
     run: ({ engine }, { elementId, timeMs, values }) => {
       const element = getElement(engine.project, elementId)
       if (!element) return
-      const allowed = new Set<AnimatableProperty>(animatableProperties(element))
+      const allowed = animatableProperties(element)
       engine.transact(() => {
         for (const [property, value] of Object.entries(values)) {
-          if (!allowed.has(property as AnimatableProperty) || value === undefined) continue
+          const animatable = allowed.find((candidate) => candidate === property)
+          if (!animatable || value === undefined) continue
           engine.dispatch({
             type: 'setKeyframe',
             elementId,
-            property: property as AnimatableProperty,
+            property: animatable,
             timeMs,
             value,
           })

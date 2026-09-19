@@ -1,5 +1,6 @@
 import { AudioBufferSink } from 'mediabunny'
 import { inputFor, type MediaSourceLike } from './probe'
+import { valueAt } from './value-at'
 
 export interface AudioPeaksOptions {
   /** Number of peak buckets across the range. Default 256. */
@@ -22,8 +23,8 @@ export function bucketPeaks(samples: Float32Array, buckets: number): Float32Arra
   const perBucket = samples.length / peaks.length
   for (let i = 0; i < samples.length; i++) {
     const bucket = Math.min(peaks.length - 1, Math.floor(i / perBucket))
-    const value = Math.abs(samples[i]!)
-    if (value > peaks[bucket]!) peaks[bucket] = value
+    const value = Math.abs(valueAt(samples, i))
+    if (value > valueAt(peaks, bucket)) peaks[bucket] = value
   }
   return peaks
 }
@@ -58,8 +59,8 @@ export async function extractAudioPeaks(
         const timeMs = bufferStartMs + i * msPerSample
         const bucket = Math.floor(((timeMs - startMs) / spanMs) * bucketCount)
         if (bucket < 0 || bucket >= bucketCount) continue
-        const value = Math.abs(channel[i]!)
-        if (value > peaks[bucket]!) peaks[bucket] = value
+        const value = Math.abs(valueAt(channel, i))
+        if (value > valueAt(peaks, bucket)) peaks[bucket] = value
       }
     }
     return { peaks, durationMs: spanMs }

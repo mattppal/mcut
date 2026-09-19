@@ -6,6 +6,8 @@
  * never blocks on decode.
  */
 
+import { valueAt } from './value-at'
+
 interface CachedFrame {
   timeMs: number
   canvas: OffscreenCanvas
@@ -53,8 +55,7 @@ export class ScrubFrameCache {
     const frame: CachedFrame = { timeMs, canvas }
     this.frames.splice(index, 0, frame)
     this.order.push(frame)
-    if (this.order.length > this.maxFrames) {
-      const evicted = this.order.shift()!
+    for (const evicted of this.order.splice(0, Math.max(0, this.order.length - this.maxFrames))) {
       const i = this.frames.indexOf(evicted)
       if (i !== -1) this.frames.splice(i, 1)
     }
@@ -62,13 +63,11 @@ export class ScrubFrameCache {
 
   /** The cached frame nearest `timeMs`, or null when the cache is empty. */
   nearest(timeMs: number): OffscreenCanvas | null {
-    if (this.frames.length === 0) return null
     const index = this.indexAtOrAfter(timeMs)
     const before = this.frames[index - 1]
     const at = this.frames[index]
-    if (!before) return at!.canvas
-    if (!at) return before.canvas
-    return timeMs - before.timeMs <= at.timeMs - timeMs ? before.canvas : at.canvas
+    if (before && at) return timeMs - before.timeMs <= at.timeMs - timeMs ? before.canvas : at.canvas
+    return (before ?? at)?.canvas ?? null
   }
 
   get size(): number {
@@ -86,7 +85,7 @@ export class ScrubFrameCache {
     let hi = this.frames.length
     while (lo < hi) {
       const mid = (lo + hi) >> 1
-      if (this.frames[mid]!.timeMs < timeMs) lo = mid + 1
+      if (valueAt(this.frames, mid).timeMs < timeMs) lo = mid + 1
       else hi = mid
     }
     return lo

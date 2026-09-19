@@ -31,6 +31,7 @@ import {
   type Track,
   type TrackId,
 } from '@mcut/timeline'
+import { OperatorError } from './operators'
 
 function getFitScale(project: { width: number; height: number }, width: number, height: number): number {
   if (width <= 0 || height <= 0) return 1
@@ -53,8 +54,7 @@ export function insertElementAtPlayhead(engine: EditorEngine, element: TimelineE
     () => {
       const project = engine.project
       let trackId: Track['id'] | undefined
-      for (let i = project.tracks.length - 1; i >= 0; i--) {
-        const track = project.tracks[i]!
+      for (const track of project.tracks.toReversed()) {
         if (track.locked || isCaptionTrack(track)) continue
         if (canPlace(track, startMs, element.durationMs)) {
           trackId = track.id
@@ -144,44 +144,51 @@ export interface SequentialVideoCollageResult {
   videoElementIds: `e-${string}`[]
 }
 
-function assertVideoAsset(asset: AssetRef): asserts asset is AssetRef & {
+type CollageVideoAsset = AssetRef & {
   kind: 'video'
   width: number
   height: number
   durationMs: number
-} {
-  if (asset.kind !== 'video') throw new Error(`"${asset.name ?? asset.id}" is not a video`)
+}
+
+type CollageVideoAssets = readonly [CollageVideoAsset, CollageVideoAsset, ...CollageVideoAsset[]]
+
+function toCollageVideoAsset(asset: AssetRef): CollageVideoAsset {
+  if (asset.kind !== 'video') throw new OperatorError('invalid-payload', `"${asset.name ?? asset.id}" is not a video`)
   if (!asset.width || !asset.height) {
-    throw new Error(`"${asset.name ?? asset.id}" is missing video dimensions`)
+    throw new OperatorError('invalid-payload', `"${asset.name ?? asset.id}" is missing video dimensions`)
   }
   if (!asset.durationMs) {
-    throw new Error(`"${asset.name ?? asset.id}" is missing video duration`)
+    throw new OperatorError('invalid-payload', `"${asset.name ?? asset.id}" is missing video duration`)
+  }
+  return {
+    ...asset,
+    kind: asset.kind,
+    width: asset.width,
+    height: asset.height,
+    durationMs: asset.durationMs,
   }
 }
 
-function assertMatchingAspectRatios(assets: readonly AssetRef[]): asserts assets is Array<AssetRef & {
-  kind: 'video'
-  width: number
-  height: number
-  durationMs: number
-}> {
-  if (assets.length < 2) throw new Error('Select at least two videos')
-  for (const asset of assets) assertVideoAsset(asset)
-  const videos = assets as Array<AssetRef & {
-    kind: 'video'
-    width: number
-    height: number
-    durationMs: number
-  }>
-  const base = videos[0]!
+function collageVideoAssets(assets: readonly AssetRef[]): CollageVideoAssets {
+  const [first, second, ...rest] = assets
+  if (!first || !second) throw new OperatorError('invalid-payload', 'Select at least two videos')
+  const videos: CollageVideoAssets = [
+    toCollageVideoAsset(first),
+    toCollageVideoAsset(second),
+    ...rest.map(toCollageVideoAsset),
+  ]
+  const [base] = videos
   const baseRatio = base.width / base.height
   const mismatch = videos.find((asset) => Math.abs(asset.width / asset.height - baseRatio) > 0.001)
   if (mismatch) {
-    throw new Error(
+    throw new OperatorError(
+      'invalid-payload',
       `All videos must use the same aspect ratio (${base.width}:${base.height} vs ` +
         `${mismatch.width}:${mismatch.height})`,
     )
   }
+  return videos
 }
 
 function flatFreezeMap(durationMs: number, sourceOffsetMs: number): TimeMap {
@@ -199,9 +206,10 @@ function centeredCropForZoom(zoom: number): { x: number; y: number; w: number; h
 }
 
 function isFlatFreezeVideo(element: TimelineElement): element is VideoElement {
-  if (element.type !== 'video' || !element.timeMap || element.timeMap.length < 2) return false
-  const value = element.timeMap[0]!.value
-  return element.timeMap.every((frame) => frame.value === value)
+  if (element.type !== 'video') return false
+  const [first, ...rest] = element.timeMap ?? []
+  if (!first || rest.length === 0) return false
+  return rest.every((frame) => frame.value === first.value)
 }
 
 interface CollageGroupParts {
@@ -288,11 +296,12 @@ export function fitCanvasToVideoCollage(
   assets: readonly AssetRef[],
   layout: Exclude<SequentialCollageLayout, 'auto'>,
 ): { width: number; height: number } {
-  assertMatchingAspectRatios(assets)
-  const cellWidth = Math.max(...assets.map((asset) => asset.width))
-  const cellHeight = Math.round(cellWidth / (assets[0]!.width / assets[0]!.height))
-  const width = layout === 'horizontal' ? cellWidth * assets.length : cellWidth
-  const height = layout === 'vertical' ? cellHeight * assets.length : cellHeight
+  const videos = collageVideoAssets(assets)
+  const [first] = videos
+  const cellWidth = Math.max(...videos.map((asset) => asset.width))
+  const cellHeight = Math.round(cellWidth / (first.width / first.height))
+  const width = layout === 'horizontal' ? cellWidth * videos.length : cellWidth
+  const height = layout === 'vertical' ? cellHeight * videos.length : cellHeight
   engine.dispatch({ type: 'updateProject', width, height })
   return { width, height }
 }
@@ -306,9 +315,8 @@ export function createSequentialVideoCollage(
   engine: EditorEngine,
   options: SequentialVideoCollageOptions,
 ): SequentialVideoCollageResult {
-  assertMatchingAspectRatios(options.assets)
-  const assets = options.assets
-  const first = assets[0]!
+  const assets = collageVideoAssets(options.assets)
+  const [first] = assets
   const layout =
     options.layout === 'horizontal' || options.layout === 'vertical'
       ? options.layout
@@ -345,8 +353,7 @@ export function createSequentialVideoCollage(
     }
 
     let cursorMs = 0
-    for (let i = 0; i < assets.length; i++) {
-      const asset = assets[i]!
+    for (const [i, asset] of assets.entries()) {
       const zoom = Math.max(1, options.zooms?.[i] ?? 1)
       const crop = centeredCropForZoom(zoom)
       const scale = (cellWidth / asset.width) * zoom
@@ -496,7 +503,8 @@ export function retimeSequentialCollage(
 
     let cursorMs = 0
     for (const group of groups) {
-      const active = getElement(engine.project, group.active.id) as VideoElement | undefined
+      const current = getElement(engine.project, group.active.id)
+      const active = current?.type === 'video' ? current : undefined
       if (!active) continue
       const audioTrackId = group.audioTrackId
       const visualProps = optionalVisualProps(active)

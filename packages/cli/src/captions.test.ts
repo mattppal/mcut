@@ -35,13 +35,11 @@ function projectWithClip() {
 }
 
 describe('buildCaptionsCommand', () => {
-  test('scopes the transcript to an element source window and timeline position', () => {
+  test('elementId keeps words inside the clip source window and maps them onto the clip timeline start', () => {
     const project = projectWithClip()
     const command = buildCaptionsCommand(project, transcript, { elementId: 'e-1' })
     expect(command.type).toBe('applyCaptions')
     const captions = command.captions as Array<{ startMs: number; text: string }>
-    // Source window 4000–7000 keeps only the first two words; the clip sits
-    // at timeline 2000, so source 5000 lands at 2000 + (5000 - 4000) = 3000.
     expect(captions).toHaveLength(1)
     expect(captions[0]!.text).toBe('hello there')
     expect(captions[0]!.startMs).toBe(3000)

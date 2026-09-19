@@ -26,7 +26,7 @@ import { transitionRenderers } from './transition-renderers'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
 import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
 
-type ElementByType = { [E in TimelineElement as E['type']]: E }
+type ElementByType = { [K in ElementType]: Extract<TimelineElement, { type: K }> }
 
 /**
  * `letterSpacing` shipped in Chromium 99+/Safari 17 but is still missing from
@@ -35,7 +35,7 @@ type ElementByType = { [E in TimelineElement as E['type']]: E }
  */
 function setLetterSpacing(ctx: Canvas2D, px: number): void {
   if ('letterSpacing' in ctx) {
-    ;(ctx as { letterSpacing: string }).letterSpacing = `${px}px`
+    ctx.letterSpacing = `${px}px`
   }
 }
 
@@ -54,13 +54,14 @@ export function getImageSize(source: CanvasImageSource): { width: number; height
   if (typeof HTMLImageElement !== 'undefined' && source instanceof HTMLImageElement) {
     return { width: source.naturalWidth, height: source.naturalHeight }
   }
-  if (typeof VideoFrame !== 'undefined' && source instanceof VideoFrame) {
+  if ('displayWidth' in source) {
     return { width: source.displayWidth, height: source.displayHeight }
   }
-  const maybe = source as { width?: number | { baseVal: { value: number } }; height?: number | { baseVal: { value: number } } }
-  const width = typeof maybe.width === 'number' ? maybe.width : (maybe.width?.baseVal.value ?? 0)
-  const height = typeof maybe.height === 'number' ? maybe.height : (maybe.height?.baseVal.value ?? 0)
-  return { width, height }
+  return { width: lengthInPixels(source.width), height: lengthInPixels(source.height) }
+}
+
+function lengthInPixels(length: number | SVGAnimatedLength): number {
+  return typeof length === 'number' ? length : length.baseVal.value
 }
 
 interface VisualChrome {
@@ -287,8 +288,7 @@ const renderText: ElementRenderer<TextElement> = (element, context) => {
       ctx.shadowOffsetX = 0
       ctx.shadowOffsetY = 0
     }
-    for (let i = 0; i < layout.lines.length; i++) {
-      const line = layout.lines[i]!
+    for (const [i, line] of layout.lines.entries()) {
       const y = -layout.height / 2 + layout.padding + layout.lineHeight * (i + 0.5)
       if (line.segments) {
         // Rich-text runs: paint left-to-right with each segment's own font
@@ -368,8 +368,7 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'left'
 
-  for (let i = 0; i < layout.lines.length; i++) {
-    const line = layout.lines[i]!
+  for (const [i, line] of layout.lines.entries()) {
     const lineLeft = project.width / 2 - line.width / 2
     const lineCenterY = blockTop + layout.lineHeight * (i + 0.5)
 
@@ -388,12 +387,11 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
 
     for (const word of line.words) {
       const isActive =
-        style.activeWordColor !== undefined &&
         word.startMs !== undefined &&
         word.endMs !== undefined &&
         relativeMs >= word.startMs &&
         relativeMs < word.endMs
-      ctx.fillStyle = isActive ? style.activeWordColor! : style.color
+      ctx.fillStyle = isActive && style.activeWordColor !== undefined ? style.activeWordColor : style.color
       ctx.fillText(word.text, lineLeft + word.x, lineCenterY)
     }
   }
@@ -407,7 +405,8 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
  * and export; decode parity comes from getFrameRequests.
  */
 const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
-  if (!context.source) return
+  const frames = context.source
+  if (!frames) return
   const { ctx, project } = context
   const W = project.width
   const H = project.height
@@ -419,7 +418,7 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
         const source = element.sources.find((s) => s.key === slot.source)
         if (!source) continue
         const sourceTimeMs = getMulticamSourceTimeMs(element, source, context.timeMs)
-        const frame = context.source!.getFrame(source.assetId, sourceTimeMs)
+        const frame = frames.getFrame(source.assetId, sourceTimeMs)
         if (!frame) continue
         const { width: fw, height: fh } = getImageSize(frame)
         if (fw <= 0 || fh <= 0) continue

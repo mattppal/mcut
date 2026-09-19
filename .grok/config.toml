@@ -1,0 +1,11 @@
+# Grok Build reads project scope MCP servers from this file when started inside
+# the repo (https://docs.x.ai/build/features/mcp-servers).
+
+[mcp_servers.mcut]
+command = "bun"
+args = ["packages/mcp-server/src/cli.ts", "${MCUT_PROJECT:-project.mcut.json}"]
+startup_timeout_sec = 60
+
+[mcp_servers.mcut-live]
+url = "http://127.0.0.1:${MCUT_BRIDGE_PORT:-44737}/mcp?token=${MCUT_BRIDGE_TOKEN:-mcut-local-dev}"
+enabled = false

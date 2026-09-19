@@ -12,6 +12,7 @@ import {
 import { inputFor } from './probe'
 import { constantSpeedOf, stretchStereo, type ConstantSpeed } from './time-stretch'
 import { AUDIO_SAMPLE_RATE, type MixedAudioData } from './export-types'
+import { valueAt } from './value-at'
 
 /**
  * The export audio mix. This phase stays on the MAIN thread: it renders
@@ -67,8 +68,8 @@ function remapSourceToOutput(
 ): { outputMs: number; rate: number } | null {
   const { grid, stepMs } = plan
   const last = grid.length - 1
-  if (sourceOffsetMs >= grid[last]!) {
-    const seg = grid[last]! - grid[last - 1]!
+  if (sourceOffsetMs >= valueAt(grid, last)) {
+    const seg = valueAt(grid, last) - valueAt(grid, last - 1)
     if (seg <= 1e-6) return null
     return { outputMs: last * stepMs, rate: seg / stepMs }
   }
@@ -77,12 +78,12 @@ function remapSourceToOutput(
   let hi = last
   while (hi - lo > 1) {
     const mid = (lo + hi) >> 1
-    if (grid[mid]! <= sourceOffsetMs) lo = mid
+    if (valueAt(grid, mid) <= sourceOffsetMs) lo = mid
     else hi = mid
   }
-  const seg = grid[hi]! - grid[lo]!
+  const seg = valueAt(grid, hi) - valueAt(grid, lo)
   if (seg <= 1e-6) return null
-  const frac = (sourceOffsetMs - grid[lo]!) / seg
+  const frac = (sourceOffsetMs - valueAt(grid, lo)) / seg
   return { outputMs: (lo + frac) * stepMs, rate: seg / stepMs }
 }
 

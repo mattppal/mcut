@@ -26,14 +26,20 @@ export interface NativeVideoFilmstrip {
   timestampsMs: number[]
 }
 
-function createCanvas(width: number, height: number): HTMLCanvasElement | OffscreenCanvas {
+export interface CanvasSurface {
+  canvas: HTMLCanvasElement | OffscreenCanvas
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
+}
+
+export function createCanvasSurface(width: number, height: number): CanvasSurface {
   if (typeof document !== 'undefined') {
     const canvas = document.createElement('canvas')
     canvas.width = width
     canvas.height = height
-    return canvas
+    return { canvas, ctx: canvas.getContext('2d') }
   }
-  return new OffscreenCanvas(width, height)
+  const canvas = new OffscreenCanvas(width, height)
+  return { canvas, ctx: canvas.getContext('2d') }
 }
 
 function loadVideoMetadata(video: HTMLVideoElement, src: string): Promise<void> {
@@ -88,11 +94,7 @@ function drawVideoFrame(
 
   const sourceAspect = video.videoWidth / video.videoHeight
   const height = Math.max(1, Math.round(width / sourceAspect))
-  const canvas = createCanvas(width, height)
-  const ctx = canvas.getContext('2d') as
-    | CanvasRenderingContext2D
-    | OffscreenCanvasRenderingContext2D
-    | null
+  const { canvas, ctx } = createCanvasSurface(width, height)
   if (!ctx) return null
 
   if (fit === 'cover') {
@@ -167,8 +169,7 @@ export async function getNativeVideoFilmstrip(
       (_, i) => startMs + ((i + 0.5) / options.frameCount) * spanMs,
     )
 
-    let strip: HTMLCanvasElement | OffscreenCanvas | null = null
-    let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null
+    let strip: CanvasSurface | null = null
     let frameHeight = 0
 
     for (let index = 0; index < timestampsMs.length; index++) {
@@ -182,15 +183,14 @@ export async function getNativeVideoFilmstrip(
 
       if (!strip) {
         frameHeight = frame.height
-        strip = createCanvas(options.frameWidth * options.frameCount, frameHeight)
-        ctx = strip.getContext('2d') as CanvasRenderingContext2D | null
+        strip = createCanvasSurface(options.frameWidth * options.frameCount, frameHeight)
       }
-      ctx?.drawImage(frame, index * options.frameWidth, 0)
+      strip.ctx?.drawImage(frame, index * options.frameWidth, 0)
     }
 
     if (!strip) return null
     return {
-      canvas: strip,
+      canvas: strip.canvas,
       frameWidth: options.frameWidth,
       frameHeight,
       frameCount: options.frameCount,

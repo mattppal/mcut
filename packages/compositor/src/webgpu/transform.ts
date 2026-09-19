@@ -52,6 +52,5 @@ export function gaussianKernel(radius: number): Float32Array {
     weights[i + half] = w
     sum += w
   }
-  for (let i = 0; i < weights.length; i++) weights[i] = weights[i]! / sum
-  return weights
+  return weights.map((w) => w / sum)
 }

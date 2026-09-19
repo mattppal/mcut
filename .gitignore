@@ -12,6 +12,8 @@ out/
 coverage/
 playwright-report/
 test-results/
+reports/
+/project.mcut.json
 .mcp.json
 .context/
 release-out/
@@ -20,3 +22,6 @@ release-out/
 # Generated docs
 apps/web/public/docs/
 apps/web/public/docs.md
+
+# Synthetic test media from `bun run fixtures`
+fixtures/media/

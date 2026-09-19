@@ -1,12 +1,3 @@
-/**
- * mcut as an MCP server: every editor command becomes an MCP tool, straight
- * from the zod command table, plus the user-level operators from @mcut/editor
- * and the static tools (summary, project, captions, silence cuts, lint,
- * presets, undo/redo).
- *
- * The target can be a local EditorEngine or a live browser tab. Export stays
- * in the browser (WebCodecs); MCP edits the project document/state.
- */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import {
   CallToolRequestSchema,
@@ -68,7 +59,6 @@ export interface McutMcpTarget {
 
 export interface McutMcpServerOptions {
   engine: EditorEngine
-  /** Called after every successful edit — persist the project here. */
   onChange?: () => void | Promise<void>
   name?: string
   version?: string
@@ -232,10 +222,6 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
   }
 }
 
-/**
- * Build the server around an existing engine. The caller owns the transport:
- * `await createMcutMcpServer({ engine }).connect(new StdioServerTransport())`.
- */
 export function createMcutMcpServer(options: McutMcpServerOptions): Server {
   return createMcutMcpServerForTarget({
     target: createEngineTarget(options.engine, options.onChange ?? (() => {})),
@@ -244,7 +230,6 @@ export function createMcutMcpServer(options: McutMcpServerOptions): Server {
   })
 }
 
-/** Build the same MCP tool surface around any target, including a live browser tab. */
 export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOptions): Server {
   const { target } = options
   const tools = listServerToolDefinitions()

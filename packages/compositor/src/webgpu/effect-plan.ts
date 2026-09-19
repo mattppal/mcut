@@ -54,25 +54,25 @@ const params = (...values: number[]): number[] => values
 /** Monotone-x piecewise-linear curve → 256-entry LUT (identity when empty). */
 export function curveToLut(points: readonly CurvePoint[] | undefined): Float32Array {
   const lut = new Float32Array(256)
-  const sorted = [...(points ?? [])].sort((a, b) => a.x - b.x)
-  if (sorted.length === 0) {
+  const [first, ...rest] = [...(points ?? [])].sort((a, b) => a.x - b.x)
+  if (!first) {
     for (let i = 0; i < 256; i++) lut[i] = i / 255
     return lut
   }
-  for (let i = 0; i < 256; i++) {
-    const x = i / 255
-    const after = sorted.findIndex((p) => p.x >= x)
-    if (after < 0) {
-      lut[i] = sorted[sorted.length - 1]!.y
-    } else if (after === 0) {
-      lut[i] = sorted[0]!.y
-    } else {
-      const a = sorted[after - 1]!
-      const b = sorted[after]!
-      const t = b.x === a.x ? 0 : (x - a.x) / (b.x - a.x)
-      lut[i] = a.y + (b.y - a.y) * t
+  const sample = (x: number): number => {
+    if (first.x >= x) return first.y
+    let a = first
+    for (const b of rest) {
+      if (b.x >= x) {
+        const t = b.x === a.x ? 0 : (x - a.x) / (b.x - a.x)
+        return a.y + (b.y - a.y) * t
+      }
+      a = b
     }
-    lut[i] = Math.min(1, Math.max(0, lut[i]!))
+    return a.y
+  }
+  for (let i = 0; i < 256; i++) {
+    lut[i] = Math.min(1, Math.max(0, sample(i / 255)))
   }
   return lut
 }

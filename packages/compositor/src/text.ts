@@ -102,16 +102,14 @@ function sliceSegments(
   letterSpacing: number,
 ): TextSegment[] {
   if (to <= from) return []
-  const edges = new Set<number>([from, to])
+  const innerEdges = new Set<number>()
   for (const run of runs) {
-    if (run.start > from && run.start < to) edges.add(run.start)
-    if (run.end > from && run.end < to) edges.add(run.end)
+    if (run.start > from && run.start < to) innerEdges.add(run.start)
+    if (run.end > from && run.end < to) innerEdges.add(run.end)
   }
-  const sorted = [...edges].sort((a, b) => a - b)
   const segments: TextSegment[] = []
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const a = sorted[i]!
-    const b = sorted[i + 1]!
+  let a = from
+  for (const b of [...innerEdges, to].sort((x, y) => x - y)) {
     const run = getRunStyleAt(runs, a)
     const font = segmentFont(style, run)
     const segText = applyTextTransform(text.slice(a, b), style.textTransform ?? 'none')
@@ -121,6 +119,7 @@ function sliceSegments(
       font,
       ...(run.color !== undefined ? { color: run.color } : {}),
     })
+    a = b
   }
   return segments
 }
@@ -149,14 +148,14 @@ function wrapLine(
   maxWidth: number,
   letterSpacing: number,
 ): { text: string; width: number }[] {
-  const words = line.match(/\S+/g)
-  if (!words || words.length === 0) return [{ text: '', width: 0 }]
+  const [firstWord, ...restWords] = line.match(/\S+/g) ?? []
+  if (firstWord === undefined) return [{ text: '', width: 0 }]
 
   const lines: { text: string; width: number }[] = []
-  let current = words[0]!
+  let current = firstWord
   let currentWidth = measure(current, font, letterSpacing)
 
-  for (const word of words.slice(1)) {
+  for (const word of restWords) {
     const candidate = `${current} ${word}`
     const candidateWidth = measure(candidate, font, letterSpacing)
     if (candidateWidth <= maxWidth) {
@@ -218,13 +217,14 @@ function layoutRunLines(
     for (let m = matcher.exec(lineText); m; m = matcher.exec(lineText)) {
       words.push({ start: source.start + m.index, end: source.start + m.index + m[0].length })
     }
-    if (words.length === 0) {
+    const [firstWord, ...restWords] = words
+    if (!firstWord) {
       finishLine(source.start, source.start)
       continue
     }
-    let visualStart = words[0]!.start
-    let lastEnd = words[0]!.end
-    for (const word of words.slice(1)) {
+    let visualStart = firstWord.start
+    let lastEnd = firstWord.end
+    for (const word of restWords) {
       const candidate = rangeWidth(measure, text, style, runs, visualStart, word.end, letterSpacing)
       if (candidate <= innerBoxWidth) {
         lastEnd = word.end
