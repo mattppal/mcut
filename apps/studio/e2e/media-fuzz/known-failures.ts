@@ -4,4 +4,4 @@ import type { KnownFailure } from '../../../../packages/media/src/fuzz/known-fai
 export { matchKnownFailure } from '../../../../packages/media/src/fuzz/known-failures'
 export type { KnownFailure, Violation }
 
-export const knownFailures: readonly KnownFailure[] = [];
+export const knownFailures: readonly KnownFailure[] = []
