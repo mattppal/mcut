@@ -143,18 +143,21 @@ function roundTrip(project: Project): string[] {
 
 function firstDifference(saved: unknown, parsed: unknown, path: string): string | undefined {
   if (Bun.deepEquals(saved, parsed, true)) return undefined
+  const mismatch = `at ${path} saved ${show(saved)} parsed back as ${show(parsed)}`
   if (Array.isArray(saved) && Array.isArray(parsed)) {
     for (let i = 0; i < Math.max(saved.length, parsed.length); i++) {
       const difference = firstDifference(saved[i], parsed[i], `${path}[${i}]`)
       if (difference !== undefined) return difference
     }
-  } else if (isRecord(saved) && isRecord(parsed)) {
+    return mismatch
+  }
+  if (isRecord(saved) && isRecord(parsed)) {
     for (const key of new Set([...Object.keys(saved), ...Object.keys(parsed)])) {
       const difference = firstDifference(saved[key], parsed[key], `${path}.${key}`)
       if (difference !== undefined) return difference
     }
   }
-  return `at ${path} saved ${show(saved)} parsed back as ${show(parsed)}`
+  return mismatch
 }
 
 function show(value: unknown): string {

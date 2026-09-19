@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import type { Rng } from './rng'
 
 export type SlotKind = 'track' | 'element' | 'asset' | 'marker' | 'layout' | 'preset'
@@ -18,9 +19,37 @@ export interface GenerateOptions {
 
 const SLOT_KINDS: readonly SlotKind[] = ['track', 'element', 'asset', 'marker', 'layout', 'preset']
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
+export interface JsonObject {
+  [key: string]: unknown
+}
+
+export function isRecord(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
+
+const jsonSchemaShape = z
+  .object({
+    type: z.string().optional(),
+    anyOf: z.array(z.unknown()).optional(),
+    oneOf: z.array(z.unknown()).optional(),
+    enum: z.array(z.unknown()).optional(),
+    const: z.unknown().optional(),
+    pattern: z.string().optional(),
+    minLength: z.number().optional(),
+    minimum: z.number().optional(),
+    maximum: z.number().optional(),
+    exclusiveMinimum: z.number().optional(),
+    items: z.unknown().optional(),
+    prefixItems: z.array(z.unknown()).optional(),
+    minItems: z.number().optional(),
+    properties: z.record(z.string(), z.unknown()).optional(),
+    required: z.array(z.string()).optional(),
+    additionalProperties: z.unknown().optional(),
+    propertyNames: z.object({ enum: z.array(z.string()).optional() }).optional(),
+  })
+  .loose()
+
+type JsonSchema = z.infer<typeof jsonSchemaShape>
 
 export function isSlot(value: unknown): value is Slot {
   if (!isRecord(value)) return false
@@ -37,7 +66,7 @@ interface Context {
   key: string | undefined
 }
 
-type Generator = (schema: Record<string, unknown>, rng: Rng, context: Context) => ArgTemplate
+type Generator = (schema: JsonSchema, rng: Rng, context: Context) => ArgTemplate
 
 const EXTREME_RATE = 0.05
 const OPTIONAL_RATE = 0.35
@@ -72,8 +101,8 @@ const wrongType: Record<LeafKind, (rng: Rng) => ArgTemplate> = {
 
 const generators: Record<SchemaKind, Generator> = {
   any: () => null,
-  branches: (schema, rng, context) => generate(rng.pick(arrayOf(schema.anyOf ?? schema.oneOf)), rng, context),
-  enum: (schema, rng) => rng.pick(arrayOf(schema.enum)),
+  branches: (schema, rng, context) => generate(rng.pick(schema.anyOf ?? schema.oneOf ?? []), rng, context),
+  enum: (schema, rng) => rng.pick(schema.enum ?? []),
   const: (schema) => schema.const,
   boolean: (_schema, rng) => rng.chance(0.5),
   null: () => null,
@@ -95,25 +124,25 @@ export function generateArgs(schema: unknown, rng: Rng, options: GenerateOptions
 function generate(schema: unknown, rng: Rng, context: Context): ArgTemplate {
   const override = context.key === undefined ? undefined : context.overrides[context.key]
   if (override) return override(rng)
-  if (!isRecord(schema)) return null
-  const kind = kindOf(schema)
+  const parsed = jsonSchemaShape.safeParse(schema)
+  if (!parsed.success) return null
+  const kind = kindOf(parsed.data)
   if (isLeaf(kind) && rng.chance(context.wrongTypeRate)) return wrongType[kind](rng)
-  return generators[kind](schema, rng, context)
+  return generators[kind](parsed.data, rng, context)
 }
 
-function kindOf(schema: Record<string, unknown>): SchemaKind {
-  if (Array.isArray(schema.anyOf) || Array.isArray(schema.oneOf)) return 'branches'
-  if (Array.isArray(schema.enum)) return 'enum'
+function kindOf(schema: JsonSchema): SchemaKind {
+  if (schema.anyOf || schema.oneOf) return 'branches'
+  if (schema.enum) return 'enum'
   if ('const' in schema) return 'const'
-  const type = schema.type
-  return TYPED_KINDS.find((kind) => kind === type) ?? 'any'
+  return TYPED_KINDS.find((kind) => kind === schema.type) ?? 'any'
 }
 
 function isLeaf(kind: SchemaKind): kind is LeafKind {
   return LEAF_KINDS.some((leaf) => leaf === kind)
 }
 
-function stringValue(schema: Record<string, unknown>, rng: Rng, context: Context): ArgTemplate {
+function stringValue(schema: JsonSchema, rng: Rng, context: Context): ArgTemplate {
   const key = context.key ?? ''
   const keyRule = keySlotRules.find((rule) => rule.test.test(key))
   if (keyRule) return slot(keyRule.kind, rng)
@@ -123,13 +152,13 @@ function stringValue(schema: Record<string, unknown>, rng: Rng, context: Context
     if (key === 'id' || kind === null || kind === undefined) return freshId(prefix, rng)
     return slot(kind, rng)
   }
-  const minLength = numberOf(schema.minLength) ?? 0
+  const minLength = schema.minLength ?? 0
   const word = rng.pick(WORDS)
   return word.length >= minLength ? word : word.padEnd(minLength, 'x')
 }
 
-function idPrefixOf(pattern: unknown): string | undefined {
-  if (typeof pattern !== 'string') return undefined
+function idPrefixOf(pattern: string | undefined): string | undefined {
+  if (pattern === undefined) return undefined
   const match = /^\^([a-z]+)-/.exec(pattern)
   return match?.[1]
 }
@@ -142,11 +171,10 @@ function freshId(prefix: string, rng: Rng): string {
   return `${prefix}-fz${rng.int(0, 0xffffff).toString(16).padStart(6, '0')}`
 }
 
-function numeric(schema: Record<string, unknown>, rng: Rng, integer: boolean): number {
-  const exclusiveMinimum = numberOf(schema.exclusiveMinimum)
+function numeric(schema: JsonSchema, rng: Rng, integer: boolean): number {
+  const { exclusiveMinimum, maximum } = schema
   const minimum =
-    numberOf(schema.minimum) ?? (exclusiveMinimum === undefined ? undefined : exclusiveMinimum + (integer ? 1 : 0.001))
-  const maximum = numberOf(schema.maximum)
+    schema.minimum ?? (exclusiveMinimum === undefined ? undefined : exclusiveMinimum + (integer ? 1 : 0.001))
   if (rng.chance(EXTREME_RATE)) return extreme(rng, integer, minimum, maximum)
   const smallBounded = minimum !== undefined && maximum !== undefined && maximum <= SMALL_BOUND
   const lo = smallBounded ? minimum : Math.max(minimum ?? 0, -DOMAIN_MAX)
@@ -164,17 +192,17 @@ function extreme(rng: Rng, integer: boolean, minimum: number | undefined, maximu
   return rng.pick(candidates)
 }
 
-function arrayValue(schema: Record<string, unknown>, rng: Rng, context: Context): ArgTemplate {
-  if (Array.isArray(schema.prefixItems)) return schema.prefixItems.map((item) => generate(item, rng, context))
-  const minItems = numberOf(schema.minItems) ?? 0
+function arrayValue(schema: JsonSchema, rng: Rng, context: Context): ArgTemplate {
+  if (schema.prefixItems) return schema.prefixItems.map((item) => generate(item, rng, context))
+  const minItems = schema.minItems ?? 0
   const count = rng.int(minItems, Math.max(MAX_ITEMS, minItems))
   return Array.from({ length: count }, () => generate(schema.items, rng, context))
 }
 
-function objectValue(schema: Record<string, unknown>, rng: Rng, context: Context): ArgTemplate {
-  const result: Record<string, ArgTemplate> = {}
-  const properties = isRecord(schema.properties) ? schema.properties : {}
-  const required = arrayOf(schema.required)
+function objectValue(schema: JsonSchema, rng: Rng, context: Context): ArgTemplate {
+  const result: JsonObject = {}
+  const properties = schema.properties ?? {}
+  const required = schema.required ?? []
   for (const [key, property] of Object.entries(properties)) {
     if (required.includes(key) || rng.chance(OPTIONAL_RATE)) result[key] = generate(property, rng, { ...context, key })
   }
@@ -190,21 +218,9 @@ function objectValue(schema: Record<string, unknown>, rng: Rng, context: Context
   return result
 }
 
-function propertyNames(schema: Record<string, unknown>): string[] {
-  const names = isRecord(schema.propertyNames) ? arrayOf(schema.propertyNames.enum).filter(isString) : []
+function propertyNames(schema: JsonSchema): string[] {
+  const names = schema.propertyNames?.enum ?? []
   return names.length > 0 ? names : RECORD_KEYS
-}
-
-function arrayOf(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : []
-}
-
-function numberOf(value: unknown): number | undefined {
-  return typeof value === 'number' ? value : undefined
-}
-
-function isString(value: unknown): value is string {
-  return typeof value === 'string'
 }
 
 function round3(value: number): number {

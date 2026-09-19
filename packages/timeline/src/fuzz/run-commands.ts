@@ -1,4 +1,4 @@
-import type { BuiltinCommand } from '../commands'
+import { parseCommand } from '../commands'
 import { EditorEngine } from '../engine'
 import { CommandError } from '../errors'
 import type { Project } from '../model'
@@ -7,9 +7,14 @@ import { isRecord } from './json-schema-gen'
 import { matchKnownFailure, type KnownFailure } from './known-failures'
 import { resolveArgs, type Plan } from './plan'
 
+export interface FuzzCommand {
+  type: string
+  [key: string]: unknown
+}
+
 export interface RunFailure {
   stepIndex: number
-  command: BuiltinCommand
+  command: FuzzCommand
   violations: Violation[]
 }
 
@@ -100,15 +105,14 @@ export function formatFailure(plan: Plan, result: RunResult): string {
   ].join('\n')
 }
 
-function toCommand(type: string, args: unknown): BuiltinCommand {
+function toCommand(type: string, args: unknown): FuzzCommand {
   const payload = isRecord(args) ? args : {}
-  // Fuzz steps are untrusted by design; applyCommand re-validates at the boundary.
-  return { ...payload, type } as BuiltinCommand
+  return { ...payload, type }
 }
 
-function dispatch(engine: EditorEngine, command: BuiltinCommand): Outcome {
+function dispatch(engine: EditorEngine, command: FuzzCommand): Outcome {
   try {
-    return { kind: 'applied', project: engine.dispatch(command) }
+    return { kind: 'applied', project: engine.dispatch(parseCommand(command)) }
   } catch (error) {
     return error instanceof CommandError ? { kind: 'rejected', error } : { kind: 'threw', error }
   }

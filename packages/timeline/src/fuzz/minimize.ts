@@ -12,11 +12,10 @@ export async function minimizeSteps<T>(steps: readonly T[], stillFails: StillFai
     if (smaller !== undefined) {
       current = smaller
       granularity = Math.max(granularity - 1, 2)
-    } else if (granularity >= current.length) {
-      break
-    } else {
-      granularity = Math.min(granularity * 2, current.length)
+      continue
     }
+    if (granularity >= current.length) break
+    granularity = Math.min(granularity * 2, current.length)
   }
   return removeSingles(current, stillFails)
 }
