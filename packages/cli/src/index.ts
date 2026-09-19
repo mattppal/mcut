@@ -1,15 +1,5 @@
 export { lintProject, type LintIssue } from './lint'
-export {
-  planSilenceCuts,
-  type SilenceCutOptions,
-  type SilenceCutPlan,
-  type SilenceCutTranscript,
-  type SilenceWindow,
-} from './silence'
-export {
-  buildCaptionsCommand,
-  captionsCommandOptionsSchema,
-  type CaptionsCommandOptions,
-} from './captions'
+export { planSilenceCuts, type SilenceCutOptions, type SilenceCutPlan, type SilenceCutTranscript, type SilenceWindow } from './silence'
+export { buildCaptionsCommand, captionsCommandOptionsSchema, type CaptionsCommandOptions } from './captions'
 export { PLATFORM_PRESETS, getPlatformPreset, type PlatformPreset } from './presets'
 export { readProjectFile, readTranscriptFile, writeProjectFile } from './io'

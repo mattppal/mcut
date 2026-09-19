@@ -1,13 +1,7 @@
 import { existsSync } from 'node:fs'
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import {
-  parseManifest,
-  type FixtureManifest,
-  type ManifestFixture,
-  type ManifestMutation,
-  type Mutation,
-} from './manifest'
+import { parseManifest, type FixtureManifest, type ManifestFixture, type ManifestMutation, type Mutation } from './manifest'
 import { applyByteMutation, variantsFor } from './mutate'
 import { containerExtension, recipes, type FixtureRecipe } from './recipes'
 import { detectTooling, exec, planRender, probeTruth, stillImageArgs, type Tooling } from './render'
@@ -210,9 +204,7 @@ export async function generateFixtures(options: GenerateOptions): Promise<Fixtur
   if (options.mutate) {
     const jobs = fixtures
       .filter((fixture) => fixture.skipped === null)
-      .flatMap((fixture) =>
-        variantsFor(fixture.id, fixture.recipe.container, fixture.bytes).map((variant) => ({ fixture, variant })),
-      )
+      .flatMap((fixture) => variantsFor(fixture.id, fixture.recipe.container, fixture.bytes).map((variant) => ({ fixture, variant })))
     const entries = await runPool(jobs, async ({ fixture, variant }) => {
       const result = await mutationFor(fixture, variant.suffix, variant.mutation, options.outDir, existing)
       options.log(mutationLine(result.entry, result.status))

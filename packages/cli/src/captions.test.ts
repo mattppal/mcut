@@ -46,9 +46,7 @@ describe('buildCaptionsCommand', () => {
 
     const engine = new EditorEngine({ project })
     engine.dispatch(command)
-    const captionTrack = engine.project.tracks.find((t) =>
-      t.elements.some((e) => e.type === 'caption'),
-    )
+    const captionTrack = engine.project.tracks.find((t) => t.elements.some((e) => e.type === 'caption'))
     expect(captionTrack).toBeDefined()
   })
 

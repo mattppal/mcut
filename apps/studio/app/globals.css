@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -235,8 +235,8 @@
   --clip-multicam: oklch(25.7% 0.09 281.288 / 90%);
 }
 
-[data-slot="dialog-content"][data-command-palette],
-[data-slot="dialog-overlay"]:has(~ [data-slot="dialog-content"][data-command-palette]) {
+[data-slot='dialog-content'][data-command-palette],
+[data-slot='dialog-overlay']:has(~ [data-slot='dialog-content'][data-command-palette]) {
   transition-duration: 0s;
   opacity: 1;
   scale: 1;
@@ -290,22 +290,22 @@
  * rendering smudge — use `scroll-mask-b` there, not `scroll-mask-y`.
  * ------------------------------------------------------------------------- */
 @property --scroll-mask-t {
-  syntax: "<number>";
+  syntax: '<number>';
   inherits: false;
   initial-value: 0;
 }
 @property --scroll-mask-b {
-  syntax: "<number>";
+  syntax: '<number>';
   inherits: false;
   initial-value: 0;
 }
 @property --scroll-mask-l {
-  syntax: "<number>";
+  syntax: '<number>';
   inherits: false;
   initial-value: 0;
 }
 @property --scroll-mask-r {
-  syntax: "<number>";
+  syntax: '<number>';
   inherits: false;
   initial-value: 0;
 }
@@ -346,18 +346,10 @@
 @utility scroll-mask-y {
   @supports (animation-timeline: scroll()) {
     &,
-    & [data-slot="scroll-area-viewport"] {
+    & [data-slot='scroll-area-viewport'] {
       mask-image:
-        linear-gradient(
-          to bottom,
-          transparent,
-          black calc(var(--scroll-mask-t) * var(--scroll-mask-size, 1.5rem))
-        ),
-        linear-gradient(
-          to top,
-          transparent,
-          black calc(var(--scroll-mask-b) * var(--scroll-mask-size, 1.5rem))
-        );
+        linear-gradient(to bottom, transparent, black calc(var(--scroll-mask-t) * var(--scroll-mask-size, 1.5rem))),
+        linear-gradient(to top, transparent, black calc(var(--scroll-mask-b) * var(--scroll-mask-size, 1.5rem)));
       mask-composite: intersect;
       animation:
         scroll-mask-reveal-t linear both,
@@ -373,18 +365,10 @@
 @utility scroll-mask-x {
   @supports (animation-timeline: scroll()) {
     &,
-    & [data-slot="scroll-area-viewport"] {
+    & [data-slot='scroll-area-viewport'] {
       mask-image:
-        linear-gradient(
-          to right,
-          transparent,
-          black calc(var(--scroll-mask-l) * var(--scroll-mask-size, 1.5rem))
-        ),
-        linear-gradient(
-          to left,
-          transparent,
-          black calc(var(--scroll-mask-r) * var(--scroll-mask-size, 1.5rem))
-        );
+        linear-gradient(to right, transparent, black calc(var(--scroll-mask-l) * var(--scroll-mask-size, 1.5rem))),
+        linear-gradient(to left, transparent, black calc(var(--scroll-mask-r) * var(--scroll-mask-size, 1.5rem)));
       mask-composite: intersect;
       animation:
         scroll-mask-reveal-l linear both,
@@ -400,12 +384,8 @@
 @utility scroll-mask-t {
   @supports (animation-timeline: scroll()) {
     &,
-    & [data-slot="scroll-area-viewport"] {
-      mask-image: linear-gradient(
-        to bottom,
-        transparent,
-        black calc(var(--scroll-mask-t) * var(--scroll-mask-size, 1.5rem))
-      );
+    & [data-slot='scroll-area-viewport'] {
+      mask-image: linear-gradient(to bottom, transparent, black calc(var(--scroll-mask-t) * var(--scroll-mask-size, 1.5rem)));
       animation: scroll-mask-reveal-t linear both;
       animation-timeline: scroll(self block);
       animation-range: 0px calc(var(--scroll-mask-size, 1.5rem) * 2);
@@ -416,12 +396,8 @@
 @utility scroll-mask-b {
   @supports (animation-timeline: scroll()) {
     &,
-    & [data-slot="scroll-area-viewport"] {
-      mask-image: linear-gradient(
-        to top,
-        transparent,
-        black calc(var(--scroll-mask-b) * var(--scroll-mask-size, 1.5rem))
-      );
+    & [data-slot='scroll-area-viewport'] {
+      mask-image: linear-gradient(to top, transparent, black calc(var(--scroll-mask-b) * var(--scroll-mask-size, 1.5rem)));
       animation: scroll-mask-conceal-b linear both;
       animation-timeline: scroll(self block);
       animation-range: calc(100% - var(--scroll-mask-size, 1.5rem) * 2) 100%;
@@ -432,12 +408,8 @@
 @utility scroll-mask-l {
   @supports (animation-timeline: scroll()) {
     &,
-    & [data-slot="scroll-area-viewport"] {
-      mask-image: linear-gradient(
-        to right,
-        transparent,
-        black calc(var(--scroll-mask-l) * var(--scroll-mask-size, 1.5rem))
-      );
+    & [data-slot='scroll-area-viewport'] {
+      mask-image: linear-gradient(to right, transparent, black calc(var(--scroll-mask-l) * var(--scroll-mask-size, 1.5rem)));
       animation: scroll-mask-reveal-l linear both;
       animation-timeline: scroll(self inline);
       animation-range: 0px calc(var(--scroll-mask-size, 1.5rem) * 2);
@@ -448,12 +420,8 @@
 @utility scroll-mask-r {
   @supports (animation-timeline: scroll()) {
     &,
-    & [data-slot="scroll-area-viewport"] {
-      mask-image: linear-gradient(
-        to left,
-        transparent,
-        black calc(var(--scroll-mask-r) * var(--scroll-mask-size, 1.5rem))
-      );
+    & [data-slot='scroll-area-viewport'] {
+      mask-image: linear-gradient(to left, transparent, black calc(var(--scroll-mask-r) * var(--scroll-mask-size, 1.5rem)));
       animation: scroll-mask-conceal-r linear both;
       animation-timeline: scroll(self inline);
       animation-range: calc(100% - var(--scroll-mask-size, 1.5rem) * 2) 100%;

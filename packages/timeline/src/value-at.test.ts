@@ -9,14 +9,8 @@ describe('valueAt', () => {
   })
 
   test('throws a RangeError naming the index and length when out of range', () => {
-    expect(() => valueAt([10, 20, 30], 3)).toThrow(
-      new RangeError('Index 3 is out of range for a list of length 3'),
-    )
-    expect(() => valueAt([10, 20, 30], -1)).toThrow(
-      new RangeError('Index -1 is out of range for a list of length 3'),
-    )
-    expect(() => valueAt([], 0)).toThrow(
-      new RangeError('Index 0 is out of range for a list of length 0'),
-    )
+    expect(() => valueAt([10, 20, 30], 3)).toThrow(new RangeError('Index 3 is out of range for a list of length 3'))
+    expect(() => valueAt([10, 20, 30], -1)).toThrow(new RangeError('Index -1 is out of range for a list of length 3'))
+    expect(() => valueAt([], 0)).toThrow(new RangeError('Index 0 is out of range for a list of length 0'))
   })
 })

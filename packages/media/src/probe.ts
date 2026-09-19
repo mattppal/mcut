@@ -1,4 +1,4 @@
-import { ALL_FORMATS, BlobSource, Input, UrlSource } from 'mediabunny'
+import { ALL_FORMATS, BlobSource, EncodedPacketSink, Input, UrlSource } from 'mediabunny'
 import { createAssetId, type AssetRef } from '@mcut/timeline'
 import { hashBlob } from './media-store'
 import { isMatroskaLike } from './video-capabilities'
@@ -21,6 +21,22 @@ export interface MediaProbe {
   mimeType?: string
 }
 
+export type MediaProbeErrorCode = 'unreadable' | 'no-tracks' | 'no-duration'
+
+export class MediaProbeError extends Error {
+  readonly code: MediaProbeErrorCode
+
+  constructor(code: MediaProbeErrorCode, message: string, options?: { cause?: unknown }) {
+    super(message, options)
+    this.name = 'MediaProbeError'
+    this.code = code
+  }
+}
+
+function describeCause(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
 interface NativeMediaMetadata {
   durationMs: number
   width?: number
@@ -37,10 +53,7 @@ function trackListLength(trackList: unknown): number | undefined {
   return typeof trackList.length === 'number' ? trackList.length : undefined
 }
 
-function loadNativeMetadata(
-  tag: 'video' | 'audio',
-  src: string,
-): Promise<NativeMediaMetadata | null> {
+function loadNativeMetadata(tag: 'video' | 'audio', src: string): Promise<NativeMediaMetadata | null> {
   return new Promise((resolve) => {
     const media = document.createElement(tag)
     let settled = false
@@ -140,11 +153,19 @@ async function hasNativeVideoPreview(file: File, mimeType?: string): Promise<boo
   return canDecodeNatively(file)
 }
 
+async function probeDurationSeconds(input: Input): Promise<number> {
+  const tracks = await input.getTracks()
+  const firstPackets = await Promise.all(tracks.map((track) => new EncodedPacketSink(track).getFirstPacket({ metadataOnly: true })))
+  const computed = await input.computeDuration(tracks.filter((_, index) => firstPackets[index] !== null))
+  if (computed > 0) return computed
+  return (await input.getDurationFromMetadata(tracks)) ?? 0
+}
+
 export async function probeMedia(src: MediaSourceLike): Promise<MediaProbe> {
   const input = inputFor(src)
   try {
     const [durationSeconds, video, audio, mimeType] = await Promise.all([
-      input.computeDuration(),
+      probeDurationSeconds(input),
       input.getPrimaryVideoTrack(),
       input.getPrimaryAudioTrack(),
       input.getMimeType().catch(() => undefined),
@@ -159,7 +180,9 @@ export async function probeMedia(src: MediaSourceLike): Promise<MediaProbe> {
   } catch (error) {
     const nativeProbe = await probeNativeMedia(src)
     if (nativeProbe) return nativeProbe
-    throw error
+    throw new MediaProbeError('unreadable', `Cannot read this file as audio or video (${describeCause(error)})`, {
+      cause: error,
+    })
   } finally {
     input.dispose()
   }
@@ -190,6 +213,12 @@ export async function createAssetFromFile(file: File): Promise<AssetRef> {
       return { ...base, kind: 'image', width, height }
     }
     const probe = await probeMedia(file)
+    if (!probe.hasVideo && !probe.hasAudio) {
+      throw new MediaProbeError('no-tracks', `"${file.name}" has no playable audio or video tracks`)
+    }
+    if (probe.durationMs <= 0) {
+      throw new MediaProbeError('no-duration', `"${file.name}" declares tracks but no playable media (duration 0 ms)`)
+    }
     if (probe.hasVideo) {
       return {
         ...base,
@@ -200,10 +229,7 @@ export async function createAssetFromFile(file: File): Promise<AssetRef> {
         nativePreview: await hasNativeVideoPreview(file, probe.mimeType),
       }
     }
-    if (probe.hasAudio) {
-      return { ...base, kind: 'audio', durationMs: probe.durationMs }
-    }
-    throw new Error(`"${file.name}" has no playable audio or video tracks`)
+    return { ...base, kind: 'audio', durationMs: probe.durationMs }
   } catch (error) {
     URL.revokeObjectURL(src)
     throw error

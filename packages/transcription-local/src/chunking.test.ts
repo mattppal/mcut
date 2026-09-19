@@ -68,11 +68,7 @@ describe('mergeChunkWords', () => {
       },
       {
         chunk: { startS: 25, endS: 55 },
-        words: [
-          word('b', 27_010, 27_960),
-          word('tail', 28_010, 28_960),
-          word('next', 29_010, 29_960),
-        ],
+        words: [word('b', 27_010, 27_960), word('tail', 28_010, 28_960), word('next', 29_010, 29_960)],
       },
     ])
     expect(merged.map((w) => w.text)).toEqual(['a', 'b', 'tail', 'next'])
@@ -99,19 +95,11 @@ describe('mergeChunkSegments', () => {
     const merged = mergeChunkSegments([
       {
         chunk: { startS: 0, endS: 30 },
-        segments: [
-          segment('one', 24_000, 24_800),
-          segment('two', 26_000, 26_700),
-          segment('drift', 28_000, 28_600),
-        ],
+        segments: [segment('one', 24_000, 24_800), segment('two', 26_000, 26_700), segment('drift', 28_000, 28_600)],
       },
       {
         chunk: { startS: 25, endS: 55 },
-        segments: [
-          segment('two', 26_050, 26_750),
-          segment('three', 27_600, 28_200),
-          segment('four', 31_000, 31_700),
-        ],
+        segments: [segment('two', 26_050, 26_750), segment('three', 27_600, 28_200), segment('four', 31_000, 31_700)],
       },
     ])
     expect(merged.map((s) => s.text)).toEqual(['one', 'two', 'three', 'four'])

@@ -6,11 +6,7 @@ export interface WebSocketHandlers {
   onMessage: (socket: WebSocket, event: MessageEvent) => void
 }
 
-export function useWebSocket(
-  url: string | null,
-  handlers: WebSocketHandlers,
-  options: { reconnectDelayMs: number },
-): void {
+export function useWebSocket(url: string | null, handlers: WebSocketHandlers, options: { reconnectDelayMs: number }): void {
   const latest = useLatest(handlers)
   const reconnectDelayMs = options.reconnectDelayMs
   useEffect(() => {

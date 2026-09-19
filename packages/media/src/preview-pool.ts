@@ -45,9 +45,7 @@ function mergeActiveMediaItems(current: ActiveMediaItem, next: ActiveMediaItem):
     return {
       ...preferred,
       kind,
-      volume: hasSameMediaClock(current, next)
-        ? current.volume + next.volume
-        : Math.max(current.volume, next.volume),
+      volume: hasSameMediaClock(current, next) ? current.volume + next.volume : Math.max(current.volume, next.volume),
     }
   }
 
@@ -84,10 +82,7 @@ export function getActiveMediaItems(project: Project, timeMs: number): ActiveMed
           kind: 'video',
           sourceTimeMs: getMulticamSourceTimeMs(element, source, timeMs),
           rate: getSpeedAt(speedShim, timeMs - element.startMs),
-          volume:
-            isAudio && audible && !track.muted && !element.muted
-              ? getEffectiveVolume(element, timeMs)
-              : 0,
+          volume: isAudio && audible && !track.muted && !element.muted ? getEffectiveVolume(element, timeMs) : 0,
         })
       }
       continue
@@ -102,10 +97,7 @@ export function getActiveMediaItems(project: Project, timeMs: number): ActiveMed
       kind: element.type,
       sourceTimeMs: Math.max(0, getSourceTimeMs(element, localMs)),
       rate: getSpeedAt(element, localMs),
-      volume:
-        !audible || track.muted || element.muted || element.reversed
-          ? 0
-          : getEffectiveVolume(element, timeMs),
+      volume: !audible || track.muted || element.muted || element.reversed ? 0 : getEffectiveVolume(element, timeMs),
       ...(element.reversed ? { reversed: true } : {}),
     })
   }
@@ -183,8 +175,7 @@ export class PreviewMediaPool implements FrameSource {
       const element = this.media.get(assetId)?.el
       if (!(element instanceof HTMLVideoElement)) return null
       const cache = this.ensureScrubCache(assetId)
-      const onFrame =
-        element.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && !element.seeking
+      const onFrame = element.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && !element.seeking
       if (onFrame) {
         cache.capture(element, element.currentTime * 1000)
         return element
@@ -234,9 +225,7 @@ export class PreviewMediaPool implements FrameSource {
           const lead = drift > 0 ? Math.min(MAX_SEEK_LEAD_S, pooled.seekLatencyS * forwardRate) : 0
           this.requestSeek(pooled, targetSeconds + lead)
         } else if (Math.abs(drift) > MIN_CATCHUP_DRIFT_S && !element.seeking) {
-          rate =
-            forwardRate *
-            Math.min(CATCHUP_RATE_MAX_BIAS, Math.max(CATCHUP_RATE_MIN_BIAS, 1 + drift))
+          rate = forwardRate * Math.min(CATCHUP_RATE_MAX_BIAS, Math.max(CATCHUP_RATE_MIN_BIAS, 1 + drift))
         }
         if (element.playbackRate !== rate) element.playbackRate = rate
         if (element.paused) {
@@ -347,10 +336,7 @@ export class PreviewMediaPool implements FrameSource {
       }
       return existing
     }
-    const element =
-      kind === 'video' && !audioOnly
-        ? document.createElement('video')
-        : document.createElement('audio')
+    const element = kind === 'video' && !audioOnly ? document.createElement('video') : document.createElement('audio')
     element.src = asset.src
     element.preload = 'auto'
     element.crossOrigin = 'anonymous'
@@ -369,11 +355,7 @@ export class PreviewMediaPool implements FrameSource {
     return pooled
   }
 
-  private getDecodedVideoFrame(
-    assetId: AssetId,
-    asset: AssetRef,
-    sourceTimeMs: number,
-  ): CanvasImageSource | null {
+  private getDecodedVideoFrame(assetId: AssetId, asset: AssetRef, sourceTimeMs: number): CanvasImageSource | null {
     const state = this.ensureDecodedVideoState(assetId, asset)
     if (state.failed) return null
 
@@ -439,10 +421,7 @@ export class PreviewMediaPool implements FrameSource {
       })
   }
 
-  private async decodeVideoFrame(
-    asset: AssetRef,
-    sourceTimeMs: number,
-  ): Promise<CanvasImageSource | null> {
+  private async decodeVideoFrame(asset: AssetRef, sourceTimeMs: number): Promise<CanvasImageSource | null> {
     const state = this.ensureDecodedVideoState(asset.id, asset)
     if (!state.sink) {
       const input = inputFor(asset.src)
@@ -470,11 +449,7 @@ export class PreviewMediaPool implements FrameSource {
 
   private trimDecodedVideoFrames(state: DecodedVideoState, centerKey: number): void {
     if (state.frames.size <= 80) return
-    const keep = new Set(
-      [...state.frames.keys()]
-        .sort((a, b) => Math.abs(a - centerKey) - Math.abs(b - centerKey))
-        .slice(0, 60),
-    )
+    const keep = new Set([...state.frames.keys()].sort((a, b) => Math.abs(a - centerKey) - Math.abs(b - centerKey)).slice(0, 60))
     for (const key of state.frames.keys()) {
       if (!keep.has(key)) state.frames.delete(key)
     }

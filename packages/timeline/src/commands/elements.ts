@@ -14,24 +14,11 @@ import {
   type TimelineElement,
 } from '../model'
 import { compactTimelineIfMagnetic, placementFor, rangesOverlap } from '../placement'
-import {
-  defineCommand,
-  insertSorted,
-  mintElementId,
-  mustGetTrack,
-  mustLocate,
-  replaceTrack,
-  sortByStart,
-} from './shared'
+import { defineCommand, insertSorted, mintElementId, mustGetTrack, mustLocate, replaceTrack, sortByStart } from './shared'
 
 const editModeSchema = z.enum(['normal', 'overwrite', 'insert']).default('normal')
 
-function carveOverwriteRange(
-  project: Project,
-  trackId: TrackId,
-  startMs: number,
-  durationMs: number,
-): Project {
+function carveOverwriteRange(project: Project, trackId: TrackId, startMs: number, durationMs: number): Project {
   const endMs = startMs + durationMs
   return replaceTrack(project, trackId, (track) => {
     const elements: TimelineElement[] = []
@@ -50,21 +37,14 @@ function carveOverwriteRange(
       }
       if (tailMs >= MIN_ELEMENT_DURATION_MS) {
         const right = applyEdgeTrim(element, 'start', endMs - element.startMs)
-        elements.push(
-          headMs >= MIN_ELEMENT_DURATION_MS ? { ...right, id: createElementId() } : right,
-        )
+        elements.push(headMs >= MIN_ELEMENT_DURATION_MS ? { ...right, id: createElementId() } : right)
       }
     }
     return { ...track, elements: sortByStart(elements) }
   })
 }
 
-function rippleOpenGap(
-  project: Project,
-  targetTrackId: TrackId,
-  atMs: number,
-  durationMs: number,
-): Project {
+function rippleOpenGap(project: Project, targetTrackId: TrackId, atMs: number, durationMs: number): Project {
   const tracks = project.tracks.map((track) => {
     const isTarget = track.id === targetTrackId
     if (track.locked && !isTarget) return track
@@ -97,12 +77,7 @@ function rippleOpenGap(
   return { ...project, tracks }
 }
 
-function placeElement(
-  project: Project,
-  trackId: TrackId,
-  element: TimelineElement,
-  editMode: z.output<typeof editModeSchema>,
-): Project {
+function placeElement(project: Project, trackId: TrackId, element: TimelineElement, editMode: z.output<typeof editModeSchema>): Project {
   const policy = placementFor(mustGetTrack(project, trackId))
   const mode = policy.editMode(editMode)
   let next = project
@@ -178,9 +153,7 @@ export const moveElement = defineCommand({
 
 export const trimElement = defineCommand({
   type: 'trimElement',
-  description:
-    'Set element timing. `startMs`/`durationMs` position it on the timeline; ' +
-    '`trimStartMs` (video/audio) offsets into the source media.',
+  description: 'Set element timing. `startMs`/`durationMs` position it on the timeline; ' + '`trimStartMs` (video/audio) offsets into the source media.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     startMs: z.number().int().nonnegative().optional(),
@@ -224,8 +197,7 @@ export const splitElement = defineCommand({
     if (offset < MIN_ELEMENT_DURATION_MS || element.durationMs - offset < MIN_ELEMENT_DURATION_MS) {
       throw new CommandError(
         'out-of-bounds',
-        `cannot split "${element.id}" at ${payload.atMs}ms: both halves must be at least ` +
-          `${MIN_ELEMENT_DURATION_MS}ms long`,
+        `cannot split "${element.id}" at ${payload.atMs}ms: both halves must be at least ` + `${MIN_ELEMENT_DURATION_MS}ms long`,
       )
     }
     const { left, right } = splitElementAt(element, offset)
@@ -247,8 +219,7 @@ export const splitElement = defineCommand({
 export const updateElement = defineCommand({
   type: 'updateElement',
   description:
-    'Patch element properties (text, style, transform, opacity, volume, ...). ' +
-    'The merged element is re-validated; `id` and `type` cannot change.',
+    'Patch element properties (text, style, transform, opacity, volume, ...). ' + 'The merged element is re-validated; `id` and `type` cannot change.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     patch: z.record(z.string(), z.unknown()),
@@ -260,11 +231,7 @@ export const updateElement = defineCommand({
     }
     const merged = elementSchema.safeParse({ ...element, ...payload.patch })
     if (!merged.success) {
-      throw new CommandError(
-        'invalid-payload',
-        `patch produces an invalid element: ${merged.error.message}`,
-        { cause: merged.error },
-      )
+      throw new CommandError('invalid-payload', `patch produces an invalid element: ${merged.error.message}`, { cause: merged.error })
     }
     validateElement(project, merged.data)
     const policy = placementFor(track)
@@ -292,9 +259,7 @@ export const rippleDelete = defineCommand({
       const elements = track.elements
         .filter((e) => !ids.has(e.id))
         .map((element) => {
-          const shiftMs = removed
-            .filter((r) => r.startMs < element.startMs)
-            .reduce((sum, r) => sum + r.durationMs, 0)
+          const shiftMs = removed.filter((r) => r.startMs < element.startMs).reduce((sum, r) => sum + r.durationMs, 0)
           return shiftMs > 0 ? { ...element, startMs: element.startMs - shiftMs } : element
         })
       return { ...track, elements }

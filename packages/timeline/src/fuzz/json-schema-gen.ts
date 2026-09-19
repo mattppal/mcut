@@ -173,8 +173,7 @@ function freshId(prefix: string, rng: Rng): string {
 
 function numeric(schema: JsonSchema, rng: Rng, integer: boolean): number {
   const { exclusiveMinimum, maximum } = schema
-  const minimum =
-    schema.minimum ?? (exclusiveMinimum === undefined ? undefined : exclusiveMinimum + (integer ? 1 : 0.001))
+  const minimum = schema.minimum ?? (exclusiveMinimum === undefined ? undefined : exclusiveMinimum + (integer ? 1 : 0.001))
   if (rng.chance(EXTREME_RATE)) return extreme(rng, integer, minimum, maximum)
   const smallBounded = minimum !== undefined && maximum !== undefined && maximum <= SMALL_BOUND
   const lo = smallBounded ? minimum : Math.max(minimum ?? 0, -DOMAIN_MAX)

@@ -1,30 +1,9 @@
 import { z } from 'zod'
 import { CommandError } from './errors'
 import type { Project } from './model'
-import {
-  applyCaptions,
-  applyThumbnail,
-  createMulticam,
-  detachAudio,
-} from './commands/derived-elements'
-import {
-  addElement,
-  moveElement,
-  removeElement,
-  rippleDelete,
-  splitElement,
-  trimElement,
-  updateElement,
-} from './commands/elements'
-import {
-  applyAnimationPreset,
-  applyZoomPreset,
-  clearKeyframes,
-  moveKeyframe,
-  removeKeyframe,
-  setKeyframe,
-  setKeyframeEasing,
-} from './commands/keyframes'
+import { applyCaptions, applyThumbnail, createMulticam, detachAudio } from './commands/derived-elements'
+import { addElement, moveElement, removeElement, rippleDelete, splitElement, trimElement, updateElement } from './commands/elements'
+import { applyAnimationPreset, applyZoomPreset, clearKeyframes, moveKeyframe, removeKeyframe, setKeyframe, setKeyframeEasing } from './commands/keyframes'
 import { removeLayout, saveLayout } from './commands/layouts'
 import { addMarker, removeMarker, updateMarker } from './commands/markers'
 import {
@@ -38,41 +17,10 @@ import {
   setMulticamSourceKey,
   setMulticamSourceTrim,
 } from './commands/multicam'
-import {
-  addAsset,
-  removeAsset,
-  removePreset,
-  savePreset,
-  updateAsset,
-  updateProject,
-} from './commands/project'
-import {
-  rippleTrim,
-  rollEdit,
-  setElementSpeed,
-  setTimeMap,
-  slideElement,
-  slipElement,
-  trimEdge,
-} from './commands/timing'
-import {
-  addTrack,
-  compactTimelineGaps,
-  compactTrackGaps,
-  removeTrack,
-  renameTrack,
-  reorderTrack,
-  setTrackFlags,
-} from './commands/tracks'
-import {
-  addEffect,
-  removeEffect,
-  reorderEffect,
-  setBlendMode,
-  setMotionBlur,
-  setTransition,
-  updateEffect,
-} from './commands/visual'
+import { addAsset, removeAsset, removePreset, savePreset, updateAsset, updateProject } from './commands/project'
+import { rippleTrim, rollEdit, setElementSpeed, setTimeMap, slideElement, slipElement, trimEdge } from './commands/timing'
+import { addTrack, compactTimelineGaps, compactTrackGaps, removeTrack, renameTrack, reorderTrack, setTrackFlags } from './commands/tracks'
+import { addEffect, removeEffect, reorderEffect, setBlendMode, setMotionBlur, setTransition, updateEffect } from './commands/visual'
 
 export { CommandError } from './errors'
 

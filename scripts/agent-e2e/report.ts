@@ -63,7 +63,6 @@ export function markdownTable(report: Report): string {
     ].join(' | ')
   })
   const summary =
-    `${report.passed}/${report.runs.length} tasks passed with model ${report.model} ` +
-    `against ${report.target}${report.dryRun ? ' (dry run)' : ''}.`
+    `${report.passed}/${report.runs.length} tasks passed with model ${report.model} ` + `against ${report.target}${report.dryRun ? ' (dry run)' : ''}.`
   return [header, divider, ...rows.map((row) => `| ${row} |`), '', summary].join('\n')
 }

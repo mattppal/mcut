@@ -24,10 +24,7 @@ export class ScrubFrameCache {
     const index = this.indexAtOrAfter(timeMs)
     const before = this.frames[index - 1]
     const at = this.frames[index]
-    if (
-      (before && timeMs - before.timeMs < this.minGapMs) ||
-      (at && at.timeMs - timeMs < this.minGapMs)
-    ) {
+    if ((before && timeMs - before.timeMs < this.minGapMs) || (at && at.timeMs - timeMs < this.minGapMs)) {
       return
     }
     const scale = Math.min(1, Math.sqrt(MAX_FRAME_AREA / (sw * sh)))

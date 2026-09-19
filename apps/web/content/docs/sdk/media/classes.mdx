@@ -15,6 +15,17 @@ class AudioNotDecodableError extends Error {
 
 Error thrown when a file has an audio track but the browser has no decoder for its codec.
 
+### MediaProbeError
+
+```ts
+class MediaProbeError extends Error {
+  readonly name = 'MediaProbeError'
+  readonly code: MediaProbeErrorCode
+}
+```
+
+Error thrown by `probeMedia` and `createAssetFromFile` when a file cannot be read as media or has no playable track. `code` says which.
+
 ### PreviewMediaPool
 
 ```ts

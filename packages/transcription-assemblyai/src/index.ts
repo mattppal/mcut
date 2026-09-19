@@ -1,25 +1,16 @@
 import { AssemblyAI, type TranscribeParams } from 'assemblyai'
-import type {
-  TranscribeInput,
-  TranscribeOptions,
-  TranscriptionProvider,
-  TranscriptResult,
-} from '@mcut/transcription'
+import type { TranscribeInput, TranscribeOptions, TranscriptionProvider, TranscriptResult } from '@mcut/transcription'
 
 export interface AssemblyAITranscriptLike {
   text?: string | null
-  words?:
-    | Array<{
-        text: string
-        start: number
-        end: number
-        confidence?: number
-        speaker?: string | null
-      }>
-    | null
-  utterances?:
-    | Array<{ text: string; start: number; end: number; speaker?: string | null }>
-    | null
+  words?: Array<{
+    text: string
+    start: number
+    end: number
+    confidence?: number
+    speaker?: string | null
+  }> | null
+  utterances?: Array<{ text: string; start: number; end: number; speaker?: string | null }> | null
   language_code?: string | null
   audio_duration?: number | null
 }
@@ -46,9 +37,7 @@ export function normalizeAssemblyAIResult(transcript: AssemblyAITranscriptLike):
   return {
     text: transcript.text ?? '',
     ...(transcript.language_code != null ? { language: transcript.language_code } : {}),
-    ...(transcript.audio_duration != null
-      ? { durationMs: millisecondsFromAssemblyAiDurationSeconds(transcript.audio_duration) }
-      : {}),
+    ...(transcript.audio_duration != null ? { durationMs: millisecondsFromAssemblyAiDurationSeconds(transcript.audio_duration) } : {}),
     words,
     segments,
   }
@@ -69,26 +58,19 @@ async function toAudioArg(audio: TranscribeInput['audio']): Promise<string | Uin
   return audio
 }
 
-export function createAssemblyAIProvider(
-  options: AssemblyAIProviderOptions = {},
-): TranscriptionProvider {
+export function createAssemblyAIProvider(options: AssemblyAIProviderOptions = {}): TranscriptionProvider {
   const apiKey = options.apiKey ?? process.env.ASSEMBLYAI_API_KEY
   const client =
     options.client ??
     (apiKey
       ? new AssemblyAI({ apiKey })
       : (() => {
-          throw new Error(
-            'createAssemblyAIProvider: pass `apiKey` or `client`, or set ASSEMBLYAI_API_KEY',
-          )
+          throw new Error('createAssemblyAIProvider: pass `apiKey` or `client`, or set ASSEMBLYAI_API_KEY')
         })())
 
   return {
     id: options.id ?? 'assemblyai',
-    async transcribe(
-      input: TranscribeInput,
-      transcribeOptions?: TranscribeOptions,
-    ): Promise<TranscriptResult> {
+    async transcribe(input: TranscribeInput, transcribeOptions?: TranscribeOptions): Promise<TranscriptResult> {
       const transcript = await client.transcripts.transcribe({
         audio: await toAudioArg(input.audio),
         speaker_labels: options.speakerLabels ?? true,

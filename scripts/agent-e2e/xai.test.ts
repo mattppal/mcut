@@ -123,9 +123,7 @@ describe('xAI Responses API client', () => {
       parallel_tool_calls: true,
     })
     expect(follow?.body.previous_response_id).toBe('resp_1')
-    expect(follow?.body.input).toEqual([
-      { type: 'function_call_output', call_id: 'call_1', output: 'OK: splitElement applied.' },
-    ])
+    expect(follow?.body.input).toEqual([{ type: 'function_call_output', call_id: 'call_1', output: 'OK: splitElement applied.' }])
     expect(follow?.body.tools).toEqual(open?.body.tools)
   })
 
@@ -153,7 +151,10 @@ describe('xAI Responses API client', () => {
   })
 
   test('gives up after the retry budget is spent', async () => {
-    fake = fakeXai([{ status: 500, body: {} }, { status: 500, body: {} }])
+    fake = fakeXai([
+      { status: 500, body: {} },
+      { status: 500, body: {} },
+    ])
     const model = createXaiModel(options(fake.baseUrl), [0])
     await expect(model.start(prompt, tools)).rejects.toThrow(/xAI responded 500/)
     expect(fake.requests).toHaveLength(2)

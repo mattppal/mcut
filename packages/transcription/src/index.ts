@@ -9,12 +9,7 @@ export {
   type TranscriptWord,
 } from './types'
 
-export {
-  toSrt,
-  toVtt,
-  transcriptToCues,
-  type SubtitleCue,
-} from './subtitles'
+export { toSrt, toVtt, transcriptToCues, type SubtitleCue } from './subtitles'
 
 export {
   buildApplyCaptionsCommand,

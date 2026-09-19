@@ -1,28 +1,26 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { CheckIcon, CopyIcon } from "@/lib/hugeicons";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react'
+import { CheckIcon, CopyIcon } from '@/lib/hugeicons'
+import { Button } from '@/components/ui/button'
 
 const COMMANDS = [
   {
-    comment: "core SDK",
-    command:
-      "bun add @mcut/timeline @mcut/editor @mcut/compositor @mcut/media @mcut/react @mcut/transcription",
+    comment: 'core SDK',
+    command: 'bun add @mcut/timeline @mcut/editor @mcut/compositor @mcut/media @mcut/react @mcut/transcription',
   },
   {
-    comment: "caption providers",
-    command:
-      "bun add @mcut/transcription-assemblyai @mcut/transcription-local @mcut/transcription-ai-sdk ai",
+    comment: 'caption providers',
+    command: 'bun add @mcut/transcription-assemblyai @mcut/transcription-local @mcut/transcription-ai-sdk ai',
   },
   {
-    comment: "CLI",
-    command: "bunx @mcut/cli --help",
+    comment: 'CLI',
+    command: 'bunx @mcut/cli --help',
   },
-] as const;
+] as const
 
 function CopyButton({ command }: { command: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState(false)
   return (
     <Button
       variant="ghost"
@@ -30,14 +28,14 @@ function CopyButton({ command }: { command: string }) {
       className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
       aria-label="Copy command"
       onClick={async () => {
-        await navigator.clipboard.writeText(command);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1500);
+        await navigator.clipboard.writeText(command)
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 1500)
       }}
     >
       {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
     </Button>
-  );
+  )
 }
 
 export function InstallCommands() {
@@ -48,7 +46,7 @@ export function InstallCommands() {
           <pre className="command-scroll min-w-0 flex-1 overflow-x-auto pb-1 pr-3">
             <span className="text-muted-foreground">
               # {comment}
-              {"\n"}
+              {'\n'}
             </span>
             {command}
           </pre>
@@ -56,5 +54,5 @@ export function InstallCommands() {
         </div>
       ))}
     </section>
-  );
+  )
 }
