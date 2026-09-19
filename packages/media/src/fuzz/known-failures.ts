@@ -17,9 +17,7 @@ const truncatedMatroska = [
   'tiny-1x1-vp9-webm.trunc50',
 ]
 
-export const knownFailures: readonly KnownFailure[] = [
-  { issue: `${issues}/72`, fixtures: truncatedMatroska, invariants: ['truncated-duration-positive'] },
-]
+export const knownFailures: readonly KnownFailure[] = [{ issue: `${issues}/72`, fixtures: truncatedMatroska, invariants: ['truncated-duration-positive'] }]
 
 export function matchKnownFailure(fixture: string, violations: readonly Violation[], known: readonly KnownFailure[] = knownFailures): KnownFailure | undefined {
   return known.find(

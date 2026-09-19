@@ -155,9 +155,7 @@ async function hasNativeVideoPreview(file: File, mimeType?: string): Promise<boo
 
 async function computeDurationSeconds(input: Input): Promise<number> {
   const tracks = await input.getTracks()
-  const firstPackets = await Promise.all(
-    tracks.map((track) => new EncodedPacketSink(track).getFirstPacket({ metadataOnly: true })),
-  )
+  const firstPackets = await Promise.all(tracks.map((track) => new EncodedPacketSink(track).getFirstPacket({ metadataOnly: true })))
   return input.computeDuration(tracks.filter((_, index) => firstPackets[index] !== null))
 }
 
