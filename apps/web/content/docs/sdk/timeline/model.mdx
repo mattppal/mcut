@@ -78,10 +78,10 @@ const captionWordSchema = z.object({
   text: z.string(),
   startMs: z.number().int().nonnegative(),
   endMs: z.number().int().nonnegative(),
-})
+}).refine((word) => word.endMs >= word.startMs, 'caption word endMs must be >= startMs')
 ```
 
-Zod schema for one caption word with timing relative to the caption's `startMs`.
+Zod schema for one caption word with timing relative to the caption's `startMs`, rejecting a word whose `endMs` is before its `startMs`.
 
 ### elementIdSchema
 
