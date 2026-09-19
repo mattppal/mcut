@@ -8,10 +8,11 @@ import {
   getProjectDurationMs,
   getTrack,
 } from './selectors'
+import { mustFind } from './test-helpers'
 
 function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
   let project = createProject({ name: 'test' })
-  const trackId = project.tracks[0]!.id
+  const trackId = mustFind(project.tracks[0], 'first track').id
   project = applyCommand(project, {
     type: 'addAsset',
     asset: { id: 'a-vid', kind: 'video', src: 'blob:video', durationMs: 10_000 },
@@ -30,7 +31,7 @@ describe('track commands', () => {
 
   test('addTrack inherits active timeline magnet mode', () => {
     let project = createProject()
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, { type: 'setTrackFlags', trackId, magnetic: true })
     project = applyCommand(project, { type: 'addTrack', name: 'Captions' })
     expect(project.tracks.map((track) => track.magnetic)).toEqual([true, true])
@@ -39,28 +40,28 @@ describe('track commands', () => {
   test('reorderTrack moves a track', () => {
     let project = createProject()
     project = applyCommand(project, { type: 'addTrack', name: 'B' })
-    const first = project.tracks[0]!.id
+    const first = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, { type: 'reorderTrack', trackId: first, toIndex: 1 })
-    expect(project.tracks[1]!.id).toBe(first)
+    expect(mustFind(project.tracks[1], 'second track').id).toBe(first)
   })
 
   test('removeTrack drops the track', () => {
     let project = createProject()
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, { type: 'removeTrack', trackId })
     expect(project.tracks).toHaveLength(0)
   })
 
   test('setTrackFlags updates flags', () => {
     let project = createProject()
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, { type: 'setTrackFlags', trackId, muted: true, hidden: true, magnetic: true })
     expect(getTrack(project, trackId)).toMatchObject({ muted: true, hidden: true, locked: false, magnetic: true })
   })
 
   test('compactTrackGaps closes gaps without enabling magnet mode', () => {
     let project = createProject()
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     for (const [id, startMs] of [['e-a', 1000], ['e-b', 4000]] as const) {
       project = applyCommand(project, {
         type: 'addElement',
@@ -71,7 +72,7 @@ describe('track commands', () => {
 
     const next = applyCommand(project, { type: 'compactTrackGaps', trackId })
     expect(getTrack(next, trackId)).toMatchObject({ magnetic: false })
-    expect(getTrack(next, trackId)!.elements.map((e) => [e.id, e.startMs])).toEqual([
+    expect(mustFind(getTrack(next, trackId), trackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-a', 0],
       ['e-b', 1000],
     ])
@@ -79,9 +80,9 @@ describe('track commands', () => {
 
   test('compactTimelineGaps closes gaps on every track without enabling magnet mode', () => {
     let project = createProject()
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, { type: 'addTrack', name: 'Captions' })
-    const captionTrackId = project.tracks[1]!.id
+    const captionTrackId = mustFind(project.tracks[1], 'second track').id
 
     for (const [targetTrackId, id, startMs] of [
       [trackId, 'e-a', 1000],
@@ -98,11 +99,11 @@ describe('track commands', () => {
 
     const next = applyCommand(project, { type: 'compactTimelineGaps' })
     expect(next.tracks.map((track) => track.magnetic)).toEqual([false, false])
-    expect(getTrack(next, trackId)!.elements.map((e) => [e.id, e.startMs])).toEqual([
+    expect(mustFind(getTrack(next, trackId), trackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-a', 0],
       ['e-b', 1000],
     ])
-    expect(getTrack(next, captionTrackId)!.elements.map((e) => [e.id, e.startMs])).toEqual([
+    expect(mustFind(getTrack(next, captionTrackId), captionTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-caption-a', 0],
       ['e-caption-b', 1000],
     ])
@@ -110,9 +111,9 @@ describe('track commands', () => {
 
   test('enabling magnet mode immediately compacts every track', () => {
     let project = createProject()
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, { type: 'addTrack', name: 'Captions' })
-    const captionTrackId = project.tracks[1]!.id
+    const captionTrackId = mustFind(project.tracks[1], 'second track').id
 
     for (const [targetTrackId, id, startMs] of [
       [trackId, 'e-a', 1000],
@@ -128,11 +129,11 @@ describe('track commands', () => {
     }
 
     const next = applyCommand(project, { type: 'setTrackFlags', trackId, magnetic: true })
-    expect(getTrack(next, trackId)!.elements.map((e) => [e.id, e.startMs])).toEqual([
+    expect(mustFind(getTrack(next, trackId), trackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-a', 0],
       ['e-b', 1000],
     ])
-    expect(getTrack(next, captionTrackId)!.elements.map((e) => [e.id, e.startMs])).toEqual([
+    expect(mustFind(getTrack(next, captionTrackId), captionTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-caption-a', 0],
       ['e-caption-b', 1000],
     ])
@@ -196,7 +197,7 @@ describe('element commands', () => {
       trackId,
       element: { type: 'video', assetId: 'a-vid', startMs: 0, durationMs: 2000 },
     })
-    const elements = getTrack(next, trackId)!.elements
+    const elements = mustFind(getTrack(next, trackId), trackId).elements
     expect(elements.map((e) => e.startMs)).toEqual([0, 5000])
     const video = elements[0] as VideoElement
     expect(video.id.startsWith('e-')).toBe(true)
@@ -247,7 +248,7 @@ describe('element commands', () => {
   test('moveElement moves across tracks and rejects overlap', () => {
     let { project, trackId } = projectWithVideo()
     project = applyCommand(project, { type: 'addTrack', name: 'B' })
-    const trackB = project.tracks[1]!.id
+    const trackB = mustFind(project.tracks[1], 'second track').id
     project = applyCommand(project, {
       type: 'addElement',
       trackId,
@@ -264,8 +265,8 @@ describe('element commands', () => {
       startMs: 3000,
       toTrackId: trackB,
     })
-    expect(getTrack(moved, trackId)!.elements).toHaveLength(0)
-    expect(getTrack(moved, trackB)!.elements.map((e) => e.id)).toEqual(['e-two', 'e-one'])
+    expect(mustFind(getTrack(moved, trackId), trackId).elements).toHaveLength(0)
+    expect(mustFind(getTrack(moved, trackB), trackB).elements.map((e) => e.id)).toEqual(['e-two', 'e-one'])
     expect(() =>
       applyCommand(project, { type: 'moveElement', elementId: 'e-one', startMs: 1000, toTrackId: trackB }),
     ).toThrow('overlap')
@@ -297,9 +298,9 @@ describe('element commands', () => {
 
   test('magnetic tracks compact after remove, trim, and cross-track moves', () => {
     let project = createProject()
-    const sourceTrackId = project.tracks[0]!.id
+    const sourceTrackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, { type: 'addTrack', name: 'Target' })
-    const targetTrackId = project.tracks[1]!.id
+    const targetTrackId = mustFind(project.tracks[1], 'second track').id
 
     for (const [trackId, id, startMs] of [
       [sourceTrackId, 'e-a', 0],
@@ -317,13 +318,13 @@ describe('element commands', () => {
     project = applyCommand(project, { type: 'setTrackFlags', trackId: targetTrackId, magnetic: true })
 
     project = applyCommand(project, { type: 'removeElement', elementId: 'e-b' })
-    expect(getTrack(project, sourceTrackId)!.elements.map((e) => [e.id, e.startMs])).toEqual([
+    expect(mustFind(getTrack(project, sourceTrackId), sourceTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-a', 0],
       ['e-c', 1000],
     ])
 
     project = applyCommand(project, { type: 'trimElement', elementId: 'e-a', durationMs: 500 })
-    expect(getTrack(project, sourceTrackId)!.elements.map((e) => [e.id, e.startMs])).toEqual([
+    expect(mustFind(getTrack(project, sourceTrackId), sourceTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-a', 0],
       ['e-c', 500],
     ])
@@ -334,10 +335,10 @@ describe('element commands', () => {
       startMs: 4000,
       toTrackId: targetTrackId,
     })
-    expect(getTrack(project, sourceTrackId)!.elements.map((e) => [e.id, e.startMs])).toEqual([
+    expect(mustFind(getTrack(project, sourceTrackId), sourceTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-a', 0],
     ])
-    expect(getTrack(project, targetTrackId)!.elements.map((e) => [e.id, e.startMs])).toEqual([
+    expect(mustFind(getTrack(project, targetTrackId), targetTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-x', 0],
       ['e-c', 1000],
     ])
@@ -363,7 +364,7 @@ describe('element commands', () => {
       atMs: 2500,
       rightElementId: 'e-right',
     })
-    const elements = getTrack(split, trackId)!.elements as VideoElement[]
+    const elements = mustFind(getTrack(split, trackId), trackId).elements as VideoElement[]
     expect(elements).toHaveLength(2)
     expect(elements[0]).toMatchObject({ id: 'e-one', startMs: 1000, durationMs: 1500, trimStartMs: 500 })
     expect(elements[1]).toMatchObject({ id: 'e-right', startMs: 2500, durationMs: 2500, trimStartMs: 2000 })
@@ -371,7 +372,7 @@ describe('element commands', () => {
 
   test('splitElement partitions caption words relative to each half', () => {
     let project = createProject()
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, {
       type: 'addElement',
       trackId,
@@ -394,16 +395,18 @@ describe('element commands', () => {
       atMs: 1000,
       rightElementId: 'e-cap2',
     })
-    const [left, right] = getTrack(split, trackId)!.elements as CaptionElement[]
-    expect(left!.words!.map((w) => w.text)).toEqual(['hello', 'brave'])
-    expect(left!.text).toBe('hello brave')
-    expect(right!.words).toEqual([{ text: 'world', startMs: 200, endMs: 600 }])
-    expect(right!.text).toBe('world')
+    const [leftHalf, rightHalf] = mustFind(getTrack(split, trackId), trackId).elements as CaptionElement[]
+    const left = mustFind(leftHalf, 'left caption')
+    const right = mustFind(rightHalf, 'right caption')
+    expect(mustFind(left.words, 'left caption words').map((w) => w.text)).toEqual(['hello', 'brave'])
+    expect(left.text).toBe('hello brave')
+    expect(right.words).toEqual([{ text: 'world', startMs: 200, endMs: 600 }])
+    expect(right.text).toBe('world')
   })
 
   test('updateElement validates the merged element', () => {
     let project = createProject()
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, {
       type: 'addElement',
       trackId,
@@ -444,7 +447,7 @@ describe('element commands', () => {
     })
     const next = applyCommand(project, { type: 'removeAsset', assetId: 'a-vid' })
     expect(next.assets['a-vid']).toBeUndefined()
-    expect(getTrack(next, trackId)!.elements.map((e) => e.type)).toEqual(['text'])
+    expect(mustFind(getTrack(next, trackId), trackId).elements.map((e) => e.type)).toEqual(['text'])
   })
 })
 
@@ -459,7 +462,7 @@ describe('applyCaptions', () => {
       ],
     })
     expect(project.tracks.map((t) => t.name)).toEqual(['Track 1', 'Captions'])
-    expect(project.tracks[1]!.elements).toHaveLength(2)
+    expect(mustFind(project.tracks[1], 'second track').elements).toHaveLength(2)
 
     // Re-applying replaces instead of stacking.
     project = applyCommand(project, {
@@ -467,8 +470,8 @@ describe('applyCaptions', () => {
       captions: [{ startMs: 0, durationMs: 500, text: 'replaced' }],
     })
     expect(project.tracks).toHaveLength(2)
-    expect(project.tracks[1]!.elements).toHaveLength(1)
-    expect(project.tracks[1]!.elements[0]).toMatchObject({ type: 'caption', text: 'replaced' })
+    expect(mustFind(project.tracks[1], 'second track').elements).toHaveLength(1)
+    expect(mustFind(project.tracks[1], 'second track').elements[0]).toMatchObject({ type: 'caption', text: 'replaced' })
   })
 })
 
@@ -481,7 +484,7 @@ describe('selectors', () => {
       element: { type: 'video', assetId: 'a-vid', startMs: 1000, durationMs: 2000 },
     })
     expect(getProjectDurationMs(project)).toBe(3000)
-    const track = getTrack(project, trackId)!
+    const track = mustFind(getTrack(project, trackId), trackId)
     // Desired position overlaps; nearest free slot is flush after the clip.
     expect(findNearestFreeSlot(track, 2000, 1000)).toBe(3000)
     expect(findNearestFreeSlot(track, 4000, 1000)).toBe(4000)
@@ -526,11 +529,11 @@ describe('detachAudio', () => {
     const next = applyCommand(project, { type: 'detachAudio', elementId: 'e-vid' })
 
     expect(next.tracks).toHaveLength(2)
-    const audioTrack = next.tracks[0]!
+    const audioTrack = mustFind(next.tracks[0], 'first track')
     expect(audioTrack.name).toBe('Audio')
     expect(audioTrack.elements).toHaveLength(1)
 
-    const audio = audioTrack.elements[0]!
+    const audio = mustFind(audioTrack.elements[0], 'detached audio')
     expect(audio.type).toBe('audio')
     expect(audio).toMatchObject({
       startMs: 1000,
@@ -543,7 +546,7 @@ describe('detachAudio', () => {
     // Volume keyframes move to the audio element.
     expect(audio.keyframes?.volume).toHaveLength(2)
 
-    const video = getElement(next, 'e-vid' as `e-${string}`)! as VideoElement
+    const video = mustFind(getElement(next, 'e-vid' as `e-${string}`), 'e-vid') as VideoElement
     expect(video.muted).toBe(true)
     expect(video.keyframes?.volume).toBeUndefined()
     expect(video.keyframes?.opacity).toHaveLength(1)
@@ -555,17 +558,18 @@ describe('detachAudio', () => {
   test('respects toTrackId and rejects overlap there', () => {
     const { project } = projectWithPlacedVideo()
     let next = applyCommand(project, { type: 'addTrack', name: 'Music' })
-    const musicTrackId = next.tracks[1]!.id
+    const musicTrackId = mustFind(next.tracks[1], 'second track').id
     next = applyCommand(next, { type: 'detachAudio', elementId: 'e-vid', toTrackId: musicTrackId })
     expect(next.tracks).toHaveLength(2)
-    expect(getTrack(next, musicTrackId)!.elements[0]!.type).toBe('audio')
+    const musicTrack = mustFind(getTrack(next, musicTrackId), musicTrackId)
+    expect(mustFind(musicTrack.elements[0], 'detached audio').type).toBe('audio')
     // Detaching again: video is now muted.
     expect(() => applyCommand(next, { type: 'detachAudio', elementId: 'e-vid' })).toThrow(CommandError)
   })
 
   test('rejects non-video elements', () => {
     let project = createProject()
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, {
       type: 'addElement',
       trackId,
@@ -605,7 +609,7 @@ describe('flips (negative scale)', () => {
 describe('magnetic tracks', () => {
   function magneticProject(): { project: Project; trackId: `t-${string}` } {
     let project = createProject({ name: 'magnet' })
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, { type: 'setTrackFlags', trackId, magnetic: true })
     project = applyCommand(project, {
       type: 'addElement',
@@ -621,7 +625,7 @@ describe('magnetic tracks', () => {
   }
 
   const order = (p: Project, trackId: string) =>
-    p.tracks.find((t) => t.id === trackId)!.elements.map((e) => [e.id, e.startMs])
+    mustFind(p.tracks.find((t) => t.id === trackId), trackId).elements.map((e) => [e.id, e.startMs])
 
   test('adding clips packs them with no gaps', () => {
     const { project, trackId } = magneticProject()
@@ -633,7 +637,7 @@ describe('magnetic tracks', () => {
 
   test('enabling the magnet compacts existing gaps', () => {
     let project = createProject()
-    const trackId = project.tracks[0]!.id
+    const trackId = mustFind(project.tracks[0], 'first track').id
     project = applyCommand(project, {
       type: 'addElement',
       trackId,
@@ -722,7 +726,7 @@ describe('tool definitions', () => {
   test('every command is exposed as an MCP-shaped tool with JSON Schema params', () => {
     const tools = listToolDefinitions()
     expect(tools.length).toBe(listCommands().length)
-    const split = tools.find((t) => t.name === 'splitElement')!
+    const split = mustFind(tools.find((t) => t.name === 'splitElement'), 'splitElement tool')
     expect(split.description).toContain('Split')
     expect(split.inputSchema.type).toBe('object')
     const properties = split.inputSchema.properties as Record<string, unknown>
