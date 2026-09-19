@@ -20,3 +20,6 @@ release-out/
 # Generated docs
 apps/web/public/docs/
 apps/web/public/docs.md
+
+# Synthetic test media from `bun run fixtures`
+fixtures/media/

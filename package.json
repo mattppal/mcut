@@ -17,6 +17,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "smoke:packages": "bun run scripts/smoke-packages.ts",
+    "fixtures": "bun scripts/fixtures/generate-media.ts --mutate",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "bun run release:check && bun run release:publish",
@@ -41,7 +42,8 @@
     "publint": "0.3.21",
     "tsdown": "0.22.2",
     "turbo": "2.9.18",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "zod": "4.4.3"
   },
   "description": "Open source video editing SDK for TypeScript apps.",
   "author": "Matt Palmer",
