@@ -5,7 +5,9 @@ import { MCP_AGENT_TOOL_DEFINITIONS, MCP_BRIDGE_ONLY_TOOL_NAMES, listServerToolD
 import { EditorEngine, createProject, getElementLocation, listCommands } from '@mcut/timeline'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { GET as toolsJson, dynamic as toolsJsonDynamic } from '../../app/tools.json/route'
+import { GET as toolsCommandsJson } from '../../app/tools.commands.json/route'
+import { GET as toolsFullJson } from '../../app/tools.full.json/route'
+import { GET as toolsJson } from '../../app/tools.json/route'
 import './editor-default-actions'
 import {
   LIVE_MCP_DYNAMIC_TOOL_REQUESTS,
@@ -37,19 +39,9 @@ async function listServerTools() {
   }
 }
 
-function toolsRequest(profile?: string): Request {
-  const url = new URL('http://localhost/tools.json')
-  if (profile) url.searchParams.set('profile', profile)
-  return new Request(url)
-}
-
 describe('MCP tool manifest', () => {
-  test('/tools.json stays dynamic because it varies by profile query', () => {
-    expect(toolsJsonDynamic).toBe('force-dynamic')
-  })
-
-  test('/tools.json defaults to the curated agent profile', async () => {
-    const response = toolsJson(toolsRequest())
+  test('/tools.json serves the curated agent profile', async () => {
+    const response = toolsJson()
     const body = (await response.json()) as {
       profile?: string
       tools?: ReturnType<typeof listMcpToolDefinitions>
@@ -74,8 +66,8 @@ describe('MCP tool manifest', () => {
     }
   })
 
-  test('/tools.json?profile=full exposes static tools, operators, and timeline commands', async () => {
-    const response = toolsJson(toolsRequest('full'))
+  test('/tools.full.json exposes static tools, operators, and timeline commands', async () => {
+    const response = toolsFullJson()
     const body = (await response.json()) as {
       profile?: string
       tools?: ReturnType<typeof listMcpToolDefinitions>
@@ -98,8 +90,8 @@ describe('MCP tool manifest', () => {
     }
   })
 
-  test('/tools.json?profile=commands exposes raw command tools only', async () => {
-    const response = toolsJson(toolsRequest('commands'))
+  test('/tools.commands.json exposes raw command tools only', async () => {
+    const response = toolsCommandsJson()
     const body = (await response.json()) as {
       profile?: string
       tools?: ReturnType<typeof listMcpToolDefinitions>

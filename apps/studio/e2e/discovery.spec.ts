@@ -28,7 +28,7 @@ const FULL_TOOL_COUNT = 120
 type Tool = { name: string; description: string; inputSchema: { type: string; properties: object } }
 
 test('serves the curated agent profile at /tools.json and every command under ?profile=full', async ({ request }) => {
-  const res = await request.get('/tools.json')
+  const res = await request.get('/tools.agent.json')
   expect(res.ok()).toBe(true)
   const agent: { profile: string; tools: Tool[] } = await res.json()
   expect(agent.profile).toBe('agent')
@@ -37,7 +37,7 @@ test('serves the curated agent profile at /tools.json and every command under ?p
     'MCP_AGENT_TOOL_NAMES in @mcut/mcp-server/contract',
   ).toEqual(AGENT_TOOL_NAMES)
 
-  const fullRes = await request.get('/tools.json?profile=full')
+  const fullRes = await request.get('/tools.full.json')
   expect(fullRes.ok()).toBe(true)
   const full: { profile: string; tools: Tool[] } = await fullRes.json()
   expect(full.profile).toBe('full')
