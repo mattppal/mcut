@@ -1,8 +1,7 @@
 import { z } from 'zod'
-import { listEffectTypes } from '../effects'
-import { listElementTypes } from '../element-registry'
-import { listTransitionTypes } from '../transitions'
-import type { Project } from '../model'
+import { effectSchema } from '../effects'
+import { elementInputSchema, type Project } from '../model'
+import { TRANSITION_TYPES } from '../transitions'
 import {
   generateArgs,
   isRecord,
@@ -104,11 +103,11 @@ function jsonSchemaOf(schema: z.ZodType): unknown {
 }
 
 export function effectTemplate(rng: Rng): ArgTemplate {
-  return generateArgs(jsonSchemaOf(rng.pick(listEffectTypes()).schema), rng)
+  return generateArgs(jsonSchemaOf(effectSchema), rng)
 }
 
 function transitionTemplate(rng: Rng): ArgTemplate {
-  return { type: rng.pick(listTransitionTypes()), durationMs: rng.int(100, 5000) }
+  return { type: rng.pick(TRANSITION_TYPES), durationMs: rng.int(100, 5000) }
 }
 
 function timeMapTemplate(rng: Rng): ArgTemplate {
@@ -145,7 +144,7 @@ const elementOverrides: Overrides = {
 }
 
 export function elementTemplate(rng: Rng): ArgTemplate {
-  return generateArgs(jsonSchemaOf(rng.pick(listElementTypes()).inputSchema), rng, { overrides: elementOverrides })
+  return generateArgs(jsonSchemaOf(elementInputSchema), rng, { overrides: elementOverrides })
 }
 
 export const commandOverrides: Overrides = { ...refinedShapes, element: elementTemplate }
