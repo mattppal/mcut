@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand } from './commands'
-import { createProject, type Project, type VideoElement } from './model'
+import { EditorEngine } from './engine'
+import { createProject, parseProject, type Project, type VideoElement } from './model'
 import { getElement } from './selectors'
 import { getSourceTimeMs, makeConstantSpeedMap } from './speed'
 
@@ -94,6 +95,40 @@ describe('splitting reversed clips', () => {
     expect(getSourceTimeMs(left, 1000)).toBe(getSourceTimeMs(original, 1000))
     expect(getSourceTimeMs(right, 0)).toBe(getSourceTimeMs(original, 1000))
     expect(getSourceTimeMs(right, 3000)).toBe(getSourceTimeMs(original, 4000))
+  })
+
+  test('split of a reversed speed-ramped clip keeps trimStartMs integral', () => {
+    const engine = new EditorEngine()
+    engine.dispatch({ type: 'addAsset', asset: { id: 'a-1', kind: 'video', src: 'x.mp4' } })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: {
+        id: 'e-ramp',
+        type: 'video',
+        assetId: 'a-1',
+        startMs: 2862,
+        durationMs: 3019,
+        reversed: true,
+        timeMap: [
+          { timeMs: 0, value: 0 },
+          { timeMs: 329, value: 4128 },
+        ],
+      },
+    })
+    engine.dispatch({ type: 'splitElement', elementId: 'e-ramp', atMs: 2943 })
+    const halves = (project: Project) =>
+      project.tracks.flatMap((track) =>
+        track.elements.flatMap((e) => (e.type === 'video' ? [[e.startMs, e.durationMs, e.trimStartMs]] : [])),
+      )
+    expect(halves(engine.project)).toEqual([
+      [2862, 81, 3111],
+      [2943, 2938, 0],
+    ])
+    expect(halves(parseProject(JSON.parse(JSON.stringify(engine.project))))).toEqual([
+      [2862, 81, 3111],
+      [2943, 2938, 0],
+    ])
   })
 
   test('reversed clips stay inside their asset', () => {

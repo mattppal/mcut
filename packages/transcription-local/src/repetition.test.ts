@@ -29,4 +29,13 @@ describe('hasRepetitionLoop', () => {
   test('respects explicit thresholds', () => {
     expect(hasRepetitionLoop(['a', 'b', 'a', 'b'], { minRepeats: 2 })).toBe(true)
   })
+
+  test('unigrams need 6 repeats, bigrams need 4, longer ngrams need 3', () => {
+    expect(hasRepetitionLoop(['a', 'a', 'a', 'a', 'a'])).toBe(false)
+    expect(hasRepetitionLoop(['a', 'a', 'a', 'a', 'a', 'a'])).toBe(true)
+    expect(hasRepetitionLoop(['a', 'b', 'a', 'b', 'a', 'b'])).toBe(false)
+    expect(hasRepetitionLoop(['a', 'b', 'a', 'b', 'a', 'b', 'a', 'b'])).toBe(true)
+    expect(hasRepetitionLoop(['a', 'b', 'c', 'a', 'b', 'c'])).toBe(false)
+    expect(hasRepetitionLoop(['a', 'b', 'c', 'a', 'b', 'c', 'a', 'b', 'c'])).toBe(true)
+  })
 })

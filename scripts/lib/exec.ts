@@ -27,7 +27,6 @@ function spawn(command: string[], options: RunOptions): RunResult {
   }
 }
 
-/** Run a command, throwing with its output on failure. */
 export function run(command: string[], options: RunOptions = {}): string {
   const result = spawn(command, options)
   if (!result.success) {
@@ -44,7 +43,6 @@ export function run(command: string[], options: RunOptions = {}): string {
   return result.stdout
 }
 
-/** Run a command and report the outcome instead of throwing. */
 export function tryRun(command: string[], options: RunOptions = {}): RunResult {
   return spawn(command, options)
 }

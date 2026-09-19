@@ -103,7 +103,7 @@ export const captionWordSchema = z.object({
   text: z.string(),
   startMs: z.number().int().nonnegative(),
   endMs: z.number().int().nonnegative(),
-})
+}).refine((word) => word.endMs >= word.startMs, 'caption word endMs must be >= startMs')
 
 const visualShape = {
   effects: effectsSchema.optional(),
@@ -408,7 +408,7 @@ function splitTrimmedMedia(
   }
   if (element.reversed) {
     const leftSpanMs = getSourceSpanMs(left)
-    left.trimStartMs = element.trimStartMs + (originalSpanMs - leftSpanMs)
+    left.trimStartMs = Math.floor(element.trimStartMs + (originalSpanMs - leftSpanMs))
   }
   if (element.fadeOutMs !== undefined) delete left.fadeOutMs
   if (element.fadeInMs !== undefined) delete right.fadeInMs

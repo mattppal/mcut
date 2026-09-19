@@ -31,6 +31,7 @@ import {
   type Track,
   type TrackId,
 } from '@mcut/timeline'
+import { OperatorError } from './operators'
 
 function getFitScale(project: { width: number; height: number }, width: number, height: number): number {
   if (width <= 0 || height <= 0) return 1
@@ -140,12 +141,12 @@ type CollageVideoAsset = AssetRef & {
 type CollageVideoAssets = readonly [CollageVideoAsset, CollageVideoAsset, ...CollageVideoAsset[]]
 
 function toCollageVideoAsset(asset: AssetRef): CollageVideoAsset {
-  if (asset.kind !== 'video') throw new Error(`"${asset.name ?? asset.id}" is not a video`)
+  if (asset.kind !== 'video') throw new OperatorError('invalid-payload', `"${asset.name ?? asset.id}" is not a video`)
   if (!asset.width || !asset.height) {
-    throw new Error(`"${asset.name ?? asset.id}" is missing video dimensions`)
+    throw new OperatorError('invalid-payload', `"${asset.name ?? asset.id}" is missing video dimensions`)
   }
   if (!asset.durationMs) {
-    throw new Error(`"${asset.name ?? asset.id}" is missing video duration`)
+    throw new OperatorError('invalid-payload', `"${asset.name ?? asset.id}" is missing video duration`)
   }
   return {
     ...asset,
@@ -158,7 +159,7 @@ function toCollageVideoAsset(asset: AssetRef): CollageVideoAsset {
 
 function collageVideoAssets(assets: readonly AssetRef[]): CollageVideoAssets {
   const [first, second, ...rest] = assets
-  if (!first || !second) throw new Error('Select at least two videos')
+  if (!first || !second) throw new OperatorError('invalid-payload', 'Select at least two videos')
   const videos: CollageVideoAssets = [
     toCollageVideoAsset(first),
     toCollageVideoAsset(second),
@@ -168,7 +169,8 @@ function collageVideoAssets(assets: readonly AssetRef[]): CollageVideoAssets {
   const baseRatio = base.width / base.height
   const mismatch = videos.find((asset) => Math.abs(asset.width / asset.height - baseRatio) > 0.001)
   if (mismatch) {
-    throw new Error(
+    throw new OperatorError(
+      'invalid-payload',
       `All videos must use the same aspect ratio (${base.width}:${base.height} vs ` +
         `${mismatch.width}:${mismatch.height})`,
     )

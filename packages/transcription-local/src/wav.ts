@@ -1,23 +1,21 @@
-/**
- * Minimal WAV reader → 16kHz mono Float32Array (Whisper's input format).
- * The editor extracts clip audio as 16kHz WAV already (`extractAudioToWav`),
- * so this covers the hot path without any AudioContext — it runs in workers
- * and tests alike. Non-WAV input falls back to decodeAudioData upstream.
- */
-
+// Whisper's input sample rate. https://github.com/openai/whisper/blob/main/whisper/audio.py
 export const WHISPER_SAMPLE_RATE = 16_000
+
+const RIFF = 0x52494646
+const WAVE = 0x57415645
+const FMT = 0x666d7420
+const DATA = 0x64617461
 
 export interface DecodedAudio {
   samples: Float32Array
   sampleRate: number
 }
 
-/** Parse a PCM/float WAV file. Returns null when it isn't one. */
 export function parseWav(buffer: ArrayBuffer): DecodedAudio | null {
   const view = new DataView(buffer)
   if (buffer.byteLength < 44) return null
-  if (view.getUint32(0) !== 0x52494646 /* RIFF */) return null
-  if (view.getUint32(8) !== 0x57415645 /* WAVE */) return null
+  if (view.getUint32(0) !== RIFF) return null
+  if (view.getUint32(8) !== WAVE) return null
 
   let offset = 12
   let format: { audioFormat: number; channels: number; sampleRate: number; bitsPerSample: number } | null = null
@@ -25,14 +23,14 @@ export function parseWav(buffer: ArrayBuffer): DecodedAudio | null {
     const id = view.getUint32(offset)
     const size = view.getUint32(offset + 4, true)
     const body = offset + 8
-    if (id === 0x666d7420 /* fmt  */) {
+    if (id === FMT) {
       format = {
         audioFormat: view.getUint16(body, true),
         channels: view.getUint16(body + 2, true),
         sampleRate: view.getUint32(body + 4, true),
         bitsPerSample: view.getUint16(body + 14, true),
       }
-    } else if (id === 0x64617461 /* data */ && format) {
+    } else if (id === DATA && format) {
       const end = Math.min(buffer.byteLength, body + size)
       return decodeData(view, body, end, format)
     }
@@ -66,8 +64,7 @@ function decodeData(
     }
     return Number.NaN
   }
-  // Probe the first frame for an unsupported encoding before looping.
-  if (frames > 0 && Number.isNaN(read(start))) return null
+  if (!firstFrameUsesSupportedEncoding(read, start, frames)) return null
 
   for (let frame = 0; frame < frames; frame++) {
     const at = start + frame * frameBytes
@@ -78,7 +75,14 @@ function decodeData(
   return { samples, sampleRate }
 }
 
-/** Linear-interpolation resample (fine for speech models). */
+function firstFrameUsesSupportedEncoding(
+  read: (at: number) => number,
+  start: number,
+  frames: number,
+): boolean {
+  return frames === 0 || !Number.isNaN(read(start))
+}
+
 export function resampleTo(audio: DecodedAudio, targetRate: number): Float32Array {
   if (audio.sampleRate === targetRate) return audio.samples
   const ratio = audio.sampleRate / targetRate

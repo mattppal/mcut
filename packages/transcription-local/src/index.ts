@@ -27,22 +27,13 @@ export type {
   WhisperWorkerResponse,
 } from './protocol'
 
-/**
- * On-device Whisper provider (Transformers.js in a dedicated worker).
- * Reliability over flash: capability-gated hard (WebGPU + enough memory),
- * chunked with per-window progress, VAD + repetition guards in the worker.
- * On-device is OFFERED, never forced — keep a server provider as the
- * default and let users opt in (the model is a 40–150MB one-time download,
- * cached by the browser after that).
- */
-
-/** Built-in model choices (ONNX community builds of OpenAI Whisper). */
 export const WHISPER_MODELS = {
-  /** Multilingual, ~145MB at q8 — the WebGPU default. */
   base: 'onnx-community/whisper-base',
-  /** English-only, ~40MB — the low-memory default. */
   'tiny.en': 'onnx-community/whisper-tiny.en',
 } as const
+
+const MIN_DEVICE_MEMORY_GIB = 4
+const ROOMY_DEVICE_MEMORY_GIB = 8
 
 interface NavigatorCapabilities {
   gpu?: unknown
@@ -53,43 +44,31 @@ function capabilities(): NavigatorCapabilities {
   return typeof navigator === 'undefined' ? {} : (navigator as unknown as NavigatorCapabilities)
 }
 
-/**
- * Hard capability gate: WebGPU plus ≥4GB device memory. Browsers that don't
- * report `deviceMemory` (Safari/Firefox) pass on WebGPU alone — the spec
- * caps reported values at 8 anyway.
- */
 export function isLocalTranscriptionSupported(): boolean {
   if (typeof Worker === 'undefined') return false
   const { gpu, deviceMemory } = capabilities()
   if (!gpu) return false
-  return deviceMemory === undefined || deviceMemory >= 4
+  // Safari and Firefox omit deviceMemory. https://www.w3.org/TR/device-memory-1/
+  return deviceMemory === undefined || deviceMemory >= MIN_DEVICE_MEMORY_GIB
 }
 
-/** whisper-base on roomy machines, whisper-tiny.en when memory is tight. */
 export function pickDefaultModel(): string {
   const { deviceMemory } = capabilities()
-  return deviceMemory !== undefined && deviceMemory < 8
+  return deviceMemory !== undefined && deviceMemory < ROOMY_DEVICE_MEMORY_GIB
     ? WHISPER_MODELS['tiny.en']
     : WHISPER_MODELS.base
 }
 
 export interface LocalWhisperProgress {
-  /** 'model' while downloading/loading weights, then 'transcribe'. */
   phase: 'model' | 'transcribe'
-  /** 0–1 within the phase. */
   progress: number
 }
 
 export interface CreateLocalWhisperProviderOptions {
-  /** A {@link WHISPER_MODELS} key or any HF ASR model id. Default {@link pickDefaultModel}. */
   model?: keyof typeof WHISPER_MODELS | (string & {})
-  /** Inference device. Default 'webgpu'. */
   device?: 'webgpu' | 'wasm'
-  /** Quantization. Default 'q8'. */
   dtype?: WhisperDtype
-  /** Model download + transcription progress. */
   onProgress?: (progress: LocalWhisperProgress) => void
-  /** Override worker creation (custom bundling setups). */
   createWorker?: () => Worker
   id?: string
 }
@@ -104,15 +83,19 @@ export function createLocalWhisperProvider(
   const device = options.device ?? 'webgpu'
   const dtype = options.dtype ?? 'q8'
 
-  // One worker per provider: the loaded model survives across calls.
-  let worker: Worker | null = null
+  let reusedWorker: Worker | null = null
   let requestId = 0
 
   const ensureWorker = (): Worker => {
-    worker ??= options.createWorker
+    reusedWorker ??= options.createWorker
       ? options.createWorker()
       : new Worker(new URL('./whisper-worker.js', import.meta.url), { type: 'module' })
-    return worker
+    return reusedWorker
+  }
+
+  const terminateWorkerOnAbort = (target: Worker): void => {
+    target.terminate()
+    reusedWorker = null
   }
 
   return {
@@ -136,15 +119,12 @@ export function createLocalWhisperProvider(
         }
         const onAbort = () => {
           cleanup()
-          // Mid-inference there is no in-band cancel: drop the worker (the
-          // model cache makes the next spin-up cheap).
-          target.terminate()
-          worker = null
+          terminateWorkerOnAbort(target)
           reject(signal?.reason ?? new DOMException('Transcription aborted', 'AbortError'))
         }
         const onError = (event: ErrorEvent) => {
           cleanup()
-          worker = null
+          reusedWorker = null
           reject(event.error instanceof Error ? event.error : new Error(event.message || 'Whisper worker crashed'))
         }
         const onMessage = (event: MessageEvent<WhisperWorkerResponse>) => {
@@ -175,28 +155,27 @@ export function createLocalWhisperProvider(
   }
 }
 
-/** Normalize any {@link TranscribeInput} into 16kHz mono PCM. */
 async function decodeToWhisperInput(input: TranscribeInput): Promise<Float32Array> {
   const buffer = await toArrayBuffer(input.audio)
   const wav = parseWav(buffer)
   if (wav) return resampleTo(wav, WHISPER_SAMPLE_RATE)
-
-  // Compressed audio: lean on the browser decoder (main-thread only).
-  if (typeof AudioContext !== 'undefined') {
-    const context = new AudioContext({ sampleRate: WHISPER_SAMPLE_RATE })
-    try {
-      const decoded = await context.decodeAudioData(buffer.slice(0))
-      const mono = new Float32Array(decoded.length)
-      for (let c = 0; c < decoded.numberOfChannels; c++) {
-        const channel = decoded.getChannelData(c)
-        for (let i = 0; i < channel.length; i++) mono[i]! += channel[i]! / decoded.numberOfChannels
-      }
-      return resampleTo({ samples: mono, sampleRate: decoded.sampleRate }, WHISPER_SAMPLE_RATE)
-    } finally {
-      void context.close()
-    }
-  }
+  if (typeof AudioContext !== 'undefined') return decodeCompressedAudioOnMainThread(buffer)
   throw new Error('Unsupported audio: expected WAV (use extractAudioToWav) or a browser context')
+}
+
+async function decodeCompressedAudioOnMainThread(buffer: ArrayBuffer): Promise<Float32Array> {
+  const context = new AudioContext({ sampleRate: WHISPER_SAMPLE_RATE })
+  try {
+    const decoded = await context.decodeAudioData(buffer.slice(0))
+    const mono = new Float32Array(decoded.length)
+    for (let c = 0; c < decoded.numberOfChannels; c++) {
+      const channel = decoded.getChannelData(c)
+      for (let i = 0; i < channel.length; i++) mono[i]! += channel[i]! / decoded.numberOfChannels
+    }
+    return resampleTo({ samples: mono, sampleRate: decoded.sampleRate }, WHISPER_SAMPLE_RATE)
+  } finally {
+    void context.close()
+  }
 }
 
 async function toArrayBuffer(audio: TranscribeInput['audio']): Promise<ArrayBuffer> {

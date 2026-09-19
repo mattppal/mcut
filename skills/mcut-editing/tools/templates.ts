@@ -1,8 +1,3 @@
-/**
- * Starter projects, built through the engine so they can never drift from the
- * schema. Every id is fixed: templates must be byte-stable across generate
- * runs (CI diffs them) and recipes reference these ids literally.
- */
 import {
   EditorEngine,
   createProject,
@@ -24,8 +19,7 @@ function dispatchAll(project: Project, commands: BuiltinCommand[]): Project {
   return engine.project
 }
 
-/** The default layouts, with fixed ids (createDefaultLayouts() randomizes them). */
-const LAYOUTS: CommandOfType<'saveLayout'>['layout'][] = [
+const FIXED_ID_LAYOUTS: CommandOfType<'saveLayout'>['layout'][] = [
   {
     id: 'lay-screen-cam',
     name: 'Screen + Cam',
@@ -134,8 +128,7 @@ export const TEMPLATES: TemplateDefinition[] = [
             trackId: 't-camera',
             element: { id: 'e-camera', type: 'video', startMs: 0, durationMs: 90000, assetId: 'a-camera' },
           },
-          ...LAYOUTS.map((layout) => ({ type: 'saveLayout', layout }) satisfies BuiltinCommand),
-          // Bottom layer (t-default) becomes the "screen" role, top the "camera".
+          ...FIXED_ID_LAYOUTS.map((layout) => ({ type: 'saveLayout', layout }) satisfies BuiltinCommand),
           { type: 'createMulticam', elementIds: ['e-screen', 'e-camera'], multicamId: 'e-multicam' },
           { type: 'removeTrack', trackId: 't-camera' },
         ],

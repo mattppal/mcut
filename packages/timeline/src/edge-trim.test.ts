@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError } from './commands'
 import { applyEdgeTrim, getEdgeTrimRange } from './edge-trim'
-import { createProject, type Project, type TimelineElement, type VideoElement } from './model'
+import { EditorEngine } from './engine'
+import { createProject, parseProject, type Project, type TimelineElement, type VideoElement } from './model'
 import { getElement, getTrack } from './selectors'
 import { getSourceTimeMs, makeConstantSpeedMap } from './speed'
+import { thrownBy } from './test-helpers'
 
 const TRACK = 't-default'
 
@@ -476,6 +478,33 @@ describe('rippleTrim', () => {
     const left = getElement(project, 'e-2')!
     const right = getElement(project, 'e-3')!
     expect(left.startMs + left.durationMs).toBe(right.startMs)
+  })
+
+  test('rejects a start-edge rippleTrim whose duration leaves the safe integer range', () => {
+    const engine = new EditorEngine()
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { id: 'e-text', type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
+    })
+    const thrown = thrownBy(() =>
+      engine.dispatch({ type: 'rippleTrim', elementId: 'e-text', edge: 'start', deltaMs: -9007199254740991 }),
+    )
+    expect(thrown).toBeInstanceOf(CommandError)
+    expect(thrown).toMatchObject({ code: 'out-of-bounds' })
+    expect(getElement(engine.project, 'e-text')).toMatchObject({ startMs: 1000, durationMs: 1000 })
+    expect(parseProject(JSON.parse(JSON.stringify(engine.project)))).toEqual(engine.project)
+  })
+
+  test('start-edge rippleTrim still grows a text element in range', () => {
+    const engine = new EditorEngine()
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { id: 'e-text', type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
+    })
+    engine.dispatch({ type: 'rippleTrim', elementId: 'e-text', edge: 'start', deltaMs: -500 })
+    expect(getElement(engine.project, 'e-text')).toMatchObject({ startMs: 1000, durationMs: 1500 })
   })
 })
 

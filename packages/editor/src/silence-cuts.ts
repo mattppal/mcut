@@ -9,6 +9,7 @@ import {
   type Project,
   type TimelineElement,
 } from '@mcut/timeline'
+import { OperatorError } from './operators'
 
 type ClipElement = TimelineElement & { type: 'video' | 'audio' }
 
@@ -70,14 +71,15 @@ export function planSilenceCuts(
 
   const parsedId = elementIdSchema.safeParse(elementId)
   const location = parsedId.success ? getElementLocation(project, parsedId.data) : undefined
-  if (!location) throw new Error(`no element "${elementId}" in project`)
+  if (!location) throw new OperatorError('unknown-element', `no element "${elementId}" in project`)
   const element = location.element
   const id = element.id
   if (element.type !== 'video' && element.type !== 'audio') {
-    throw new Error(`silence cuts apply to video/audio elements, not "${element.type}"`)
+    throw new OperatorError('invalid-payload', `silence cuts apply to video/audio elements, not "${element.type}"`)
   }
   if (element.timeMap) {
-    throw new Error(
+    throw new OperatorError(
+      'unsupported',
       `element "${elementId}" has a time remap; silence cuts require 1x playback ` +
         '(clear it with setTimeMap null first)',
     )
@@ -90,7 +92,8 @@ export function planSilenceCuts(
     .filter((word) => word.endMs > windowStart && word.startMs < windowEnd)
     .sort((a, b) => a.startMs - b.startMs)
   if (!firstWord) {
-    throw new Error(
+    throw new OperatorError(
+      'invalid-payload',
       `transcript has no words inside the element's source window ` +
         `(${windowStart}-${windowEnd}ms); refusing to remove silence without word timings`,
     )
@@ -211,7 +214,7 @@ function findSilences(
   }
 
   if (merged.some((s) => s.startMs <= windowStart && s.endMs >= windowEnd)) {
-    throw new Error('silence cut would remove the entire element; check the transcript timing')
+    throw new OperatorError('out-of-bounds', 'silence cut would remove the entire element; check the transcript timing')
   }
 
   return merged
