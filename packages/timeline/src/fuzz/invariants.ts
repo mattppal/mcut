@@ -141,7 +141,7 @@ function roundTrip(project: Project): string[] {
   return [firstDifference(document, parsed, 'project') ?? 'saved document and re-parsed project differ']
 }
 
-function firstDifference(saved: unknown, parsed: unknown, path: string): string | undefined {
+export function firstDifference(saved: unknown, parsed: unknown, path: string): string | undefined {
   if (Bun.deepEquals(saved, parsed, true)) return undefined
   const mismatch = `at ${path} saved ${show(saved)} parsed back as ${show(parsed)}`
   if (Array.isArray(saved) && Array.isArray(parsed)) {

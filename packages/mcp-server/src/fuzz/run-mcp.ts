@@ -1,5 +1,4 @@
-import { checkProjectInvariants, type Violation } from '../../../timeline/src/fuzz/invariants'
-import { isRecord } from '../../../timeline/src/fuzz/json-schema-gen'
+import { checkProjectInvariants, firstDifference, type Violation } from '../../../timeline/src/fuzz/invariants'
 import { matchKnownFailure, type KnownFailure } from '../../../timeline/src/fuzz/known-failures'
 import { resolveArgs, type Plan } from '../../../timeline/src/fuzz/plan'
 import type { Project } from '../../../timeline/src/model'
@@ -144,26 +143,6 @@ function inspect(snapshot: ProjectSnapshot): Violation[] {
 function replayedIssue(tool: string, violations: Violation[], quarantined: Quarantined | undefined): string | undefined {
   if (quarantined === undefined || !redoTools.has(tool)) return undefined
   return Bun.deepEquals(violations, quarantined.violations, true) ? quarantined.issue : undefined
-}
-
-function firstDifference(saved: unknown, parsed: unknown, path: string): string | undefined {
-  if (Bun.deepEquals(saved, parsed, true)) return undefined
-  if (Array.isArray(saved) && Array.isArray(parsed)) {
-    for (let i = 0; i < Math.max(saved.length, parsed.length); i++) {
-      const difference = firstDifference(saved[i], parsed[i], `${path}[${i}]`)
-      if (difference !== undefined) return difference
-    }
-  } else if (isRecord(saved) && isRecord(parsed)) {
-    for (const key of new Set([...Object.keys(saved), ...Object.keys(parsed)])) {
-      const difference = firstDifference(saved[key], parsed[key], `${path}.${key}`)
-      if (difference !== undefined) return difference
-    }
-  }
-  return `at ${path} server sent ${show(saved)} which parses back as ${show(parsed)}`
-}
-
-function show(value: unknown): string {
-  return value === undefined ? 'undefined' : JSON.stringify(value)
 }
 
 function describe(error: unknown): string {
