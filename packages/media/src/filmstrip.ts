@@ -3,30 +3,20 @@ import { createCanvasSurface, getNativeVideoFilmstrip, type CanvasSurface } from
 import { inputFor, type MediaSourceLike } from './probe'
 
 export interface FilmstripOptions {
-  /** Number of evenly spaced frames. */
   frameCount: number
-  /** Width of each frame in px (height follows aspect). Default 80. */
   frameWidth?: number
-  /** Source range to sample. Defaults to the whole file. */
   startMs?: number
   endMs?: number
 }
 
 export interface Filmstrip {
-  /** All frames drawn side-by-side, `frameCount × frameWidth` wide. */
   canvas: HTMLCanvasElement | OffscreenCanvas
   frameWidth: number
   frameHeight: number
   frameCount: number
-  /** Source timestamp of each frame, in ms. */
   timestampsMs: number[]
 }
 
-/**
- * Sample evenly spaced poster frames into one horizontal strip — the
- * filmstrip background of timeline video clips. Returns `null` for files
- * without a video track.
- */
 async function getCanvasSinkFilmstrip(
   src: MediaSourceLike,
   options: FilmstripOptions,
