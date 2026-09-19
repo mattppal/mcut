@@ -57,7 +57,7 @@ describe('searchCaptions', () => {
       endChar: 11,
       firstWord: 1,
       lastWord: 1,
-      timeMs: 1500, // 1000 + 500
+      timeMs: 1500,
       endTimeMs: 1900,
     })
   })
@@ -129,7 +129,7 @@ describe('replaceMatch', () => {
 })
 
 describe('replaceAllMatches', () => {
-  test('replaces every occurrence across captions', () => {
+  test('replaces every occurrence from right to left so earlier offsets stay valid', () => {
     const a = caption('c-a', 0, 'acme makes acme tools', [
       ['acme', 0, 200],
       ['makes', 300, 500],
@@ -148,7 +148,6 @@ describe('replaceAllMatches', () => {
       'Corp',
       'tools',
     ])
-    // Timings stay inside the original spans.
     expect(patches[0]!.words![0]).toMatchObject({ startMs: 0 })
     expect(patches[0]!.words![1]).toMatchObject({ endMs: 200 })
   })
@@ -199,7 +198,7 @@ describe('mergeCaptions', () => {
       ['old', 0, 300],
       ['friend', 400, 800],
     ])
-    const merged = mergeCaptions(b, a) // order-independent
+    const merged = mergeCaptions(b, a)
     expect(merged).toMatchObject({ startMs: 1000, durationMs: 4000, text: 'Hello there old friend' })
     expect(merged.words!.map((w) => w.startMs)).toEqual([0, 500, 2000, 2400])
   })

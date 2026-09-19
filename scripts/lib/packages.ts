@@ -3,7 +3,6 @@ import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { run } from './exec'
 
-/** The union of package.json fields the release scripts read. */
 export interface PackageManifest {
   name?: string
   version?: string
@@ -39,7 +38,6 @@ export async function readPackageJson(path: string): Promise<PackageManifest> {
   return JSON.parse(await readFile(path, 'utf8')) as PackageManifest
 }
 
-/** Every named, non-private package under packages/, sorted by directory. */
 export async function discoverPublicPackages(): Promise<PublicPackage[]> {
   const entries = await readdir(packagesDir, { withFileTypes: true })
   const packages: PublicPackage[] = []
@@ -55,7 +53,6 @@ export async function discoverPublicPackages(): Promise<PublicPackage[]> {
   return packages.sort((a, b) => a.dir.localeCompare(b.dir))
 }
 
-/** `bun pm pack` a package into `destination` and return the tarball path. */
 export function packTarball(dir: string, destination: string): string {
   const output = run(['bun', 'pm', 'pack', '--destination', destination, '--quiet'], { cwd: dir })
   const tarball = output

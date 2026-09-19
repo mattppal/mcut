@@ -6,12 +6,10 @@ import { TEMPLATES, buildTemplate } from './templates'
 
 describe('templates', () => {
   for (const template of TEMPLATES) {
-    test(`${template.id} parses, lints clean, and is byte-stable`, () => {
+    test(`${template.id} parses, lints clean, and two builds are byte-identical`, () => {
       const project = template.build()
-      // Round-trip through JSON the way a consumer would load it.
       parseProject(JSON.parse(JSON.stringify(project)))
       expect(lintProject(project).filter((issue) => issue.severity === 'error')).toEqual([])
-      // generate.ts output is diffed in CI; two builds must be identical.
       expect(JSON.stringify(template.build())).toBe(JSON.stringify(project))
     })
   }

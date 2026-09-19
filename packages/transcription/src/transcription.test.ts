@@ -10,7 +10,6 @@ const words: TranscriptWord[] = [
   { text: 'this', startMs: 900, endMs: 1100 },
   { text: 'is', startMs: 1150, endMs: 1250 },
   { text: 'mcut.', startMs: 1300, endMs: 1700 },
-  // 2s silence gap → new caption
   { text: 'Second', startMs: 3700, endMs: 4100 },
   { text: 'caption.', startMs: 4150, endMs: 4600 },
 ]
@@ -76,7 +75,7 @@ describe('toCaptionElements', () => {
       words: [],
       segments: [
         { text: 'a', startMs: 0, endMs: 1000 },
-        { text: 'b', startMs: 500, endMs: 1500 }, // overlaps previous
+        { text: 'b', startMs: 500, endMs: 1500 },
       ],
     }
     const elements = toCaptionElements(overlapping)

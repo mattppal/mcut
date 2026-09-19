@@ -1,9 +1,3 @@
-/**
- * Executable recipes: each one is BOTH documentation (rendered into
- * references/recipes.md by generate.ts) and a test fixture (replayed against
- * its template by recipes.test.ts). If a command's schema or semantics
- * change, the recipe test breaks before the docs lie.
- */
 import { buildCaptionsCommand, planSilenceCuts } from '@mcut/cli'
 import type { BuiltinCommand, Project } from '@mcut/timeline'
 import { SAMPLE_TRANSCRIPT } from './sample-transcript'
@@ -12,20 +6,11 @@ import { buildTemplate } from './templates'
 export interface Recipe {
   id: string
   title: string
-  /** The user phrasing this recipe answers. */
   intent: string
-  /** Template id the commands run against. */
   template: string
-  /** Markdown: why these commands, and which knobs to turn. */
   notes: string
-  /**
-   * Literal commands, replayable as-is (ids reference the template).
-   * Computed recipes (silence cuts) use `apply` + `cli` instead.
-   */
   commands?: BuiltinCommand[]
-  /** CLI equivalent, shown alongside the commands. */
   cli?: string
-  /** For computed edits that cannot be expressed as static commands. */
   apply?: (project: Project) => Project
   verify: (project: Project) => void
 }

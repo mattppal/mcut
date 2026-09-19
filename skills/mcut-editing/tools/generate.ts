@@ -1,9 +1,3 @@
-/**
- * Regenerates everything derived from code: references/commands.md and
- * references/recipes.md, the starter templates, and the preset data assets.
- * Output is deterministic. CI rebuilds and diffs it, so the published skill
- * can never drift from the registries it documents.
- */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { PLATFORM_PRESETS, type PlatformPreset } from '@mcut/cli'
@@ -71,7 +65,7 @@ function sanitizePreset(preset: PlatformPreset): PlatformPreset {
   return { ...preset, notes: plainProse(preset.notes) }
 }
 
-const EXCLUDED_COMMANDS = new Set([
+const COMMANDS_HIDDEN_FROM_STUDIO = new Set([
   'applyThumbnail',
 ])
 
@@ -93,7 +87,7 @@ function typeLabel(schema: unknown): string {
 }
 
 function commandsMarkdown(): string {
-  const tools = listToolDefinitions().filter((tool) => !EXCLUDED_COMMANDS.has(tool.name))
+  const tools = listToolDefinitions().filter((tool) => !COMMANDS_HIDDEN_FROM_STUDIO.has(tool.name))
   const lines: string[] = [
     '# Command reference',
     '',
