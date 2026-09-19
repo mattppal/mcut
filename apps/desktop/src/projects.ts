@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { DesktopError, type InvokeHandlers } from '@mcut/desktop-ipc'
 import { ProjectFormatError, parseProject, type Project } from '@mcut/timeline'
@@ -9,7 +9,34 @@ const PROJECT_EXTENSION = '.mcut.json'
 
 const PROJECT_FILTERS: FileFilter[] = [{ name: 'mcut project', extensions: ['mcut.json', 'json'] }]
 
+const grantedProjectPaths = new Set<string>()
+
 export type ProjectHandlers = Pick<InvokeHandlers, 'project.open' | 'project.save'>
+
+function grantProjectPath(file: string): string {
+  const resolved = path.resolve(file)
+  grantedProjectPaths.add(resolved)
+  return resolved
+}
+
+function assertGrantedSavePath(file: string): string {
+  const resolved = path.resolve(file)
+  if (!grantedProjectPaths.has(resolved)) {
+    throw new DesktopError('not-found', `${resolved} is not a granted project path.`)
+  }
+  if (!resolved.endsWith('.json')) {
+    throw new DesktopError('io', `${resolved} is not a json project file.`)
+  }
+  try {
+    if (statSync(resolved).isDirectory()) {
+      throw new DesktopError('io', `${resolved} is a directory.`)
+    }
+  } catch (error) {
+    if (error instanceof DesktopError) throw error
+    if (!isMissingFile(error)) throw new DesktopError('io', `Could not write ${resolved}. ${failureMessage(error)}`)
+  }
+  return resolved
+}
 
 function projectFileName(project: Project): string {
   const slug = (project.name || 'untitled').trim().replace(/[\\/:*?"<>|]+/g, '-')
@@ -37,7 +64,7 @@ async function chooseSavePath(project: Project): Promise<string> {
   const window = ownerWindow()
   const result = window === undefined ? await dialog.showSaveDialog(options) : await dialog.showSaveDialog(window, options)
   if (result.canceled || result.filePath.length === 0) throw new DesktopError('cancelled', 'Save cancelled.')
-  return withProjectExtension(result.filePath)
+  return grantProjectPath(withProjectExtension(result.filePath))
 }
 
 async function chooseOpenPath(): Promise<string> {
@@ -46,7 +73,7 @@ async function chooseOpenPath(): Promise<string> {
   const result = window === undefined ? await dialog.showOpenDialog(options) : await dialog.showOpenDialog(window, options)
   const [file] = result.filePaths
   if (result.canceled || file === undefined) throw new DesktopError('cancelled', 'Open cancelled.')
-  return file
+  return grantProjectPath(file)
 }
 
 function writeProjectFile(file: string, project: Project): void {
@@ -85,7 +112,7 @@ export const projectHandlers: ProjectHandlers = {
     return { project: readProjectFile(file), path: file }
   },
   'project.save': async ({ project, path: requested }) => {
-    const file = requested ?? (await chooseSavePath(project))
+    const file = requested === null ? await chooseSavePath(project) : assertGrantedSavePath(requested)
     writeProjectFile(file, project)
     return { path: file }
   },
