@@ -11,7 +11,7 @@ import {
   PlusIcon,
   ZoomInIcon,
   ZoomOutIcon,
-} from "@/lib/hugeicons";
+} from "@/lib/icons";
 import { useEditor, useEditorState, useElementEvent, usePlayback, useProject } from "@mcut/react";
 import {
   getProjectDurationMs,

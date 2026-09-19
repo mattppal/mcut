@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { KeyboardIcon } from "@/lib/hugeicons";
+import { KeyboardIcon } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

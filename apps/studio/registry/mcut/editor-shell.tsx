@@ -3,7 +3,8 @@
 import { useCallback, useMemo, useState, useSyncExternalStore, type RefObject } from "react";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { usePanelRef, type GroupProps, type PanelImperativeHandle } from "react-resizable-panels";
-import { CaptionsIcon, FolderOpenIcon, SearchIcon, SparklesIcon, TypeIcon } from "@/lib/hugeicons";
+import { IconoirProvider } from "iconoir-react";
+import { CaptionsIcon, FolderOpenIcon, SearchIcon, SparklesIcon, TypeIcon } from "@/lib/icons";
 import { toast } from "sonner";
 import { isWebGPUSupported } from "@mcut/compositor";
 import {
@@ -549,18 +550,22 @@ function Shell({
  * light/dark themes, and IndexedDB session restore. Installed as source —
  * every panel is yours to modify.
  */
+const iconProps = { strokeWidth: 1.25 };
+
 export function EditorShell({ project, transcribe }: EditorShellProps) {
   const [queryClient] = useState(() => new QueryClient());
   const leftPanelRef = usePanelRef();
   return (
     <QueryClientProvider client={queryClient}>
-      <EditorProvider {...(project ? { project } : {})}>
-        <EditorUIProvider leftPanelRef={leftPanelRef}>
-          <TooltipProvider>
-            <Shell transcribe={transcribe} leftPanelRef={leftPanelRef} />
-          </TooltipProvider>
-        </EditorUIProvider>
-      </EditorProvider>
+      <IconoirProvider iconProps={iconProps}>
+        <EditorProvider {...(project ? { project } : {})}>
+          <EditorUIProvider leftPanelRef={leftPanelRef}>
+            <TooltipProvider>
+              <Shell transcribe={transcribe} leftPanelRef={leftPanelRef} />
+            </TooltipProvider>
+          </EditorUIProvider>
+        </EditorProvider>
+      </IconoirProvider>
     </QueryClientProvider>
   );
 }

@@ -12,7 +12,7 @@ import {
   SearchIcon,
   Trash2Icon,
   UploadIcon,
-} from "@/lib/hugeicons";
+} from "@/lib/icons";
 import { toast } from "sonner";
 import { getVideoThumbnailUrl } from "@mcut/media";
 import { useEditor, useProject } from "@mcut/react";

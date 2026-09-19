@@ -8,7 +8,7 @@ import {
   LayersIcon,
   MusicIcon,
   TypeIcon,
-} from "@/lib/hugeicons";
+} from "@/lib/icons";
 
 /**
  * The webapp half of the element-type registry: how a type LOOKS in the

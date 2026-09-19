@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SwatchIcon, Trash2Icon } from "@/lib/hugeicons";
+import { SwatchIcon, Trash2Icon } from "@/lib/icons";
 import { useEditor, useProject } from "@mcut/react";
 import { createPresetId, listPresets } from "@mcut/timeline";
 import { toast } from "sonner";

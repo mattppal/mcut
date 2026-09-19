@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { ChevronRightIcon, Undo2Icon } from "@/lib/hugeicons";
+import { ChevronRightIcon, Undo2Icon } from "@/lib/icons";
 import { useEditor } from "@mcut/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";

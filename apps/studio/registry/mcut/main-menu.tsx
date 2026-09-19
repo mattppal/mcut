@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEditor, useEditorState } from "@mcut/react";
-import { ChevronDownIcon } from "@/lib/hugeicons";
+import { ChevronDownIcon } from "@/lib/icons";
 import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import {
