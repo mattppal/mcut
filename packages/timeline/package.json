@@ -20,7 +20,8 @@
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "fuzz": "MCUT_FUZZ_SEQUENCES=1000 bun test src/fuzz.test.ts"
   },
   "repository": {
     "type": "git",
