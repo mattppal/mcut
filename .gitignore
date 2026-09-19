@@ -23,5 +23,9 @@ release-out/
 apps/web/public/docs/
 apps/web/public/docs.md
 
+# Desktop build inputs and packages
+apps/desktop/studio/
+apps/desktop/release/
+
 # Synthetic test media from `bun run fixtures`
 fixtures/media/

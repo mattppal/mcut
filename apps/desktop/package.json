@@ -1,0 +1,24 @@
+{
+  "name": "mcut-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "mcut Studio as a desktop app. Electron serves the Studio static export from app://studio and hosts the live MCP bridge.",
+  "main": "dist/main.mjs",
+  "scripts": {
+    "build": "rm -rf studio && cp -R ../studio/out studio && tsdown",
+    "start": "electron .",
+    "package": "electron-builder --dir",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@mcut/mcp-server": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.21.0",
+    "electron": "44.4.3",
+    "electron-builder": "26.15.3",
+    "tsdown": "0.22.2",
+    "typescript": "6.0.3",
+    "zod": "4.4.3"
+  }
+}

@@ -61,6 +61,7 @@ const areas: readonly Area[] = [
   { name: 'packages', roots: ['packages'] },
   { name: 'apps/studio', roots: ['apps/studio'] },
   { name: 'apps/web', roots: ['apps/web'] },
+  { name: 'apps/desktop', roots: ['apps/desktop'] },
   { name: 'skills+scripts+examples', roots: ['skills', 'scripts', 'examples'] },
 ]
 
