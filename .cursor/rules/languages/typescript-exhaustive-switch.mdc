@@ -1,0 +1,20 @@
+---
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: false
+---
+
+# Exhaustive switches
+
+Use `never`, `assertNever`, `invariant`, or an equivalent throw only for a
+program-owned union closed by construction or boundary normalization. Static
+types do not close raw RPC, protobuf, IPC, persisted, deep-link, plugin, or
+other independently versioned values at runtime.
+
+Long-lived client display paths map well-formed newer values to an explicit
+renderable `unknown` / `unsupported` domain arm; malformed values and strict
+control inputs return a typed rejection. Exhaustively switch only on that
+closed domain union, never on the raw external value.
+
+Query, transport, and command failures remain errors in their owning channels.

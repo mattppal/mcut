@@ -1,0 +1,59 @@
+---
+title: "@mcut/transcription-ai-sdk"
+description: "Transcription provider backed by the Vercel AI SDK."
+---
+
+`@mcut/transcription-ai-sdk` adapts any AI SDK transcription model to the mcut `TranscriptionProvider` interface.
+
+## Install
+
+```sh
+bun add @mcut/transcription-ai-sdk
+```
+
+## Types
+
+### AISDKTranscriptionProviderOptions
+
+```ts
+interface AISDKTranscriptionProviderOptions {
+  model: TranscribeArgs['model']
+  providerOptions?: TranscribeArgs['providerOptions']
+  id?: string
+}
+```
+
+Options for `createAISDKTranscriptionProvider`, an AI SDK transcription model plus optional provider options and provider id.
+
+### AISDKTranscriptionResultLike
+
+```ts
+interface AISDKTranscriptionResultLike {
+  text: string
+  segments: ReadonlyArray<{ text: string; startSecond: number; endSecond: number }>
+  language: string | undefined
+  durationInSeconds: number | undefined
+}
+```
+
+The fields of an AI SDK transcription result that `normalizeAISDKResult` reads.
+
+## Functions
+
+### normalizeAISDKResult
+
+```ts
+function normalizeAISDKResult(result: AISDKTranscriptionResultLike): TranscriptResult
+```
+
+Converts an AI SDK transcription result to a `TranscriptResult`, exposing word-level segments as `words` and sentence-level segments as `segments`.
+
+### createAISDKTranscriptionProvider
+
+```ts
+function createAISDKTranscriptionProvider(
+  options: AISDKTranscriptionProviderOptions,
+): TranscriptionProvider
+```
+
+Returns a `TranscriptionProvider` that sends audio to the given AI SDK transcription model and normalizes the result.
