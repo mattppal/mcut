@@ -1,0 +1,18 @@
+{
+  "title": "@mcut/timeline",
+  "pages": [
+    "index",
+    "model",
+    "model-types",
+    "lifecycle",
+    "engine",
+    "editing",
+    "audio",
+    "effects",
+    "keyframes",
+    "animation",
+    "text",
+    "layouts",
+    "context"
+  ]
+}

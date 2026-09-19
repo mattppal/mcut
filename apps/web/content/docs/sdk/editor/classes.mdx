@@ -1,0 +1,32 @@
+---
+title: "Classes"
+description: "Classes exported by @mcut/editor."
+---
+
+## Classes
+
+### EditorOperatorRegistry
+
+```ts
+class EditorOperatorRegistry {
+  define<Input, Output = unknown>(operator: EditorOperator<Input, Output>): EditorOperator<Input, Output>
+  get(id: string): EditorOperator<unknown, unknown> | undefined
+  list(): EditorOperator<unknown, unknown>[]
+  listAvailable(context: EditorOperatorContext): ListedEditorOperator[]
+  isEnabled(id: string, context: EditorOperatorContext, input: unknown = {}): boolean
+  async run(id: string, context: EditorOperatorContext, input: unknown = {}): Promise<unknown>
+}
+```
+
+Holds operators by id and can list them, report whether one is enabled for a context, and validate input then run one.
+
+### OperatorError
+
+```ts
+class OperatorError extends Error {
+  readonly code: string
+  constructor(code: string, message: string, options?: { cause?: unknown })
+}
+```
+
+Error thrown by the registry with a `code` such as `duplicate-operator`, `unknown-operator`, `invalid-input`, or `operator-disabled`.

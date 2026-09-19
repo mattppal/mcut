@@ -1,0 +1,270 @@
+---
+title: "Project context and export"
+description: "Project summaries, media and transcript context views, and OpenTimelineIO export."
+---
+
+## Types
+
+### ProjectCaptionRef
+
+```ts
+interface ProjectCaptionRef {
+  trackId: string
+  trackName: string
+  trackIndex: number
+  caption: CaptionElement
+}
+```
+
+A caption element together with the id, name, and index of its track.
+
+### ProjectMediaAssetContext
+
+```ts
+interface ProjectMediaAssetContext
+  extends Omit<AssetRef, 'src'> {
+  usedBy: string[]
+}
+```
+
+An asset without its `src` plus the ids of the elements that use it.
+
+### ProjectMediaContext
+
+```ts
+interface ProjectMediaContext {
+  project: {
+    id: string
+    name: string
+    width: number
+    height: number
+    fps: number
+    durationMs: number
+    trackCount: number
+    assetCount: number
+    markerCount: number
+  }
+  playback?: PlaybackState
+  selection: { elementIds: string[] }
+  assets: ProjectMediaAssetContext[]
+  tracks: ProjectMediaTrackContext[]
+  markers: Marker[]
+  transcript: {
+    hasTranscript: boolean
+    captionCount: number
+    wordCount: number
+    startMs?: number
+    endMs?: number
+  }
+}
+```
+
+A structured view of the whole project, summary fields, optional playback, selection, assets with usage, tracks with elements, markers, and transcript counts.
+
+### ProjectMediaElementContext
+
+```ts
+interface ProjectMediaElementContext {
+  id: string
+  type: TimelineElement['type']
+  trackId: string
+  trackName: string
+  trackIndex: number
+  startMs: number
+  endMs: number
+  durationMs: number
+  selected: boolean
+  active?: boolean
+  linkId?: string
+  asset?: {
+    id: string
+    kind?: AssetRef['kind']
+    name?: string
+    durationMs?: number
+    width?: number
+    height?: number
+    mimeType?: string
+    nativePreview?: boolean
+  }
+  source?: {
+    startMs: number
+    endMs: number
+    durationMs: number
+    averageSpeed: number
+    hasTimeMap: boolean
+    reversed: boolean
+  }
+  text?: string
+  caption?: {
+    hasWordTimings: boolean
+    wordCount: number
+  }
+  multicam?: {
+    audioSource?: string
+    angleCount: number
+    sources: Array<{
+      key: string
+      assetId: string
+      assetName?: string
+      trimStartMs: number
+    }>
+  }
+  effects?: string[]
+  blendMode?: string
+  transition?: {
+    type: string
+    durationMs: number
+  }
+}
+```
+
+One element in context form, its placement, selection and active state, and the asset, source, text, caption, multicam, effect, blend, and transition details that apply to its type.
+
+### ProjectMediaTrackContext
+
+```ts
+interface ProjectMediaTrackContext {
+  id: string
+  name: string
+  index: number
+  muted: boolean
+  hidden: boolean
+  locked: boolean
+  magnetic: boolean
+  elements: ProjectMediaElementContext[]
+}
+```
+
+A track's id, name, index, and flags together with its elements in context form.
+
+### ProjectTranscriptCaptionContext
+
+```ts
+interface ProjectTranscriptCaptionContext {
+  id: string
+  trackId: string
+  trackName: string
+  startMs: number
+  endMs: number
+  durationMs: number
+  text: string
+  hasWordTimings: boolean
+  wordCount: number
+  words?: ProjectTranscriptWordContext[]
+}
+```
+
+One caption in transcript form, its track, absolute times, text, word count, and optionally its words.
+
+### ProjectTranscriptContext
+
+```ts
+interface ProjectTranscriptContext {
+  hasTranscript: boolean
+  captionCount: number
+  wordCount: number
+  text: string
+  captions: ProjectTranscriptCaptionContext[]
+}
+```
+
+The project's captions read as a transcript, with counts, the joined text, and the captions in time order.
+
+### ProjectTranscriptOptions
+
+```ts
+interface ProjectTranscriptOptions {
+  includeWords?: boolean
+}
+```
+
+Options for `getProjectTranscript`, whether to include per-word timings.
+
+### ProjectTranscriptWordContext
+
+```ts
+interface ProjectTranscriptWordContext {
+  text: string
+  startMs: number
+  endMs: number
+}
+```
+
+One transcript word with absolute start and end times.
+
+### ProjectViewContextOptions
+
+```ts
+interface ProjectViewContextOptions {
+  playback?: PlaybackState
+  selection?: { elementIds: readonly string[] }
+}
+```
+
+Options for `getProjectMediaContext`, the playback state and selection to fold into the view.
+
+### OtioExportOptions
+
+```ts
+interface OtioExportOptions {
+  fps?: number
+}
+```
+
+Options for OpenTimelineIO export, a frame rate for the global start time that defaults to the project fps.
+
+## Functions
+
+### summarizeProject
+
+```ts
+function summarizeProject(project: Project): string
+```
+
+Returns a deterministic text rendering of the project, one header line then each track from the top down with its elements, keyframes, effects, blend modes, transitions, and fades.
+
+### getProjectCaptions
+
+```ts
+function getProjectCaptions(project: Project): ProjectCaptionRef[]
+```
+
+Returns every caption element with its track, sorted by start time, then track index, then id.
+
+### getProjectMediaContext
+
+```ts
+function getProjectMediaContext(
+  project: Project,
+  options: ProjectViewContextOptions = {},
+): ProjectMediaContext
+```
+
+Returns the full project view for agents, with assets sorted by id and stripped of `src`, every element in context form, and the selection and playback state when given.
+
+### getProjectTranscript
+
+```ts
+function getProjectTranscript(
+  project: Project,
+  options: ProjectTranscriptOptions = {},
+): ProjectTranscriptContext
+```
+
+Returns the project's captions as a transcript with absolute times and the joined text, including per-word timings when `includeWords` is set.
+
+### toOtio
+
+```ts
+function toOtio(project: Project, options: OtioExportOptions = {}): OtioValue
+```
+
+Returns the project as an OpenTimelineIO document object with one stack of tracks, markers on the stack, and project metadata under `metadata.mcut`.
+
+### toOtioJson
+
+```ts
+function toOtioJson(project: Project, options: OtioExportOptions = {}): string
+```
+
+Returns the project serialized as the contents of a `.otio` file.
