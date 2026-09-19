@@ -1,6 +1,5 @@
 import { expect, type Page } from "@playwright/test";
 
-/** Console/page errors collected per test — assert empty at the end. */
 export function collectErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
@@ -10,7 +9,6 @@ export function collectErrors(page: Page): string[] {
   return errors;
 }
 
-/** Open the studio and dismiss the session-restore prompt if one appears. */
 export async function openEditor(page: Page): Promise<void> {
   await page.goto("/", { waitUntil: "networkidle" });
   await page.waitForTimeout(600);
@@ -20,7 +18,6 @@ export async function openEditor(page: Page): Promise<void> {
     .catch(() => {});
 }
 
-/** Import a generated PNG through the media bin's hidden file input. */
 export async function importPng(page: Page, name = "fixture.png"): Promise<void> {
   const dataUrl = await page.evaluate(() => {
     const canvas = document.createElement("canvas");
@@ -42,7 +39,6 @@ export async function importPng(page: Page, name = "fixture.png"): Promise<void>
   await expect(page.getByTitle(new RegExp(name))).toBeVisible();
 }
 
-/** Record a short webm (canvas + oscillator) in-page and import it. */
 export async function importWebm(page: Page, name = "fixture.webm"): Promise<void> {
   const base64 = await page.evaluate(async () => {
     const canvas = document.createElement("canvas");
@@ -95,11 +91,6 @@ export async function importWebm(page: Page, name = "fixture.webm"): Promise<voi
   await expect(page.getByTitle(new RegExp(name))).toBeVisible({ timeout: 10_000 });
 }
 
-/**
- * Drag a media-bin card onto a timeline lane. Lane geometry is measured
- * AFTER the drag starts: the phantom "new track" lane mounts on drag start
- * and shifts every row down.
- */
 export async function dragAssetToLane(
   page: Page,
   cardTitle: RegExp,
@@ -116,14 +107,12 @@ export async function dragAssetToLane(
   const targetX = laneBox.x + (options.offsetX ?? 120);
   const targetY = laneBox.y + laneBox.height / 2;
   await page.mouse.move(targetX, targetY, { steps: 10 });
-  // Jiggle so remeasured droppable rects apply before the drop.
   await page.mouse.move(targetX + 1, targetY + 1);
   await page.waitForTimeout(200);
   await page.mouse.up();
   await page.waitForTimeout(300);
 }
 
-/** Non-black pixel count of the preview canvas (animation/visibility checks). */
 export async function previewPixels(page: Page): Promise<number> {
   return page.evaluate(() => {
     const canvas = document.querySelector<HTMLCanvasElement>("[data-mcut-player] canvas")!;
@@ -139,12 +128,6 @@ export async function previewPixels(page: Page): Promise<number> {
 
 export const clip = (page: Page) => page.locator("[data-mcut-clip]");
 
-/**
- * Open a left-rail tab idempotently. Clicking the active tab collapses the
- * panel, so blind clicks (and role-name lookups that collide with inspector
- * section headers) are unsafe — target the rail directly and skip when the
- * tab is already open.
- */
 export async function openLeftTab(
   page: Page,
   tab: "media" | "text" | "animate" | "captions",

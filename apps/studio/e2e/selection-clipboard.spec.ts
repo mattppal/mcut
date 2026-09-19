@@ -28,16 +28,15 @@ test("copy/paste at playhead round-trips a clip", async ({ page }) => {
   const original = (await clip(page).first().boundingBox())!;
 
   await page.keyboard.press("ControlOrMeta+c");
-  await page.keyboard.press("Shift+ArrowRight"); // +1s
-  await page.keyboard.press("Shift+ArrowRight"); // +2s
-  await page.keyboard.press("Shift+ArrowRight"); // +3s (past the 3s clip)
-  await page.keyboard.press("Shift+ArrowRight"); // +4s
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("Shift+ArrowRight");
   await page.keyboard.press("ControlOrMeta+v");
 
   await expect(clip(page)).toHaveCount(2);
   const pasted = (await clip(page).nth(1).boundingBox())!;
-  expect(pasted.x).toBeGreaterThan(original.x + 50); // landed at the playhead
-  // Pasted clip becomes the selection
+  expect(pasted.x).toBeGreaterThan(original.x + 50);
   await expect(selectedClips(page)).toHaveCount(1);
 });
 
@@ -56,8 +55,7 @@ test("cut removes, paste restores; ⌘D duplicates", async ({ page }) => {
 test("track header click selects that track's clips", async ({ page }) => {
   await openEditor(page);
   await addTwoTitles(page);
-  await page.keyboard.press("ControlOrMeta+Shift+a"); // ensure clean slate
-  // Click the first (topmost) track header's name area
+  await page.keyboard.press("ControlOrMeta+Shift+a");
   await page.locator("[data-mcut-timeline] span.truncate").first().click();
   await expect(selectedClips(page)).toHaveCount(1);
 });

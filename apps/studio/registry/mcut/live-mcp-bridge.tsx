@@ -391,7 +391,6 @@ function rememberBridgeLaunch(launch: BridgeLaunch): void {
       JSON.stringify({ port: launch.port, token: launch.token }),
     );
   } catch {
-    // Ignore storage failures; explicit URL params still connect for this page load.
   }
 }
 

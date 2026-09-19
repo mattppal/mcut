@@ -2,12 +2,6 @@ import { createAssemblyAIProvider } from "@mcut/transcription-assemblyai";
 
 export const maxDuration = 300;
 
-/**
- * Transcribe an audio blob (extracted client-side by `@mcut/media`) and
- * return mcut's normalized `TranscriptResult` JSON. The API key stays
- * server-side; swap the provider here to use any other backend (e.g.
- * `@mcut/transcription-ai-sdk` with an OpenAI/Deepgram/Groq model).
- */
 export async function POST(request: Request) {
   if (!process.env.ASSEMBLYAI_API_KEY) {
     return Response.json(

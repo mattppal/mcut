@@ -14,7 +14,6 @@ import { Kbd } from "@/components/ui/kbd";
 import "./editor-default-actions";
 import { formatShortcut, listEditorActions } from "./action-registry";
 
-/** Pointer gestures that aren't registry actions. */
 const GESTURES: Array<{ keys: string; label: string }> = [
   { keys: "⌘ Scroll", label: "Zoom timeline at pointer" },
   { keys: "⇧ Click", label: "Add clip to selection" },
@@ -25,7 +24,6 @@ const GESTURES: Array<{ keys: string; label: string }> = [
   { keys: "Esc", label: "Blur field / clear selection" },
 ];
 
-/** Derived from the action registry — never hand-maintained again. */
 export function ShortcutsDialog() {
   const [open, setOpen] = useState(false);
   const rows = listEditorActions()

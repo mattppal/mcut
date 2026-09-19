@@ -1,13 +1,6 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
-/**
- * Machine-discovery surfaces: the MCP tool manifest and the agent skill
- * hosted under the RFC 8615 well-known prefix. The digest assertion keeps
- * index.json honest when SKILL.md is edited — regenerate it with
- * `shasum -a 256 public/.well-known/agent-skills/mcut/SKILL.md`.
- */
-
 const AGENT_TOOL_NAMES = [
   "get_summary",
   "get_project",
@@ -84,5 +77,8 @@ test("hosts the mcut agent skill under /.well-known/agent-skills", async ({ requ
   expect(body.toString("utf8")).toContain("name: mcut");
 
   const digest = `sha256:${createHash("sha256").update(body).digest("hex")}`;
-  expect(digest).toBe(skill.digest);
+  expect(
+    digest,
+    "index.json digest is stale; regenerate with: shasum -a 256 public/.well-known/agent-skills/mcut/SKILL.md",
+  ).toBe(skill.digest);
 });

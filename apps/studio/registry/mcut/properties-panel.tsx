@@ -95,24 +95,14 @@ function ProjectProperties() {
   );
 }
 
-/**
- * The inspector: collapsible sections with scrubbable fields (drag a label
- * to adjust), sliders, and a full color picker — for the selected element,
- * or project settings when nothing is selected.
- */
 export function PropertiesPanel({ className }: { className?: string }) {
   const engine = useEditor();
   const project = useProject();
   const selected = useSelectedElement();
   const { editingLayoutId, mode, setEditingTextId } = useEditorUI();
-  // Re-render with the playhead only while the selection is keyframed, so the
-  // inspector shows live resolved values (Premiere behavior) at no cost
-  // for static elements.
   const anyArmed = selected ? hasKeyframes(selected.element) : false;
   const playheadMs = usePlayback((s) => (anyArmed ? Math.round(s.currentTimeMs) : -1));
 
-  // Slot edit state takes over the inspector: while a layout is being edited
-  // on the canvas, the panel styles its slots instead of the selection.
   const editingLayout = editingLayoutId
     ? project.layouts.find((l) => l.id === editingLayoutId)
     : undefined;
@@ -127,13 +117,11 @@ export function PropertiesPanel({ className }: { className?: string }) {
   const timelineNowMs =
     playheadMs >= 0 ? playheadMs : Math.round(engine.playback.state.currentTimeMs);
 
-  /** Resolved value for a row: keyframe track when armed, static otherwise. */
   const animValue = (property: AnimatableProperty, staticValue: number): number =>
     hasKeyframes(element, property)
       ? getAnimatedValue(element, property, timelineNowMs)
       : staticValue;
 
-  /** Commit for a row: auto-key at the playhead when armed (stopwatch on). */
   const animCommit =
     (property: AnimatableProperty, staticCommit: (value: number) => void) =>
     (value: number) => {
@@ -150,7 +138,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
           value,
         });
       } catch {
-        // Element vanished mid-edit.
       }
     };
 
@@ -162,7 +149,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
     try {
       engine.dispatch({ type: "updateElement", elementId: element.id, patch: values }, options);
     } catch {
-      // Invalid patch (overlap/bounds): drop it; inputs resync from state.
     }
   };
   const patchTransform = (
@@ -186,7 +172,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
           try {
             engine.dispatch({ type: "updateElement", elementId: id, patch: { transform } });
           } catch {
-            // Invalid grouped member patch: continue with remaining members.
           }
         }
       }
@@ -205,7 +190,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
         try {
           engine.dispatch({ type: "updateElement", elementId: id, patch: values });
         } catch {
-          // Invalid grouped member patch: continue with remaining members.
         }
       }
     }
@@ -247,16 +231,9 @@ export function PropertiesPanel({ className }: { className?: string }) {
     try {
       engine.dispatch({ type: "trimElement", elementId: element.id, ...values });
     } catch {
-      // Rejected (overlap/asset bounds): inputs resync from state.
     }
   };
 
-  /**
-   * The element's frame for the shared frame editor (the same FrameFields
-   * the multicam slot inspector renders): its canvas-px bounding box,
-   * translated to the center-origin transform on write. Armed properties
-   * auto-key at the playhead, exactly like the bare rows did.
-   */
   const frameTarget: FrameTarget | null = (() => {
     if (!("transform" in element) || !naturalSize || !displaySize) return null;
     const isText = element.type === "text";
@@ -281,15 +258,11 @@ export function PropertiesPanel({ className }: { className?: string }) {
       setRect: (patchRect: Partial<FrameRect>) => {
         const nextWidth = patchRect.width ?? width;
         const nextHeight = patchRect.height ?? height;
-        // Static transform fields batch into ONE update (sequential patches
-        // would each spread the stale render-time transform); armed
-        // properties key individually and never touch the static transform.
         const staticPatch: Partial<{ x: number; y: number; scaleX: number; scaleY: number }> =
           {};
         const commit = (property: AnimatableProperty, value: number, write: () => void) =>
           animCommit(property, write)(value);
         if (isText) {
-          // Text width/height size the layout box, not the scale.
           if (patchRect.width !== undefined || patchRect.height !== undefined) {
             patchDisplaySize({
               ...(patchRect.width !== undefined ? { width: Math.round(nextWidth) } : {}),
@@ -341,7 +314,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
         if (field === "x") return kfControls("position.x");
         if (field === "y") return kfControls("position.y");
         if (field === "rotation") return kfControls("rotation");
-        // Text W/H edit the layout box, not scale — no scale keys there.
         if (isText) return undefined;
         return kfControls(field === "width" ? "scale.x" : "scale.y");
       },
@@ -378,8 +350,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
           min={0.01}
           unit="s"
           onCommit={(s) => {
-            // Edge trim, not a raw window edit: the clip's remaining content
-            // stays anchored (reversed spans and speed maps included).
             try {
               engine.dispatch({
                 type: "trimEdge",
@@ -388,7 +358,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
                 deltaMs: Math.round(s * 1000) - element.durationMs,
               });
             } catch {
-              // Rejected (bounds/overlap): inputs resync from state.
             }
           }}
         />
@@ -412,9 +381,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
             unit="%"
             scrubPerPx={1}
             onCommit={(pct) => {
-              // Signed percentage: 100 = normal, 50 = half speed, negative
-              // plays backward (preview scrubs reversed clips, audio muted;
-              // export renders them exactly).
               const reversed = pct < 0;
               const speed = Math.min(20, Math.max(0.05, Math.abs(pct) / 100));
               try {
@@ -429,7 +395,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
                   }
                 });
               } catch {
-                // Rejected (overlap after rescale): inputs resync from state.
               }
             }}
           />
@@ -442,10 +407,8 @@ export function PropertiesPanel({ className }: { className?: string }) {
           onReset={() => patch({ transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 } })}
         >
           {frameTarget ? (
-            // Figma-basics frame rows, shared with the multicam slot editor.
             <FrameFields target={frameTarget} />
           ) : (
-            // No natural size (multicam, unprobed media): offset semantics.
             <>
               <NumberField
                 label="X"
@@ -482,7 +445,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
             min={0.01}
             scrubPerPx={0.005}
             onCommit={(scale) => {
-              // Uniform Scale: each axis keys independently when armed.
               animCommit("scale.x", () => patchTransform({ scaleX: scale, scaleY: scale }))(scale);
               if (hasKeyframes(element, "scale.y")) animCommit("scale.y", () => {})(scale);
             }}
@@ -560,8 +522,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
                 shadow: element.shadow ?? null,
               })}
               onApply={(values) => {
-                // Tolerant apply: a slot's boolean shadow becomes the
-                // default element shadow; `fit` (slot-only) is ignored.
                 const preset = readStylePreset(values);
                 const patchValues: Record<string, unknown> = {};
                 if (preset.cornerRadius !== undefined) patchValues.cornerRadius = preset.cornerRadius;
@@ -636,7 +596,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
               },
             });
           };
-          // Largest centered crop of the source with this frame aspect.
           const cropToAspect = (ratio: number) => {
             let w = 1;
             let h = srcW / ratio / srcH;
@@ -826,8 +785,6 @@ export function PropertiesPanel({ className }: { className?: string }) {
             />
           }
         >
-          {/* Content edits INLINE on the canvas (double-click), with
-              per-range bold/italic/color via the selection toolbar. */}
           <Button
             variant="outline"
             size="xs"

@@ -10,7 +10,6 @@ import {
 
 const transcribeFailureSchema = z.object({ error: z.string() });
 
-/** Upload extracted audio to the demo's transcription route. */
 async function transcribeRemote(audio: Blob): Promise<TranscriptResult> {
   const form = new FormData();
   form.append("audio", audio, "audio.wav");
@@ -29,10 +28,6 @@ async function transcribeRemote(audio: Blob): Promise<TranscriptResult> {
   return result.data;
 }
 
-/**
- * Server transcription by default; on-device Whisper when the user opted in
- * via the captions panel (offered only on capable browsers — never forced).
- */
 function transcribe(audio: Blob): Promise<TranscriptResult> {
   return isOnDeviceTranscriptionEnabled() ? transcribeOnDevice(audio) : transcribeRemote(audio);
 }

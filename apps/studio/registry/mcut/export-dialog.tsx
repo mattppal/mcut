@@ -41,10 +41,6 @@ function downloadBlob(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-/**
- * Deterministic client-side export: the shared compositor renders every
- * frame from exact decoded samples, WebCodecs encodes, Mediabunny muxes.
- */
 export function ExportDialog() {
   const engine = useEditor();
   const [open, setOpen] = useState(false);
@@ -66,9 +62,6 @@ export function ExportDialog() {
     mutationFn: async (controller: AbortController) => {
       setProgress({ progress: 0, phase: "audio" });
       engine.pause();
-      // Text frames render with whatever face is loaded — make sure every
-      // referenced font is in document.fonts (main-thread fallback path) and
-      // collect the faces the export worker registers in its own scope.
       await ensureProjectFontsLoaded(engine.project);
       const fonts = await collectProjectFontExports(engine.project);
       return exportProject(engine.project, {

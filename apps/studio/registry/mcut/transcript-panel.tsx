@@ -49,7 +49,6 @@ import {
 
 export interface TranscriptPanelProps {
   className?: string;
-  /** Same handler as the captions panel — used by "Re-transcribe clip". */
   transcribe?: (audio: Blob) => Promise<TranscriptResult>;
 }
 
@@ -60,7 +59,6 @@ function captionsOf(project: Project): CaptionElement[] {
     .sort((a, b) => a.startMs - b.startMs);
 }
 
-/** Word indices of a caption covered by any of the given matches. */
 function matchedWordIndices(captionId: string, matches: TranscriptMatch[]): Set<number> {
   const indices = new Set<number>();
   for (const match of matches) {
@@ -76,13 +74,6 @@ interface WordSelection {
   wordIndex: number;
 }
 
-/**
- * Transcript tooling over word-timed captions: fast find (⌘F), persisted
- * keyword highlights (soft ticks on the timeline ruler), replace with word
- * timings preserved, and repair — retype a word, split/merge captions,
- * re-transcribe one clip. Works identically for AssemblyAI- and
- * Whisper-produced transcripts.
- */
 export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps) {
   const engine = useEditor();
   const project = useProject();
@@ -103,7 +94,6 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
   );
   const active = matches.length > 0 ? matches[Math.min(activeIndex, matches.length - 1)]! : null;
 
-  // First Enter after typing lands on the current hit; subsequent ones advance.
   const [navigated, setNavigated] = useState(false);
   const goTo = (index: number) => {
     if (matches.length === 0) return;
@@ -130,7 +120,6 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
     } catch {
       return;
     }
-    // The hit list reflows; keep the cursor at the same ordinal.
     setActiveIndex((i) => i);
   };
 
@@ -148,7 +137,6 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
             patch: { text: patch.text, words: patch.words ?? [] },
           });
         } catch {
-          // Caption vanished mid-apply.
         }
       }
     });
@@ -164,7 +152,6 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
       </PanelHeader>
 
       <div className="flex shrink-0 flex-col gap-2 px-3 pb-2">
-        {/* Find */}
         <div className="flex items-center gap-1">
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -198,7 +185,6 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
           </Button>
         </div>
 
-        {/* Replace */}
         {trimmedQuery && (
           <div className="flex items-center gap-1">
             <Input
@@ -222,7 +208,6 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
           </div>
         )}
 
-        {/* Keywords */}
         <div className="flex flex-col gap-1">
           <PanelSectionLabel>Keywords</PanelSectionLabel>
           <div className="flex flex-wrap items-center gap-1">
@@ -262,7 +247,6 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
           </div>
         </div>
 
-        {/* Repair: re-transcribe the selected clip */}
         {transcribe && (
           <Button
             variant="outline"
@@ -309,12 +293,9 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
   );
 }
 
-/** Occurrence count for a keyword chip. */
 function countOf(captions: CaptionElement[], keyword: string): number {
   return searchCaptions(captions, keyword).length;
 }
-
-// ---------------------------------------------------------------------------
 
 function useRetranscribe(transcribe: TranscriptPanelProps["transcribe"]) {
   const engine = useEditor();
@@ -332,14 +313,11 @@ function useRetranscribe(transcribe: TranscriptPanelProps["transcribe"]) {
       const start = source.timelineStartMs;
       const end = source.timelineStartMs + source.timelineDurationMs;
       engine.transact(() => {
-        // Only this clip's range is re-done: captions overlapping it go,
-        // everything else stays.
         for (const caption of captionsOf(engine.project)) {
           if (caption.startMs < end && caption.startMs + caption.durationMs > start) {
             try {
               engine.dispatch({ type: "removeElement", elementId: caption.id });
             } catch {
-              // Already gone.
             }
           }
         }
@@ -360,8 +338,6 @@ function useRetranscribe(transcribe: TranscriptPanelProps["transcribe"]) {
   });
   return { ...mutation, eligible: !!source && !!transcribe };
 }
-
-// ---------------------------------------------------------------------------
 
 function TranscriptRow({
   caption,
@@ -411,7 +387,6 @@ function TranscriptRow({
         patch: { text: patch.text, words: patch.words ?? [] },
       });
     } catch {
-      // Invalid intermediate state.
     }
   };
 
@@ -541,7 +516,6 @@ function TranscriptRow({
           })}
         </p>
       ) : (
-        // Word timings were invalidated (manual edit) — caption-level only.
         <p
           className="cursor-pointer p-1 text-xs leading-5 text-muted-foreground"
           title="No word timings (edited caption) — click to seek"

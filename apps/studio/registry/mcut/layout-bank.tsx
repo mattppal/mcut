@@ -10,13 +10,7 @@ import { PanelSectionLabel } from "./editor-primitives";
 import { findTargetMulticam, switchToLayout } from "./multicam-ui";
 import { useEditorUI } from "./editor-ui";
 
-/**
- * The multicam layout bank (Premiere's angle monitor adapted to layouts):
- * one live tile per project layout. Click or press 1–9 — while playing it
- * CUTS at the playhead; while paused it CORRECTS the span under it.
- */
-
-const TILE_FPS_MS = 120; // ~8fps live tiles — smooth enough, cheap enough
+const TILE_FPS_MS = 120;
 
 function projectWithForcedLayout(
   project: Project,
@@ -141,7 +135,6 @@ export function LayoutBank({ className }: { className?: string }) {
             try {
               engine.dispatch({ type: "createMulticam", elementIds: selectedVideos });
             } catch {
-              // Selection changed underneath: state resyncs.
             }
           }}
         >

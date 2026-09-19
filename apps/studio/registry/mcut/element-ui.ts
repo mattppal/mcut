@@ -10,18 +10,8 @@ import {
   TypeIcon,
 } from "@/lib/hugeicons";
 
-/**
- * The webapp half of the element-type registry: how a type LOOKS in the
- * editor chrome (timeline clip color, track icon). Custom element types
- * register here after registerTimelineElementType (engine) and
- * registerElementRenderer (compositor); anything unregistered falls back to
- * a neutral style so unknown types are visible, not invisible.
- */
-
 export interface ElementUI {
-  /** Timeline clip chip classes (bg + text color, alpha baked in). */
   clipClassName: string;
-  /** Track-header icon for tracks led by this type. */
   icon: typeof FilmIcon;
 }
 
@@ -40,7 +30,6 @@ export function getElementUI(type: string): ElementUI {
   return registry.get(type) ?? FALLBACK;
 }
 
-// Built-ins, on the project's clip-color tokens (globals.css).
 registerElementUI("video", {
   clipClassName: "bg-(--clip-video) text-(--clip-video-foreground)",
   icon: FilmIcon,

@@ -1,7 +1,5 @@
 "use client";
 
-// Inspector for the layout slot being edited on the canvas (multicam mode).
-
 import { useEditor, useProject } from "@mcut/react";
 import {
   createLayoutId,
@@ -19,7 +17,6 @@ import { FrameFields, type FrameTarget } from "./frame-section";
 import { PresetMenu } from "./preset-menu";
 import { RadiusRow, readStylePreset, StrokeFields } from "./style-fields";
 
-/** Aspect chips for quick crops: keep the slot's center and pixel width. */
 export const SLOT_ASPECTS: ReadonlyArray<readonly [label: string, ratio: number]> = [
   ["1:1", 1],
   ["3:4", 3 / 4],
@@ -28,11 +25,6 @@ export const SLOT_ASPECTS: ReadonlyArray<readonly [label: string, ratio: number]
   ["9:16", 9 / 16],
 ];
 
-/**
- * Inspector for the layout slot being edited on the canvas (multicam mode).
- * The canvas does direct manipulation (move / resize / crop-pan); everything
- * with a value lives here, in the same controls as element properties.
- */
 export function LayoutSlotInspector({ layout, className }: { layout: Layout; className?: string }) {
   const engine = useEditor();
   const project = useProject();
@@ -54,7 +46,6 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
 
   const applyAspect = (ratio: number) => {
     if (!slot) return;
-    // Hold the center and the pixel width; derive the height (shrink to fit).
     let w = slot.rect.w;
     let h = (slot.rect.w * W) / ratio / H;
     if (h > 1) {
@@ -66,8 +57,6 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
     saveRect({ x: cx - w / 2, y: cy - h / 2, w, h });
   };
 
-  // The shared frame editor drives the slot through px-rect reads/writes;
-  // normalized storage stays an adapter detail.
   const slotFrame: FrameTarget | null =
     slot === null
       ? null
@@ -202,8 +191,6 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
                   stroke: slot.stroke ?? null,
                 })}
                 onApply={(values) => {
-                  // Tolerant apply: slots keep the keys they understand; a
-                  // full element shadow lands as the slot's boolean look.
                   const preset = readStylePreset(values);
                   const patch: Partial<LayoutSlot> = {};
                   if (preset.fit) patch.fit = preset.fit;

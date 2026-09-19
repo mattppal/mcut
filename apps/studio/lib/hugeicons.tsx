@@ -39,8 +39,6 @@ import {
   Layers01Icon as LayersSvg,
   Link01Icon as LinkSvg,
   Loading01Icon as Loader2Svg,
-  // Locked/unlocked must read as one toggle: both come from the SquareLock
-  // family (the round LockIcon next to SquareUnlock01 looked like two icons).
   SquareLock01Icon as LockSvg,
   MagnetIcon as MagnetSvg,
   Maximize01Icon as MaximizeSvg,

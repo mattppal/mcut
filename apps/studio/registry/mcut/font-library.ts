@@ -7,26 +7,6 @@ import type { Project } from "@mcut/timeline";
 import { z } from "zod";
 import { parseGoogleFontCss, weightDescriptorMatches } from "./font-css";
 
-/**
- * The editor's font system. Four tiers, mirroring what Figma/Canva/Photopea
- * converged on:
- *
- *  1. Generic CSS families — always available, zero loading.
- *  2. A curated Google Fonts catalog — loaded on demand via the css2 API +
- *     `document.fonts.load`, so the canvas never draws with a fallback face.
- *  3. System fonts via the Local Font Access API (`queryLocalFonts`,
- *     Chromium desktop only) — faces are registered into `document.fonts`
- *     from their binary blobs, which makes canvas rendering and PNG/video
- *     export deterministic instead of depending on OS name resolution.
- *  4. Uploaded font files (.ttf/.otf/.woff/.woff2) — the cross-browser
- *     fallback; persisted in IndexedDB and re-registered on boot.
- *
- * Everything funnels through {@link ensureFontLoaded}; export paths call
- * {@link ensureProjectFontsLoaded} before rendering (canvas `fillText` has
- * no reflow-on-load — drawing before the face is ready silently uses the
- * fallback font).
- */
-
 export type FontSource = "generic" | "google" | "system" | "uploaded";
 export type FontCategory = "sans-serif" | "serif" | "display" | "handwriting" | "monospace";
 
@@ -34,49 +14,30 @@ export interface FontOption {
   family: string;
   source: FontSource;
   category: FontCategory;
-  /** Weights this family offers (system/uploaded: the discovered faces). */
   weights: number[];
   hasItalic: boolean;
-  /** Continuous weight axis when the family is a variable font. */
   variableWeight?: { min: number; max: number };
 }
 
 export type SystemFontStatus = "unsupported" | "idle" | "loading" | "ready" | "denied";
 
 export interface FontLibraryState {
-  /** Generic + catalog + uploaded + system, in picker order. */
   options: FontOption[];
   systemStatus: SystemFontStatus;
   recents: string[];
 }
-
-// ---------------------------------------------------------------------------
-// Curated Google Fonts catalog
-// ---------------------------------------------------------------------------
 
 interface GoogleFontEntry {
   family: string;
   category: FontCategory;
   weights: number[];
   italic?: boolean;
-  /**
-   * The family ships as a VARIABLE font on Google Fonts: css2 accepts a
-   * `wght@min..max` range and any weight inside it renders a true
-   * interpolated face (no synthetic bolding). `weights` then just lists the
-   * named stops for the picker; min/max bound the axis.
-   */
   variable?: boolean;
 }
 
 const W_FULL = [100, 200, 300, 400, 500, 600, 700, 800, 900];
 
-/**
- * Build-time snapshot of the catalog (the Polotno/Penpot pattern) — no
- * runtime dependency on the Google Fonts Developer API. Ordered roughly by
- * thumbnail usefulness within each category.
- */
 export const GOOGLE_FONTS: GoogleFontEntry[] = [
-  // Display / impact — the YouTube-thumbnail staples.
   { family: "Anton", category: "display", weights: [400] },
   { family: "Bebas Neue", category: "display", weights: [400] },
   { family: "Archivo Black", category: "display", weights: [400] },
@@ -93,7 +54,6 @@ export const GOOGLE_FONTS: GoogleFontEntry[] = [
   { family: "Righteous", category: "display", weights: [400] },
   { family: "Concert One", category: "display", weights: [400] },
   { family: "Abril Fatface", category: "display", weights: [400] },
-  // Sans-serif workhorses.
   { family: "Inter", category: "sans-serif", weights: W_FULL, italic: true, variable: true },
   { family: "Roboto", category: "sans-serif", weights: [100, 300, 400, 500, 700, 900], italic: true, variable: true },
   { family: "Montserrat", category: "sans-serif", weights: W_FULL, italic: true, variable: true },
@@ -110,14 +70,12 @@ export const GOOGLE_FONTS: GoogleFontEntry[] = [
   { family: "Archivo", category: "sans-serif", weights: W_FULL, italic: true, variable: true },
   { family: "Outfit", category: "sans-serif", weights: W_FULL, variable: true },
   { family: "Figtree", category: "sans-serif", weights: [300, 400, 500, 600, 700, 800, 900], italic: true, variable: true },
-  // Serif.
   { family: "Playfair Display", category: "serif", weights: [400, 500, 600, 700, 800, 900], italic: true, variable: true },
   { family: "Merriweather", category: "serif", weights: [300, 400, 700, 900], italic: true },
   { family: "Lora", category: "serif", weights: [400, 500, 600, 700], italic: true, variable: true },
   { family: "DM Serif Display", category: "serif", weights: [400], italic: true },
   { family: "Libre Baskerville", category: "serif", weights: [400, 700], italic: true },
   { family: "Instrument Serif", category: "serif", weights: [400], italic: true },
-  // Handwriting / script.
   { family: "Caveat", category: "handwriting", weights: [400, 500, 600, 700], variable: true },
   { family: "Pacifico", category: "handwriting", weights: [400] },
   { family: "Lobster", category: "handwriting", weights: [400] },
@@ -126,7 +84,6 @@ export const GOOGLE_FONTS: GoogleFontEntry[] = [
   { family: "Shadows Into Light", category: "handwriting", weights: [400] },
   { family: "Satisfy", category: "handwriting", weights: [400] },
   { family: "Kalam", category: "handwriting", weights: [300, 400, 700] },
-  // Monospace.
   { family: "JetBrains Mono", category: "monospace", weights: [100, 200, 300, 400, 500, 600, 700, 800], italic: true, variable: true },
   { family: "Roboto Mono", category: "monospace", weights: [100, 200, 300, 400, 500, 600, 700], italic: true, variable: true },
   { family: "IBM Plex Mono", category: "monospace", weights: [100, 200, 300, 400, 500, 600, 700], italic: true },
@@ -138,10 +95,6 @@ const GENERIC_FONTS: FontOption[] = [
   { family: "serif", source: "generic", category: "serif", weights: W_FULL, hasItalic: true },
   { family: "monospace", source: "generic", category: "monospace", weights: W_FULL, hasItalic: true },
 ];
-
-// ---------------------------------------------------------------------------
-// Store (template-store pattern: module state + useSyncExternalStore)
-// ---------------------------------------------------------------------------
 
 const listeners = new Set<() => void>();
 let snapshot: FontLibraryState | null = null;
@@ -173,7 +126,6 @@ let systemStatus: SystemFontStatus = "idle";
 const systemFamilies = new Map<string, SystemFace[]>();
 const uploadedRecords: UploadedRecord[] = [];
 
-/** Local Font Access API (WICG, Chromium 103+ desktop). */
 interface LocalFontData {
   postscriptName: string;
   fullName: string;
@@ -212,7 +164,6 @@ export function pushRecentFont(family: string): void {
   try {
     window.localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
   } catch {
-    // Private mode: recents just don't persist.
   }
   notify();
 }
@@ -287,15 +238,9 @@ export function findFontOption(family: string): FontOption | undefined {
   return getFontLibraryState().options.find((o) => o.family === family);
 }
 
-// ---------------------------------------------------------------------------
-// Google Fonts loading (css2 stylesheet injection + document.fonts.load)
-// ---------------------------------------------------------------------------
-
 function googleCss2Url(entry: GoogleFontEntry, text?: string): string {
   const family = entry.family.replace(/ /g, "+");
-  // Variable families load the whole wght axis once; static families list
-  // their cuts. (A range request against a static family 400s, so the
-  // `variable` flags must be accurate.)
+  // Google Fonts CSS2 rejects a wght range against a static family, so only variable families request a range. https://developers.google.com/fonts/docs/css2
   const min = entry.weights[0] ?? 400;
   const max = entry.weights[entry.weights.length - 1] ?? 400;
   const stops = entry.variable && max > min ? [`${min}..${max}`] : entry.weights;
@@ -311,9 +256,7 @@ function googleCss2Url(entry: GoogleFontEntry, text?: string): string {
 
 const injectedStylesheets = new Map<string, Promise<void>>();
 
-/** Resolves once the stylesheet is PARSED — only then does
- * `document.fonts.load` know the family and actually fetch the face. */
-function injectStylesheet(url: string): Promise<void> {
+function ensureStylesheetParsed(url: string): Promise<void> {
   let pending = injectedStylesheets.get(url);
   if (!pending) {
     pending = new Promise<void>((resolve) => {
@@ -321,7 +264,7 @@ function injectStylesheet(url: string): Promise<void> {
       link.rel = "stylesheet";
       link.href = url;
       link.onload = () => resolve();
-      link.onerror = () => resolve(); // offline: degrade to fallback face
+      link.onerror = () => resolve();
       document.head.appendChild(link);
     });
     injectedStylesheets.set(url, pending);
@@ -341,7 +284,7 @@ function fontLoadSpec(family: string, weight: number, italic: boolean): string {
 }
 
 async function ensureGoogleFont(entry: GoogleFontEntry, weight: number, italic: boolean): Promise<void> {
-  await injectStylesheet(googleCss2Url(entry));
+  await ensureStylesheetParsed(googleCss2Url(entry));
   const min = entry.weights[0] ?? 400;
   const max = entry.weights[entry.weights.length - 1] ?? 400;
   const w = entry.variable
@@ -350,26 +293,18 @@ async function ensureGoogleFont(entry: GoogleFontEntry, weight: number, italic: 
   await document.fonts.load(fontLoadSpec(entry.family, w, italic && (entry.italic ?? false)));
 }
 
-/**
- * Cheap per-family preview for picker rows: a css2 request subset to just
- * the characters of the family name (~2–8 kB instead of the full face).
- */
 export function ensureFontPreview(family: string): void {
   if (typeof document === "undefined") return;
   const entry = GOOGLE_FONTS.find((e) => e.family === family);
-  if (!entry) return; // system/uploaded families resolve natively
+  if (!entry) return;
   const preview: GoogleFontEntry = {
     ...entry,
     weights: [closestWeight(entry.weights, 400)],
     italic: false,
     variable: false,
   };
-  void injectStylesheet(googleCss2Url(preview, family));
+  void ensureStylesheetParsed(googleCss2Url(preview, family));
 }
-
-// ---------------------------------------------------------------------------
-// System fonts (Local Font Access API)
-// ---------------------------------------------------------------------------
 
 function weightFromStyleName(style: string): number {
   const s = style.toLowerCase();
@@ -403,11 +338,7 @@ function indexSystemFonts(fonts: LocalFontData[]): void {
   }
 }
 
-/**
- * Enumerate system fonts. MUST be called from a user gesture the first time
- * (the browser shows a "local fonts" permission prompt); afterwards
- * {@link restoreSystemFonts} re-enumerates silently on boot.
- */
+// queryLocalFonts requires transient activation, so the first enumeration must run from a user gesture. https://developer.mozilla.org/en-US/docs/Web/API/Window/queryLocalFonts
 export async function loadSystemFonts(): Promise<boolean> {
   if (!isSystemFontAccessSupported()) return false;
   systemStatus = "loading";
@@ -419,7 +350,6 @@ export async function loadSystemFonts(): Promise<boolean> {
     try {
       window.localStorage.setItem(SYSTEM_ENABLED_KEY, "1");
     } catch {
-      // Private mode: re-enable manually next session.
     }
     notify();
     return true;
@@ -430,7 +360,6 @@ export async function loadSystemFonts(): Promise<boolean> {
   }
 }
 
-/** Silent re-enumeration on boot when permission was already granted. */
 async function restoreSystemFonts(): Promise<void> {
   if (!isSystemFontAccessSupported()) return;
   try {
@@ -444,14 +373,13 @@ async function restoreSystemFonts(): Promise<void> {
     });
     if (status.state !== "granted") return;
   } catch {
-    return; // permission name unknown: stay idle, the button still works
+    return;
   }
   await loadSystemFonts();
 }
 
 const registeredSystemFamilies = new Set<string>();
 
-/** Pick one face per (weight, italic) — fewest extra style tokens wins. */
 function dedupeFaces(faces: SystemFace[]): SystemFace[] {
   const byKey = new Map<string, SystemFace>();
   for (const face of faces) {
@@ -462,11 +390,6 @@ function dedupeFaces(faces: SystemFace[]): SystemFace[] {
   return [...byKey.values()];
 }
 
-/**
- * Register a system family's faces into `document.fonts` from their blobs.
- * After this, canvas drawing and `document.fonts.load` for the plain family
- * name are deterministic (no dependence on OS font name resolution).
- */
 async function ensureSystemFamily(family: string): Promise<void> {
   if (registeredSystemFamilies.has(family)) return;
   const faces = systemFamilies.get(family);
@@ -484,13 +407,9 @@ async function ensureSystemFamily(family: string): Promise<void> {
     }),
   );
   if (results.every((r) => r.status === "rejected")) {
-    registeredSystemFamilies.delete(family); // retry next time
+    registeredSystemFamilies.delete(family);
   }
 }
-
-// ---------------------------------------------------------------------------
-// Uploaded fonts (IndexedDB persistence)
-// ---------------------------------------------------------------------------
 
 const DB_NAME = "mcut-fonts";
 const DB_STORE = "uploaded";
@@ -556,29 +475,39 @@ export async function removeUploadedFontFamily(family: string): Promise<void> {
     });
     db.close();
   } catch {
-    // Registered faces stay live this session; the DB row survives.
   }
 }
 
-/**
- * Minimal SFNT `name`-table reader: family (nameID 16, falling back to 1)
- * and subfamily (17 → 2) from TTF/OTF/TTC bytes. WOFF/WOFF2 tables are
- * compressed — callers fall back to the filename for those.
- */
+// OpenType sfnt version tags, the TrueType Collection header, and table tags. https://learn.microsoft.com/en-us/typography/opentype/spec/otff
+const SFNT_TAG = {
+  ttcCollection: 0x74746366,
+  trueTypeOutlines: 0x00010000,
+  cffOutlines: 0x4f54544f,
+  appleTrueType: 0x74727565,
+  nameTable: 0x6e616d65,
+};
+// OpenType name table name ids and platform ids. https://learn.microsoft.com/en-us/typography/opentype/spec/name
+const NAME_ID = { family: 1, subfamily: 2, typographicFamily: 16, typographicSubfamily: 17 };
+const PLATFORM_ID = { unicode: 0, macintosh: 1, windows: 3 };
+
 function parseFontNames(buffer: ArrayBuffer): { family?: string; subfamily?: string } {
   try {
     const view = new DataView(buffer);
     let base = 0;
-    if (view.getUint32(0) === 0x74746366 /* 'ttcf' */) base = view.getUint32(12);
+    if (view.getUint32(0) === SFNT_TAG.ttcCollection) base = view.getUint32(12);
     const tag = view.getUint32(base);
-    if (tag !== 0x00010000 && tag !== 0x4f54544f /* 'OTTO' */ && tag !== 0x74727565 /* 'true' */) {
+    if (
+      tag !== SFNT_TAG.trueTypeOutlines &&
+      tag !== SFNT_TAG.cffOutlines &&
+      tag !== SFNT_TAG.appleTrueType
+    ) {
       return {};
     }
     const numTables = view.getUint16(base + 4);
     let nameTable = -1;
     for (let i = 0; i < numTables; i++) {
       const record = base + 12 + i * 16;
-      if (view.getUint32(record) === 0x6e616d65 /* 'name' */) {
+      if (view.getUint32(record) === SFNT_TAG.nameTable) {
         nameTable = view.getUint32(record + 8);
         break;
       }
@@ -586,6 +515,7 @@ function parseFontNames(buffer: ArrayBuffer): { family?: string; subfamily?: str
     if (nameTable < 0) return {};
     const count = view.getUint16(nameTable + 2);
     const stringsStart = nameTable + view.getUint16(nameTable + 4);
+    const wantedNameIds = new Set(Object.values(NAME_ID));
     const names = new Map<number, string>();
     for (let i = 0; i < count; i++) {
       const record = nameTable + 6 + i * 12;
@@ -593,21 +523,21 @@ function parseFontNames(buffer: ArrayBuffer): { family?: string; subfamily?: str
       const nameId = view.getUint16(record + 6);
       const length = view.getUint16(record + 8);
       const offset = stringsStart + view.getUint16(record + 10);
-      if (nameId !== 1 && nameId !== 2 && nameId !== 16 && nameId !== 17) continue;
+      if (!wantedNameIds.has(nameId)) continue;
       let value = "";
-      if (platformId === 3 || platformId === 0) {
+      if (platformId === PLATFORM_ID.windows || platformId === PLATFORM_ID.unicode) {
         for (let j = 0; j + 1 < length; j += 2) value += String.fromCharCode(view.getUint16(offset + j));
-      } else if (platformId === 1) {
+      } else if (platformId === PLATFORM_ID.macintosh) {
         for (let j = 0; j < length; j++) value += String.fromCharCode(view.getUint8(offset + j));
       } else {
         continue;
       }
-      // Windows (platform 3) entries win; others only fill gaps.
-      if (value && (platformId === 3 || !names.has(nameId))) names.set(nameId, value);
+      const windowsEntryWins = platformId === PLATFORM_ID.windows || !names.has(nameId);
+      if (value && windowsEntryWins) names.set(nameId, value);
     }
     return {
-      family: names.get(16) ?? names.get(1),
-      subfamily: names.get(17) ?? names.get(2),
+      family: names.get(NAME_ID.typographicFamily) ?? names.get(NAME_ID.family),
+      subfamily: names.get(NAME_ID.typographicSubfamily) ?? names.get(NAME_ID.subfamily),
     };
   } catch {
     return {};
@@ -632,7 +562,6 @@ async function registerUploadedRecord(record: UploadedRecord): Promise<void> {
   document.fonts.add(fontFace);
 }
 
-/** Import font files: parse names, register faces, persist to IndexedDB. */
 export async function uploadFontFiles(files: Iterable<File>): Promise<{ added: string[]; failed: string[] }> {
   const added: string[] = [];
   const failed: string[] = [];
@@ -658,7 +587,6 @@ export async function uploadFontFiles(files: Iterable<File>): Promise<{ added: s
       try {
         await dbPutFont(record);
       } catch {
-        // Usable this session even if persistence fails.
       }
     } catch {
       failed.push(file.name);
@@ -667,10 +595,6 @@ export async function uploadFontFiles(files: Iterable<File>): Promise<{ added: s
   if (added.length > 0) notify();
   return { added, failed };
 }
-
-// ---------------------------------------------------------------------------
-// Loading orchestration
-// ---------------------------------------------------------------------------
 
 const GENERIC_FAMILY_NAMES = new Set([
   ...GENERIC_FONTS.map((f) => f.family),
@@ -683,15 +607,9 @@ const GENERIC_FAMILY_NAMES = new Set([
   "ui-rounded",
 ]);
 
-/**
- * Make `family` at (`weight`, `italic`) drawable on a canvas. Resolves on a
- * best-effort basis — unknown families degrade to the fallback face rather
- * than rejecting.
- */
 export async function ensureFontLoaded(family: string, weight = 400, italic = false): Promise<void> {
   if (typeof document === "undefined") return;
   const name = family.trim();
-  // Stacks ("Arial, sans-serif") and generic keywords need no loading.
   if (GENERIC_FAMILY_NAMES.has(name) || name.includes(",")) return;
   try {
     const google = GOOGLE_FONTS.find((e) => e.family === name);
@@ -702,11 +620,8 @@ export async function ensureFontLoaded(family: string, weight = 400, italic = fa
     if (systemFamilies.has(name)) {
       await ensureSystemFamily(name);
     }
-    // Uploaded faces register at init; system faces just registered; for
-    // anything else this still resolves OS-installed names in Chromium.
     await document.fonts.load(fontLoadSpec(name, weight, italic));
   } catch {
-    // Never block rendering on a font.
   }
 }
 
@@ -716,7 +631,6 @@ interface FontSpec {
   italic: boolean;
 }
 
-/** Unique font specs referenced by the project's text + caption elements. */
 export function collectProjectFontSpecs(project: Project): FontSpec[] {
   const specs = new Map<string, FontSpec>();
   for (const track of project.tracks) {
@@ -733,29 +647,19 @@ export function collectProjectFontSpecs(project: Project): FontSpec[] {
   return [...specs.values()];
 }
 
-/**
- * Load every font the project references — REQUIRED before any canvas
- * render that must be correct (PNG cover export, video export): canvas text
- * drawn before the face is ready silently uses the fallback font.
- */
 export async function ensureProjectFontsLoaded(project: Project): Promise<void> {
   await Promise.allSettled(
     collectProjectFontSpecs(project).map((spec) => ensureFontLoaded(spec.family, spec.weight, spec.italic)),
   );
 }
 
-// ---------------------------------------------------------------------------
-// Export worker fonts
-// ---------------------------------------------------------------------------
-
-/** Faces of a Google family the project actually uses (weights + styles). */
 async function googleExportFaces(entry: GoogleFontEntry, specs: FontSpec[]): Promise<ExportFontFaceInit[]> {
   let css = "";
   try {
     const response = await fetch(googleCss2Url(entry));
     if (response.ok) css = await response.text();
   } catch {
-    return []; // offline: the worker degrades to a fallback face, like the main thread
+    return [];
   }
   const min = entry.weights[0] ?? 400;
   const max = entry.weights[entry.weights.length - 1] ?? 400;
@@ -782,13 +686,6 @@ async function googleExportFaces(entry: GoogleFontEntry, specs: FontSpec[]): Pro
     }));
 }
 
-/**
- * Resolve the project's font specs to faces the export worker can register
- * in its own `FontFaceSet` (workers can't see `document.fonts`): Google
- * faces as fetchable URLs (with unicode-range subsets), uploaded and system
- * faces as binary copies. Families neither in the catalog nor registered
- * from binaries resolve natively in the worker canvas, same as on main.
- */
 export async function collectProjectFontExports(project: Project): Promise<ExportFontFaceInit[]> {
   const byFamily = new Map<string, FontSpec[]>();
   for (const spec of collectProjectFontSpecs(project)) {
@@ -811,7 +708,6 @@ export async function collectProjectFontExports(project: Project): Promise<Expor
           family,
           weight: String(record.weight),
           style: record.italic ? "italic" : "normal",
-          // Copy: the start message transfers (detaches) binary sources.
           source: record.data.slice(0),
         });
       }
@@ -836,7 +732,6 @@ export async function collectProjectFontExports(project: Project): Promise<Expor
           source: await (await face.data.blob()).arrayBuffer(),
         });
       } catch {
-        // Face unavailable: the worker falls back, same as a failed load here.
       }
     }
   }
@@ -845,7 +740,6 @@ export async function collectProjectFontExports(project: Project): Promise<Expor
 
 let initPromise: Promise<void> | null = null;
 
-/** One-time boot: re-register uploaded fonts, silently restore system fonts. */
 export function initFontLibrary(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
   initPromise ??= (async () => {
@@ -855,14 +749,12 @@ export function initFontLibrary(): Promise<void> {
       uploadedRecords.push(...records.filter((_, i) => results[i]!.status === "fulfilled"));
       if (records.length > 0) notify();
     } catch {
-      // No IndexedDB (private mode): uploads just don't persist.
     }
     await restoreSystemFonts();
   })();
   return initPromise;
 }
 
-/** Reactive view of the library (options, system status, recents). */
 export function useFontLibrary(): FontLibraryState {
   return useSyncExternalStore(subscribeFontLibrary, getFontLibraryState, getFontLibraryServerState);
 }
@@ -874,12 +766,6 @@ function projectFontKey(project: Project): string {
     .join(",");
 }
 
-/**
- * Keep `document.fonts` in sync with the project: boots the library, then
- * loads any font a text/caption element references whenever the set changes.
- * The preview canvas redraws every frame, so faces pop in as they arrive.
- * Mount once inside the editor provider.
- */
 export function useProjectFontLoader(): void {
   const engine = useEditor();
   useEngineSync(

@@ -5,13 +5,6 @@ import { loadMediaBlob } from "@mcut/media";
 import { parseProject, type EditorEngine, type Project } from "@mcut/timeline";
 import { pickFiles } from "./media-import";
 
-/**
- * Project files: the document JSON travels; media does not. Asset `src`s are
- * runtime bindings (usually blob: URLs) — on open we rebind them from the
- * OPFS media store by content hash, the same identity autosave uses, and
- * warn about anything that needs re-importing.
- */
-
 function downloadText(text: string, filename: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type }));
   const anchor = document.createElement("a");

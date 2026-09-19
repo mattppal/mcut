@@ -25,14 +25,6 @@ import {
   type FontOption,
 } from "./font-library";
 
-/**
- * The font family picker (Figma/Canva-style): search, category filters,
- * recents on top, then uploaded → system → library groups — every row
- * rendered in its own typeface. System fonts arrive via the Local Font
- * Access API behind an explicit button (Chromium desktop); font-file upload
- * is the everywhere fallback.
- */
-
 const CATEGORY_FILTERS: Array<{ key: FontCategory; label: string }> = [
   { key: "display", label: "Display" },
   { key: "sans-serif", label: "Sans" },
@@ -92,9 +84,7 @@ export function FontPicker({
   onSelect,
   className,
 }: {
-  /** Current font family. */
   value: string;
-  /** Current weight/style — preloaded for the picked family so the canvas updates without a fallback flash. */
   weight?: number;
   italic?: boolean;
   onSelect: (family: string) => void;
@@ -121,8 +111,6 @@ export function FontPicker({
     options: library.options.filter(
       (o) =>
         o.source === source &&
-        // System families have no reliable category metadata; only the
-        // library/default groups narrow under a category filter.
         (category === null || o.source === "system" || o.source === "uploaded" || o.category === category),
     ),
   })).filter((group) => group.options.length > 0);

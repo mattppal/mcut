@@ -125,8 +125,6 @@ describe("Studio action/operator MCP surface", () => {
 
     expect(JSON.parse(JSON.stringify(result.tools))).toEqual(JSON.parse(JSON.stringify(expected)));
 
-    // Every agent tool is either registered on the server or handled by the
-    // bridge in the browser — a third category means the contract drifted.
     const serverNames = new Set(result.tools.map((tool) => tool.name));
     const bridgeOnly = new Set<string>(MCP_BRIDGE_ONLY_TOOL_NAMES);
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) {

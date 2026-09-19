@@ -6,22 +6,11 @@ import {
   saveMediaBlob,
 } from "@mcut/media";
 
-/**
- * Local project library: each project is autosaved into an IndexedDB store
- * keyed by project id (with denormalized metadata for a future projects
- * screen); media blobs go to OPFS keyed by content hash (deduped, relinkable)
- * with an IndexedDB fallback keyed by asset id for unhashed files and
- * unsupported browsers. Blob pruning considers every saved project, not just
- * the active one. On load, object URLs are recreated and the asset `src`s
- * rewritten — `src` is a runtime binding, `hash` is the identity.
- */
-
 const DB_NAME = "mcut-editor";
 const DB_VERSION = 2;
 const KV_STORE = "kv";
 const ASSET_STORE = "assets";
 const PROJECT_STORE = "projects";
-/** v1 single-slot autosave key, migrated into PROJECT_STORE on upgrade. */
 const LEGACY_PROJECT_KEY = "project";
 const ACTIVE_PROJECT_KEY = "activeProjectId";
 
@@ -30,7 +19,6 @@ interface StoredAsset {
   blob: Blob;
 }
 
-/** One saved project. Metadata is denormalized so listing never parses JSON. */
 interface StoredProject {
   id: string;
   name: string;
@@ -38,12 +26,10 @@ interface StoredProject {
   updatedMs: number;
   durationMs: number;
   assetCount: number;
-  /** Poster frame for the projects screen; generation is wired up later. */
   thumbnail?: Blob;
   project: unknown;
 }
 
-/** What a projects screen needs to render a card — everything but the JSON. */
 export type ProjectListEntry = Omit<StoredProject, "project">;
 
 function projectDurationMs(project: Project): number {
@@ -89,7 +75,6 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(PROJECT_STORE)) {
         db.createObjectStore(PROJECT_STORE, { keyPath: "id" });
-        // Migrate the v1 single-slot autosave into the library.
         const kv = tx.objectStore(KV_STORE);
         const read = kv.get(LEGACY_PROJECT_KEY);
         read.onsuccess = () => {
@@ -101,7 +86,6 @@ function openDb(): Promise<IDBDatabase> {
             kv.put(project.id, ACTIVE_PROJECT_KEY);
             kv.delete(LEGACY_PROJECT_KEY);
           } catch {
-            // Unparseable legacy snapshot — drop it rather than block the upgrade.
             kv.delete(LEGACY_PROJECT_KEY);
           }
         };
@@ -127,10 +111,6 @@ function getRequest<T>(request: IDBRequest<T>): Promise<T> {
   });
 }
 
-/**
- * Ask the browser not to evict our IndexedDB/OPFS data under storage
- * pressure. Safe to call repeatedly; browsers may grant silently or prompt.
- */
 export async function requestPersistentStorage(): Promise<boolean> {
   try {
     return (await navigator.storage?.persist?.()) ?? false;
@@ -139,9 +119,7 @@ export async function requestPersistentStorage(): Promise<boolean> {
   }
 }
 
-/** Upsert the project into the library and mark it active. */
 export async function saveProjectSnapshot(project: Project): Promise<void> {
-  // Don't litter the library with the empty project every page boot creates.
   if (!hasContent(project)) return;
   const db = await openDb();
   let keepHashes = new Set<string>();
@@ -178,7 +156,6 @@ export async function saveProjectSnapshot(project: Project): Promise<void> {
   await pruneMediaBlobs(keepHashes).catch(() => 0);
 }
 
-/** Union of asset ids/hashes across every saved project. */
 function collectReferencedAssets(
   stored: StoredProject[],
 ): { keepAssetIds: Set<string>; keepHashes: Set<string> } {
@@ -211,7 +188,6 @@ export async function saveAssetBlob(asset: AssetRef | string, blob: Blob): Promi
   }
 }
 
-/** Saved projects, most recently edited first. */
 export async function listProjects(): Promise<ProjectListEntry[]> {
   const db = await openDb();
   try {
@@ -237,14 +213,9 @@ export async function listProjects(): Promise<ProjectListEntry[]> {
 
 export interface RestoredSession {
   project: Project;
-  /** Asset ids whose media blobs were not found (their clips render empty). */
   missingAssetIds: string[];
 }
 
-/**
- * Load a saved project by id, recreating object URLs for stored media blobs
- * and rewriting asset `src`s. Returns `null` when nothing useful is saved.
- */
 export async function loadProject(id: string): Promise<RestoredSession | null> {
   const db = await openDb();
   try {
@@ -262,7 +233,6 @@ export async function loadProject(id: string): Promise<RestoredSession | null> {
     const missingAssetIds: string[] = [];
     const assets = { ...project.assets };
     for (const [assetId, asset] of Object.entries(assets)) {
-      // OPFS by content hash first (stable identity), then legacy IDB by id.
       const blob =
         (asset.hash ? await loadMediaBlob(asset.hash).catch(() => null) : null) ??
         blobs.get(assetId);
@@ -293,19 +263,16 @@ async function getActiveProjectId(): Promise<string | null> {
   }
 }
 
-/** Load the most recently active project (the v1 "restore session" behavior). */
 export async function loadSavedSession(): Promise<RestoredSession | null> {
   const activeId = await getActiveProjectId();
   if (activeId) {
     const restored = await loadProject(activeId);
     if (restored) return restored;
   }
-  // Active pointer missing or stale — fall back to the newest project.
   const [newest] = await listProjects();
   return newest ? loadProject(newest.id) : null;
 }
 
-/** Remove a project from the library and prune blobs it alone referenced. */
 export async function deleteProject(id: string): Promise<void> {
   const db = await openDb();
   let keepHashes = new Set<string>();
@@ -340,7 +307,6 @@ export async function deleteProject(id: string): Promise<void> {
   await pruneMediaBlobs(keepHashes).catch(() => 0);
 }
 
-/** Store a poster frame for a project card (no-op if the project is gone). */
 export async function saveProjectThumbnail(id: string, thumbnail: Blob): Promise<void> {
   const db = await openDb();
   try {
@@ -357,10 +323,6 @@ export async function saveProjectThumbnail(id: string, thumbnail: Blob): Promise
   }
 }
 
-/**
- * v1-compat: forget the active project. With the library in place this only
- * deletes the project being replaced, not every saved project.
- */
 export async function clearSavedSession(): Promise<void> {
   const activeId = await getActiveProjectId();
   if (activeId) await deleteProject(activeId);
