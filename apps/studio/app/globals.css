@@ -58,6 +58,8 @@
    * `font-mono text-2xs tabular-nums`. */
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 :root {
@@ -233,10 +235,20 @@
   --clip-multicam: oklch(25.7% 0.09 281.288 / 90%);
 }
 
-/* The command palette is a keyboard toggle. It opens and closes with no motion. */
+[data-slot='dialog-content'][data-command-palette],
 [data-slot='dialog-overlay']:has(~ [data-slot='dialog-content'][data-command-palette]) {
-  animation-duration: 0s;
   transition-duration: 0s;
+  opacity: 1;
+  scale: 1;
+}
+
+/* Reduced motion keeps popup fades and drops the scale movement. Popups are
+   portaled under body, so match on the wrapper's data-slot, not on [data-editor]. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot][data-starting-style],
+  [data-slot][data-ending-style] {
+    scale: 1;
+  }
 }
 
 [data-editor] ::-webkit-scrollbar {
