@@ -5,6 +5,11 @@ on:
     - cron: "0 7 * * 1"
   workflow_dispatch:
     inputs:
+      target:
+        description: MCP target, the headless stdio server or a Studio tab over the live bridge
+        type: choice
+        options: [stdio, bridge]
+        default: stdio
       model:
         description: xAI model id (empty uses the harness default)
         required: false
@@ -46,15 +51,37 @@ jobs:
           path: reports/agent-e2e
           retention-days: 14
 
+  bridge-dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - run: bunx turbo run build --filter=mcut-studio-web...
+      - run: bunx playwright install --with-deps chromium
+      - name: Replay the scripted tool calls through a Studio tab over the live bridge
+        shell: bash
+        run: bun scripts/agent-e2e/run.ts --dry-run --target bridge | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: agent-e2e-bridge-dry-run
+          path: reports/agent-e2e
+          retention-days: 14
+
   live:
     if: github.event_name != 'pull_request'
-    needs: dry-run
+    needs: [dry-run, bridge-dry-run]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
       XAI_MODEL: ${{ inputs.model }}
       TASK_IDS: ${{ inputs.tasks }}
+      TARGET: ${{ inputs.target || 'stdio' }}
     steps:
       - name: Check for the xAI key
         id: key
@@ -74,12 +101,16 @@ jobs:
       - run: bun install --frozen-lockfile
         if: steps.key.outputs.present == 'true'
       - run: bunx turbo run build --filter=@mcut/mcp-server...
-        if: steps.key.outputs.present == 'true'
+        if: steps.key.outputs.present == 'true' && env.TARGET == 'stdio'
+      - run: bunx turbo run build --filter=mcut-studio-web...
+        if: steps.key.outputs.present == 'true' && env.TARGET == 'bridge'
+      - run: bunx playwright install --with-deps chromium
+        if: steps.key.outputs.present == 'true' && env.TARGET == 'bridge'
       - name: Drive the MCP server with xAI
         if: steps.key.outputs.present == 'true'
         shell: bash
         run: |
-          args=()
+          args=(--target "$TARGET")
           IFS=',' read -ra ids <<< "$TASK_IDS"
           for id in "${ids[@]}"; do
             id="$(echo "$id" | xargs)"
