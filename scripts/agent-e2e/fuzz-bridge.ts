@@ -11,13 +11,14 @@ import { createRunDir } from './report'
 const USAGE = [
   'usage: bun scripts/agent-e2e/fuzz-bridge.ts [--seeds N] [--length N] [--seed S]',
   '',
-  'Runs random tool sequences against a production Studio tab over the live bridge and checks',
+  'Runs random tool sequences against the Electron desktop app over the live bridge and checks',
   'the same project invariants as the stdio fuzzer in packages/mcp-server.',
   '',
   'env  MCUT_FUZZ_SEQUENCES  seed count, default 20 (--seeds wins)',
   '     MCUT_FUZZ_LENGTH     steps per sequence, default 20 (--length wins)',
   '     MCUT_FUZZ_SEED       run one seed and ignore known failures (--seed wins)',
-  '     MCUT_HEADED          set to 1 to watch the Studio tab',
+  '',
+  'display  the app window shows on the current display, wrap in xvfb-run --auto-servernum on a headless machine',
 ].join('\n')
 
 const BASE_SEED = 1
@@ -119,17 +120,17 @@ async function fuzz(server: McpFuzzServer, options: Options): Promise<number> {
 async function main(argv: string[]): Promise<number> {
   const options = parseOptions(argv)
   const runDir = createRunDir('bridge-fuzz')
-  const session = await openBridgeSession({ logDir: runDir, headless: process.env.MCUT_HEADED !== '1' })
+  const session = await openBridgeSession({ logDir: runDir })
   try {
     const server = await McpFuzzServer.connect(new StreamableHTTPClientTransport(new URL(session.mcpUrl)))
     try {
-      return await fuzz(server, options)
+      return await Promise.race([fuzz(server, options), session.lost])
     } finally {
       await server.close()
     }
   } finally {
     await session.close()
-    log(`bridge logs and trace in ${runDir}`)
+    log(`app log in ${runDir}`)
   }
 }
 

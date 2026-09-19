@@ -2,23 +2,25 @@
 
 `scripts/agent-e2e/run.ts` lets a language model drive the mcut MCP server the way an agent would. It connects an MCP client to `@mcut/mcp-server`, turns `tools/list` into function definitions for the xAI Responses API, routes every function call back through the MCP client, and scores the final project JSON against a task registry. The same loop replays a scripted tool sequence per task with `--dry-run`, so the harness and its scorers run in CI with zero secrets.
 
-A run picks a target and a driver. The target is what the MCP client talks to, the headless stdio server or a production Studio tab over the live bridge. The driver is what decides the tool calls, the harness loop calling the xAI Responses API or the Grok Build CLI (`grok`) running headless against the bridge.
+A run picks a target and a driver. The target is what the MCP client talks to, the headless stdio server or the Electron desktop app (`apps/desktop`) hosting Studio and the live bridge. The driver is what decides the tool calls, the harness loop calling the xAI Responses API or the Grok Build CLI (`grok`) running headless against the bridge.
 
 ## Commands
 
 ```sh
 bun scripts/agent-e2e/run.ts --dry-run
-bun scripts/agent-e2e/run.ts --dry-run --target bridge
-bun scripts/agent-e2e/run.ts --dry-run --target bridge --driver grok-build
+xvfb-run --auto-servernum -- bun scripts/agent-e2e/run.ts --dry-run --target bridge
+xvfb-run --auto-servernum -- bun scripts/agent-e2e/run.ts --dry-run --target bridge --driver grok-build
 XAI_API_KEY=xai-... bun scripts/agent-e2e/run.ts
-XAI_API_KEY=xai-... bun scripts/agent-e2e/run.ts --target bridge --driver grok-build
+XAI_API_KEY=xai-... xvfb-run --auto-servernum -- bun scripts/agent-e2e/run.ts --target bridge --driver grok-build
 XAI_API_KEY=xai-... XAI_MODEL=grok-build-0.1 bun scripts/agent-e2e/run.ts --task silence-cuts --max-steps 12
 bun scripts/agent-e2e/run.ts --list
 bun test scripts/agent-e2e
-bun run fuzz:mcp:bridge
+xvfb-run --auto-servernum -- bun run fuzz:mcp:bridge
 ```
 
-Build first. The stdio target needs `bunx turbo run build --filter=@mcut/mcp-server...`, the bridge target needs `bunx turbo run build --filter=mcut-studio-web...` and `bunx playwright install chromium`, and `bun run build` covers both. The default target is the headless stdio server (`packages/mcp-server/src/cli.ts`) writing to a temp project file that is deleted after the run.
+Build first. The stdio target needs `bunx turbo run build --filter=@mcut/mcp-server...`, the bridge target needs `bunx turbo run build --filter=mcut-desktop...`, which builds the Studio static export and copies it into the Electron app, and `bun run build` covers both. The default target is the headless stdio server (`packages/mcp-server/src/cli.ts`) writing to a temp project file that is deleted after the run.
+
+The bridge target opens a real Electron window, so it needs a display. On a headless machine wrap the command in `xvfb-run --auto-servernum` as above, after `apt-get install xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64`. On a desktop run it bare and watch the window.
 
 ## Environment
 
@@ -29,17 +31,18 @@ Build first. The stdio target needs `bunx turbo run build --filter=@mcut/mcp-ser
 | `XAI_BASE_URL` | API base, default `https://api.x.ai/v1`. |
 | `GROK_BUILD_MODEL` | Model id the grok-build driver passes to `grok -m`. Empty lets grok pick its default. |
 | `GROK_BIN` | Path to the `grok` binary when it is neither on `PATH` nor in `~/.grok/bin`. |
-| `MCUT_BRIDGE_URL` | Full Streamable HTTP MCP URL of a running live bridge, for example the output of `bun run scripts/mcut-local-dev.ts mcp-url`. The bridge target then uses that tab instead of opening a session. |
+| `MCUT_BRIDGE_URL` | Full Streamable HTTP MCP URL of a running live bridge, the `MCP_URL` line a separately launched desktop app prints or the output of `bun run scripts/mcut-local-dev.ts mcp-url`. The harness then uses that bridge instead of launching the app itself. |
 | `MCUT_BRIDGE_TOKEN` | Pair with the local bridge on `MCUT_BRIDGE_PORT` (default 44737) without spelling out the URL. Appended as `?token=` when `MCUT_BRIDGE_URL` lacks one. |
-| `MCUT_HEADED` | Set to 1 to watch the Studio tab the bridge target opens. |
 
-The bridge is the existing pairing from `bun run dev`. The harness adds no auth of its own. When a bridge target is used, the connected Studio tab is the source of truth and every task starts by clearing that project.
+The bridge is the existing pairing from `bun run dev`. The harness adds no auth of its own. When a bridge target is used, the connected Studio window is the source of truth and every task starts by clearing that project.
 
 ## Bridge target
 
-`--target bridge` without `MCUT_BRIDGE_URL` opens a session through `scripts/agent-e2e/bridge-session.ts`. It starts `scripts/serve-out.ts` over the static Studio export in `apps/studio/out` and `bridge-cli.ts start` on ephemeral ports, opens `/editor?mcpBridge=<port>&mcpToken=<token>` in headless Chromium through Playwright, and waits for the bridge `/status` hello frame before the first tool call. The run directory collects `studio.log`, `bridge.log`, `browser.log`, and a Playwright `trace.zip`.
+`--target bridge` without `MCUT_BRIDGE_URL` opens a session through `scripts/agent-e2e/bridge-session.ts`. It spawns one process with `Bun.spawn`, the Electron app as `electron apps/desktop --port 0 --token <64 hex chars>` from the repo root with `ELECTRON_RUN_AS_NODE` removed from the environment, reads the `BRIDGE_READY ws://127.0.0.1:<port>/mcut-mcp` line the app prints on stdout, and polls `GET /status` on that port until `connected` is true and the hello frame has arrived. The app serves Studio from `app://studio` and hosts the bridge in its main process, so there is no static file server, no `bridge-cli.ts`, and no Chromium to install. The run directory collects `app.log`, the app's stdout and stderr plus the session's own lines, including the hello frame with the `Electron/` user agent. The Playwright `trace.zip` from the Chromium era is gone, there is no Playwright in the session anymore.
 
-The session also serves media. The static export server answers 404 for repo relative paths such as `fixtures/media/counter-vp9-webm.webm`, so `scripts/agent-e2e/fixture-server.ts` runs a `Bun.serve` static server on an ephemeral port that serves only `fixtures/media/` and `apps/studio/e2e/fixtures/`, with CORS headers and byte range requests because mediabunny and the `<video>` element fetch by range. Tasks resolve fixture sources through a `MediaSrc` function, the repo relative path for the stdio target and `http://127.0.0.1:<port>/<path>` for the bridge, so prompts, scripted calls, and scorers agree on the `src` the tab actually loads. With `MCUT_BRIDGE_URL` the harness still starts the fixture server so an externally paired tab can fetch the media.
+If the app exits while a run is open, the harness reports `the Electron app exited with ...` with the app's last output lines and exits 1 instead of waiting on a dead bridge.
+
+The session also serves media. The app's `app://studio` origin has no route for repo relative paths such as `fixtures/media/counter-vp9-webm.webm`, so `scripts/agent-e2e/fixture-server.ts` runs a `Bun.serve` static server on an ephemeral port that serves only `fixtures/media/` and `apps/studio/e2e/fixtures/`, with CORS headers and byte range requests because mediabunny and the `<video>` element fetch by range. The desktop content security policy allows `http://127.0.0.1:*` for `connect-src` and `media-src`, which is what makes this work. Tasks resolve fixture sources through a `MediaSrc` function, the repo relative path for the stdio target and `http://127.0.0.1:<port>/<path>` for the bridge, so prompts, scripted calls, and scorers agree on the `src` the window actually loads. With `MCUT_BRIDGE_URL` the harness still starts the fixture server so an externally launched app can fetch the media.
 
 ## Grok Build driver
 
@@ -129,17 +132,19 @@ grok -p "Register apps/studio/e2e/fixtures/fixture-vp9.mkv as a video asset and 
 
 ## Fuzzing the bridge
 
-`bun run fuzz:mcp:bridge` (`scripts/agent-e2e/fuzz-bridge.ts`) opens the same bridge session, connects the MCP fuzz client from `packages/mcp-server/src/fuzz` over Streamable HTTP, and runs 20 random sequences of 20 tool calls against the tab, resetting the project between seeds and checking the project invariants from `packages/timeline/src/fuzz`. `ensure_transcript` is left out because transcription can take minutes. A violated invariant is minimized and printed with the `MCUT_FUZZ_SEED=<n>` line that reproduces it. `--seeds`, `--length`, and `--seed`, or `MCUT_FUZZ_SEQUENCES`, `MCUT_FUZZ_LENGTH`, and `MCUT_FUZZ_SEED`, resize the window.
+`bun run fuzz:mcp:bridge` (`scripts/agent-e2e/fuzz-bridge.ts`) opens the same Electron session, connects the MCP fuzz client from `packages/mcp-server/src/fuzz` over Streamable HTTP, and runs 20 random sequences of 20 tool calls against the app, resetting the project between seeds and checking the project invariants from `packages/timeline/src/fuzz`. `ensure_transcript` is left out because transcription can take minutes. A violated invariant is minimized and printed with the `MCUT_FUZZ_SEED=<n>` line that reproduces it. `--seeds`, `--length`, and `--seed`, or `MCUT_FUZZ_SEQUENCES`, `MCUT_FUZZ_LENGTH`, and `MCUT_FUZZ_SEED`, resize the window.
 
 ## CI
 
-`.github/workflows/agent-e2e.yml` runs every Monday at 07:00 UTC and on `workflow_dispatch` with optional `target`, `model`, and `tasks` inputs. Pull requests that touch `scripts/agent-e2e/**` or the workflow run the two dry run jobs.
+`.github/workflows/agent-e2e.yml` runs every Monday at 07:00 UTC and on `workflow_dispatch` with optional `target`, `model`, and `tasks` inputs. Pull requests that touch `scripts/agent-e2e/**`, `apps/studio/**`, `apps/desktop/**`, `packages/desktop-ipc/**`, `packages/mcp-server/**`, `packages/timeline/**`, or the workflow run the two dry run jobs.
+
+The bridge jobs build the desktop app with `bunx turbo run build --filter=mcut-desktop...`, install `xvfb` and the Electron runtime libraries with `apt-get`, set `kernel.apparmor_restrict_unprivileged_userns=0` so the Chromium sandbox can start on the Ubuntu 24.04 runner (https://github.com/microsoft/playwright/issues/34251), and run the harness under `xvfb-run --auto-servernum`. Electron's `cli.js` downloads the Electron binary on first launch, so the job needs network but no extra install step.
 
 | Job | Runs on | Needs the key | Does |
 | --- | --- | --- | --- |
 | `dry-run` | pull requests, schedule, dispatch | no | typechecks and tests the harness, replays the scripted tasks through the stdio server |
-| `bridge-dry-run` | pull requests, schedule, dispatch | no | builds Studio, installs Chromium and Grok Build, replays the scripted tasks including the WebM export through a Studio tab, checks that grok discovers the bridge config and completes the MCP handshake, fuzzes the bridge for 20 seeds |
+| `bridge-dry-run` | pull requests, schedule, dispatch | no | builds the desktop app, installs Xvfb and Grok Build, replays the scripted tasks including the WebM export through the Electron app, checks that grok discovers the bridge config and completes the MCP handshake, fuzzes the bridge for 20 seeds |
 | `live` | schedule, dispatch | yes | the xai driver against the `target` input, stdio by default |
-| `bridge-live` | schedule, dispatch | yes | installs Grok Build and lets it run every bridge task against a Studio tab over the live bridge |
+| `bridge-live` | schedule, dispatch | yes | installs Grok Build and lets it run every bridge task against the Electron app over the live bridge |
 
 The live jobs read the `XAI_API_KEY` repository secret and skip with a notice when it is empty. Every job appends the markdown table to the job summary and uploads `reports/agent-e2e` as an artifact whatever the outcome.

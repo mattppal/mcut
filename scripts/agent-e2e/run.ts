@@ -18,12 +18,13 @@ const EXIT_FAILED = 1
 const EXIT_CONFIG = 2
 const XAI_REQUEST_TIMEOUT_MS = 120_000
 const GROK_SKIPPED = 'skipped: grok binary not found'
+const SESSION_LOSS_GRACE_MS = 1_000
 
 const USAGE = [
   'usage: bun scripts/agent-e2e/run.ts [--dry-run] [--target stdio|bridge] [--driver xai|grok-build] [--task <id>]... [--max-steps N] [--wall-clock-ms N] [--list]',
   '',
   'targets  stdio       the headless MCP server over stdio writing a temp project file (default)',
-  '         bridge      a production Studio tab in headless Chromium connected through the live bridge',
+  '         bridge      the Electron desktop app (apps/desktop) hosting Studio and the live bridge',
   '',
   'drivers  xai         the harness loop calls the xAI Responses API and executes its tool calls (default)',
   '         grok-build  the grok CLI runs headless against the bridge from a temp project dir; needs --target bridge',
@@ -38,7 +39,8 @@ const USAGE = [
   '     GROK_BIN           path to the grok binary when it is not on PATH or in ~/.grok/bin',
   '     MCUT_BRIDGE_URL    full MCP URL of a running live bridge (token included as ?token=)',
   '     MCUT_BRIDGE_TOKEN  pair with a local bridge on MCUT_BRIDGE_PORT (default 44737) instead',
-  '     MCUT_HEADED        set to 1 to watch the Studio tab when the target is bridge',
+  '',
+  'display  the bridge target shows the app window on the current display, wrap in xvfb-run --auto-servernum on a headless machine',
   '',
   `exit codes  0 all tasks passed (or "${GROK_SKIPPED}" on a dry run), 1 a task failed, 2 configuration error`,
 ].join('\n')
@@ -143,17 +145,27 @@ function externalBridge(): McpTarget | undefined {
 }
 
 async function connectTarget(options: Options, runDir: string, projectPath: string): Promise<Connected> {
+  const external = externalBridge()
+  if (external !== undefined) {
+    const fixtures = startFixtureServer()
+    log(`serving fixtures for the external bridge from ${fixtures.origin}`)
+    return { target: external, srcOf: servedSrc(fixtures.origin), session: undefined, close: fixtures.stop }
+  }
   if (options.target === 'bridge') {
-    const session = await openBridgeSession({ logDir: runDir, headless: envValue('MCUT_HEADED') !== '1' })
+    const session = await openBridgeSession({ logDir: runDir })
     return { target: { kind: 'bridge', url: session.mcpUrl }, srcOf: servedSrc(session.mediaOrigin), session, close: session.close }
   }
-  const external = externalBridge()
-  if (external === undefined) {
-    return { target: { kind: 'stdio', projectPath }, srcOf: repoRelativeSrc, session: undefined, close: async () => {} }
+  return { target: { kind: 'stdio', projectPath }, srcOf: repoRelativeSrc, session: undefined, close: async () => {} }
+}
+
+async function untilLost<T>(work: Promise<T>, session: BridgeSession | undefined): Promise<T> {
+  if (session === undefined) return work
+  try {
+    return await Promise.race([work, session.lost])
+  } catch (error) {
+    await Promise.race([session.lost, Bun.sleep(SESSION_LOSS_GRACE_MS)])
+    throw error
   }
-  const fixtures = startFixtureServer()
-  log(`serving fixtures for the external bridge from ${fixtures.origin}`)
-  return { target: external, srcOf: servedSrc(fixtures.origin), session: undefined, close: fixtures.stop }
 }
 
 function xaiRunner(options: Options, session: McpSession): TaskRunner {
@@ -216,7 +228,7 @@ async function runWithXai(options: Options, runDir: string, workDir: string): Pr
     const session = await connectMcp(createTransport(connected.target))
     try {
       const tasks = selectTasks(createTasks(connected.srcOf), options.taskIds, connected.target)
-      const runs = await runAll(tasks, xaiRunner(options, session))
+      const runs = await untilLost(runAll(tasks, xaiRunner(options, session)), connected.session)
       return finishReport(runs, connected.target, options, runDir)
     } finally {
       await session.close()
@@ -254,7 +266,10 @@ async function runWithGrokBuild(options: Options, runDir: string, workDir: strin
     try {
       const tasks = selectTasks(createTasks(connected.srcOf), options.taskIds, connected.target)
       const grok = { binary, projectDir, runDir, caps: options.caps, model: envValue('GROK_BUILD_MODEL'), log }
-      const runs = await runAll(tasks, (task) => runGrokBuildTask(task, mcp, grok))
+      const runs = await untilLost(
+        runAll(tasks, (task) => runGrokBuildTask(task, mcp, grok)),
+        session,
+      )
       return finishReport(runs, connected.target, options, runDir)
     } finally {
       await mcp.close()
