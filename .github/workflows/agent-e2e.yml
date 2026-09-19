@@ -62,9 +62,20 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bunx turbo run build --filter=mcut-studio-web...
       - run: bunx playwright install --with-deps chromium
-      - name: Replay the scripted tool calls through a Studio tab over the live bridge
+      - name: Install Grok Build
+        run: |
+          curl -fsSL https://x.ai/cli/install.sh | bash
+          echo "$HOME/.grok/bin" >> "$GITHUB_PATH"
+          "$HOME/.grok/bin/grok" --version
+      - name: Replay the scripted tool calls, including the WebM export, through a Studio tab over the live bridge
         shell: bash
         run: bun scripts/agent-e2e/run.ts --dry-run --target bridge | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Check that grok discovers the bridge config and completes the MCP handshake
+        shell: bash
+        run: bun scripts/agent-e2e/run.ts --dry-run --target bridge --driver grok-build | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Fuzz the live bridge with 20 random tool sequences
+        shell: bash
+        run: bun run fuzz:mcp:bridge | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -121,5 +132,59 @@ jobs:
         if: always() && steps.key.outputs.present == 'true'
         with:
           name: agent-e2e-live
+          path: reports/agent-e2e
+          retention-days: 30
+
+  bridge-live:
+    if: github.event_name != 'pull_request'
+    needs: [dry-run, bridge-dry-run]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      TASK_IDS: ${{ inputs.tasks }}
+    steps:
+      - name: Check for the xAI key
+        id: key
+        run: |
+          if [ -z "$XAI_API_KEY" ]; then
+            echo "::notice title=agent-e2e bridge live run skipped::The XAI_API_KEY secret is empty. Add it under repository secrets to let Grok Build edit a Studio tab over the live bridge."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v6
+        if: steps.key.outputs.present == 'true'
+      - uses: oven-sh/setup-bun@v2
+        if: steps.key.outputs.present == 'true'
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+        if: steps.key.outputs.present == 'true'
+      - run: bunx turbo run build --filter=mcut-studio-web...
+        if: steps.key.outputs.present == 'true'
+      - run: bunx playwright install --with-deps chromium
+        if: steps.key.outputs.present == 'true'
+      - name: Install Grok Build
+        if: steps.key.outputs.present == 'true'
+        run: |
+          curl -fsSL https://x.ai/cli/install.sh | bash
+          echo "$HOME/.grok/bin" >> "$GITHUB_PATH"
+          "$HOME/.grok/bin/grok" --version
+      - name: Let Grok Build run the tasks against a Studio tab over the live bridge
+        if: steps.key.outputs.present == 'true'
+        shell: bash
+        run: |
+          args=(--target bridge --driver grok-build)
+          IFS=',' read -ra ids <<< "$TASK_IDS"
+          for id in "${ids[@]}"; do
+            id="$(echo "$id" | xargs)"
+            if [ -n "$id" ]; then args+=(--task "$id"); fi
+          done
+          bun scripts/agent-e2e/run.ts "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always() && steps.key.outputs.present == 'true'
+        with:
+          name: agent-e2e-bridge-live
           path: reports/agent-e2e
           retention-days: 30
