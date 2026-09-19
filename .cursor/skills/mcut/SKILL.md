@@ -93,7 +93,7 @@ tests, changesets, and clean-room rules.
 - `examples/headless-editing/README.md` - direct engine usage without a browser.
 - `examples/agentic-editing/` - AI SDK tools over mcut project commands.
 - `examples/mcp-server/README.md` - minimal MCP server launcher.
-- `.agents/skills/mcut-development/` - contributor-facing development rules.
+- `.cursor/skills/mcut-development/` - contributor-facing development rules.
 
 ## Answering Rules
 
