@@ -21,6 +21,11 @@ function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
 }
 
 describe('track commands', () => {
+  test('createProject gives the default track the same id in every call', () => {
+    expect(createProject().tracks.map((t) => t.id)).toEqual(['t-default'])
+    expect(createProject({ name: 'other' }).tracks.map((t) => t.id)).toEqual(['t-default'])
+  })
+
   test('addTrack appends and inserts at index', () => {
     let project = createProject()
     project = applyCommand(project, { type: 'addTrack', name: 'Overlay' })
@@ -464,7 +469,6 @@ describe('applyCaptions', () => {
     expect(project.tracks.map((t) => t.name)).toEqual(['Track 1', 'Captions'])
     expect(mustFind(project.tracks[1], 'second track').elements).toHaveLength(2)
 
-    // Re-applying replaces instead of stacking.
     project = applyCommand(project, {
       type: 'applyCaptions',
       captions: [{ startMs: 0, durationMs: 500, text: 'replaced' }],
@@ -485,10 +489,8 @@ describe('selectors', () => {
     })
     expect(getProjectDurationMs(project)).toBe(3000)
     const track = mustFind(getTrack(project, trackId), trackId)
-    // Desired position overlaps; nearest free slot is flush after the clip.
     expect(findNearestFreeSlot(track, 2000, 1000)).toBe(3000)
     expect(findNearestFreeSlot(track, 4000, 1000)).toBe(4000)
-    // Fits exactly before the clip.
     expect(findNearestFreeSlot(track, 500, 1000)).toBe(0)
   })
 
@@ -543,7 +545,6 @@ describe('detachAudio', () => {
       volume: 1.5,
       muted: false,
     })
-    // Volume keyframes move to the audio element.
     expect(audio.keyframes?.volume).toHaveLength(2)
 
     const video = mustFind(getElement(next, 'e-vid' as `e-${string}`), 'e-vid') as VideoElement
@@ -563,7 +564,6 @@ describe('detachAudio', () => {
     expect(next.tracks).toHaveLength(2)
     const musicTrack = mustFind(getTrack(next, musicTrackId), musicTrackId)
     expect(mustFind(musicTrack.elements[0], 'detached audio').type).toBe('audio')
-    // Detaching again: video is now muted.
     expect(() => applyCommand(next, { type: 'detachAudio', elementId: 'e-vid' })).toThrow(CommandError)
   })
 
@@ -649,21 +649,16 @@ describe('magnetic tracks', () => {
 
   test('moving past the neighbor midpoint reorders; short drags do not', () => {
     const { project, trackId } = magneticProject()
-    // Threshold: A swaps when its RIGHT edge passes B's visible midpoint
-    // (1000 + 200) — i.e. startMs ≥ 200. A short nudge stays put.
     const same = applyCommand(project, { type: 'moveElement', elementId: 'e-a', startMs: 100 })
     expect(order(same, trackId)).toEqual([
       ['e-a', 0],
       ['e-b', 1000],
     ])
-    // Past it: reorder to B, A — and packed.
     const swapped = applyCommand(project, { type: 'moveElement', elementId: 'e-a', startMs: 300 })
     expect(order(swapped, trackId)).toEqual([
       ['e-b', 0],
       ['e-a', 400],
     ])
-    // And back (reversible mid-gesture): the threshold is unchanged after the
-    // swap (B's packed midpoint is 200), so the same pointer travel undoes it.
     const restored = applyCommand(swapped, { type: 'moveElement', elementId: 'e-a', startMs: 100 })
     expect(order(restored, trackId)).toEqual([
       ['e-a', 0],
@@ -693,7 +688,6 @@ describe('magnetic tracks', () => {
 
   test('dropping a new clip between others inserts at the slot', () => {
     const { project, trackId } = magneticProject()
-    // Left edge at 800 ≥ A's midpoint (500), before B's midpoint (1200) → slot 1.
     const next = applyCommand(project, {
       type: 'addElement',
       trackId,
@@ -732,5 +726,16 @@ describe('tool definitions', () => {
     const properties = split.inputSchema.properties as Record<string, unknown>
     expect(Object.keys(properties)).toContain('elementId')
     expect(Object.keys(properties)).toContain('atMs')
+  })
+
+  test('branded id params serialize as prefixed string schemas', () => {
+    const split = mustFind(
+      listToolDefinitions().find((t) => t.name === 'splitElement'),
+      'splitElement tool',
+    )
+    expect(split.inputSchema.properties).toMatchObject({
+      elementId: { type: 'string', pattern: '^e-[\\w-]+$' },
+      rightElementId: { type: 'string', pattern: '^e-[\\w-]+$' },
+    })
   })
 })

@@ -50,7 +50,6 @@ describe('frame quantization helpers', () => {
   })
 
   test('quantizeMsToFrame snaps to the nearest boundary', () => {
-    // 30fps: frames at 0, 33, 67, 100...
     expect(quantizeMsToFrame(40, 30)).toBe(33)
     expect(quantizeMsToFrame(60, 30)).toBe(67)
     expect(quantizeMsToFrame(60, 30, 'floor')).toBe(33)

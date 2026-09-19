@@ -17,13 +17,6 @@ const hasTimeMap = (element: TimelineElement): boolean =>
 const isReversed = (element: TimelineElement): boolean =>
   'reversed' in element && element.reversed === true
 
-/**
- * Move one edge of an element by `deltaMs`, keeping its content anchored.
- * Pure on the element; the caller re-validates (asset bounds) and re-places
- * (overlaps). Throws CommandError on minimum-duration violations, negative
- * trims, and unsupported combinations (growing the head of a reversed
- * speed-ramped clip).
- */
 export function applyEdgeTrim(
   element: TimelineElement,
   edge: TrimEdge,
@@ -53,21 +46,13 @@ function shrinkViaSplit(
   offsetMs: number,
 ): TimelineElement {
   const { left, right } = splitElementAt(element, offsetMs)
-  // The element's end-cut transition stays on it either way: the kept half
-  // owns the (possibly moved) end cut, and render-time adjacency checks make
-  // it inert unless a neighbor still abuts.
   return keep === 'left' ? left : right
 }
 
-/** Extend the end: later output, same in-point. */
 function growEnd(element: TimelineElement, growMs: number): TimelineElement {
   const next: TimelineElement = { ...element, durationMs: element.durationMs + growMs }
-  // With a timeMap the map clamps at its last keyframe (freeze tail), and a
-  // reversed map freezes on the span's first frame — no bookkeeping needed.
   if (hasTimeMap(element)) return next
   if (isReversed(element) && 'trimStartMs' in next) {
-    // Reversed clips play the span backward: a later out point reveals
-    // EARLIER source, so the window slides down.
     next.trimStartMs = next.trimStartMs - growMs
     if (next.trimStartMs < 0) {
       throw new CommandError('out-of-bounds', `"${element.id}" has no media before its trim start`)
@@ -76,14 +61,12 @@ function growEnd(element: TimelineElement, growMs: number): TimelineElement {
   return next
 }
 
-/** Extend the start: earlier output, revealing earlier (or later, reversed) source. */
 function growStart(element: TimelineElement, growMs: number): TimelineElement {
   const next: TimelineElement = {
     ...element,
     startMs: element.startMs - growMs,
     durationMs: element.durationMs + growMs,
   }
-  // Keyframes are element-local: existing motion shifts later to stay anchored.
   if ('keyframes' in next && next.keyframes) {
     const shifted: KeyframeMap = {}
     for (const [property, track] of Object.entries(next.keyframes) as Array<
@@ -124,7 +107,6 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
       }
       return { ...source, trimStartMs }
     })
-    // Cuts shift with their content; the first layout extends over the new head.
     const angles = multicam.angles.map((a) => ({ ...a, atMs: a.atMs + growMs }))
     if (angles[0]) angles[0] = { ...angles[0], atMs: 0 }
     multicam.angles = angles
@@ -140,9 +122,6 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
         `cannot extend the start of reversed speed-ramped clip "${element.id}"`,
       )
     }
-    // Reversed: the head shows the END of the span, so growing it reveals
-    // LATER source. The span (== durationMs) already grew; the trim stays.
-    // Asset-bound validation catches overruns.
     return next
   }
 
@@ -152,8 +131,6 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
   }
   next.trimStartMs = trimStartMs
   if (hasTimeMap(next) && next.timeMap) {
-    // Map values are source offsets relative to trimStartMs: rebase onto the
-    // earlier trim and cover the new head with a 1x segment.
     const rebased = next.timeMap.map((k) => ({
       ...k,
       timeMs: k.timeMs + growMs,
@@ -165,18 +142,10 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
 }
 
 export interface EdgeTrimRange {
-  /** Most negative accepted `deltaMs` (edge moving left). */
   minDeltaMs: number
-  /** Most positive accepted `deltaMs` (edge moving right). */
   maxDeltaMs: number
 }
 
-/**
- * The `deltaMs` range {@link applyEdgeTrim} accepts for this element and
- * edge, from minimum duration, timeline zero, and available media. UIs clamp
- * drags with this; ±Infinity where media is unbounded (stills, freezes,
- * unknown asset durations).
- */
 export function getEdgeTrimRange(
   project: Project,
   element: TimelineElement,
@@ -193,7 +162,7 @@ export function getEdgeTrimRange(
     let growLimitMs = Infinity
     if (element.type === 'video' || element.type === 'audio') {
       if (mapped) {
-        growLimitMs = Infinity // freeze tail
+        growLimitMs = Infinity
       } else if (reversed) {
         growLimitMs = trimStartMs
       } else if (assetDurationMs !== undefined) {
@@ -216,7 +185,7 @@ export function getEdgeTrimRange(
   if (element.type === 'video' || element.type === 'audio') {
     if (reversed) {
       growLimitMs = mapped
-        ? 0 // unsupported combination
+        ? 0
         : assetDurationMs === undefined
           ? Infinity
           : assetDurationMs - trimStartMs - getSourceSpanMs(element)

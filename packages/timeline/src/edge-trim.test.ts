@@ -96,14 +96,12 @@ describe('applyEdgeTrim on reversed clips', () => {
   test('end grow reveals EARLIER source (window slides down)', () => {
     const next = applyEdgeTrim(reversed(), 'end', 500) as VideoElement
     expect(next).toMatchObject({ durationMs: 3500, trimStartMs: 500 })
-    // Content anchor: source at output 0 is unchanged.
     expect(getSourceTimeMs(next, 0)).toBe(getSourceTimeMs(reversed(), 0))
   })
 
   test('start grow reveals LATER source, trim unchanged', () => {
     const next = applyEdgeTrim(reversed(), 'start', -500) as VideoElement
     expect(next).toMatchObject({ startMs: 1500, durationMs: 3500, trimStartMs: 1000 })
-    // Content anchor: what played at output local L plays at L+500 now.
     expect(getSourceTimeMs(next, 1000)).toBe(getSourceTimeMs(reversed(), 500))
   })
 
@@ -115,7 +113,7 @@ describe('applyEdgeTrim on reversed clips', () => {
 describe('applyEdgeTrim on speed-ramped clips', () => {
   const ramped = (): VideoElement => ({
     ...video(withVideo(baseProject())),
-    timeMap: makeConstantSpeedMap(3000, 2), // consumes 6000ms source
+    timeMap: makeConstantSpeedMap(3000, 2),
   })
 
   test('end grow freezes (map clamps); no trim bookkeeping', () => {
@@ -134,7 +132,6 @@ describe('applyEdgeTrim on speed-ramped clips', () => {
   test('start shrink keeps trim; the map carries the offset', () => {
     const next = applyEdgeTrim(ramped(), 'start', 1000) as VideoElement
     expect(next).toMatchObject({ startMs: 3000, durationMs: 2000, trimStartMs: 1000 })
-    // Source mapping is unchanged for surviving content.
     expect(getSourceTimeMs(next, 0)).toBe(getSourceTimeMs(ramped(), 1000))
     expect(getSourceTimeMs(next, 2000)).toBe(getSourceTimeMs(ramped(), 3000))
   })
@@ -142,10 +139,8 @@ describe('applyEdgeTrim on speed-ramped clips', () => {
   test('start grow rebases trim and covers the head at 1x', () => {
     const next = applyEdgeTrim(ramped(), 'start', -500) as VideoElement
     expect(next).toMatchObject({ startMs: 1500, durationMs: 3500, trimStartMs: 500 })
-    // New head plays the revealed media at 1x...
     expect(getSourceTimeMs(next, 0)).toBe(500)
     expect(getSourceTimeMs(next, 250)).toBe(750)
-    // ...and surviving content keeps its absolute source times.
     expect(getSourceTimeMs(next, 500)).toBe(getSourceTimeMs(ramped(), 0))
     expect(getSourceTimeMs(next, 2500)).toBe(getSourceTimeMs(ramped(), 2000))
   })
@@ -160,7 +155,6 @@ describe('getEdgeTrimRange', () => {
   test('plain video: bounded by media handles and minimum duration', () => {
     const project = withVideo(baseProject())
     const element = video(project)
-    // Head: 1000ms of trim available; tail: 10000 - 1000 - 3000 = 6000.
     expect(getEdgeTrimRange(project, element, 'start')).toEqual({
       minDeltaMs: -1000,
       maxDeltaMs: 2990,
@@ -201,10 +195,6 @@ describe('getEdgeTrimRange', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Commands built on the edge-trim core
-// ---------------------------------------------------------------------------
-
 function threeAdjacentClips(): Project {
   let project = baseProject()
   for (const [id, startMs, trimStartMs] of [
@@ -236,7 +226,6 @@ describe('slipElement', () => {
     expect(() =>
       applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: -1500 }),
     ).toThrow(CommandError)
-    // 10000 - 3000 = 7000 max trim; current 1000 → +6000 ok, +6001 overruns.
     expect(() =>
       applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: 6001 }),
     ).toThrow(CommandError)
@@ -343,7 +332,7 @@ describe('slideElement', () => {
     expect(getElement(project, 'e-2')).toMatchObject({
       startMs: 2500,
       durationMs: 2000,
-      trimStartMs: 4000, // content untouched
+      trimStartMs: 4000,
     })
     expect(getElement(project, 'e-3')).toMatchObject({
       startMs: 4500,
@@ -456,7 +445,6 @@ describe('rippleTrim', () => {
   test('a ripple that would collide with a straddling clip throws', () => {
     let project = threeAdjacentClips()
     project = applyCommand(project, { type: 'addTrack', id: 't-b' })
-    // Straddles the cut at 2000 on another track and a clip right after it.
     project = applyCommand(project, {
       type: 'addElement',
       trackId: 't-b',

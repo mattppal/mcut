@@ -25,7 +25,6 @@ const textElement = (overrides: Partial<TextElement> = {}): TextElement => ({
   startMs: 1000,
   durationMs: 4000,
   text: 'hello',
-  // Parse so style defaults (tracking, line height, …) stay in sync with the schema.
   style: textStyleSchema.parse({ fontSize: 64, color: '#fff' }),
   transform: { x: 10, y: 20, scaleX: 1, scaleY: 1, rotation: 0 },
   opacity: 1,
@@ -39,9 +38,7 @@ describe('easing', () => {
     expect(evaluateEasing('hold', 0.99)).toBe(0)
   })
   test('cubic bezier golden values', () => {
-    // ease-in-out at midpoint is 0.5 by symmetry
     expect(cubicBezierAt([0.42, 0, 0.58, 1], 0.5)).toBeCloseTo(0.5, 4)
-    // ease-out runs ahead of linear; ease-in lags behind; they mirror exactly
     expect(evaluateEasing('easeOut', 0.25)).toBeCloseTo(0.3784, 3)
     expect(evaluateEasing('easeIn', 0.25)).toBeLessThan(0.25)
     expect(evaluateEasing('easeIn', 0.25)).toBeCloseTo(1 - evaluateEasing('easeOut', 0.75), 4)
@@ -84,7 +81,6 @@ describe('resolveAnimatedElement', () => {
         opacity: [{ timeMs: 0, value: 0.5 }],
       },
     })
-    // timeline 1500 = local 500 → x halfway, opacity from single kf, y static
     const resolved = resolveAnimatedElement(element, 1500)
     expect(resolved.transform.x).toBe(0)
     expect(resolved.transform.y).toBe(20)
@@ -129,10 +125,6 @@ describe('splitKeyframes', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Commands
-// ---------------------------------------------------------------------------
-
 function projectWithText(): { project: Project; elementId: `e-${string}` } {
   let project = createProject()
   const trackId = project.tracks[0]!.id
@@ -164,7 +156,7 @@ describe('keyframe commands', () => {
     })
     const element = next.tracks[0]!.elements[0]!
     expect(hasKeyframes(element, 'opacity')).toBe(true)
-    expect(getAnimatedValue(element, 'opacity', 250)).toBeGreaterThan(0.5) // easeOut
+    expect(getAnimatedValue(element, 'opacity', 250)).toBeGreaterThan(0.5)
     expect(isOnKeyframe(element, 'opacity', 500)).toBe(true)
 
     const cleared = applyCommand(next, { type: 'clearKeyframes', elementId, property: 'opacity' })
@@ -260,7 +252,6 @@ describe('applyAnimationPreset', () => {
     const element = textElement({ startMs: 0 })
     const expanded = expandAnimationPreset(element, 'pop-in')
     expect(expanded['scale.x']?.[0]?.value).toBeCloseTo(0.85, 5)
-    // Overshoot easing on the way in.
     expect(expanded['scale.x']?.[0]?.easing).toEqual({ cubicBezier: [0.34, 1.56, 0.64, 1] })
   })
 
@@ -274,7 +265,6 @@ describe('applyAnimationPreset', () => {
     expect('effects' in atStart ? atStart.effects : undefined).toEqual([
       { type: 'blur', enabled: true, radius: 16 },
     ])
-    // Once sharp, no synthetic effect remains.
     const atEnd = resolveAnimatedElement(element, 1000)
     expect('effects' in atEnd ? atEnd.effects : undefined).toBeUndefined()
   })
@@ -390,9 +380,9 @@ describe('rippleDelete', () => {
     const starts = Object.fromEntries(
       next.tracks.flatMap((t) => t.elements.map((e) => [e.id, e.startMs])),
     )
-    expect(starts['e-a']).toBe(0)      // before the removal: unchanged
-    expect(starts['e-c']).toBe(7000)   // shifted left by e-b's 2000ms
-    expect(starts['e-x']).toBe(5000)   // other track untouched
+    expect(starts['e-a']).toBe(0)
+    expect(starts['e-c']).toBe(7000)
+    expect(starts['e-x']).toBe(5000)
   })
 
   test('multiple removals accumulate shifts; unknown ids reject', () => {

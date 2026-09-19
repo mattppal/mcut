@@ -1,18 +1,3 @@
-/**
- * Project format versioning.
- *
- * The serialized project JSON is mcut's public contract: projects persisted
- * by older releases must keep loading forever. Every breaking change to
- * {@link import('./model').projectSchema} bumps {@link PROJECT_VERSION} and
- * adds one entry to {@link MIGRATIONS}; `parseProject` runs the chain before
- * validating. (Kdenlive's DocumentValidator pattern: sequential upgrades,
- * refuse documents from the future.)
- *
- * Purely additive optional fields do NOT need a version bump — older
- * documents already satisfy the new schema.
- */
-
-/** Version written into newly created/serialized projects. */
 export const PROJECT_VERSION = 1
 
 export class ProjectFormatError extends Error {
@@ -27,21 +12,9 @@ export class ProjectFormatError extends Error {
 
 type ProjectDoc = Record<string, unknown>
 
-/**
- * `MIGRATIONS[n]` upgrades a version-`n` document to version `n + 1`.
- * Migrations receive and return plain JSON; the result is schema-validated
- * once the chain reaches {@link PROJECT_VERSION}.
- */
 const MIGRATIONS: Record<number, (doc: ProjectDoc) => ProjectDoc> = {
-  // 1: (doc) => ({ ...doc, /* upgrade to v2 */ }),
 }
 
-/**
- * Upgrade a persisted project document to {@link PROJECT_VERSION}.
- * Documents without a `version` field predate versioning and are treated as
- * version 1 (the shapes are identical). Throws {@link ProjectFormatError}
- * for documents written by a newer mcut.
- */
 export function migrateProject(data: unknown): unknown {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     throw new ProjectFormatError('invalid-document', 'project document must be a JSON object')

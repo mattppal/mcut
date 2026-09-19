@@ -7,9 +7,9 @@ import { getSourceTimeMs, makeConstantSpeedMap } from './speed'
 describe('reversed source mapping', () => {
   test('plays the trimmed span backward', () => {
     const el = { startMs: 0, durationMs: 2000, trimStartMs: 500, reversed: true }
-    expect(getSourceTimeMs(el, 0)).toBe(2500) // trim + span
+    expect(getSourceTimeMs(el, 0)).toBe(2500)
     expect(getSourceTimeMs(el, 1000)).toBe(1500)
-    expect(getSourceTimeMs(el, 2000)).toBe(500) // back at the trim-in
+    expect(getSourceTimeMs(el, 2000)).toBe(500)
   })
 
   test('composes with a constant-speed map', () => {
@@ -20,7 +20,6 @@ describe('reversed source mapping', () => {
       timeMap: makeConstantSpeedMap(1000, 2),
       reversed: true,
     }
-    // 2x over 1000ms output consumes 2000ms of source, backward.
     expect(getSourceTimeMs(el, 0)).toBe(2000)
     expect(getSourceTimeMs(el, 500)).toBe(1000)
     expect(getSourceTimeMs(el, 1000)).toBe(0)
@@ -58,7 +57,6 @@ describe('splitting reversed clips', () => {
   test('halves keep playing the same source frames (no timeMap)', () => {
     let project = projectWithVideo()
     const original = getElement(project, 'e-v') as VideoElement
-    // Source at the original timeline time 3000 (local 3000).
     const sourceAt3000 = getSourceTimeMs(original, 3000)
     project = applyCommand(project, {
       type: 'splitElement',
@@ -69,10 +67,8 @@ describe('splitting reversed clips', () => {
     const left = getElement(project, 'e-v') as VideoElement
     const right = getElement(project, 'e-right') as VideoElement
 
-    // Left half holds the LATER source span: original local 0..2500.
     expect(getSourceTimeMs(left, 0)).toBe(getSourceTimeMs(original, 0))
     expect(getSourceTimeMs(left, 2500)).toBe(getSourceTimeMs(original, 2500))
-    // Right half: original local 2500..4000 maps to right-local 0..1500.
     expect(getSourceTimeMs(right, 0)).toBe(getSourceTimeMs(original, 2500))
     expect(getSourceTimeMs(right, 500)).toBe(sourceAt3000)
     expect(getSourceTimeMs(right, 1500)).toBe(getSourceTimeMs(original, 4000))
@@ -101,7 +97,6 @@ describe('splitting reversed clips', () => {
   })
 
   test('reversed clips stay inside their asset', () => {
-    // Same validation as forward: trim + span may not exceed the asset.
     expect(() =>
       projectWithVideo({ trimStartMs: 7000, durationMs: 4000 }),
     ).toThrow(/plays past the end/)

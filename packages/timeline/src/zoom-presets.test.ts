@@ -25,7 +25,7 @@ function projectWithText(scale = 1): Project {
 
 describe('applyZoomPreset', () => {
   test('expands relative values against the current framing', () => {
-    const project = projectWithText(2) // clip already scaled 2x
+    const project = projectWithText(2)
     const punchIn = ZOOM_PRESETS.find((p) => p.name === 'Punch in')!
     const next = applyCommand(project, {
       type: 'applyZoomPreset',
@@ -36,7 +36,6 @@ describe('applyZoomPreset', () => {
     const element = getElement(next, 'e-t' as `e-${string}`)!
     const scaleTrack = getKeyframes(element, 'scale.x')
     expect(scaleTrack.map((k) => k.timeMs)).toEqual([500, 850])
-    // Multiplier semantics: 2 × 1 → 2, 2 × 1.25 → 2.5.
     expect(scaleTrack.map((k) => k.value)).toEqual([2, 2.5])
   })
 
@@ -46,14 +45,14 @@ describe('applyZoomPreset', () => {
       type: 'setKeyframe',
       elementId: 'e-t',
       property: 'scale.x',
-      timeMs: 600, // inside the window — will be replaced
+      timeMs: 600,
       value: 3,
     })
     project = applyCommand(project, {
       type: 'setKeyframe',
       elementId: 'e-t',
       property: 'scale.x',
-      timeMs: 4000, // outside — survives
+      timeMs: 4000,
       value: 1.5,
     })
     const punchIn = ZOOM_PRESETS.find((p) => p.name === 'Punch in')!
@@ -72,7 +71,6 @@ describe('applyZoomPreset', () => {
 
 describe('captureZoomPreset', () => {
   test('round-trips: capture from one clip, apply to another framing', () => {
-    // Hand-animate a punch on a clip framed at scale 1.
     let project = projectWithText(1)
     for (const [timeMs, value] of [
       [1000, 1],
@@ -93,7 +91,6 @@ describe('captureZoomPreset', () => {
     expect(preset.durationMs).toBe(400)
     expect(preset.tracks['scale.x']!.map((k) => k.value)).toEqual([1, 1.4])
 
-    // Apply to a clip already at 2x: relative multipliers rescale.
     const expanded = expandZoomPreset(
       { ...element, keyframes: undefined, transform: { ...element.transform, scaleX: 2, scaleY: 2 } },
       preset,
