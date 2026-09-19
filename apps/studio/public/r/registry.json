@@ -1312,7 +1312,7 @@
         "@mcut/transcription-local",
         "@mcut/desktop-ipc"
       ],
-      "registryDependencies": ["button", "textarea", "switch", "scroll-area"],
+      "registryDependencies": ["button", "input", "textarea", "switch", "scroll-area"],
       "files": [
         {
           "path": "registry/mcut/captions-panel.tsx",
