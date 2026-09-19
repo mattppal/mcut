@@ -13,6 +13,7 @@ import {
 } from "react";
 import { useEditor, type PreviewQuality } from "@mcut/react";
 import type { AnimatableProperty, ElementId } from "@mcut/timeline";
+import { parseEditorPrefs, type EditorPrefs } from "./editor-prefs";
 import { clamp } from "./math";
 
 /** A live drop ghost while dragging media over the timeline. */
@@ -183,15 +184,9 @@ const EditorUIContext = createContext<EditorUIValue | null>(null);
 
 const PREFS_KEY = "mcut:ui";
 
-interface EditorPrefs {
-  pxPerMs: number;
-  snapEnabled: boolean;
-  autoCrossfade: boolean;
-  theme: EditorTheme;
-  previewQuality: PreviewQuality;
-}
+type ResolvedEditorPrefs = Required<EditorPrefs>;
 
-const DEFAULT_PREFS: EditorPrefs = {
+const DEFAULT_PREFS: ResolvedEditorPrefs = {
   pxPerMs: 0.05,
   snapEnabled: true,
   autoCrossfade: false,
@@ -199,44 +194,32 @@ const DEFAULT_PREFS: EditorPrefs = {
   previewQuality: "auto",
 };
 
-function loadPrefs(): {
-  pxPerMs?: number;
-  snapEnabled?: boolean;
-  autoCrossfade?: boolean;
-  theme?: EditorTheme;
-  previewQuality?: PreviewQuality;
-} {
+function loadPrefs(): EditorPrefs {
   if (typeof window === "undefined") return {};
   try {
-    return JSON.parse(window.localStorage.getItem(PREFS_KEY) ?? "{}");
+    return parseEditorPrefs(window.localStorage.getItem(PREFS_KEY));
   } catch {
     return {};
   }
 }
 
-function isPreviewQuality(value: unknown): value is PreviewQuality {
-  return value === "auto" || value === "full" || (typeof value === "number" && value > 0);
-}
-
-let prefsSnapshot: EditorPrefs | null = null;
+let prefsSnapshot: ResolvedEditorPrefs | null = null;
 const prefsListeners = new Set<() => void>();
 
-export function getEditorPrefs(): EditorPrefs {
+export function getEditorPrefs(): ResolvedEditorPrefs {
   if (prefsSnapshot) return prefsSnapshot;
   const stored = loadPrefs();
   prefsSnapshot = {
     pxPerMs: stored.pxPerMs ? clampZoom(stored.pxPerMs) : DEFAULT_PREFS.pxPerMs,
     snapEnabled: stored.snapEnabled ?? DEFAULT_PREFS.snapEnabled,
     autoCrossfade: stored.autoCrossfade ?? DEFAULT_PREFS.autoCrossfade,
-    theme: stored.theme === "light" || stored.theme === "dark" ? stored.theme : DEFAULT_PREFS.theme,
-    previewQuality: isPreviewQuality(stored.previewQuality)
-      ? stored.previewQuality
-      : DEFAULT_PREFS.previewQuality,
+    theme: stored.theme ?? DEFAULT_PREFS.theme,
+    previewQuality: stored.previewQuality ?? DEFAULT_PREFS.previewQuality,
   };
   return prefsSnapshot;
 }
 
-function writePrefs(patch: Partial<EditorPrefs>): void {
+function writePrefs(patch: Partial<ResolvedEditorPrefs>): void {
   prefsSnapshot = { ...getEditorPrefs(), ...patch };
   try {
     window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefsSnapshot));
@@ -249,11 +232,11 @@ function subscribePrefs(listener: () => void): () => void {
   return () => prefsListeners.delete(listener);
 }
 
-function serverPrefs(): EditorPrefs {
+function serverPrefs(): ResolvedEditorPrefs {
   return DEFAULT_PREFS;
 }
 
-function useEditorPrefs(): EditorPrefs {
+function useEditorPrefs(): ResolvedEditorPrefs {
   return useSyncExternalStore(subscribePrefs, getEditorPrefs, serverPrefs);
 }
 
