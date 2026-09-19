@@ -5,21 +5,20 @@ import { extractAudioPeaks, getFilmstrip, type AudioPeaks, type Filmstrip } from
 import { getSourceTimeMs, type AssetRef, type TimeMap } from "@mcut/timeline";
 import { cn } from "@/lib/utils";
 
-// Layout effect on the client so cached strips paint before the frame —
-// remounting clips (e.g. a drag crossing lanes) must not flash a placeholder.
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
-// Per-asset caches: decode once, redraw cheaply on zoom/trim changes. The
-// resolved maps let remounts draw synchronously instead of waiting a
-// microtask (which paints one placeholder frame per lane crossing).
 const filmstripCache = new Map<string, Promise<Filmstrip | null>>();
 const resolvedFilmstrips = new Map<string, Filmstrip | null>();
 const peaksCache = new Map<string, Promise<AudioPeaks | null>>();
 const resolvedPeaks = new Map<string, AudioPeaks | null>();
 
-/** The atlas frame for a 0..1 position, clamped to the strip's range. */
 export function filmstripFrameIndex(strip: Filmstrip, ratio: number): number {
   return Math.max(0, Math.min(strip.frameCount - 1, Math.floor(ratio * strip.frameCount)));
+}
+
+function forgetFailureSoALaterRenderRetries<T>(cache: Map<string, Promise<T>>, assetId: string): null {
+  cache.delete(assetId);
+  return null;
 }
 
 export function filmstripFor(asset: AssetRef): Promise<Filmstrip | null> {
@@ -32,12 +31,7 @@ export function filmstripFor(asset: AssetRef): Promise<Filmstrip | null> {
         resolvedFilmstrips.set(asset.id, strip);
         return strip;
       })
-      .catch(() => {
-        // Transient decode failures (decoder pressure when many clips mount at
-        // once) must not stick for the session — drop so a later render retries.
-        filmstripCache.delete(asset.id);
-        return null;
-      });
+      .catch(() => forgetFailureSoALaterRenderRetries(filmstripCache, asset.id));
     filmstripCache.set(asset.id, cached);
   }
   return cached;
@@ -54,10 +48,7 @@ export function peaksFor(asset: AssetRef): Promise<AudioPeaks | null> {
         resolvedPeaks.set(asset.id, peaks);
         return peaks;
       })
-      .catch(() => {
-        peaksCache.delete(asset.id);
-        return null;
-      });
+      .catch(() => forgetFailureSoALaterRenderRetries(peaksCache, asset.id));
     peaksCache.set(asset.id, cached);
   }
   return cached;
@@ -70,10 +61,6 @@ export function evictClipMediaCache(assetId: string): void {
   resolvedPeaks.delete(assetId);
 }
 
-/**
- * Filmstrip background for video clips: tiles cached poster frames mapped to
- * the clip's trimmed source range, like CapCut/Premiere clip thumbnails.
- */
 export function VideoFilmstrip({
   asset,
   widthPx,
@@ -113,7 +100,6 @@ export function VideoFilmstrip({
       const tileWidth = Math.max(8, (strip.frameWidth / strip.frameHeight) * height);
       const clip = { startMs: 0, durationMs, trimStartMs, timeMap, reversed };
       for (let x = 0; x < width; x += tileWidth) {
-        // Through the time remap, so sped/frozen clips show what actually plays.
         const sourceMs = getSourceTimeMs(clip, (x / width) * durationMs);
         const index = filmstripFrameIndex(strip, sourceMs / assetDurationMs);
         ctx.drawImage(
@@ -130,8 +116,6 @@ export function VideoFilmstrip({
       }
       setReady(true);
     };
-    // Already decoded: paint before this frame so remounts (a drag crossing
-    // lanes) never flash the placeholder.
     const resolved = resolvedFilmstrips.get(asset.id);
     if (resolved !== undefined) draw(resolved);
     else void filmstripFor(asset).then(draw);
@@ -152,11 +136,6 @@ export function VideoFilmstrip({
   );
 }
 
-/**
- * Mirrored waveform drawn from cached decoded peaks. Renders nothing when the
- * asset has no audio track. `variant="full"` fills the clip (audio clips);
- * `variant="strip"` hugs the bottom edge (audio texture over filmstrips).
- */
 export function AudioWaveform({
   asset,
   widthPx,

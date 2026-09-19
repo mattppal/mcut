@@ -1,22 +1,9 @@
 ---
 title: "Effects and transitions"
-description: "Effect and transition schemas, registries, and render-time lookups."
+description: "Effect and transition schemas, the closed type tables, and render-time lookups."
 ---
 
 ## Types
-
-### EffectTypeConfig
-
-```ts
-interface EffectTypeConfig {
-  type: string
-  shape: z.ZodRawShape
-  toFilter: (effect: Record<string, unknown>) => string
-  param?: { key: string; min: number; max: number; unit?: string }
-}
-```
-
-The input to `registerEffectType`, a type name, its Zod parameter shape, a compiler to a CSS filter fragment, and an optional primary parameter with its range.
 
 ### BlendMode
 
@@ -26,23 +13,42 @@ type BlendMode = z.infer<typeof blendModeSchema>
 
 A blend mode as inferred from `blendModeSchema`.
 
+### CurvePoint
+
+```ts
+type CurvePoint = z.infer<typeof curvePointSchema>
+```
+
+One control point of a `curves` effect channel, `x` and `y` each from 0 to 1.
+
 ### Effect
 
 ```ts
-type Effect =
-  | BuiltinEffect<'blur', { radius: number }>
-  | BuiltinEffect<'brightness', { amount: number }>
-  | BuiltinEffect<'contrast', { amount: number }>
-  | BuiltinEffect<'saturate', { amount: number }>
-  | BuiltinEffect<'grayscale', { amount: number }>
-  | BuiltinEffect<'sepia', { amount: number }>
-  | BuiltinEffect<'hue-rotate', { degrees: number }>
-  | BuiltinEffect<'invert', { amount: number }>
-  | BuiltinEffect<'drop-shadow', { offsetX: number; offsetY: number; blur: number; color: string }>
-  | BuiltinEffect<'css', { filter: string }>
+type Effect = z.infer<typeof effectSchema>
 ```
 
-The union of the built-in effect records, each a `type`, an `enabled` flag, and the parameters of that type.
+The union of the effect records as inferred from `effectSchema`, each a `type`, an `enabled` flag, and the parameters of that type.
+
+### EffectOfType
+
+```ts
+type EffectOfType<K extends EffectType> = Extract<Effect, { type: K }>
+```
+
+The one arm of `Effect` whose `type` is `K`.
+
+### EffectParam
+
+```ts
+interface EffectParam<K extends EffectType = EffectType> {
+  key: Exclude<keyof EffectOfType<K>, 'type' | 'enabled'>
+  min: number
+  max: number
+  unit?: string
+}
+```
+
+The primary parameter of an effect type for a slider, its field name, range, and optional unit label.
 
 ### EffectType
 
@@ -50,7 +56,7 @@ The union of the built-in effect records, each a `type`, an `enabled` flag, and 
 type EffectType = Effect['type']
 ```
 
-The `type` field of the built-in effects.
+The `type` field of the effects, from `blur` to `lut3d`.
 
 ### MotionBlur
 
@@ -97,10 +103,10 @@ Two adjacent clips joined by a transition, with the cut time, the clamped blend 
 ### TransitionType
 
 ```ts
-type TransitionType = (typeof BUILTIN_TRANSITION_TYPES)[number] | (string & {})
+type TransitionType = z.infer<typeof transitionTypeSchema>
 ```
 
-A built-in transition type name or any other registered string.
+One of the seven transition type names as inferred from `transitionTypeSchema`.
 
 ## Schemas
 
@@ -132,10 +138,26 @@ Zod schema for the sixteen compositing blend modes, from `normal` to `luminosity
 ### effectSchema
 
 ```ts
-const effectSchema: z.ZodType<Effect, unknown>
+const effectSchema: z.ZodType<Effect>
 ```
 
-Zod schema for one effect of any registered type, rebuilt when a new type is registered.
+Zod discriminated union on `type` over the thirteen effect arms below, where every arm also carries an `enabled` flag defaulting to `true`.
+
+| Type | Parameters |
+| --- | --- |
+| `blur` | `radius` from 0 to 200, default 8 |
+| `brightness` | `amount` from 0 to 4, default 1.1 |
+| `contrast` | `amount` from 0 to 4, default 1.1 |
+| `saturate` | `amount` from 0 to 4, default 1.25 |
+| `grayscale` | `amount` from 0 to 1, default 1 |
+| `sepia` | `amount` from 0 to 1, default 1 |
+| `hue-rotate` | `degrees` from -360 to 360, default 90 |
+| `invert` | `amount` from 0 to 1, default 1 |
+| `drop-shadow` | `offsetX` default 0, `offsetY` default 8, `blur` from 0 to 100 default 16, `color` default `rgba(0, 0, 0, 0.6)` |
+| `css` | `filter`, a non-empty CSS filter string |
+| `chroma-key` | `keyColor` default `#00ff00`, `tolerance` from 0 to 1 default 0.25, `softness` from 0 to 1 default 0.1, `spillSuppression` from 0 to 1 default 0.5 |
+| `curves` | optional `rgb`, `red`, `green`, and `blue` arrays of `CurvePoint` |
+| `lut3d` | `lutId`, a non-empty string, and `intensity` from 0 to 1, default 1 |
 
 ### effectsSchema
 
@@ -170,33 +192,7 @@ Zod schema for a transition, its type and a blend window from 100 to 5000 ms cen
 ### transitionTypeSchema
 
 ```ts
-const transitionTypeSchema = z
-  .string()
-  .refine((type) => transitionRegistry.has(type), {
-    message: 'unregistered transition type',
-  })
-```
-
-Zod schema for a registered transition type name.
-
-## Constants
-
-### EFFECT_TYPES
-
-```ts
-const EFFECT_TYPES = {
-  get current(): string[] {
-    return listEffectTypes().map((e) => e.type)
-  },
-}.current
-```
-
-The effect type names registered when the module loaded, which are the built-in types.
-
-### BUILTIN_TRANSITION_TYPES
-
-```ts
-const BUILTIN_TRANSITION_TYPES = [
+const transitionTypeSchema = z.enum([
   'dissolve',
   'fade-black',
   'fade-white',
@@ -204,10 +200,47 @@ const BUILTIN_TRANSITION_TYPES = [
   'slide-right',
   'wipe-left',
   'wipe-right',
-] as const
+])
 ```
 
-The seven built-in transition types, dissolves, fades through black and white, slides, and wipes.
+Zod enum of the seven transition types, dissolves, fades through black and white, slides, and wipes.
+
+## Constants
+
+### EFFECT_PARAMS
+
+```ts
+const EFFECT_PARAMS: { readonly [K in EffectType]?: EffectParam<K> } = {
+  blur: { key: 'radius', min: 0, max: 100, unit: 'px' },
+  brightness: { key: 'amount', min: 0, max: 3 },
+  contrast: { key: 'amount', min: 0, max: 3 },
+  saturate: { key: 'amount', min: 0, max: 3 },
+  grayscale: { key: 'amount', min: 0, max: 1 },
+  sepia: { key: 'amount', min: 0, max: 1 },
+  'hue-rotate': { key: 'degrees', min: -180, max: 180, unit: '°' },
+  invert: { key: 'amount', min: 0, max: 1 },
+  'drop-shadow': { key: 'blur', min: 0, max: 100, unit: 'px' },
+  'chroma-key': { key: 'tolerance', min: 0, max: 1 },
+}
+```
+
+The primary slider parameter for each effect type that has one, which excludes `css`, `curves`, and `lut3d`.
+
+### EFFECT_TYPES
+
+```ts
+const EFFECT_TYPES: readonly EffectType[]
+```
+
+The effect type names in the order of the `effectSchema` arms.
+
+### TRANSITION_TYPES
+
+```ts
+const TRANSITION_TYPES: readonly TransitionType[]
+```
+
+The transition type names in the order of the `transitionTypeSchema` options.
 
 ## Functions
 
@@ -219,30 +252,6 @@ function buildFilterString(effects: readonly Effect[] | undefined): string
 
 Compiles an effect stack into a CSS filter string by joining the fragments of enabled effects in order, or an empty string when nothing applies.
 
-### getEffectType
-
-```ts
-function getEffectType(type: string): EffectTypeEntry | undefined
-```
-
-Returns the registry entry for an effect type, or `undefined`.
-
-### listEffectTypes
-
-```ts
-function listEffectTypes(): EffectTypeEntry[]
-```
-
-Returns every registered effect type entry in registration order.
-
-### registerEffectType
-
-```ts
-function registerEffectType(config: EffectTypeConfig): void
-```
-
-Registers an effect type by wrapping its parameter shape in a schema with `type` and `enabled` fields, and throws when the type already exists.
-
 ### toCompositeOperation
 
 ```ts
@@ -250,22 +259,6 @@ function toCompositeOperation(mode: BlendMode | undefined): CompositeOperation
 ```
 
 Returns `source-over` for `normal` or an unset mode and otherwise the blend mode itself.
-
-### listTransitionTypes
-
-```ts
-function listTransitionTypes(): string[]
-```
-
-Returns every registered transition type name in registration order.
-
-### registerTransitionType
-
-```ts
-function registerTransitionType(entry: { type: string; label?: string }): void
-```
-
-Registers a transition type name with an optional label, and throws when the type already exists.
 
 ### getActiveTransitionPairs
 

@@ -3,9 +3,7 @@ import { getNativeVideoFrame } from './native-video'
 import { inputFor, type MediaSourceLike } from './probe'
 
 export interface ThumbnailOptions {
-  /** Thumbnail width in px (height follows aspect ratio). Default 160. */
   width?: number
-  /** Source time to sample. Default 0. */
   timeMs?: number
 }
 
@@ -62,7 +60,6 @@ export async function getVideoThumbnail(
   }
 }
 
-/** A poster frame as a data URL (handy for `<img>` in media bins). */
 export async function getVideoThumbnailUrl(
   src: MediaSourceLike,
   options: ThumbnailOptions = {},

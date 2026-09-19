@@ -53,14 +53,13 @@ describe('snapTime', () => {
   test('disabled snapping still frame-quantizes when fps is given', () => {
     const result = snapTime(3005, targets, 100, { enabled: false, fps: 30 })
     expect(result.guideMs).toBeNull()
-    // 3005ms at 30fps → frame 90 → 3000ms
     expect(result.ms).toBe(3000)
   })
 
   test('un-snapped times frame-quantize when fps is given', () => {
     const result = snapTime(3521, targets, 100, { fps: 30 })
     expect(result.guideMs).toBeNull()
-    expect(result.ms).toBe(3533) // frame 106 at 30fps
+    expect(result.ms).toBe(3533)
   })
 })
 
@@ -74,6 +73,10 @@ describe('nearestSnapTarget', () => {
     expect(nearestSnapTarget(6500, targets, 600)?.timeMs).toBe(6000)
     expect(nearestSnapTarget(6500, targets, 100)).toBeNull()
   })
+
+  test('a tie between two targets goes to the earlier one', () => {
+    expect(nearestSnapTarget(2000, targets, 1000)?.timeMs).toBe(1000)
+  })
 })
 
 describe('snapClip', () => {
@@ -82,9 +85,7 @@ describe('snapClip', () => {
   })
 
   test('the closer edge wins and the clip shifts to land it on the target', () => {
-    // Clip end at 4030 is within 50 of nothing; start at 3030 is within 50 of 3000.
     expect(snapClip(3030, 1000, targets, 50)).toMatchObject({ ms: 3000, edge: 'start' })
-    // End edge near a target: start 2050 → end 3050, snaps end to 3000.
     expect(snapClip(2050, 1000, targets, 60)).toMatchObject({ ms: 2000, guideMs: 3000, edge: 'end' })
   })
 

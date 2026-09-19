@@ -1,18 +1,9 @@
-/**
- * Platform delivery presets: the project geometry an agent (or human) should
- * start from for a given destination. Data, not code — the skill's
- * `platform-presets.json` asset and `mcut new --preset` both read this list.
- */
 export interface PlatformPreset {
   id: string
   label: string
   width: number
   height: number
   fps: number
-  /**
-   * Fractions of frame height covered by platform chrome (usernames,
-   * captions UI, action rails). Keep text and faces out of these bands.
-   */
   safeArea: { top: number; bottom: number }
   notes: string
 }

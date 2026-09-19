@@ -23,20 +23,10 @@ import { useEditorState } from "@mcut/react";
 import { getElementLocation } from "@mcut/timeline";
 import { useEditorUI } from "./editor-ui";
 
-/**
- * The graph editor: value-vs-time for one property of one clip, AE-style.
- * Keyframes are draggable points (drag retimes + revalues); each segment's
- * easing is a cubic-bezier whose two handles you drag directly — mcut's
- * easing IS `cubicBezier`, so the mapping is 1:1, and the evaluator accepts
- * y outside 0..1, which is exactly how Overshoot/Anticipate work. A curve
- * library applies named beziers per segment (⌥-click: all segments).
- */
-
 const W = 280;
 const H = 150;
 const PAD = 18;
 
-/** Named curves (the Flow-plugin idea). x values stay in 0..1; y overshoots. */
 export const CURVE_LIBRARY: Array<{ name: string; bezier: [number, number, number, number] }> = [
   { name: "Linear", bezier: [0.25, 0.25, 0.75, 0.75] },
   { name: "Smooth", bezier: [0.42, 0, 0.58, 1] },
@@ -48,7 +38,7 @@ export const CURVE_LIBRARY: Array<{ name: string; bezier: [number, number, numbe
 
 function easingToBezier(easing: Easing | undefined): [number, number, number, number] {
   if (!easing || easing === "linear") return [0.25, 0.25, 0.75, 0.75];
-  if (easing === "hold") return [0, 0, 1, 0]; // drawn as a step; handles hidden
+  if (easing === "hold") return [0, 0, 1, 0];
   if (easing === "easeIn") return [0.42, 0, 1, 1];
   if (easing === "easeOut") return [0, 0, 0.58, 1];
   if (easing === "easeInOut") return [0.42, 0, 0.58, 1];
@@ -72,7 +62,6 @@ function makeScale(track: readonly Keyframe[]): Scale {
     v0 -= 1;
     v1 += 1;
   }
-  // Headroom for overshoot handles.
   const pad = (v1 - v0) * 0.25;
   v0 -= pad;
   v1 += pad;
@@ -116,7 +105,6 @@ export function EasingGraph({
   const [bx1, by1, bx2, by2] = easingToBezier(from.easing);
   const isHold = from.easing === "hold";
 
-  // Segment bezier control points in graph space.
   const cp = (bx: number, by: number) => ({
     x: scale.toX(from.timeMs + bx * (to.timeMs - from.timeMs)),
     y: scale.toY(from.value + by * (to.value - from.value)),
@@ -129,16 +117,15 @@ export function EasingGraph({
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
 
-  const dispatch = (command: BuiltinCommand) => {
+  const dispatchOrKeepLastGoodState = (command: BuiltinCommand) => {
     try {
       engine.dispatch(command);
     } catch {
-      // Collision (duplicate time): keep last good state.
     }
   };
 
   const setSegmentBezier = (bezier: [number, number, number, number]) => {
-    dispatch({
+    dispatchOrKeepLastGoodState({
       type: "setKeyframeEasing",
       elementId: element.id,
       property,
@@ -155,7 +142,7 @@ export function EasingGraph({
       const keyframe = track[drag.index]!;
       const toMs = Math.round(scale.fromX(x));
       const value = Math.round(scale.fromY(y) * 1000) / 1000;
-      dispatch({
+      dispatchOrKeepLastGoodState({
         type: "setKeyframe",
         elementId: element.id,
         property,
@@ -170,7 +157,7 @@ export function EasingGraph({
           prev ? prev.timeMs + 1 : 0,
           Math.min(toMs, next ? next.timeMs - 1 : element.durationMs),
         );
-        dispatch({
+        dispatchOrKeepLastGoodState({
           type: "moveKeyframe",
           elementId: element.id,
           property,
@@ -180,8 +167,7 @@ export function EasingGraph({
         drag.fromMs = clamped;
       }
     } else {
-      // Handle drag: x clamps to the segment (bezier x must be 0..1); y is
-      // free — beyond the segment's value range = overshoot.
+      // cubic-bezier x values must stay within [0, 1] while y may overshoot. https://www.w3.org/TR/css-easing-1/#cubic-bezier-easing-functions
       const span = to.timeMs - from.timeMs;
       const bx = Math.max(0, Math.min(1, (scale.fromX(x) - from.timeMs) / span));
       const vSpan = to.value - from.value;
@@ -199,7 +185,6 @@ export function EasingGraph({
     (event.currentTarget as Element).releasePointerCapture(event.pointerId);
   };
 
-  // Full curve path: per-segment cubics in graph space.
   const path = track
     .slice(0, -1)
     .map((k, i) => {
@@ -233,10 +218,8 @@ export function EasingGraph({
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
       >
-        {/* midline */}
         <line x1={PAD} x2={W - PAD} y1={H / 2} y2={H / 2} stroke="currentColor" opacity={0.08} />
         <path d={path} fill="none" stroke="var(--color-primary)" strokeWidth={1.75} />
-        {/* selected-segment handles */}
         {!isHold && (
           <>
             <line x1={scale.toX(from.timeMs)} y1={scale.toY(from.value)} x2={p1.x} y2={p1.y} stroke="currentColor" opacity={0.35} />
@@ -259,7 +242,6 @@ export function EasingGraph({
             ))}
           </>
         )}
-        {/* keyframes */}
         {track.map((k, i) => (
           <rect
             key={k.timeMs}
@@ -294,7 +276,7 @@ export function EasingGraph({
               if (event.altKey) {
                 engine.transact(() => {
                   for (const k of track.slice(0, -1)) {
-                    dispatch({
+                    dispatchOrKeepLastGoodState({
                       type: "setKeyframeEasing",
                       elementId: element.id,
                       property,
@@ -338,7 +320,6 @@ function CurveSparkline({ bezier: [x1, y1, x2, y2] }: { bezier: [number, number,
   );
 }
 
-/** Popover entry: the ∿ curve button next to a property's keyframe controls. */
 export function EasingEditorButton({
   element,
   property,

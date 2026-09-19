@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useDocumentEvent, useEditor, useEditorState, usePlayback } from "@mcut/react";
 import {
   applyRunStyle,
@@ -14,18 +14,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEditorUI } from "./editor-ui";
 
-/**
- * Inline text editing ON the canvas (double-click a text element): a
- * contentEditable mirror of the element — same font, spacing, box, and
- * per-run styling — overlaid exactly on its frame while the compositor
- * skips drawing it (the editor IS the WYSIWYG render). A floating toolbar
- * over the selection styles ranges (bold / italic / color → rich-text
- * runs). The whole session is one engine transaction: every keystroke
- * dispatches live (history off), and closing the editor commits a single
- * undo entry.
- */
+function keepTheEditableSelectionThroughToolbarPresses(event: ReactPointerEvent<HTMLDivElement>): void {
+  event.preventDefault();
+  event.stopPropagation();
+}
 
-/** Editable DOM → plain text ('\n' from text nodes, <br>, and block starts). */
 function readEditableText(root: HTMLElement): string {
   let out = "";
   const walk = (node: Node, isRoot: boolean) => {
@@ -47,14 +40,12 @@ function readEditableText(root: HTMLElement): string {
   return out;
 }
 
-/** Character length of a range's contents, measured like readEditableText. */
 function rangeTextLength(range: Range): number {
   const probe = document.createElement("div");
   probe.appendChild(range.cloneContents());
   return readEditableText(probe).length;
 }
 
-/** Current selection as character offsets into the editable's text. */
 function selectionOffsets(root: HTMLElement): { start: number; end: number } | null {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return null;
@@ -67,7 +58,6 @@ function selectionOffsets(root: HTMLElement): { start: number; end: number } | n
   return { start, end: start + rangeTextLength(range) };
 }
 
-/** Restore a character-offset selection inside the editable. */
 function setSelectionOffsets(root: HTMLElement, start: number, end: number): void {
   const locate = (target: number): { node: Node; offset: number } => {
     let remaining = target;
@@ -91,7 +81,6 @@ function setSelectionOffsets(root: HTMLElement, start: number, end: number): voi
   selection.addRange(range);
 }
 
-/** Rebuild the editable's children as run-styled spans (newlines stay in text). */
 function renderSpans(root: HTMLElement, text: string, runs: readonly TextRun[]): void {
   const edges = new Set<number>([0, text.length]);
   for (const run of runs) {
@@ -114,7 +103,6 @@ function renderSpans(root: HTMLElement, text: string, runs: readonly TextRun[]):
   root.replaceChildren(...children);
 }
 
-/** True when every character in [start, end) resolves bold / italic. */
 function rangeHas(
   runs: readonly TextRun[],
   start: number,
@@ -184,7 +172,6 @@ function TextEditor({ element }: { element: TextElement }) {
     [initial],
   );
 
-  // Selection → toolbar position (container-relative).
   useDocumentEvent("selectionchange", () => {
     const container = containerRef.current;
     if (!editable || !container) return;
@@ -211,17 +198,14 @@ function TextEditor({ element }: { element: TextElement }) {
         { history: false },
       );
     } catch {
-      // Element vanished mid-edit.
     }
   };
 
   const commit = () => {
     if (session.text.trim() === "") {
-      // Empty text exits as a delete (the transaction collapses it all).
       try {
         engine.dispatch({ type: "removeElement", elementId: element.id });
       } catch {
-        // Already gone.
       }
     }
     setEditingTextId(null);
@@ -272,12 +256,10 @@ function TextEditor({ element }: { element: TextElement }) {
   const scaleX = Math.abs(resolved.transform.scaleX);
   const scaleY = Math.abs(resolved.transform.scaleY);
   const fontSize = style.fontSize * scaleY;
-  // Box width drives wrapping; measure-derived width keeps free text stable.
   const boxWidth = element.box ? element.box.width * scaleX : null;
 
   return (
     <div ref={containerRef} className="absolute inset-0 z-20 [container-type:inline-size]">
-      {/* Click-away backdrop: commits (Figma semantics). */}
       <div className="absolute inset-0" onPointerDown={commit} />
       <div
         ref={attachEditable}
@@ -330,7 +312,6 @@ function TextEditor({ element }: { element: TextElement }) {
             return;
           }
           if (event.key === "Enter" && !event.shiftKey && !event.metaKey) {
-            // Plain text newline (keeps the DOM to text nodes + spans).
             event.preventDefault();
             document.execCommand("insertText", false, "\n");
           }
@@ -350,11 +331,7 @@ function TextEditor({ element }: { element: TextElement }) {
           data-mcut-text-toolbar=""
           className="absolute z-30 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-md bg-overlay/85 p-0.5 shadow-md backdrop-blur"
           style={{ left: selection.x, top: Math.max(28, selection.y) - 6 }}
-          onPointerDown={(event) => {
-            // Keep the editable's selection alive through toolbar clicks.
-            event.preventDefault();
-            event.stopPropagation();
-          }}
+          onPointerDown={keepTheEditableSelectionThroughToolbarPresses}
         >
           <Button
             variant={selBold ? "secondary" : "ghost"}

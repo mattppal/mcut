@@ -1,7 +1,5 @@
 "use client";
 
-// The full typography stack for text elements, plus the canvas text-measurement helpers.
-
 import { layoutTextBlock, measureWith, type SizeHelpers } from "@mcut/compositor";
 import {
   type Project,
@@ -34,12 +32,6 @@ const WEIGHT_LABELS: Record<number, string> = {
   900: "Black",
 };
 
-/**
- * The full typography stack for text elements: family (font library picker),
- * weight/italic from the family's real faces, size, tracking, line height,
- * case, alignment, colors, outline, and drop shadow — the CapCut/Canva
- * table-stakes set for thumbnail text.
- */
 export function TextStyleSection({
   style,
   patchStyle,
@@ -47,7 +39,6 @@ export function TextStyleSection({
 }: {
   style: TextStyle;
   patchStyle: (values: Record<string, unknown>) => void;
-  /** Keyframe-aware Spacing row wiring (text elements; captions omit it). */
   spacing?: { value: number; onCommit: (value: number) => void; controls: React.ReactNode };
 }) {
   const option = findFontOption(style.fontFamily);
@@ -56,12 +47,9 @@ export function TextStyleSection({
     ? weights
     : [...weights, style.fontWeight].sort((a, b) => a - b);
   const italic = style.fontStyle === "italic";
-  // Variable families expose the whole wght axis; static ones their cuts.
   const axis = option?.variableWeight;
 
   const setFamily = (fontFamily: string) => {
-    // Keep the weight where the new family can express it: clamp onto a
-    // variable axis, else snap to the nearest static face.
     const next = findFontOption(fontFamily);
     const fontWeight = next?.variableWeight
       ? Math.round(
@@ -107,7 +95,6 @@ export function TextStyleSection({
         />
       </div>
       {axis ? (
-        // Variable font: the full weight axis, scrubbable like any number.
         <NumberField
           label="Weight"
           value={style.fontWeight}
@@ -205,8 +192,6 @@ export function TextStyleSection({
         value={style.backgroundColor ?? "rgba(0, 0, 0, 0)"}
         onCommit={(backgroundColor) => patchStyle({ backgroundColor })}
       />
-      {/* Outline + shadow are the shared style primitives — the same rows
-          (and presets) media frames and layout slots use. */}
       <StrokeFields
         label="Outline"
         defaultColor="#000000"

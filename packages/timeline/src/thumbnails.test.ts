@@ -32,7 +32,6 @@ describe('thumbnails', () => {
     expect(small.length).toBeGreaterThan(0)
     const smallText = small[0]! as Extract<(typeof small)[number], { type: 'text' }>
     const bigText = big[0]! as typeof smallText
-    // 3x the height → 3x the font.
     expect(bigText.style.fontSize / smallText.style.fontSize).toBeCloseTo(3, 1)
     expect(bigText.box!.width / smallText.box!.width).toBeCloseTo(3, 1)
   })
@@ -91,7 +90,6 @@ describe('thumbnails', () => {
     expect(captured.name).toBe('Mine')
     const texts = captured.items.filter((i) => i.kind === 'text')
     expect(texts.length).toBe(2)
-    // Geometry survives the round trip (within rounding).
     const original = THUMBNAIL_TEMPLATES[0]!.items.find((i) => i.kind === 'text')!
     const roundTripped = texts[0]!
     expect(Math.abs(roundTripped.rect.x - original.rect.x)).toBeLessThan(0.02)
@@ -103,7 +101,6 @@ describe('thumbnails', () => {
   })
 
   test('expand scales tracking, stroke, and shadow with the font', () => {
-    // "Big title" headline ships stroke + shadow; its label ships tracking.
     const big = expandThumbnailTemplate(
       { width: 3840, height: 2160, fps: 30 },
       THUMBNAIL_TEMPLATES[0]!,

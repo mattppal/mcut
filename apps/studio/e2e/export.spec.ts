@@ -3,12 +3,7 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 import { clip, collectErrors, dragAssetToLane, openEditor, openLeftTab } from "./helpers";
 
-/**
- * End-to-end export through the worker pipeline: the dialog mixes audio on
- * the main thread, spawns the export worker (decode→composite→encode→mux),
- * and downloads the produced file. WebM keeps the assertion valid in the
- * codec-stripped Playwright Chromium build (no H.264 encoder there).
- */
+// Playwright's Chromium lacks the licensed codecs Chrome bundles, so the export under test is WebM rather than H.264. https://playwright.dev/docs/browsers#media-codecs
 test("export renders a webm in the worker and downloads it", async ({ page }) => {
   test.slow();
   const errors = collectErrors(page);
@@ -22,7 +17,6 @@ test("export renders a webm in the worker and downloads it", async ({ page }) =>
   await dragAssetToLane(page, /fixture-vp9\.mkv/, { offsetX: 120 });
   await expect(clip(page)).toHaveCount(1);
 
-  // A title exercises worker-side text rendering + the font transfer path.
   await openLeftTab(page, "text");
   await page.getByTitle(/Title — drag/).click();
   await expect(clip(page)).toHaveCount(2);
@@ -38,7 +32,6 @@ test("export renders a webm in the worker and downloads it", async ({ page }) =>
   const file = await download.path();
   expect((await stat(file)).size).toBeGreaterThan(10_000);
 
-  // The pipeline must have run in the dedicated worker, not the fallback.
   expect(
     await page.evaluate(() => (globalThis as { __mcutLastExportMode?: string }).__mcutLastExportMode),
   ).toBe("worker");

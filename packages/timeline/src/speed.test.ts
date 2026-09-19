@@ -44,7 +44,7 @@ describe('timeMap schema', () => {
     expect(
       timeMapSchema.parse([
         { timeMs: 0, value: 0 },
-        { timeMs: 1000, value: 0 }, // freeze is fine
+        { timeMs: 1000, value: 0 },
       ]),
     ).toHaveLength(2)
   })
@@ -75,11 +75,11 @@ describe('source time mapping', () => {
       timeMap: [
         { timeMs: 0, value: 0 },
         { timeMs: 1000, value: 1000 },
-        { timeMs: 1500, value: 1000 }, // freeze
+        { timeMs: 1500, value: 1000 },
         { timeMs: 2000, value: 1500 },
       ],
     }
-    expect(getSourceTimeMs(el, 1250)).toBe(1500) // 500 trim + 1000 frozen
+    expect(getSourceTimeMs(el, 1250)).toBe(1500)
     expect(getSpeedAt(el, 1250)).toBe(0)
     expect(getSpeedAt(el, 500)).toBeCloseTo(1, 5)
   })
@@ -95,7 +95,6 @@ describe('setElementSpeed command', () => {
       { timeMs: 0, value: 0 },
       { timeMs: 2000, value: 4000 },
     ])
-    // Back to 1x removes the map and restores the duration.
     const restored = applyCommand(next, { type: 'setElementSpeed', elementId: 'e-v', speed: 1 })
     const videoRestored = getElement(restored, 'e-v' as `e-${string}`) as VideoElement
     expect(videoRestored.durationMs).toBe(4000)
@@ -104,10 +103,8 @@ describe('setElementSpeed command', () => {
 
   test('slow motion past the asset end is allowed; speedups past it are not', () => {
     const { project } = projectWithVideo()
-    // 0.5x: duration 8000, source span still 4000 <= 10000. OK.
     const slow = applyCommand(project, { type: 'setElementSpeed', elementId: 'e-v', speed: 0.5 })
     expect((getElement(slow, 'e-v' as `e-${string}`) as VideoElement).durationMs).toBe(8000)
-    // Trim to the asset tail, then 2x is still within (span unchanged).
     const tail = applyCommand(project, {
       type: 'trimElement',
       elementId: 'e-v',
@@ -177,11 +174,9 @@ describe('splitting time-mapped clips', () => {
 
     expect(left.durationMs).toBe(500)
     expect(right.durationMs).toBe(1500)
-    expect(right.trimStartMs).toBe(left.trimStartMs) // map carries the offset
-    // Continuity: the source time at the cut matches on both sides.
+    expect(right.trimStartMs).toBe(left.trimStartMs)
     expect(getSourceTimeMs(left, 500)).toBe(getSourceTimeMs(right, 0))
     expect(getSourceTimeMs(right, 0)).toBe(1000)
-    // Both halves still play at 2x.
     expect(getSpeedAt(left, 250)).toBeCloseTo(2, 3)
     expect(getSpeedAt(right, 750)).toBeCloseTo(2, 3)
   })

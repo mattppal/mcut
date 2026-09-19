@@ -214,8 +214,6 @@ export const setMulticamSourceKey = defineCommand({
             : s,
       )
       const next = { ...element, sources }
-      // Swap keeps both keys alive, so audio stays with its role (fixing a
-      // wrong screen/camera guess should move the audio to the real camera).
       if (!taken && element.audioSource === payload.sourceKey) {
         next.audioSource = payload.newKey
       }
@@ -246,7 +244,6 @@ export const flattenMulticam = defineCommand({
       ...element.angles.map((a) => mustGetLayout(project, a.layoutId).slots.length),
     )
 
-    // Spans: each cut until the next (or the element end).
     const spans = element.angles.map((cut, i) => ({
       cut,
       fromMs: cut.atMs,
@@ -329,7 +326,6 @@ export const flattenMulticam = defineCommand({
         ? { ...t, elements: t.elements.filter((e) => e.id !== element.id) }
         : t,
     )
-    // Slot tracks go where the multicam was (bottom slot first); audio below.
     tracks.splice(trackIndex + 1, 0, ...slotTracks)
     if (audioTrack) tracks.splice(trackIndex, 0, audioTrack)
     return { ...project, tracks }

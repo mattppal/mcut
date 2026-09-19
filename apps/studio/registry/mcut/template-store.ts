@@ -2,14 +2,6 @@
 
 import { useSyncExternalStore } from "react";
 
-/**
- * The user's template library (zooms, layouts): app-level
- * persistence, NOT project data — projects only ever contain the expanded
- * primitives (keyframes/elements), so documents stay portable. localStorage
- * with a version field and tolerant parsing (the louisville draft pattern);
- * JSON import/export for sharing.
- */
-
 export type TemplateKind = "zoom" | "layout";
 
 export interface UserTemplate<P = unknown> {
@@ -48,7 +40,6 @@ function write(templates: UserTemplate[]): void {
   try {
     window.localStorage.setItem(STORE_KEY, JSON.stringify(templates));
   } catch {
-    // Private mode: the library just doesn't persist.
   }
   for (const listener of listeners) listener();
 }
@@ -90,9 +81,8 @@ export function importTemplatesJson(json: string): number {
 }
 
 const EMPTY: UserTemplate[] = [];
-const snapshots = new Map<TemplateKind, UserTemplate[]>();
+const stableSnapshotsByKind = new Map<TemplateKind, UserTemplate[]>();
 
-/** Reactive list of one kind (useSyncExternalStore over the local library). */
 export function useTemplates<P>(kind: TemplateKind): UserTemplate<P>[] {
   return useSyncExternalStore(
     (onChange) => {
@@ -102,8 +92,7 @@ export function useTemplates<P>(kind: TemplateKind): UserTemplate<P>[] {
     () => {
       const all = read();
       const filtered = all.filter((t) => t.kind === kind);
-      const previous = snapshots.get(kind);
-      // Stable snapshot identity, or React loops.
+      const previous = stableSnapshotsByKind.get(kind);
       if (
         previous &&
         previous.length === filtered.length &&
@@ -111,7 +100,7 @@ export function useTemplates<P>(kind: TemplateKind): UserTemplate<P>[] {
       ) {
         return previous as UserTemplate<P>[];
       }
-      snapshots.set(kind, filtered);
+      stableSnapshotsByKind.set(kind, filtered);
       return filtered as UserTemplate<P>[];
     },
     () => EMPTY as UserTemplate<P>[],

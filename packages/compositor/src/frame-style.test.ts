@@ -37,9 +37,7 @@ describe('frame style rendering', () => {
     const ctx = new FakeContext2D()
     renderFrame(asCtx(ctx), project, 1000, { source: new FakeSource() })
     const draw = ctx.callsTo('drawImage').at(-1)!
-    // 9-arg form: source rect in the served frame's pixels (640×360)…
     expect(draw.args.slice(1, 5)).toEqual([160, 90, 320, 180])
-    // …dest box centered at the cropped asset size (1280×720 → 640×360).
     expect(draw.args.slice(5)).toEqual([-320, -180, 640, 360])
   })
 
@@ -48,7 +46,6 @@ describe('frame style rendering', () => {
     const ctx = new FakeContext2D()
     renderFrame(asCtx(ctx), project, 1000, { source: new FakeSource() })
     const round = ctx.callsTo('roundRect').at(-1)!
-    // radius = 0.1 × short edge (720)
     expect(round.args).toEqual([-640, -360, 1280, 720, 72])
     expect(ctx.callsTo('clip').length).toBeGreaterThan(0)
   })

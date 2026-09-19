@@ -32,20 +32,17 @@ import {
 import { collectSnapTargets, pointerToTimelineMs, snapClip, type SnapTarget } from "./timeline-snap";
 import { formatDurationBadge } from "./format";
 
-/** Payloads carried by dnd-kit drags. Track sorting is handled separately. */
 export type EditorDragData =
   | { kind: "asset"; asset: AssetRef; thumb?: string }
   | { kind: "text-preset"; preset: TextPreset }
   | { kind: "track"; trackId: TrackId };
 
-/** Data attached to timeline lane droppables. */
 export interface LaneDropData {
   laneTrackId: string | "new-track";
 }
 
 const ActiveDragContext = createContext<EditorDragData | null>(null);
 
-/** The payload currently being dragged (null when idle). */
 export function useActiveDrag(): EditorDragData | null {
   return useContext(ActiveDragContext);
 }
@@ -84,7 +81,6 @@ function dragDataOf(active: Active): EditorDragData | null {
   return isEditorDragData(data) ? data : null;
 }
 
-/** Lanes get pointer-precision; track sorting wants nearest-row. */
 const collisionDetection: CollisionDetection = (args) => {
   if (dragDataOf(args.active)?.kind === "track") return closestCenter(args);
   const droppableContainers = args.droppableContainers.filter((container) => {
@@ -95,8 +91,6 @@ const collisionDetection: CollisionDetection = (args) => {
 };
 
 function DragGhost({ data }: { data: EditorDragData }) {
-  // Once the in-lane ghost is live, the floating card would only cover it —
-  // the snapped ghost (with its own label/timecode) is the better feedback.
   const preview = useDropPreview();
   const Icon =
     data.kind === "text-preset"
@@ -128,17 +122,11 @@ function DragGhost({ data }: { data: EditorDragData }) {
   );
 }
 
-/**
- * One DndContext for the whole editor: media-bin assets and text presets
- * drag onto timeline lanes (with a snapped in-lane ghost), track rows sort
- * vertically. Clip move/trim stays on raw pointer events for ms precision.
- */
 export function EditorDnd({
   children,
   onTrackSort,
 }: {
   children: ReactNode;
-  /** Called when a track row is dropped over another (sortable ids). */
   onTrackSort?: (activeTrackId: string, overTrackId: string) => void;
 }) {
   const engine = useEditor();
@@ -229,8 +217,6 @@ export function EditorDnd({
       id="mcut-editor-dnd"
       sensors={sensors}
       collisionDetection={collisionDetection}
-      // Default measuring (once per drag) is enough: the "new track" lane is
-      // always mounted, so rows never shift when a drag starts.
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}

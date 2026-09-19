@@ -39,10 +39,6 @@ import {
 import { MarkerLines, Playhead, Ruler, SnapGuide } from "./timeline-ruler";
 import { DropGhostOverlay, HEADER_WIDTH, NewTrackLane, SortableRow } from "./timeline-tracks";
 
-// ---------------------------------------------------------------------------
-// Marquee selection
-// ---------------------------------------------------------------------------
-
 interface MarqueeState {
   x0: number;
   y0: number;
@@ -51,20 +47,17 @@ interface MarqueeState {
   active: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Panel
-// ---------------------------------------------------------------------------
-
 export interface TimelinePanelProps {
   className?: string;
 }
 
-/**
- * Multi-track NLE timeline: magnetic clip move/trim with guide lines,
- * filmstrip/waveform clips, option-drag duplication to new tracks, dnd-kit
- * drop target lanes with ghost preview, marquee + shift multi-select,
- * sortable tracks, ⌘+wheel zoom at pointer.
- */
+const CONTENT_WIDTH_STEP_PX = 400;
+
+function contentWidthQuantizedToKeepLanesMemoized(durationMs: number, pxPerMs: number): number {
+  const rawWidth = (durationMs + 15_000) * pxPerMs;
+  return Math.max(1600, Math.ceil(rawWidth / CONTENT_WIDTH_STEP_PX) * CONTENT_WIDTH_STEP_PX);
+}
+
 export function TimelinePanel({ className }: TimelinePanelProps) {
   const engine = useEditor();
   const project = useProject();
@@ -75,14 +68,11 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
-  // Quantized: while a drag grows the project, a raw width would change on
-  // every frame and defeat the lanes' memoization.
-  const contentWidth = Math.max(1600, Math.ceil(((durationMs + 15_000) * pxPerMs) / 400) * 400);
+  const contentWidth = contentWidthQuantizedToKeepLanesMemoized(durationMs, pxPerMs);
   const mediaDragActive = activeDrag !== null && activeDrag.kind !== "track";
   const rows = [...project.tracks].map((track, index) => ({ track, index })).reverse();
   const totalHeight = RULER_HEIGHT + NEW_TRACK_LANE_HEIGHT + rows.length * TRACK_HEIGHT;
 
-  // ⌘/ctrl+wheel zoom anchored at the pointer (non-passive listener).
   useElementEvent(
     timelineScrollRef,
     "wheel",
@@ -105,8 +95,6 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
     scroller.scrollLeft = 0;
   };
 
-  // -- marquee ---------------------------------------------------------------
-
   const toContentPoint = (event: ReactPointerEvent) => {
     const rect = contentRef.current!.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
@@ -114,7 +102,7 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
 
   const onBackgroundPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
-    if (!target.dataset.mcutLane) return; // clips/headers handle their own
+    if (!target.dataset.mcutLane) return;
     const point = toContentPoint(event);
     setMarquee({ x0: point.x, y0: point.y, x1: point.x, y1: point.y, active: false });
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -129,7 +117,6 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
     setMarquee(next);
     if (!next.active) return;
 
-    // Select clips intersecting the marquee (time × visual rows).
     const fromMs = (Math.min(next.x0, next.x1) - HEADER_WIDTH) / pxPerMs;
     const toMs = (Math.max(next.x0, next.x1) - HEADER_WIDTH) / pxPerMs;
     const rowsTop = RULER_HEIGHT + NEW_TRACK_LANE_HEIGHT;
@@ -150,7 +137,6 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
   const onBackgroundPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!marquee) return;
     if (!marquee.active) {
-      // Plain click on empty lane: seek there and clear selection.
       engine.seek(Math.max(0, (marquee.x0 - HEADER_WIDTH) / pxPerMs));
       engine.clearSelection();
     }
@@ -197,8 +183,6 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
 
       <div
         ref={timelineScrollRef}
-        // isolate: the sticky ruler/gutter z-indexes (60/70) must not compete
-        // with portaled popups (context menus are z-50 at the body level).
         className="relative isolate min-h-0 flex-1 overflow-auto overscroll-contain"
       >
         <div
@@ -209,7 +193,6 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
           onPointerMove={onBackgroundPointerMove}
           onPointerUp={onBackgroundPointerUp}
         >
-          {/* Ruler row */}
           <div className="sticky top-0 z-[60] flex">
             <div
               className="sticky left-0 z-[70] flex shrink-0 items-center justify-center border-r border-foreground/10 bg-card"

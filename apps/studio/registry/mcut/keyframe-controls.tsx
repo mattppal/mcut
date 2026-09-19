@@ -29,12 +29,14 @@ export const EASING_PRESETS: Array<{ label: string; value: Easing }> = [
   { label: "Hold", value: "hold" },
 ];
 
-/** Element-local playhead, clamped into the clip. */
 export function localPlayheadMs(element: TimelineElement, timelineMs: number): number {
   return Math.max(0, Math.min(element.durationMs, Math.round(timelineMs - element.startMs)));
 }
 
-/** A CapCut-style keyframe diamond (rotated square). */
+function restsAtZeroWithNoStaticCounterpart(property: AnimatableProperty): property is "blur" {
+  return property === "blur";
+}
+
 export function Diamond({
   filled,
   armed,
@@ -59,12 +61,6 @@ export function Diamond({
   );
 }
 
-/**
- * Premiere's Effect-Controls keyframe cluster for one property:
- * ◀ (previous) ◆ (toggle at playhead; first tap arms the stopwatch)
- * ▶ (next), an easing menu when sitting on a keyframe, and a stopwatch-off
- * (clear) affordance when armed.
- */
 export function KeyframeRowControls({
   element,
   property,
@@ -87,7 +83,6 @@ export function KeyframeRowControls({
     try {
       if (onKeyframe) {
         if (track.length === 1) {
-          // Removing the last keyframe = stopwatch off; keep the current value.
           const value = currentKeyframe?.value;
           engine.transact(() => {
             engine.dispatch({ type: "clearKeyframes", elementId: element.id, property });
@@ -102,10 +97,7 @@ export function KeyframeRowControls({
           });
         }
       } else {
-        const value = armed
-          ? // Adding between keyframes: freeze the interpolated value.
-            undefined
-          : getStaticValue(element, property);
+        const value = armed ? undefined : getStaticValue(element, property);
         engine.dispatch({
           type: "setKeyframe",
           elementId: element.id,
@@ -115,12 +107,10 @@ export function KeyframeRowControls({
         });
       }
     } catch {
-      // Element vanished or invalid time: ignore.
     }
   };
 
   const interpolatedNow = () => {
-    // getAnimatedValue without importing it twice — track is non-empty here.
     const before = [...track].reverse().find((k) => k.timeMs <= localMs);
     const after = track.find((k) => k.timeMs >= localMs);
     if (!before) return after!.value;
@@ -130,12 +120,10 @@ export function KeyframeRowControls({
   };
 
   const applyStatic = (value: number) => {
+    if (restsAtZeroWithNoStaticCounterpart(property)) return;
     const patch: Record<string, unknown> = {};
     if (property === "opacity") patch.opacity = Math.min(1, Math.max(0, value));
     else if (property === "volume") patch.volume = Math.min(2, Math.max(0, value));
-    // Animated blur has no static counterpart on the element — its resting
-    // value is 0 and persistent blur lives in the effects stack instead.
-    else if (property === "blur") return;
     else if (property === "letterSpacing") {
       if (element.type !== "text") return;
       patch.style = { ...element.style, letterSpacing: value };

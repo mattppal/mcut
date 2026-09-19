@@ -5,38 +5,21 @@ import type { ContainerFormatId } from './container-formats'
 export type { ContainerFormatId } from './container-formats'
 
 export interface ExportProgress {
-  /** 0–1 across the whole export. */
   progress: number
   phase: 'audio' | 'video' | 'finalize'
 }
 
-/**
- * A font face the export worker registers into its own `FontFaceSet` before
- * rendering: workers do not see `document.fonts`, so faces loaded on the
- * main thread are invisible to an `OffscreenCanvas` in a worker. `source` is
- * either the face's binary or a URL the worker can fetch.
- */
 export interface ExportFontFaceInit {
   family: string
-  /** CSS font-weight descriptor (e.g. "400", "100 900" for variable). */
   weight?: string
-  /** CSS font-style descriptor (e.g. "italic"). */
   style?: string
-  /** CSS unicode-range descriptor (Google Fonts ships per-subset faces). */
   unicodeRange?: string
   source: ArrayBuffer | string
 }
 
 export interface ExportProjectOptions {
-  /** Container format id from the registry. Default `'mp4'`. */
   format?: ContainerFormatId
-  /** Video bitrate in bits/s or a mediabunny `Quality`. Default `QUALITY_HIGH`. */
   videoBitrate?: number | Quality
-  /**
-   * Font faces for text/caption rendering inside the export worker. Without
-   * them the worker draws text with system fallback faces (web fonts loaded
-   * on the main thread don't exist in worker scope).
-   */
   fonts?: ExportFontFaceInit[]
   onProgress?: (progress: ExportProgress) => void
   signal?: AbortSignal
@@ -44,24 +27,17 @@ export interface ExportProjectOptions {
 
 export interface ExportResult {
   blob: Blob
-  /** Suggested file extension from the format's registry entry. */
   extension: string
 }
 
 export const AUDIO_SAMPLE_RATE = 48_000
 
-/** Planar stereo PCM, the transferable form of the main-thread audio mix. */
 export interface MixedAudioData {
   left: Float32Array<ArrayBuffer>
   right: Float32Array<ArrayBuffer>
   sampleRate: number
 }
 
-// ---------------------------------------------------------------------------
-// Worker protocol
-// ---------------------------------------------------------------------------
-
-/** Options that survive structured clone (mediabunny `Quality` does not). */
 export interface WorkerExportOptions {
   format?: ContainerFormatId
   videoBitrate?: number
@@ -69,7 +45,6 @@ export interface WorkerExportOptions {
 
 export interface ExportWorkerStartMessage {
   type: 'start'
-  /** Plain serializable project data (engine projects already are). */
   project: Project
   options: WorkerExportOptions
   mixedAudio: MixedAudioData | null

@@ -56,7 +56,6 @@ const MODES: Array<{ id: EditorMode; label: string }> = [
   { id: "collage", label: "Collage" },
 ];
 
-/** The editing-mode switch: modes re-emphasize affordances, never the document. */
 function ModeSwitch() {
   const { mode, setMode } = useEditorUI();
   return (
@@ -80,7 +79,6 @@ function ModeSwitch() {
   );
 }
 
-/** Slim top chrome: brand menu, history, project name, theme, shortcuts, export. */
 export function EditorToolbar() {
   const engine = useEditor();
   const canUndo = useEditorState((s) => s.canUndo);

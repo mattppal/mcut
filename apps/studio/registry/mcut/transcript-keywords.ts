@@ -2,13 +2,6 @@
 
 import { useSyncExternalStore } from "react";
 
-/**
- * Persisted transcript keyword terms (e.g. product names), per project.
- * Occurrences highlight in the transcript panel and render as soft ticks on
- * the timeline ruler. Module store + localStorage, the font-library pattern
- * — both panels subscribe without threading props through the shell.
- */
-
 const storageKey = (projectId: string) => `mcut:transcript:keywords:v1:${projectId}`;
 
 const listeners = new Set<() => void>();
@@ -44,7 +37,6 @@ export function setTranscriptKeywords(projectId: string, keywords: string[]): vo
   try {
     window.localStorage.setItem(storageKey(projectId), JSON.stringify(cleaned));
   } catch {
-    // Private mode: keywords just don't persist.
   }
   notify();
 }
@@ -65,7 +57,6 @@ function subscribe(onChange: () => void): () => void {
   return () => listeners.delete(onChange);
 }
 
-/** Reactive keyword list for a project. */
 export function useTranscriptKeywords(projectId: string): string[] {
   return useSyncExternalStore(
     subscribe,
