@@ -40,7 +40,6 @@
         "@mcut/react": "workspace:*",
         "@mcut/timeline": "workspace:*",
         "@mcut/transcription": "workspace:*",
-        "@mcut/transcription-assemblyai": "workspace:*",
         "@mcut/transcription-local": "workspace:*",
         "@tanstack/react-query": "^5.90.0",
         "class-variance-authority": "0.7.1",
