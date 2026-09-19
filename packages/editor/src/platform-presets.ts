@@ -17,8 +17,7 @@ export const PLATFORM_PRESETS: PlatformPreset[] = [
     fps: 30,
     safeArea: { top: 0, bottom: 0.08 },
     notes:
-      'Standard horizontal video. The bottom ~8% is covered by the scrubber on hover; ' +
-      'avoid parking captions or lower thirds at the very bottom edge.',
+      'Standard horizontal video. The bottom ~8% is covered by the scrubber on hover; ' + 'avoid parking captions or lower thirds at the very bottom edge.',
   },
   {
     id: 'youtube-4k',
@@ -60,9 +59,7 @@ export const PLATFORM_PRESETS: PlatformPreset[] = [
     height: 1920,
     fps: 30,
     safeArea: { top: 0.1, bottom: 0.25 },
-    notes:
-      'Vertical, 90s max. The feed crops a 4:5 preview from the center — keep the subject ' +
-      'centered vertically so the crop still works.',
+    notes: 'Vertical, 90s max. The feed crops a 4:5 preview from the center — keep the subject ' + 'centered vertically so the crop still works.',
   },
   {
     id: 'square',

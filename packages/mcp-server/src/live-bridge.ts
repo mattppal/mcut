@@ -269,12 +269,9 @@ export class LiveMcutBridge {
       listOperators: () => this.request('list_operators'),
       undo: async () => Boolean(await this.request('undo')),
       redo: async () => Boolean(await this.request('redo')),
-      runAction: (actionId, input) =>
-        this.request('run_action', { actionId, input: input ?? {} }),
-      runOperator: (operatorId, input) =>
-        this.request('run_operator', { operatorId, input: input ?? {} }),
-      dispatchCommand: (commandName, input) =>
-        this.request('dispatch_command', { commandName, input: input ?? {} }),
+      runAction: (actionId, input) => this.request('run_action', { actionId, input: input ?? {} }),
+      runOperator: (operatorId, input) => this.request('run_operator', { operatorId, input: input ?? {} }),
+      dispatchCommand: (commandName, input) => this.request('dispatch_command', { commandName, input: input ?? {} }),
       applyCommands: (commands) => this.request('apply_commands', { commands }),
     }
   }
@@ -293,9 +290,7 @@ export class LiveMcutBridge {
       }
       for (const [id, pending] of this.pending) {
         clearTimeout(pending.timer)
-        pending.reject(
-          new LiveBridgeError('browser-disconnected', `Browser disconnected before response ${id}.`),
-        )
+        pending.reject(new LiveBridgeError('browser-disconnected', `Browser disconnected before response ${id}.`))
       }
       this.pending.clear()
     })

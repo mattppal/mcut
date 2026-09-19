@@ -1,10 +1,4 @@
-import {
-  BufferTarget,
-  Conversion,
-  Output,
-  WavOutputFormat,
-  type ConversionAudioOptions,
-} from 'mediabunny'
+import { BufferTarget, Conversion, Output, WavOutputFormat, type ConversionAudioOptions } from 'mediabunny'
 import { inputFor, type MediaSourceLike } from './probe'
 
 export interface ExtractAudioOptions {
@@ -15,19 +9,12 @@ export interface ExtractAudioOptions {
 
 export class AudioNotDecodableError extends Error {
   constructor(codec: string | undefined) {
-    super(
-      `This browser cannot decode the clip's audio${codec ? ` (${codec})` : ''}. ` +
-        'Try re-encoding the file as MP4/AAC.',
-    )
+    super(`This browser cannot decode the clip's audio${codec ? ` (${codec})` : ''}. ` + 'Try re-encoding the file as MP4/AAC.')
     this.name = 'AudioNotDecodableError'
   }
 }
 
-async function runWavConversion(
-  src: MediaSourceLike,
-  audio: ConversionAudioOptions,
-  onProgress?: (progress: number) => void,
-): Promise<Blob | null> {
+async function runWavConversion(src: MediaSourceLike, audio: ConversionAudioOptions, onProgress?: (progress: number) => void): Promise<Blob | null> {
   const input = inputFor(src)
   try {
     const target = new BufferTarget()
@@ -44,10 +31,7 @@ async function runWavConversion(
       if (audioDiscard?.reason === 'undecodable_source_codec') {
         throw new AudioNotDecodableError(audioDiscard.track.codec ?? undefined)
       }
-      throw new Error(
-        `Audio conversion is not possible for this file` +
-          (audioDiscard ? ` (${audioDiscard.reason})` : ''),
-      )
+      throw new Error(`Audio conversion is not possible for this file` + (audioDiscard ? ` (${audioDiscard.reason})` : ''))
     }
     if (onProgress) conversion.onProgress = onProgress
     await conversion.execute()
@@ -58,10 +42,7 @@ async function runWavConversion(
   }
 }
 
-export async function extractAudioToWav(
-  src: MediaSourceLike,
-  options: ExtractAudioOptions = {},
-): Promise<Blob | null> {
+export async function extractAudioToWav(src: MediaSourceLike, options: ExtractAudioOptions = {}): Promise<Blob | null> {
   const probe = inputFor(src)
   try {
     const audioTrack = await probe.getPrimaryAudioTrack()

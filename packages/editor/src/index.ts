@@ -1,21 +1,6 @@
-export {
-  OperatorError,
-  enabledStatus,
-  type EditorOperatorContext,
-  type EnabledResult,
-  type OperatorCategory,
-  type OperatorDefinition,
-} from './operators'
+export { OperatorError, enabledStatus, type EditorOperatorContext, type EnabledResult, type OperatorCategory, type OperatorDefinition } from './operators'
 
-export {
-  listOperators,
-  operatorIds,
-  operators,
-  parseOperatorId,
-  runOperator,
-  type ListedEditorOperator,
-  type OperatorId,
-} from './core-operators'
+export { listOperators, operatorIds, operators, parseOperatorId, runOperator, type ListedEditorOperator, type OperatorId } from './core-operators'
 
 export {
   addTextAtPlayhead,

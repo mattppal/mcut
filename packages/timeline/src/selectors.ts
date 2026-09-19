@@ -13,10 +13,7 @@ export function getTrack(project: Project, trackId: TrackId): Track | undefined 
   return project.tracks.find((t) => t.id === trackId)
 }
 
-export function getElementLocation(
-  project: Project,
-  elementId: ElementId,
-): ElementLocation | undefined {
+export function getElementLocation(project: Project, elementId: ElementId): ElementLocation | undefined {
   for (const [trackIndex, track] of project.tracks.entries()) {
     for (const [elementIndex, element] of track.elements.entries()) {
       if (element.id === elementId) return { track, trackIndex, element, elementIndex }
@@ -83,12 +80,7 @@ export function getActiveElements(project: Project, timeMs: number): ActiveEleme
   return active
 }
 
-export function findNearestFreeSlot(
-  track: Track,
-  desiredStartMs: number,
-  durationMs: number,
-  ignoreElementId?: ElementId,
-): number {
+export function findNearestFreeSlot(track: Track, desiredStartMs: number, durationMs: number, ignoreElementId?: ElementId): number {
   const desired = Math.max(0, Math.round(desiredStartMs))
   if (canPlace(track, desired, durationMs, ignoreElementId)) return desired
 

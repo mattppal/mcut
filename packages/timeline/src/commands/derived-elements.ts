@@ -33,9 +33,7 @@ const applyCaptionsSchema = z.object({
 
 export const applyCaptions = defineCommand({
   type: 'applyCaptions',
-  description:
-    'Add caption elements (e.g. from a transcription) to a caption track, ' +
-    'creating the track when needed.',
+  description: 'Add caption elements (e.g. from a transcription) to a caption track, ' + 'creating the track when needed.',
   payloadSchema: applyCaptionsSchema,
   reduce: (project, payload) => {
     let next = project
@@ -43,9 +41,7 @@ export const applyCaptions = defineCommand({
     if (trackId) {
       mustGetTrack(next, trackId)
     } else {
-      const existing = next.tracks.find(
-        (t) => t.elements.length > 0 && t.elements.every((e) => e.type === 'caption'),
-      )
+      const existing = next.tracks.find((t) => t.elements.length > 0 && t.elements.every((e) => e.type === 'caption'))
       if (existing) {
         trackId = existing.id
       } else {
@@ -170,7 +166,7 @@ export const createMulticam = defineCommand({
 export const detachAudio = defineCommand({
   type: 'detachAudio',
   description:
-    'Detach a video element\'s audio onto its own audio element. The video is ' +
+    "Detach a video element's audio onto its own audio element. The video is " +
     'muted, volume keyframes move to the new audio element, and both share a ' +
     '`linkId` so UIs can select/move them together. Creates a track for the ' +
     'audio when `toTrackId` is omitted.',
@@ -242,7 +238,7 @@ export const applyThumbnail = defineCommand({
   type: 'applyThumbnail',
   description:
     'Compose a cover over the first five frames: expands a thumbnail ' +
-    "template's text items into one locked topmost \"Thumbnail\" track per " +
+    'template\'s text items into one locked topmost "Thumbnail" track per ' +
     'text layer (existing thumbnail text is replaced; image layers stay). ' +
     'Unlike a metadata cover, this is baked into the exported video.',
   payloadSchema: z.object({ template: thumbnailTemplateSchema }),

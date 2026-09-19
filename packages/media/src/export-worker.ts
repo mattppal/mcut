@@ -11,8 +11,7 @@ interface ExportWorkerScope {
 
 const scope = globalThis as unknown as ExportWorkerScope
 
-const post = (message: ExportWorkerResponse, transfer?: Transferable[]) =>
-  transfer ? scope.postMessage(message, transfer) : scope.postMessage(message)
+const post = (message: ExportWorkerResponse, transfer?: Transferable[]) => (transfer ? scope.postMessage(message, transfer) : scope.postMessage(message))
 
 // A worker's FontFaceSet is separate from document.fonts, see https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/fonts
 async function registerFonts(fonts: ExportFontFaceInit[]): Promise<void> {
@@ -58,16 +57,11 @@ scope.onmessage = async (event: MessageEvent<ExportWorkerRequest>) => {
     try {
       const result = await runExportPipeline(project, {
         ...(message.options.format ? { format: message.options.format } : {}),
-        ...(message.options.videoBitrate !== undefined
-          ? { videoBitrate: message.options.videoBitrate }
-          : {}),
+        ...(message.options.videoBitrate !== undefined ? { videoBitrate: message.options.videoBitrate } : {}),
         mixedAudio: message.mixedAudio,
         onProgress: ({ progress, phase }) => post({ type: 'progress', progress, phase }),
       })
-      post(
-        { type: 'done', buffer: result.buffer, mimeType: result.mimeType, extension: result.extension },
-        [result.buffer],
-      )
+      post({ type: 'done', buffer: result.buffer, mimeType: result.mimeType, extension: result.extension }, [result.buffer])
     } finally {
       revoke()
     }

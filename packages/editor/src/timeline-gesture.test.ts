@@ -1,12 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, createProject, type BuiltinCommand, type Project, type VideoElement } from '@mcut/timeline'
-import {
-  collectClipDragBases,
-  computeSlipRange,
-  planAutoCrossfade,
-  planDuplicateClipsToNewTracks,
-  resolveToolMode,
-} from './timeline-gesture'
+import { collectClipDragBases, computeSlipRange, planAutoCrossfade, planDuplicateClipsToNewTracks, resolveToolMode } from './timeline-gesture'
 
 function applyCommands(project: Project, commands: readonly BuiltinCommand[]): Project {
   return commands.reduce((next, command) => applyCommand(next, command), project)

@@ -2,11 +2,7 @@ import { useEffect } from 'react'
 import type { EngineStore } from './use-engine-subscription'
 import { useLatest } from './use-latest'
 
-export function useEngineSync<T, S>(
-  store: EngineStore<T>,
-  select: (state: T) => S,
-  sync: (selected: S) => void,
-): void {
+export function useEngineSync<T, S>(store: EngineStore<T>, select: (state: T) => S, sync: (selected: S) => void): void {
   const latest = useLatest({ select, sync })
   useEffect(() => {
     let current = latest.current.select(store.get())

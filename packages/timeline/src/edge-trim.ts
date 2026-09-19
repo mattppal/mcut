@@ -1,40 +1,22 @@
 import { CommandError } from './errors'
 import type { AnimatableProperty, Keyframe, KeyframeMap } from './keyframes'
-import {
-  MIN_ELEMENT_DURATION_MS,
-  splitElementAt,
-  type MulticamElement,
-  type Project,
-  type TimelineElement,
-} from './model'
+import { MIN_ELEMENT_DURATION_MS, splitElementAt, type MulticamElement, type Project, type TimelineElement } from './model'
 import { getSourceSpanMs, type TimeMap } from './speed'
 
 export type TrimEdge = 'start' | 'end'
 
-const hasTimeMap = (element: TimelineElement): boolean =>
-  'timeMap' in element && Array.isArray(element.timeMap) && element.timeMap.length >= 2
+const hasTimeMap = (element: TimelineElement): boolean => 'timeMap' in element && Array.isArray(element.timeMap) && element.timeMap.length >= 2
 
-const isReversed = (element: TimelineElement): boolean =>
-  'reversed' in element && element.reversed === true
+const isReversed = (element: TimelineElement): boolean => 'reversed' in element && element.reversed === true
 
-export function applyEdgeTrim(
-  element: TimelineElement,
-  edge: TrimEdge,
-  deltaMs: number,
-): TimelineElement {
+export function applyEdgeTrim(element: TimelineElement, edge: TrimEdge, deltaMs: number): TimelineElement {
   if (deltaMs === 0) return element
   const newDurationMs = edge === 'end' ? element.durationMs + deltaMs : element.durationMs - deltaMs
   if (!Number.isSafeInteger(newDurationMs)) {
-    throw new CommandError(
-      'out-of-bounds',
-      `trimming "${element.id}" to ${newDurationMs}ms exceeds the safe integer range`,
-    )
+    throw new CommandError('out-of-bounds', `trimming "${element.id}" to ${newDurationMs}ms exceeds the safe integer range`)
   }
   if (newDurationMs < MIN_ELEMENT_DURATION_MS) {
-    throw new CommandError(
-      'out-of-bounds',
-      `trimming "${element.id}" leaves ${newDurationMs}ms; the minimum is ${MIN_ELEMENT_DURATION_MS}ms`,
-    )
+    throw new CommandError('out-of-bounds', `trimming "${element.id}" leaves ${newDurationMs}ms; the minimum is ${MIN_ELEMENT_DURATION_MS}ms`)
   }
   if (edge === 'start' && element.startMs + deltaMs < 0) {
     throw new CommandError('out-of-bounds', `trimming "${element.id}" would start before 0`)
@@ -46,11 +28,7 @@ export function applyEdgeTrim(
   return deltaMs > 0 ? shrinkViaSplit(element, 'right', deltaMs) : growStart(element, -deltaMs)
 }
 
-function shrinkViaSplit(
-  element: TimelineElement,
-  keep: 'left' | 'right',
-  offsetMs: number,
-): TimelineElement {
+function shrinkViaSplit(element: TimelineElement, keep: 'left' | 'right', offsetMs: number): TimelineElement {
   const { left, right } = splitElementAt(element, offsetMs)
   return keep === 'left' ? left : right
 }
@@ -75,9 +53,7 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
   }
   if ('keyframes' in next && next.keyframes) {
     const shifted: KeyframeMap = {}
-    for (const [property, track] of Object.entries(next.keyframes) as Array<
-      [AnimatableProperty, Keyframe[] | undefined]
-    >) {
+    for (const [property, track] of Object.entries(next.keyframes) as Array<[AnimatableProperty, Keyframe[] | undefined]>) {
       if (!track) continue
       shifted[property] = track.map((k) => ({ ...k, timeMs: k.timeMs + growMs }))
     }
@@ -98,18 +74,12 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
   if (element.type === 'multicam') {
     const multicam = next as MulticamElement
     if (hasTimeMap(element)) {
-      throw new CommandError(
-        'unsupported',
-        `cannot extend the start of speed-ramped multicam "${element.id}"`,
-      )
+      throw new CommandError('unsupported', `cannot extend the start of speed-ramped multicam "${element.id}"`)
     }
     multicam.sources = multicam.sources.map((source) => {
       const trimStartMs = source.trimStartMs - growMs
       if (trimStartMs < 0) {
-        throw new CommandError(
-          'out-of-bounds',
-          `multicam source "${source.key}" has no media before its trim start`,
-        )
+        throw new CommandError('out-of-bounds', `multicam source "${source.key}" has no media before its trim start`)
       }
       return { ...source, trimStartMs }
     })
@@ -123,10 +93,7 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
 
   if (isReversed(element)) {
     if (hasTimeMap(element)) {
-      throw new CommandError(
-        'unsupported',
-        `cannot extend the start of reversed speed-ramped clip "${element.id}"`,
-      )
+      throw new CommandError('unsupported', `cannot extend the start of reversed speed-ramped clip "${element.id}"`)
     }
     return next
   }
@@ -152,14 +119,9 @@ export interface EdgeTrimRange {
   maxDeltaMs: number
 }
 
-export function getEdgeTrimRange(
-  project: Project,
-  element: TimelineElement,
-  edge: TrimEdge,
-): EdgeTrimRange {
+export function getEdgeTrimRange(project: Project, element: TimelineElement, edge: TrimEdge): EdgeTrimRange {
   const shrinkLimitMs = element.durationMs - MIN_ELEMENT_DURATION_MS
-  const assetDurationMs =
-    'assetId' in element ? project.assets[element.assetId]?.durationMs : undefined
+  const assetDurationMs = 'assetId' in element ? project.assets[element.assetId]?.durationMs : undefined
   const trimStartMs = 'trimStartMs' in element ? element.trimStartMs : 0
   const mapped = hasTimeMap(element)
   const reversed = isReversed(element)
@@ -178,9 +140,7 @@ export function getEdgeTrimRange(
       growLimitMs = Math.min(
         ...element.sources.map((source) => {
           const duration = project.assets[source.assetId]?.durationMs
-          return duration === undefined
-            ? Infinity
-            : duration - source.trimStartMs - element.durationMs
+          return duration === undefined ? Infinity : duration - source.trimStartMs - element.durationMs
         }),
       )
     }
@@ -190,11 +150,7 @@ export function getEdgeTrimRange(
   let growLimitMs = Infinity
   if (element.type === 'video' || element.type === 'audio') {
     if (reversed) {
-      growLimitMs = mapped
-        ? 0
-        : assetDurationMs === undefined
-          ? Infinity
-          : assetDurationMs - trimStartMs - getSourceSpanMs(element)
+      growLimitMs = mapped ? 0 : assetDurationMs === undefined ? Infinity : assetDurationMs - trimStartMs - getSourceSpanMs(element)
     } else {
       growLimitMs = trimStartMs
     }

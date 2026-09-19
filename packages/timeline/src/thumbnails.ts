@@ -1,15 +1,7 @@
 import { z } from 'zod'
 import { createElementId, createTrackId } from './id'
 import { frameToMs } from './time'
-import {
-  MIN_ELEMENT_DURATION_MS,
-  textStyleSchema,
-  type Project,
-  type TextElement,
-  type TextStyle,
-  type TimelineElement,
-  type Track,
-} from './model'
+import { MIN_ELEMENT_DURATION_MS, textStyleSchema, type Project, type TextElement, type TextStyle, type TimelineElement, type Track } from './model'
 
 export const THUMBNAIL_FRAME_COUNT = 5
 
@@ -53,9 +45,7 @@ function scaleTextStyle(style: TextStyle, scale: number): TextStyle {
     ...style,
     fontSize: Math.max(8, Math.round(style.fontSize * scale)),
     letterSpacing: Math.round(style.letterSpacing * scale * 100) / 100,
-    ...(style.stroke
-      ? { stroke: { ...style.stroke, width: Math.max(0.5, style.stroke.width * scale) } }
-      : {}),
+    ...(style.stroke ? { stroke: { ...style.stroke, width: Math.max(0.5, style.stroke.width * scale) } } : {}),
     ...(style.shadow
       ? {
           shadow: {
@@ -69,10 +59,7 @@ function scaleTextStyle(style: TextStyle, scale: number): TextStyle {
   }
 }
 
-export function expandThumbnailTemplate(
-  project: Pick<Project, 'width' | 'height' | 'fps'>,
-  template: ThumbnailTemplate,
-): TimelineElement[] {
+export function expandThumbnailTemplate(project: Pick<Project, 'width' | 'height' | 'fps'>, template: ThumbnailTemplate): TimelineElement[] {
   const durationMs = thumbnailDurationMs(project.fps)
   const fontScale = project.height / 1080
   return template.items
@@ -99,16 +86,13 @@ export function expandThumbnailTemplate(
     }))
 }
 
-export function captureThumbnailTemplate(
-  project: Project,
-  name: string,
-): ThumbnailTemplate | null {
+export function captureThumbnailTemplate(project: Project, name: string): ThumbnailTemplate | null {
   const fontScale = 1080 / project.height
   const items: ThumbnailItem[] = []
   for (const element of findThumbnailTracks(project).flatMap((track) => track.elements)) {
     if (element.type === 'text') {
       const w = (element.box?.width ?? project.width * 0.4) / project.width
-      const h = ((element.box?.height ?? element.style.fontSize * 1.4) / project.height) || 0.12
+      const h = (element.box?.height ?? element.style.fontSize * 1.4) / project.height || 0.12
       items.push({
         kind: 'text',
         rect: {
@@ -154,17 +138,15 @@ export function applyThumbnailTemplate(project: Project, template: ThumbnailTemp
     const elements = track.elements.filter((element) => element.type !== 'text')
     return elements.length === 0 ? [] : [{ ...track, elements }]
   })
-  const layers = expandThumbnailTemplate(project, template).map(
-    (element): Track => ({
-      id: createTrackId(),
-      name: THUMBNAIL_TRACK_NAME,
-      muted: false,
-      hidden: false,
-      locked: true,
-      magnetic: false,
-      elements: [element],
-    }),
-  )
+  const layers = expandThumbnailTemplate(project, template).map((element): Track => ({
+    id: createTrackId(),
+    name: THUMBNAIL_TRACK_NAME,
+    muted: false,
+    hidden: false,
+    locked: true,
+    magnetic: false,
+    elements: [element],
+  }))
   return { ...project, tracks: [...kept, ...layers] }
 }
 

@@ -10,9 +10,7 @@ import { useEditor, useEditorState, usePlayback, useProject, useSelectedElement 
 const { act, renderHook } = await import('@testing-library/react')
 
 function providerFor(engine: EditorEngine) {
-  return ({ children }: { children: ReactNode }) => (
-    <EditorProvider engine={engine}>{children}</EditorProvider>
-  )
+  return ({ children }: { children: ReactNode }) => <EditorProvider engine={engine}>{children}</EditorProvider>
 }
 
 describe('editor hooks', () => {
@@ -83,8 +81,6 @@ describe('editor hooks', () => {
   })
 
   test('hooks outside EditorProvider throw a named error', () => {
-    expect(() => renderHook(() => useEditor())).toThrow(
-      'mcut hooks must be used inside <EditorProvider>',
-    )
+    expect(() => renderHook(() => useEditor())).toThrow('mcut hooks must be used inside <EditorProvider>')
   })
 })

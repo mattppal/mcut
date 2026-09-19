@@ -91,11 +91,7 @@ describe('captureZoomPreset', () => {
     expect(preset.durationMs).toBe(400)
     expect(preset.tracks['scale.x']!.map((k) => k.value)).toEqual([1, 1.4])
 
-    const expanded = expandZoomPreset(
-      { ...element, keyframes: undefined, transform: { ...element.transform, scaleX: 2, scaleY: 2 } },
-      preset,
-      0,
-    )
+    const expanded = expandZoomPreset({ ...element, keyframes: undefined, transform: { ...element.transform, scaleX: 2, scaleY: 2 } }, preset, 0)
     expect(expanded['scale.x']!.map((k) => k.value)).toEqual([2, 2.8])
   })
 

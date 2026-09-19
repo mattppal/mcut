@@ -23,7 +23,4 @@ export interface ElementRenderContext {
   source: FrameSource | undefined
 }
 
-export type ElementRenderer<E extends TimelineElement = TimelineElement> = (
-  element: E,
-  context: ElementRenderContext,
-) => void
+export type ElementRenderer<E extends TimelineElement = TimelineElement> = (element: E, context: ElementRenderContext) => void

@@ -58,17 +58,9 @@ describe('layoutTextBlock', () => {
 
 describe('buildFont', () => {
   test('quotes concrete family names, leaves generics and stacks alone', () => {
-    expect(buildFont({ fontWeight: 400, fontSize: 64, fontFamily: 'Bebas Neue' })).toBe(
-      '400 64px "Bebas Neue"',
-    )
-    expect(buildFont({ fontWeight: 600, fontSize: 10, fontFamily: 'sans-serif' })).toBe(
-      '600 10px sans-serif',
-    )
-    expect(buildFont({ fontWeight: 600, fontSize: 10, fontFamily: 'Arial, sans-serif' })).toBe(
-      '600 10px Arial, sans-serif',
-    )
-    expect(
-      buildFont({ fontStyle: 'italic', fontWeight: 700, fontSize: 32, fontFamily: 'Inter' }),
-    ).toBe('italic 700 32px "Inter"')
+    expect(buildFont({ fontWeight: 400, fontSize: 64, fontFamily: 'Bebas Neue' })).toBe('400 64px "Bebas Neue"')
+    expect(buildFont({ fontWeight: 600, fontSize: 10, fontFamily: 'sans-serif' })).toBe('600 10px sans-serif')
+    expect(buildFont({ fontWeight: 600, fontSize: 10, fontFamily: 'Arial, sans-serif' })).toBe('600 10px Arial, sans-serif')
+    expect(buildFont({ fontStyle: 'italic', fontWeight: 700, fontSize: 32, fontFamily: 'Inter' })).toBe('italic 700 32px "Inter"')
   })
 })

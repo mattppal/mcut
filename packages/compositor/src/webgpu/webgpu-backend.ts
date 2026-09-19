@@ -1,24 +1,9 @@
-import {
-  applyChrome,
-  drawImageQuad2D,
-  type ImageQuad,
-  type LayerChrome,
-  type RenderBackend,
-} from '../backend'
+import { applyChrome, drawImageQuad2D, type ImageQuad, type LayerChrome, type RenderBackend } from '../backend'
 import { getImageSize } from '../renderers'
 import type { Canvas2D } from '../types'
 import { parseCssColor } from './color'
 import { MAX_COLOR_OPS, planEffects, type EffectPass, type EffectPlan } from './effect-plan'
-import {
-  BLEND_MODE_IDS,
-  BLUR_SHADER,
-  COLOR_SHADER,
-  COMPOSITE_SHADER,
-  LUT3D_SHADER,
-  PREPARE_SHADER,
-  PRESENT_SHADER,
-  SHADOW_SHADER,
-} from './shaders'
+import { BLEND_MODE_IDS, BLUR_SHADER, COLOR_SHADER, COMPOSITE_SHADER, LUT3D_SHADER, PREPARE_SHADER, PRESENT_SHADER, SHADOW_SHADER } from './shaders'
 import { gaussianKernel, invertChrome } from './transform'
 
 export interface WebGPUBackendOptions {
@@ -129,10 +114,7 @@ export class WebGPUBackend implements RenderBackend {
     const context = webgpuContext(options.canvas)
     if (!context) throw new Error('Could not create a webgpu canvas context')
     this.context = context
-    this.presentationFormat =
-      typeof navigator !== 'undefined' && navigator.gpu
-        ? navigator.gpu.getPreferredCanvasFormat()
-        : FORMAT
+    this.presentationFormat = typeof navigator !== 'undefined' && navigator.gpu ? navigator.gpu.getPreferredCanvasFormat() : FORMAT
     context.configure({ device, format: this.presentationFormat, alphaMode: 'opaque' })
 
     this.rasterCanvas = new OffscreenCanvas(this.width, this.height)
@@ -181,12 +163,7 @@ export class WebGPUBackend implements RenderBackend {
       identity[i * 4 + 2] = i
       identity[i * 4 + 3] = 255
     }
-    device.queue.writeTexture(
-      { texture: this.identityCurves },
-      identity,
-      { bytesPerRow: 256 * 4 },
-      { width: 256, height: 1 },
-    )
+    device.queue.writeTexture({ texture: this.identityCurves }, identity, { bytesPerRow: 256 * 4 }, { width: 256, height: 1 })
   }
 
   registerLut3D(lutId: string, size: number, data: Float32Array): void {
@@ -206,12 +183,7 @@ export class WebGPUBackend implements RenderBackend {
       format: FORMAT,
       usage: TEXTURE_USAGE.TEXTURE_BINDING | TEXTURE_USAGE.COPY_DST,
     })
-    this.device.queue.writeTexture(
-      { texture },
-      bytes,
-      { bytesPerRow: width * 4 },
-      { width, height: size },
-    )
+    this.device.queue.writeTexture({ texture }, bytes, { bytesPerRow: width * 4 }, { width, height: size })
     this.luts.get(lutId)?.texture.destroy()
     this.luts.set(lutId, { texture, size })
   }
@@ -322,9 +294,7 @@ export class WebGPUBackend implements RenderBackend {
   }
 
   private acquireTexture(width: number, height: number): GPUTexture {
-    const found = this.texturePool.find(
-      (p) => !p.inUse && p.width === width && p.height === height,
-    )
+    const found = this.texturePool.find((p) => !p.inUse && p.width === width && p.height === height)
     if (found) {
       found.inUse = true
       return found.texture
@@ -332,10 +302,7 @@ export class WebGPUBackend implements RenderBackend {
     const texture = this.device.createTexture({
       size: { width, height },
       format: FORMAT,
-      usage:
-        TEXTURE_USAGE.RENDER_ATTACHMENT |
-        TEXTURE_USAGE.TEXTURE_BINDING |
-        TEXTURE_USAGE.COPY_DST,
+      usage: TEXTURE_USAGE.RENDER_ATTACHMENT | TEXTURE_USAGE.TEXTURE_BINDING | TEXTURE_USAGE.COPY_DST,
     })
     this.texturePool.push({ texture, width, height, inUse: true })
     return texture
@@ -380,12 +347,7 @@ export class WebGPUBackend implements RenderBackend {
     this.rasterCtx.clearRect(0, 0, this.width, this.height)
   }
 
-  private drawQuadOnGpu(
-    quad: ImageQuad,
-    chrome: LayerChrome,
-    plan: EffectPlan,
-    inverse: ReturnType<typeof invertChrome>,
-  ): void {
+  private drawQuadOnGpu(quad: ImageQuad, chrome: LayerChrome, plan: EffectPlan, inverse: ReturnType<typeof invertChrome>): void {
     const limits = this.device.limits.maxTextureDimension2D
     const lw = Math.max(1, Math.min(limits, Math.round(quad.dw)))
     const lh = Math.max(1, Math.min(limits, Math.round(quad.dh)))
@@ -423,9 +385,7 @@ export class WebGPUBackend implements RenderBackend {
 
     const encoder = this.device.createCommandEncoder()
     const pass = encoder.beginRenderPass({
-      colorAttachments: [
-        { view: layer.createView(), loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 0 } },
-      ],
+      colorAttachments: [{ view: layer.createView(), loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 0 } }],
     })
 
     if (externalSource) {
@@ -511,12 +471,7 @@ export class WebGPUBackend implements RenderBackend {
     }
   }
 
-  private runColorPass(
-    layer: GPUTexture,
-    pass: Extract<EffectPass, { kind: 'color' }>,
-    lw: number,
-    lh: number,
-  ): GPUTexture {
+  private runColorPass(layer: GPUTexture, pass: Extract<EffectPass, { kind: 'color' }>, lw: number, lh: number): GPUTexture {
     if (pass.ops.length === 0) return layer
     const out = this.acquireTexture(lw, lh)
 
@@ -536,12 +491,7 @@ export class WebGPUBackend implements RenderBackend {
     let curvesTexture = this.identityCurves
     if (pass.curves) {
       curvesTexture = this.acquireTexture(256, 1)
-      this.device.queue.writeTexture(
-        { texture: curvesTexture },
-        curvesToRgba8(pass.curves),
-        { bytesPerRow: 256 * 4 },
-        { width: 256, height: 1 },
-      )
+      this.device.queue.writeTexture({ texture: curvesTexture }, curvesToRgba8(pass.curves), { bytesPerRow: 256 * 4 }, { width: 256, height: 1 })
     }
 
     this.renderFullscreen(this.pipelines.color, out, [
@@ -555,13 +505,7 @@ export class WebGPUBackend implements RenderBackend {
     return out
   }
 
-  private runBlurPasses(
-    layer: GPUTexture,
-    radius: number,
-    lw: number,
-    lh: number,
-    keepInput = false,
-  ): GPUTexture {
+  private runBlurPasses(layer: GPUTexture, radius: number, lw: number, lh: number, keepInput = false): GPUTexture {
     if (radius <= 0) return layer
     const weights = gaussianKernel(radius)
     const halfTaps = (weights.length - 1) / 2
@@ -641,11 +585,7 @@ export class WebGPUBackend implements RenderBackend {
     this.accIndex = this.accIndex === 0 ? 1 : 0
   }
 
-  private renderFullscreen(
-    pipeline: GPURenderPipeline,
-    target: GPUTexture,
-    entries: GPUBindGroupEntry[],
-  ): void {
+  private renderFullscreen(pipeline: GPURenderPipeline, target: GPUTexture, entries: GPUBindGroupEntry[]): void {
     const encoder = this.device.createCommandEncoder()
     const pass = encoder.beginRenderPass({
       colorAttachments: [
@@ -658,10 +598,7 @@ export class WebGPUBackend implements RenderBackend {
       ],
     })
     pass.setPipeline(pipeline)
-    pass.setBindGroup(
-      0,
-      this.device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries }),
-    )
+    pass.setBindGroup(0, this.device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries }))
     pass.draw(3)
     pass.end()
     this.device.queue.submit([encoder.finish()])

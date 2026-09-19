@@ -59,11 +59,7 @@ const placeClip = (fixture: Fixture): BuiltinCommand => ({
   },
 })
 
-const placedClip = (fixture: Fixture): BuiltinCommand[] => [
-  registerAsset(fixture),
-  addVideoTrack,
-  placeClip(fixture),
-]
+const placedClip = (fixture: Fixture): BuiltinCommand[] => [registerAsset(fixture), addVideoTrack, placeClip(fixture)]
 
 const captionsFor = (speech: SpeechScript): BuiltinCommand => ({
   type: 'applyCaptions',
@@ -158,9 +154,7 @@ export const TASKS: E2ETask[] = [
       }),
     ],
     score: (project) => {
-      const titles = textElements(project).filter((element) =>
-        element.text.toLowerCase().includes(TITLE.toLowerCase()),
-      )
+      const titles = textElements(project).filter((element) => element.text.toLowerCase().includes(TITLE.toLowerCase()))
       const title = titles[0]
       const above = title !== undefined && trackIndexOf(project, title.id) > trackIndexOf(project, CLIP_ID)
       return verdictOf([
@@ -226,8 +220,7 @@ export const TASKS: E2ETask[] = [
     score: (project) => {
       const only = videoClips(project)[0]
       const transform = only?.transform
-      const covers = (scale: number | undefined): boolean =>
-        scale !== undefined && scale >= cover - 0.01 && scale <= cover * 1.25
+      const covers = (scale: number | undefined): boolean => scale !== undefined && scale >= cover - 0.01 && scale <= cover * 1.25
       return verdictOf([
         ['the project is 1080x1920', project.width === 1080 && project.height === 1920],
         ['the clip is still on the timeline', only !== undefined],

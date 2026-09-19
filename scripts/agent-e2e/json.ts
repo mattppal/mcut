@@ -4,9 +4,7 @@ export const jsonObjectSchema = z.record(z.string(), z.unknown())
 
 export type JsonObject = z.infer<typeof jsonObjectSchema>
 
-export type JsonObjectResult =
-  | { ok: true; value: JsonObject }
-  | { ok: false; message: string }
+export type JsonObjectResult = { ok: true; value: JsonObject } | { ok: false; message: string }
 
 export function parseJsonObject(text: string): JsonObjectResult {
   try {

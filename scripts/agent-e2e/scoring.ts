@@ -8,8 +8,7 @@ export function verdictOf(checks: readonly Check[]): Verdict {
   return { pass: failing.length === 0, reasons: failing }
 }
 
-export const near = (actual: number, expected: number, toleranceMs: number): boolean =>
-  Math.abs(actual - expected) <= toleranceMs
+export const near = (actual: number, expected: number, toleranceMs: number): boolean => Math.abs(actual - expected) <= toleranceMs
 
 export function allElements(project: Project): TimelineElement[] {
   return project.tracks.flatMap((track) => track.elements)
@@ -48,12 +47,7 @@ export function sourceCovers(clips: readonly VideoElement[], startMs: number, en
   return clips.some((clip) => clip.trimStartMs <= startMs && sourceEnd(clip) >= endMs)
 }
 
-export function sourceTouches(
-  clips: readonly VideoElement[],
-  startMs: number,
-  endMs: number,
-  slackMs: number,
-): boolean {
+export function sourceTouches(clips: readonly VideoElement[], startMs: number, endMs: number, slackMs: number): boolean {
   const from = startMs + slackMs
   const to = endMs - slackMs
   if (to <= from) return false
@@ -65,11 +59,6 @@ export function opacityKeyframes(element: TimelineElement): Keyframe[] {
   return [...keyframes].sort((a, b) => a.timeMs - b.timeMs)
 }
 
-export function hasKeyframeNear(
-  keyframes: readonly Keyframe[],
-  timeMs: number,
-  value: number,
-  toleranceMs: number,
-): boolean {
+export function hasKeyframeNear(keyframes: readonly Keyframe[], timeMs: number, value: number, toleranceMs: number): boolean {
   return keyframes.some((frame) => near(frame.timeMs, timeMs, toleranceMs) && near(frame.value, value, 0.01))
 }

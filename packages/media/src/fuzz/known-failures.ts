@@ -9,11 +9,7 @@ export interface KnownFailure {
 
 export const knownFailures: readonly KnownFailure[] = []
 
-export function matchKnownFailure(
-  fixture: string,
-  violations: readonly Violation[],
-  known: readonly KnownFailure[] = knownFailures,
-): KnownFailure | undefined {
+export function matchKnownFailure(fixture: string, violations: readonly Violation[], known: readonly KnownFailure[] = knownFailures): KnownFailure | undefined {
   return known.find(
     (entry) =>
       entry.fixtures.includes(fixture) &&

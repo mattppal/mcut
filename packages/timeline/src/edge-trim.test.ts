@@ -70,7 +70,12 @@ describe('applyEdgeTrim on plain video', () => {
   test('start grow shifts keyframes so motion stays anchored', () => {
     const keyframed: TimelineElement = {
       ...element(),
-      keyframes: { opacity: [{ timeMs: 0, value: 0 }, { timeMs: 1000, value: 1 }] },
+      keyframes: {
+        opacity: [
+          { timeMs: 0, value: 0 },
+          { timeMs: 1000, value: 1 },
+        ],
+      },
     }
     const next = applyEdgeTrim(keyframed, 'start', -500)
     expect(next.keyframes?.opacity).toEqual([
@@ -82,7 +87,12 @@ describe('applyEdgeTrim on plain video', () => {
   test('start shrink rebases keyframes through the split machinery', () => {
     const keyframed: TimelineElement = {
       ...element(),
-      keyframes: { opacity: [{ timeMs: 0, value: 0 }, { timeMs: 1000, value: 1 }] },
+      keyframes: {
+        opacity: [
+          { timeMs: 0, value: 0 },
+          { timeMs: 1000, value: 1 },
+        ],
+      },
     }
     const next = applyEdgeTrim(keyframed, 'start', 500)
     expect(next.keyframes?.opacity).toEqual([
@@ -225,12 +235,8 @@ describe('slipElement', () => {
 
   test('clamps to media bounds', () => {
     const project = withVideo(baseProject())
-    expect(() =>
-      applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: -1500 }),
-    ).toThrow(CommandError)
-    expect(() =>
-      applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: 6001 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: -1500 })).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: 6001 })).toThrow(CommandError)
     applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: 6000 })
   })
 
@@ -253,9 +259,7 @@ describe('slipElement', () => {
     })
     project = applyCommand(project, { type: 'slipElement', elementId: 'e-m', deltaMs: 300 })
     const element = getElement(project, 'e-m')!
-    expect(element.type === 'multicam' && element.sources.map((s) => s.trimStartMs)).toEqual([
-      400, 900,
-    ])
+    expect(element.type === 'multicam' && element.sources.map((s) => s.trimStartMs)).toEqual([400, 900])
   })
 
   test('rejects non-source elements', () => {
@@ -265,9 +269,7 @@ describe('slipElement', () => {
       trackId: TRACK,
       element: { id: 'e-t', type: 'text', text: 'x', startMs: 0, durationMs: 1000 },
     })
-    expect(() =>
-      applyCommand(project, { type: 'slipElement', elementId: 'e-t', deltaMs: 100 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'slipElement', elementId: 'e-t', deltaMs: 100 })).toThrow(CommandError)
   })
 })
 
@@ -303,9 +305,7 @@ describe('rollEdit', () => {
 
   test('requires a butt cut', () => {
     const project = withVideo(baseProject())
-    expect(() =>
-      applyCommand(project, { type: 'rollEdit', elementId: 'e-v', deltaMs: 100 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'rollEdit', elementId: 'e-v', deltaMs: 100 })).toThrow(CommandError)
   })
 
   test('keeps the transition on the rolled cut valid', () => {
@@ -345,15 +345,11 @@ describe('slideElement', () => {
 
   test('requires neighbors on both sides', () => {
     const project = withVideo(baseProject())
-    expect(() =>
-      applyCommand(project, { type: 'slideElement', elementId: 'e-v', deltaMs: 100 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'slideElement', elementId: 'e-v', deltaMs: 100 })).toThrow(CommandError)
   })
 
   test('clamps to neighbor minimum durations', () => {
-    expect(() =>
-      applyCommand(threeAdjacentClips(), { type: 'slideElement', elementId: 'e-2', deltaMs: 1995 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(threeAdjacentClips(), { type: 'slideElement', elementId: 'e-2', deltaMs: 1995 })).toThrow(CommandError)
   })
 })
 
@@ -457,9 +453,7 @@ describe('rippleTrim', () => {
       trackId: 't-b',
       element: { id: 'e-after', type: 'text', text: 'y', startMs: 3600, durationMs: 500 },
     })
-    expect(() =>
-      applyCommand(project, { type: 'rippleTrim', elementId: 'e-1', edge: 'end', deltaMs: -500 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'rippleTrim', elementId: 'e-1', edge: 'end', deltaMs: -500 })).toThrow(CommandError)
   })
 
   test('downstream transitions stay valid because pairs shift together', () => {
@@ -487,9 +481,7 @@ describe('rippleTrim', () => {
       trackId: 't-default',
       element: { id: 'e-text', type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
     })
-    const thrown = thrownBy(() =>
-      engine.dispatch({ type: 'rippleTrim', elementId: 'e-text', edge: 'start', deltaMs: -9007199254740991 }),
-    )
+    const thrown = thrownBy(() => engine.dispatch({ type: 'rippleTrim', elementId: 'e-text', edge: 'start', deltaMs: -9007199254740991 }))
     expect(thrown).toBeInstanceOf(CommandError)
     expect(thrown).toMatchObject({ code: 'out-of-bounds' })
     expect(getElement(engine.project, 'e-text')).toMatchObject({ startMs: 1000, durationMs: 1000 })

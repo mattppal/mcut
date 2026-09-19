@@ -30,10 +30,7 @@ export interface RunCommandOptions {
   known?: readonly KnownFailure[]
 }
 
-type Outcome =
-  | { kind: 'applied'; project: Project }
-  | { kind: 'rejected'; error: CommandError }
-  | { kind: 'threw'; error: unknown }
+type Outcome = { kind: 'applied'; project: Project } | { kind: 'rejected'; error: CommandError } | { kind: 'threw'; error: unknown }
 
 export function runCommandPlan(plan: Plan, options: RunCommandOptions = {}): RunResult {
   const engine = options.engine ?? new EditorEngine()

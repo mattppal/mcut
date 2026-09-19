@@ -49,17 +49,7 @@ async function main(): Promise<void> {
           mcpServers: {
             'mcut-live': {
               command: 'bunx',
-              args: [
-                '-p',
-                '@mcut/mcp-server',
-                'mcut-mcp-live',
-                '--port',
-                String(port),
-                '--token',
-                bridge.token ?? '',
-                '--editor-url',
-                args.editorUrl,
-              ],
+              args: ['-p', '@mcut/mcp-server', 'mcut-mcp-live', '--port', String(port), '--token', bridge.token ?? '', '--editor-url', args.editorUrl],
             },
           },
         },

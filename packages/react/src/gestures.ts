@@ -50,17 +50,10 @@ export function applyMove(base: Transform, start: GesturePoint, current: Gesture
   }
 }
 
-export function applyRotate(
-  base: Transform,
-  obb: OBB,
-  start: GesturePoint,
-  current: GesturePoint,
-): Transform {
+export function applyRotate(base: Transform, obb: OBB, start: GesturePoint, current: GesturePoint): Transform {
   const startAngle = Math.atan2(start.y - obb.cy, start.x - obb.cx)
   const currentAngle = Math.atan2(current.y - obb.cy, current.x - obb.cx)
-  const rotation = wrapDegreesToSignedHalfTurn(
-    base.rotation + ((currentAngle - startAngle) * 180) / Math.PI,
-  )
+  const rotation = wrapDegreesToSignedHalfTurn(base.rotation + ((currentAngle - startAngle) * 180) / Math.PI)
   return { ...base, rotation: Math.round(rotation * 10) / 10 }
 }
 
@@ -83,23 +76,26 @@ export function applyResize(
     const factor = localStart.y === 0 ? 1 : localCurrent.y / localStart.y
     return { ...base, scaleY: clampScaleMagnitudeKeepingSign(base.scaleY * factor) }
   }
-  const startDistance = preserveAspect && (handle === 'e' || handle === 'w')
-    ? Math.abs(localStart.x)
-    : preserveAspect && (handle === 'n' || handle === 's')
-      ? Math.abs(localStart.y)
-      : Math.hypot(localStart.x, localStart.y)
-  const currentDistance = preserveAspect && (handle === 'e' || handle === 'w')
-    ? Math.abs(localCurrent.x)
-    : preserveAspect && (handle === 'n' || handle === 's')
-      ? Math.abs(localCurrent.y)
-      : Math.hypot(localCurrent.x, localCurrent.y)
+  const startDistance =
+    preserveAspect && (handle === 'e' || handle === 'w')
+      ? Math.abs(localStart.x)
+      : preserveAspect && (handle === 'n' || handle === 's')
+        ? Math.abs(localStart.y)
+        : Math.hypot(localStart.x, localStart.y)
+  const currentDistance =
+    preserveAspect && (handle === 'e' || handle === 'w')
+      ? Math.abs(localCurrent.x)
+      : preserveAspect && (handle === 'n' || handle === 's')
+        ? Math.abs(localCurrent.y)
+        : Math.hypot(localCurrent.x, localCurrent.y)
   const factor = startDistance === 0 ? 1 : currentDistance / startDistance
   if (preserveAspect) {
-    const baseScale = handle === 'n' || handle === 's'
-      ? Math.abs(base.scaleY)
-      : handle === 'e' || handle === 'w'
-        ? Math.abs(base.scaleX)
-        : Math.max(Math.abs(base.scaleX), Math.abs(base.scaleY))
+    const baseScale =
+      handle === 'n' || handle === 's'
+        ? Math.abs(base.scaleY)
+        : handle === 'e' || handle === 'w'
+          ? Math.abs(base.scaleX)
+          : Math.max(Math.abs(base.scaleX), Math.abs(base.scaleY))
     const scale = Math.max(MIN_SCALE, baseScale * factor)
     return {
       ...base,
@@ -114,13 +110,7 @@ export function applyResize(
   }
 }
 
-export function applyBoxResize(
-  base: Transform,
-  obb: OBB,
-  handle: Exclude<HandleId, 'rotate'>,
-  current: GesturePoint,
-  minSize = MIN_BOX_SIZE,
-): BoxResizeResult {
+export function applyBoxResize(base: Transform, obb: OBB, handle: Exclude<HandleId, 'rotate'>, current: GesturePoint, minSize = MIN_BOX_SIZE): BoxResizeResult {
   const localCurrent = pointToLocal(obb, current)
   let left = -obb.width / 2
   let right = obb.width / 2

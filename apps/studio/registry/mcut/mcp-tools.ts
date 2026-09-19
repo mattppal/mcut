@@ -1,1 +1,1 @@
-export { listMcpToolDefinitions } from "@mcut/mcp-server/contract";
+export { listMcpToolDefinitions } from '@mcut/mcp-server/contract'

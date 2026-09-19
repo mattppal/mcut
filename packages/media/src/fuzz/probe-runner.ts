@@ -5,9 +5,7 @@ export interface ProbeRequest {
   path: string
 }
 
-export type ProbeReply =
-  | { id: number; kind: 'probe'; probe: MediaProbe }
-  | { id: number; kind: 'threw'; typed: boolean; name: string; message: string }
+export type ProbeReply = { id: number; kind: 'probe'; probe: MediaProbe } | { id: number; kind: 'threw'; typed: boolean; name: string; message: string }
 
 export type ProbeOutcome =
   | { kind: 'probe'; probe: MediaProbe; elapsedMs: number }

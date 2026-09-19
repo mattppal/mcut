@@ -43,9 +43,7 @@ function mediaReference(project: Project, element: TimelineElement): OtioValue {
   return {
     OTIO_SCHEMA: 'ExternalReference.1',
     target_url: asset.src,
-    ...(asset.durationMs !== undefined
-      ? { available_range: timeRange(0, asset.durationMs) }
-      : {}),
+    ...(asset.durationMs !== undefined ? { available_range: timeRange(0, asset.durationMs) } : {}),
     metadata: { mcut: { assetId: asset.id, hash: asset.hash, name: asset.name } },
   }
 }
@@ -95,9 +93,7 @@ function otioTrack(project: Project, track: Track): OtioValue {
     if (pair) children.push(transition(pair.type, pair.durationMs))
     cursorMs = element.startMs + element.durationMs
   }
-  const kind = track.elements.every((e) => e.type === 'audio') && track.elements.length > 0
-    ? 'Audio'
-    : 'Video'
+  const kind = track.elements.every((e) => e.type === 'audio') && track.elements.length > 0 ? 'Audio' : 'Video'
   return {
     OTIO_SCHEMA: 'Track.1',
     name: track.name,

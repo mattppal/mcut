@@ -2,17 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError, listCommands, listToolDefinitions } from './commands'
 import { EditorEngine } from './engine'
 import { createProject, parseProject, type CaptionElement, type Project, type VideoElement } from './model'
-import {
-  findNearestFreeSlot,
-  getElement,
-  getGroupedElementIds,
-  getProjectDurationMs,
-  getTrack,
-} from './selectors'
+import { findNearestFreeSlot, getElement, getGroupedElementIds, getProjectDurationMs, getTrack } from './selectors'
 import { mustFind, thrownBy } from './test-helpers'
 
-const captionWords = (project: Project) =>
-  project.tracks.flatMap((track) => track.elements.flatMap((e) => (e.type === 'caption' ? [e.words] : [])))
+const captionWords = (project: Project) => project.tracks.flatMap((track) => track.elements.flatMap((e) => (e.type === 'caption' ? [e.words] : [])))
 
 function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
   let project = createProject({ name: 'test' })
@@ -71,7 +64,10 @@ describe('track commands', () => {
   test('compactTrackGaps closes gaps without enabling magnet mode', () => {
     let project = createProject()
     const trackId = mustFind(project.tracks[0], 'first track').id
-    for (const [id, startMs] of [['e-a', 1000], ['e-b', 4000]] as const) {
+    for (const [id, startMs] of [
+      ['e-a', 1000],
+      ['e-b', 4000],
+    ] as const) {
       project = applyCommand(project, {
         type: 'addElement',
         trackId,
@@ -276,9 +272,7 @@ describe('element commands', () => {
     })
     expect(mustFind(getTrack(moved, trackId), trackId).elements).toHaveLength(0)
     expect(mustFind(getTrack(moved, trackB), trackB).elements.map((e) => e.id)).toEqual(['e-two', 'e-one'])
-    expect(() =>
-      applyCommand(project, { type: 'moveElement', elementId: 'e-one', startMs: 1000, toTrackId: trackB }),
-    ).toThrow('overlap')
+    expect(() => applyCommand(project, { type: 'moveElement', elementId: 'e-one', startMs: 1000, toTrackId: trackB })).toThrow('overlap')
   })
 
   test('trimElement updates timing within asset bounds', () => {
@@ -300,9 +294,7 @@ describe('element commands', () => {
       durationMs: 3000,
       trimStartMs: 1000,
     })
-    expect(() =>
-      applyCommand(project, { type: 'trimElement', elementId: 'e-one', durationMs: 11_000 }),
-    ).toThrow('plays past the end')
+    expect(() => applyCommand(project, { type: 'trimElement', elementId: 'e-one', durationMs: 11_000 })).toThrow('plays past the end')
   })
 
   test('magnetic tracks compact after remove, trim, and cross-track moves', () => {
@@ -344,9 +336,7 @@ describe('element commands', () => {
       startMs: 4000,
       toTrackId: targetTrackId,
     })
-    expect(mustFind(getTrack(project, sourceTrackId), sourceTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([
-      ['e-a', 0],
-    ])
+    expect(mustFind(getTrack(project, sourceTrackId), sourceTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([['e-a', 0]])
     expect(mustFind(getTrack(project, targetTrackId), targetTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-x', 0],
       ['e-c', 1000],
@@ -466,15 +456,9 @@ describe('element commands', () => {
       opacity: 0.5,
       box: { width: 320, overflow: 'clip' },
     })
-    expect(() =>
-      applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { opacity: 9 } }),
-    ).toThrow('invalid element')
-    expect(() =>
-      applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { box: { width: 0 } } }),
-    ).toThrow('invalid element')
-    expect(() =>
-      applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { type: 'image' } }),
-    ).toThrow('may not change')
+    expect(() => applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { opacity: 9 } })).toThrow('invalid element')
+    expect(() => applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { box: { width: 0 } } })).toThrow('invalid element')
+    expect(() => applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { type: 'image' } })).toThrow('may not change')
   })
 
   test('removeAsset cascades to elements', () => {
@@ -538,9 +522,9 @@ describe('caller-supplied ids', () => {
 
   test('splitElement rejects a rightElementId that already exists', () => {
     const { project } = projectWithTwoVideos()
-    expect(() =>
-      applyCommand(project, { type: 'splitElement', elementId: 'e-one', atMs: 1000, rightElementId: 'e-two' }),
-    ).toThrow('element "e-two" already exists')
+    expect(() => applyCommand(project, { type: 'splitElement', elementId: 'e-one', atMs: 1000, rightElementId: 'e-two' })).toThrow(
+      'element "e-two" already exists',
+    )
     const split = applyCommand(project, {
       type: 'splitElement',
       elementId: 'e-one',
@@ -552,18 +536,14 @@ describe('caller-supplied ids', () => {
 
   test('createMulticam rejects a multicamId that already exists', () => {
     const { project } = projectWithTwoVideos()
-    expect(() =>
-      applyCommand(project, { type: 'createMulticam', elementIds: ['e-one'], multicamId: 'e-two' }),
-    ).toThrow('element "e-two" already exists')
+    expect(() => applyCommand(project, { type: 'createMulticam', elementIds: ['e-one'], multicamId: 'e-two' })).toThrow('element "e-two" already exists')
     const multicam = applyCommand(project, { type: 'createMulticam', elementIds: ['e-one'], multicamId: 'e-mc' })
     expect(allIds(multicam)).toEqual(['e-mc', 'e-two'])
   })
 
   test('detachAudio rejects an audioElementId that already exists', () => {
     const { project } = projectWithTwoVideos()
-    expect(() =>
-      applyCommand(project, { type: 'detachAudio', elementId: 'e-one', audioElementId: 'e-two' }),
-    ).toThrow('element "e-two" already exists')
+    expect(() => applyCommand(project, { type: 'detachAudio', elementId: 'e-one', audioElementId: 'e-two' })).toThrow('element "e-two" already exists')
     const detached = applyCommand(project, { type: 'detachAudio', elementId: 'e-one', audioElementId: 'e-aud' })
     expect(allIds(detached)).toEqual(['e-aud', 'e-one', 'e-two'])
   })
@@ -680,9 +660,7 @@ describe('detachAudio', () => {
       trackId,
       element: { type: 'text', id: 'e-txt', text: 'hi', startMs: 0, durationMs: 1000 },
     })
-    expect(() => applyCommand(project, { type: 'detachAudio', elementId: 'e-txt' })).toThrow(
-      CommandError,
-    )
+    expect(() => applyCommand(project, { type: 'detachAudio', elementId: 'e-txt' })).toThrow(CommandError)
   })
 })
 
@@ -730,7 +708,10 @@ describe('magnetic tracks', () => {
   }
 
   const order = (p: Project, trackId: string) =>
-    mustFind(p.tracks.find((t) => t.id === trackId), trackId).elements.map((e) => [e.id, e.startMs])
+    mustFind(
+      p.tracks.find((t) => t.id === trackId),
+      trackId,
+    ).elements.map((e) => [e.id, e.startMs])
 
   test('adding clips packs them with no gaps', () => {
     const { project, trackId } = magneticProject()
@@ -825,7 +806,10 @@ describe('tool definitions', () => {
   test('every command is exposed as an MCP-shaped tool with JSON Schema params', () => {
     const tools = listToolDefinitions()
     expect(tools.length).toBe(listCommands().length)
-    const split = mustFind(tools.find((t) => t.name === 'splitElement'), 'splitElement tool')
+    const split = mustFind(
+      tools.find((t) => t.name === 'splitElement'),
+      'splitElement tool',
+    )
     expect(split.description).toContain('Split')
     expect(split.inputSchema.type).toBe('object')
     const properties = split.inputSchema.properties as Record<string, unknown>
