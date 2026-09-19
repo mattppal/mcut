@@ -1,5 +1,13 @@
-import { elementIdSchema } from '@mcut/timeline'
 import { z } from 'zod'
+import {
+  operatorIds,
+  operators,
+  silenceCutOptionsSchema,
+  type OperatorDefinition,
+  type OperatorId,
+} from '@mcut/editor'
+import { elementIdSchema, listToolDefinitions } from '@mcut/timeline'
+import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
 
 export interface McpToolDefinition {
   name: string
@@ -17,7 +25,7 @@ export function parseMcpToolProfile(value: unknown): McpToolProfile {
   return toolProfileSchema.catch('agent').parse(value)
 }
 
-export const operatorToolName = (id: string) => `operator_${id.replace(/[^A-Za-z0-9_-]/g, '_')}`
+export const operatorToolName = (id: OperatorId) => `operator_${id.replace(/[^A-Za-z0-9_-]/g, '_')}`
 
 /** Zod schema → MCP tool `inputSchema`, with a plain-object fallback. */
 export const toToolInputSchema = (schema: z.ZodType): Record<string, unknown> => {
@@ -47,6 +55,10 @@ export const MCP_AGENT_TOOL_NAMES = [
   'ensure_transcript',
   'list_commands',
   'apply_commands',
+  'apply_captions',
+  'apply_silence_cuts',
+  'lint_project',
+  'list_presets',
   'list_operators',
   'run_operator',
   'list_actions',
@@ -56,6 +68,19 @@ export const MCP_AGENT_TOOL_NAMES = [
 ] as const
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
+
+const transcriptInput = transcriptInputSchema.describe(
+  'Transcript JSON with word timings in source-media milliseconds, the same shape `mcut captions` reads.',
+)
+
+export const applyCaptionsInputSchema = captionsCommandOptionsSchema.extend({
+  transcript: transcriptInput,
+})
+
+export const applySilenceCutsInputSchema = silenceCutOptionsSchema.extend({
+  elementId: elementIdSchema.describe('The video/audio element to cut. It must play at 1x, with no time remap.'),
+  transcript: transcriptInput,
+})
 
 export const MCP_TOOL_INPUTS = {
   get_summary: EMPTY_INPUT,
@@ -127,6 +152,10 @@ export const MCP_TOOL_INPUTS = {
       )
       .min(1),
   }),
+  apply_captions: applyCaptionsInputSchema,
+  apply_silence_cuts: applySilenceCutsInputSchema,
+  lint_project: EMPTY_INPUT,
+  list_presets: EMPTY_INPUT,
   list_operators: EMPTY_INPUT,
   run_operator: z.strictObject({ operatorId: z.string(), input: TOOL_INPUT }),
   list_actions: EMPTY_INPUT,
@@ -163,6 +192,18 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
   apply_commands:
     'Apply one or more serializable timeline commands in one undoable transaction, then return an updated project summary.',
+  apply_captions:
+    'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
+    'Pass elementId to caption only the source span one video/audio clip plays, at its timeline position. ' +
+    'styleId picks a caption style preset. Returns the updated project summary.',
+  apply_silence_cuts:
+    'Cut transcript silence out of one video/audio element (splits, ripple deletes, and edge trims) ' +
+    'as one undoable edit. Returns the removed silence windows in source-media time and the updated project summary.',
+  lint_project:
+    'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
+    'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',
+  list_presets:
+    'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',
   list_operators:
     'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' +
     'use raw command tools for low-level document edits.',
@@ -208,6 +249,10 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('search_transcript'),
   staticToolCall('ensure_transcript'),
   staticToolCall('get_audio_activity'),
+  staticToolCall('apply_captions'),
+  staticToolCall('apply_silence_cuts'),
+  staticToolCall('lint_project'),
+  staticToolCall('list_presets'),
   staticToolCall('list_operators'),
   staticToolCall('list_actions'),
   staticToolCall('run_action'),
@@ -231,38 +276,26 @@ export const isMcpServerStaticToolName = (name: string): name is McpServerStatic
 export const MCP_SERVER_STATIC_TOOLS: McpToolDefinition[] =
   MCP_SERVER_STATIC_TOOL_NAMES.map(toolDefinition)
 
-export interface OperatorToolSource {
-  id: string
-  description: string
-  inputSchema: z.ZodType
-}
-
 /** Editor operators as MCP tool definitions (`operator_<id>`). */
-export function operatorToolDefinitions(operators: OperatorToolSource[]): McpToolDefinition[] {
-  return operators.map((operator) => ({
-    name: operatorToolName(operator.id),
-    description: `Editor operator "${operator.id}": ${operator.description}`,
-    inputSchema: toToolInputSchema(operator.inputSchema),
-  }))
-}
-
-export interface McpToolSources {
-  operators: OperatorToolSource[]
-  /** Raw timeline command tools, e.g. `listToolDefinitions()` from `@mcut/timeline`. */
-  commands: McpToolDefinition[]
+function operatorToolDefinitions(): McpToolDefinition[] {
+  return operatorIds.map((id) => {
+    const operator: OperatorDefinition = operators[id]
+    return {
+      name: operatorToolName(id),
+      description: `Editor operator "${id}": ${operator.description}`,
+      inputSchema: toToolInputSchema(operator.inputSchema),
+    }
+  })
 }
 
 /** The exact tool list the published MCP server registers. */
-export function listServerToolDefinitions(sources: McpToolSources): McpToolDefinition[] {
-  return [...MCP_SERVER_STATIC_TOOLS, ...operatorToolDefinitions(sources.operators), ...sources.commands]
+export function listServerToolDefinitions(): McpToolDefinition[] {
+  return [...MCP_SERVER_STATIC_TOOLS, ...operatorToolDefinitions(), ...listToolDefinitions()]
 }
 
 /** The tool surface for a given profile, as served by Studio's /tools.json. */
-export function listMcpToolDefinitions(
-  profile: McpToolProfile,
-  sources: McpToolSources,
-): McpToolDefinition[] {
-  if (profile === 'commands') return sources.commands
+export function listMcpToolDefinitions(profile: McpToolProfile): McpToolDefinition[] {
+  if (profile === 'commands') return listToolDefinitions()
   if (profile === 'agent') return MCP_AGENT_TOOL_DEFINITIONS
-  return [...MCP_AGENT_TOOL_DEFINITIONS, ...operatorToolDefinitions(sources.operators), ...sources.commands]
+  return [...MCP_AGENT_TOOL_DEFINITIONS, ...operatorToolDefinitions(), ...listToolDefinitions()]
 }

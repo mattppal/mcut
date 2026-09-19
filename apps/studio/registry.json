@@ -384,11 +384,6 @@
           "target": "components/mcut/command-palette-events.ts"
         },
         {
-          "path": "registry/mcut/editor-operators.ts",
-          "type": "registry:lib",
-          "target": "components/mcut/editor-operators.ts"
-        },
-        {
           "path": "registry/mcut/font-picker.tsx",
           "type": "registry:component",
           "target": "components/mcut/font-picker.tsx"
@@ -864,11 +859,6 @@
           "path": "registry/mcut/editor-layout.ts",
           "type": "registry:lib",
           "target": "components/mcut/editor-layout.ts"
-        },
-        {
-          "path": "registry/mcut/editor-operators.ts",
-          "type": "registry:lib",
-          "target": "components/mcut/editor-operators.ts"
         },
         {
           "path": "registry/mcut/main-menu.tsx",

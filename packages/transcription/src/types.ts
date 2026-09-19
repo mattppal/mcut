@@ -23,6 +23,12 @@ export const transcriptResultSchema = z.object({
   segments: z.array(transcriptSegmentSchema),
 })
 
+export const transcriptInputSchema = transcriptResultSchema.extend({
+  text: z.string().default(''),
+  words: z.array(transcriptWordSchema).default([]),
+  segments: z.array(transcriptSegmentSchema).default([]),
+})
+
 export interface TranscriptWord extends z.infer<typeof transcriptWordSchema> {}
 
 export interface TranscriptSegment extends z.infer<typeof transcriptSegmentSchema> {}

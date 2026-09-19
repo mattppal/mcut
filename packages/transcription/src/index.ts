@@ -1,4 +1,5 @@
 export {
+  transcriptInputSchema,
   transcriptResultSchema,
   type TranscribeInput,
   type TranscribeOptions,
@@ -17,10 +18,13 @@ export {
 
 export {
   buildApplyCaptionsCommand,
+  buildCaptionsCommand,
+  captionsCommandOptionsSchema,
   groupWords,
   toCaptionElements,
   type BuildApplyCaptionsOptions,
   type CaptionElementInput,
+  type CaptionsCommandOptions,
   type GroupWordsOptions,
   type ToCaptionElementsOptions,
   type WordGroup,

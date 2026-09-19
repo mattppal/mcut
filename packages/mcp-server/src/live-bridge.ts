@@ -275,6 +275,7 @@ export class LiveMcutBridge {
         this.request('run_operator', { operatorId, input: input ?? {} }),
       dispatchCommand: (commandName, input) =>
         this.request('dispatch_command', { commandName, input: input ?? {} }),
+      applyCommands: (commands) => this.request('apply_commands', { commands }),
     }
   }
 
@@ -484,5 +485,6 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT): McutMcpTarge
     runAction: (actionId, input) => rpc('run_action', { actionId, input: input ?? {} }),
     runOperator: (operatorId, input) => rpc('run_operator', { operatorId, input: input ?? {} }),
     dispatchCommand: (commandName, input) => rpc('dispatch_command', { commandName, input: input ?? {} }),
+    applyCommands: (commands) => rpc('apply_commands', { commands }),
   }
 }
