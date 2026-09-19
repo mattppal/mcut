@@ -12,21 +12,17 @@ import {
   rangesOverlap,
   type EditorEngine,
   type ElementAudioSource,
-  type ElementId,
   type ProjectTranscriptContext,
   resolveElementAudioSource,
 } from "@mcut/timeline";
-import { isRecord } from "./guards";
+import type { MCP_TOOL_INPUTS } from "@mcut/mcp-server/contract";
+import type { z } from "zod";
 import {
   isLocalTranscriptionSupported,
   transcribeOnDevice,
 } from "./local-transcription";
 
-export interface EnsureTranscriptPayload {
-  elementId?: string;
-  replace?: boolean;
-  language?: string;
-}
+type EnsureTranscriptPayload = z.infer<typeof MCP_TOOL_INPUTS.ensure_transcript>;
 
 export interface EnsureTranscriptDeps {
   isLocalTranscriptionSupported: () => boolean;
@@ -58,25 +54,13 @@ const browserDeps: EnsureTranscriptDeps = {
   transcribeOnDevice,
 };
 
-
-function parsePayload(value: unknown): EnsureTranscriptPayload {
-  if (!isRecord(value)) return {};
-  return {
-    ...(typeof value.elementId === "string" ? { elementId: value.elementId } : {}),
-    ...(typeof value.replace === "boolean" ? { replace: value.replace } : {}),
-    ...(typeof value.language === "string" && value.language.trim()
-      ? { language: value.language.trim() }
-      : {}),
-  };
-}
-
 function pickTranscriptionSource(
   engine: EditorEngine,
   payload: EnsureTranscriptPayload,
 ): ElementAudioSource {
   const project = engine.project;
   if (payload.elementId) {
-    const source = resolveElementAudioSource(project, payload.elementId as ElementId);
+    const source = resolveElementAudioSource(project, payload.elementId);
     if (!source) throw new Error(`Element "${payload.elementId}" has no source audio.`);
     return source;
   }
@@ -129,10 +113,9 @@ function sourceResult(source: ElementAudioSource): EnsureTranscriptResult["sourc
 
 export async function ensureTranscriptForBridge(
   engine: EditorEngine,
-  value: unknown,
+  payload: EnsureTranscriptPayload,
   deps: EnsureTranscriptDeps = browserDeps,
 ): Promise<EnsureTranscriptResult> {
-  const payload = parsePayload(value);
   const source = pickTranscriptionSource(engine, payload);
   const sourceInfo = sourceResult(source);
   const existing = overlappingCaptions(engine, source);

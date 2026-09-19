@@ -19,6 +19,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
+    "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
@@ -41,8 +42,13 @@
     "provenance": true
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "20.14.5",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
     "@types/react": "19.2.17",
-    "@types/react-dom": "19.2.3"
+    "@types/react-dom": "19.2.3",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
   },
   "author": "Matt Palmer",
   "homepage": "https://github.com/mattppal/mcut/tree/main/packages/react#readme",

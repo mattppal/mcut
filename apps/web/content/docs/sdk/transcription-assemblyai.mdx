@@ -1,0 +1,72 @@
+---
+title: "@mcut/transcription-assemblyai"
+description: "Transcription provider backed by AssemblyAI."
+---
+
+`@mcut/transcription-assemblyai` adapts the AssemblyAI client to the mcut `TranscriptionProvider` interface.
+
+## Install
+
+```sh
+bun add @mcut/transcription-assemblyai
+```
+
+## Types
+
+### AssemblyAITranscriptLike
+
+```ts
+interface AssemblyAITranscriptLike {
+  text?: string | null
+  words?:
+    | Array<{
+        text: string
+        start: number
+        end: number
+        confidence?: number
+        speaker?: string | null
+      }>
+    | null
+  utterances?:
+    | Array<{ text: string; start: number; end: number; speaker?: string | null }>
+    | null
+  language_code?: string | null
+  audio_duration?: number | null
+}
+```
+
+The fields of an AssemblyAI transcript that `normalizeAssemblyAIResult` reads, with timestamps in milliseconds.
+
+### AssemblyAIProviderOptions
+
+```ts
+interface AssemblyAIProviderOptions {
+  apiKey?: string
+  client?: AssemblyAI
+  speakerLabels?: boolean
+  params?: Partial<Omit<TranscribeParams, 'audio'>>
+  id?: string
+}
+```
+
+Options for `createAssemblyAIProvider`, an API key or configured client, speaker labeling, extra request params, and a provider id.
+
+## Functions
+
+### normalizeAssemblyAIResult
+
+```ts
+function normalizeAssemblyAIResult(transcript: AssemblyAITranscriptLike): TranscriptResult
+```
+
+Converts an AssemblyAI transcript to a `TranscriptResult`, mapping words with confidence and speaker to `words` and utterances to `segments`.
+
+### createAssemblyAIProvider
+
+```ts
+function createAssemblyAIProvider(
+  options: AssemblyAIProviderOptions = {},
+): TranscriptionProvider
+```
+
+Returns a `TranscriptionProvider` that uploads audio to AssemblyAI with speaker labels on by default, and throws when neither an API key nor a client is available.

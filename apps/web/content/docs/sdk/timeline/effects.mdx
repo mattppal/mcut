@@ -1,0 +1,300 @@
+---
+title: "Effects and transitions"
+description: "Effect and transition schemas, registries, and render-time lookups."
+---
+
+## Types
+
+### EffectTypeConfig
+
+```ts
+interface EffectTypeConfig {
+  type: string
+  shape: z.ZodRawShape
+  toFilter: (effect: Record<string, unknown>) => string
+  param?: { key: string; min: number; max: number; unit?: string }
+}
+```
+
+The input to `registerEffectType`, a type name, its Zod parameter shape, a compiler to a CSS filter fragment, and an optional primary parameter with its range.
+
+### BlendMode
+
+```ts
+type BlendMode = z.infer<typeof blendModeSchema>
+```
+
+A blend mode as inferred from `blendModeSchema`.
+
+### Effect
+
+```ts
+type Effect =
+  | BuiltinEffect<'blur', { radius: number }>
+  | BuiltinEffect<'brightness', { amount: number }>
+  | BuiltinEffect<'contrast', { amount: number }>
+  | BuiltinEffect<'saturate', { amount: number }>
+  | BuiltinEffect<'grayscale', { amount: number }>
+  | BuiltinEffect<'sepia', { amount: number }>
+  | BuiltinEffect<'hue-rotate', { degrees: number }>
+  | BuiltinEffect<'invert', { amount: number }>
+  | BuiltinEffect<'drop-shadow', { offsetX: number; offsetY: number; blur: number; color: string }>
+  | BuiltinEffect<'css', { filter: string }>
+```
+
+The union of the built-in effect records, each a `type`, an `enabled` flag, and the parameters of that type.
+
+### EffectType
+
+```ts
+type EffectType = Effect['type']
+```
+
+The `type` field of the built-in effects.
+
+### MotionBlur
+
+```ts
+type MotionBlur = z.infer<typeof motionBlurSchema>
+```
+
+Motion blur settings as inferred from `motionBlurSchema`.
+
+### RenderableElement
+
+```ts
+interface RenderableElement {
+  track: Track
+  element: TimelineElement
+  reason: 'active' | 'transition-tail' | 'transition-head'
+}
+```
+
+An element that needs pixels at a time, with its track and whether it is active, a transition tail, or a transition head.
+
+### Transition
+
+```ts
+type Transition = z.infer<typeof transitionSchema>
+```
+
+A transition as inferred from `transitionSchema`.
+
+### TransitionPair
+
+```ts
+interface TransitionPair {
+  left: TimelineElement
+  right: TimelineElement
+  cutMs: number
+  durationMs: number
+  type: TransitionType
+}
+```
+
+Two adjacent clips joined by a transition, with the cut time, the clamped blend duration, and the type.
+
+### TransitionType
+
+```ts
+type TransitionType = (typeof BUILTIN_TRANSITION_TYPES)[number] | (string & {})
+```
+
+A built-in transition type name or any other registered string.
+
+## Schemas
+
+### blendModeSchema
+
+```ts
+const blendModeSchema = z.enum([
+  'normal',
+  'multiply',
+  'screen',
+  'overlay',
+  'darken',
+  'lighten',
+  'color-dodge',
+  'color-burn',
+  'hard-light',
+  'soft-light',
+  'difference',
+  'exclusion',
+  'hue',
+  'saturation',
+  'color',
+  'luminosity',
+])
+```
+
+Zod schema for the sixteen compositing blend modes, from `normal` to `luminosity`.
+
+### effectSchema
+
+```ts
+const effectSchema: z.ZodType<Effect, unknown>
+```
+
+Zod schema for one effect of any registered type, rebuilt when a new type is registered.
+
+### effectsSchema
+
+```ts
+const effectsSchema = z.array(effectSchema)
+```
+
+Zod schema for an ordered effect stack.
+
+### motionBlurSchema
+
+```ts
+const motionBlurSchema = z.object({
+  enabled: z.boolean().default(true),
+  shutterAngle: z.number().min(15).max(720).default(180),
+})
+```
+
+Zod schema for per-element motion blur, an enabled flag and a shutter angle in degrees from 15 to 720 with a default of 180.
+
+### transitionSchema
+
+```ts
+const transitionSchema = z.object({
+  type: transitionTypeSchema,
+  durationMs: z.number().int().min(100).max(5000).default(500),
+})
+```
+
+Zod schema for a transition, its type and a blend window from 100 to 5000 ms centered on the cut, with a default of 500.
+
+### transitionTypeSchema
+
+```ts
+const transitionTypeSchema = z
+  .string()
+  .refine((type) => transitionRegistry.has(type), {
+    message: 'unregistered transition type',
+  })
+```
+
+Zod schema for a registered transition type name.
+
+## Constants
+
+### EFFECT_TYPES
+
+```ts
+const EFFECT_TYPES = {
+  get current(): string[] {
+    return listEffectTypes().map((e) => e.type)
+  },
+}.current
+```
+
+The effect type names registered when the module loaded, which are the built-in types.
+
+### BUILTIN_TRANSITION_TYPES
+
+```ts
+const BUILTIN_TRANSITION_TYPES = [
+  'dissolve',
+  'fade-black',
+  'fade-white',
+  'slide-left',
+  'slide-right',
+  'wipe-left',
+  'wipe-right',
+] as const
+```
+
+The seven built-in transition types, dissolves, fades through black and white, slides, and wipes.
+
+## Functions
+
+### buildFilterString
+
+```ts
+function buildFilterString(effects: readonly Effect[] | undefined): string
+```
+
+Compiles an effect stack into a CSS filter string by joining the fragments of enabled effects in order, or an empty string when nothing applies.
+
+### getEffectType
+
+```ts
+function getEffectType(type: string): EffectTypeEntry | undefined
+```
+
+Returns the registry entry for an effect type, or `undefined`.
+
+### listEffectTypes
+
+```ts
+function listEffectTypes(): EffectTypeEntry[]
+```
+
+Returns every registered effect type entry in registration order.
+
+### registerEffectType
+
+```ts
+function registerEffectType(config: EffectTypeConfig): void
+```
+
+Registers an effect type by wrapping its parameter shape in a schema with `type` and `enabled` fields, and throws when the type already exists.
+
+### toCompositeOperation
+
+```ts
+function toCompositeOperation(mode: BlendMode | undefined): CompositeOperation
+```
+
+Returns `source-over` for `normal` or an unset mode and otherwise the blend mode itself.
+
+### listTransitionTypes
+
+```ts
+function listTransitionTypes(): string[]
+```
+
+Returns every registered transition type name in registration order.
+
+### registerTransitionType
+
+```ts
+function registerTransitionType(entry: { type: string; label?: string }): void
+```
+
+Registers a transition type name with an optional label, and throws when the type already exists.
+
+### getActiveTransitionPairs
+
+```ts
+function getActiveTransitionPairs(track: Track, timeMs: number): TransitionPair[]
+```
+
+Returns the transition pairs on a track whose blend window contains `timeMs`.
+
+### getRenderableElements
+
+```ts
+function getRenderableElements(project: Project, timeMs: number): RenderableElement[]
+```
+
+Returns every element that renders at `timeMs` across all tracks, the active elements plus transition partners drawn outside their own ranges.
+
+### getTransitionCompletion
+
+```ts
+function getTransitionCompletion(pair: TransitionPair, timeMs: number): number
+```
+
+Returns how far a transition has progressed at `timeMs`, from 0 at the window start to 1 at its end.
+
+### getTransitionPair
+
+```ts
+function getTransitionPair(track: Track, left: TimelineElement): TransitionPair | null
+```
+
+Returns the transition pair anchored on a left clip with the blend window clamped to both clip durations, or `null` when the clip has no transition or no neighbor starts exactly at its end.

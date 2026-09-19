@@ -1,0 +1,9 @@
+{
+  "title": "@mcut/compositor",
+  "pages": [
+    "index",
+    "types",
+    "functions",
+    "classes"
+  ]
+}

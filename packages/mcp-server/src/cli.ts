@@ -31,4 +31,4 @@ const server = createMcutMcpServer({
 })
 
 await server.connect(new StdioServerTransport())
-console.error(`mcut MCP server ready — project: ${projectPath}`)
+process.stderr.write(`mcut MCP server ready — project: ${projectPath}\n`)

@@ -57,7 +57,7 @@ async function resolveAssets(project: Project): Promise<{ project: Project; revo
   const assets = { ...project.assets }
   for (const [id, asset] of Object.entries(assets)) {
     if (!asset.hash) continue
-    const blob = await loadMediaBlob(asset.hash).catch(() => null)
+    const blob = await loadMediaBlob(asset.hash)
     if (!blob) continue
     const src = URL.createObjectURL(blob)
     urls.push(src)
