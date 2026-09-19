@@ -91,7 +91,7 @@ export function planSilenceCuts(
   }
   if (element.timeMap) {
     throw new OperatorError(
-      'invalid-payload',
+      'unsupported',
       `element "${elementId}" has a time remap; silence cuts require 1x playback ` +
         '(clear it with setTimeMap null first)',
     )
