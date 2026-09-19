@@ -42,6 +42,7 @@ export const transformSchema = z
     scaleY: scaleSchema.default(1),
     rotation: z.number().default(0),
   })
+  .strict()
   .prefault({})
 
 export const textStrokeSchema = strokeSchema
