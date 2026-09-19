@@ -87,7 +87,18 @@ function IconButton({
 }) {
   return (
     <Tooltip>
-      <TooltipTrigger render={<Button variant={active ? 'secondary' : 'ghost'} size="icon-sm" onClick={onClick} disabled={disabled} aria-label={label} />}>
+      <TooltipTrigger
+        render={
+          <Button
+            variant={active ? 'secondary' : 'ghost'}
+            size="icon-sm"
+            className={active === undefined ? undefined : 'transition-none'}
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={label}
+          />
+        }
+      >
         {children}
       </TooltipTrigger>
       <TooltipContent className="flex items-center gap-1.5">
@@ -154,7 +165,7 @@ export function TransportBar() {
                 <Button
                   variant={timelineTool === tool.id ? 'secondary' : 'ghost'}
                   size="icon-sm"
-                  className="size-6 font-mono text-2xs"
+                  className="size-6 font-mono text-2xs transition-none"
                   onClick={() => setTimelineTool(tool.id)}
                   aria-label={`${tool.label} tool`}
                 />
@@ -178,7 +189,7 @@ export function TransportBar() {
             <Button
               variant={editMode === 'normal' ? 'ghost' : 'secondary'}
               size="sm"
-              className="h-7 px-2 font-mono text-2xs uppercase"
+              className="h-7 px-2 font-mono text-2xs uppercase transition-none"
               aria-label="Edit mode"
               title="Edit mode for drops and inserts"
             />

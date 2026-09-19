@@ -91,7 +91,7 @@ export function ExportDialog() {
                     key={option.id}
                     size="xs"
                     variant={format === option.id ? 'secondary' : 'ghost'}
-                    className={cn('flex-1', format === option.id && 'font-semibold')}
+                    className={cn('flex-1 transition-none', format === option.id && 'font-semibold')}
                     disabled={busy}
                     onClick={() => setFormat(option.id)}
                   >
