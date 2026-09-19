@@ -5,6 +5,7 @@ import { EditorEngine } from './engine'
 import { createProject, parseProject, type Project, type TimelineElement, type VideoElement } from './model'
 import { getElement, getTrack } from './selectors'
 import { getSourceTimeMs, makeConstantSpeedMap } from './speed'
+import { thrownBy } from './test-helpers'
 
 const TRACK = 't-default'
 
@@ -496,22 +497,14 @@ describe('rippleTrim', () => {
     engine.dispatch({
       type: 'addElement',
       trackId: 't-default',
-      element: { type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
+      element: { id: 'e-text', type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
     })
-    const elementId = engine.project.tracks[0]!.elements[0]!.id
-    const trim = {
-      type: 'rippleTrim' as const,
-      elementId,
-      edge: 'start' as const,
-      deltaMs: -9007199254740991,
-    }
-    expect(() => engine.dispatch(trim)).toThrow(CommandError)
-    try {
-      engine.dispatch(trim)
-    } catch (error) {
-      expect((error as CommandError).code).toBe('out-of-bounds')
-    }
-    expect(getElement(engine.project, elementId)).toMatchObject({ startMs: 1000, durationMs: 1000 })
+    const thrown = thrownBy(() =>
+      engine.dispatch({ type: 'rippleTrim', elementId: 'e-text', edge: 'start', deltaMs: -9007199254740991 }),
+    )
+    expect(thrown).toBeInstanceOf(CommandError)
+    expect(thrown).toMatchObject({ code: 'out-of-bounds' })
+    expect(getElement(engine.project, 'e-text')).toMatchObject({ startMs: 1000, durationMs: 1000 })
     expect(parseProject(JSON.parse(JSON.stringify(engine.project)))).toEqual(engine.project)
   })
 
@@ -520,11 +513,10 @@ describe('rippleTrim', () => {
     engine.dispatch({
       type: 'addElement',
       trackId: 't-default',
-      element: { type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
+      element: { id: 'e-text', type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
     })
-    const elementId = engine.project.tracks[0]!.elements[0]!.id
-    engine.dispatch({ type: 'rippleTrim', elementId, edge: 'start', deltaMs: -500 })
-    expect(getElement(engine.project, elementId)).toMatchObject({ startMs: 1000, durationMs: 1500 })
+    engine.dispatch({ type: 'rippleTrim', elementId: 'e-text', edge: 'start', deltaMs: -500 })
+    expect(getElement(engine.project, 'e-text')).toMatchObject({ startMs: 1000, durationMs: 1500 })
   })
 })
 
