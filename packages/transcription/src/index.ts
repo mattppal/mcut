@@ -1,4 +1,5 @@
 export {
+  transcriptInputSchema,
   transcriptResultSchema,
   type TranscribeInput,
   type TranscribeOptions,

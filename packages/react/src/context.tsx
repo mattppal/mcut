@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { PreviewMediaPool } from '@mcut/media'
 import { EditorEngine, type Project } from '@mcut/timeline'
 
@@ -30,8 +30,7 @@ export function EditorProvider({
   maxHistorySize,
   children,
 }: EditorProviderProps) {
-  const valueRef = useRef<EditorContextValue | null>(null)
-  if (valueRef.current === null) {
+  const [value] = useState<EditorContextValue>(() => {
     const engine =
       externalEngine ??
       new EditorEngine({
@@ -39,17 +38,12 @@ export function EditorProvider({
         ...(maxHistorySize !== undefined ? { maxHistorySize } : {}),
       })
     const pool = new PreviewMediaPool((assetId) => engine.project.assets[assetId])
-    valueRef.current = { engine, pool }
-  }
+    return { engine, pool }
+  })
 
-  useEffect(() => {
-    const value = valueRef.current
-    return () => {
-      value?.pool.dispose()
-    }
-  }, [])
+  useEffect(() => () => value.pool.dispose(), [value])
 
-  return <EditorContext.Provider value={valueRef.current}>{children}</EditorContext.Provider>
+  return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>
 }
 
 export function useEditorContext(): EditorContextValue {

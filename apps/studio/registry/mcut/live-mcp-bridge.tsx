@@ -27,18 +27,16 @@ import {
   getSourceSpanMs,
   listToolDefinitions,
   parseCommand,
-  type BuiltinCommand,
   type AssetRef,
   type AudioElement,
   type EditorEngine,
-  type ElementId,
   type Project,
-  type ProjectTranscriptOptions,
   type Track,
   type VideoElement,
 } from "@mcut/timeline";
 import { searchCaptions } from "@mcut/transcription";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   formatShortcut,
   getEditorAction,
@@ -46,42 +44,14 @@ import {
   listEditorActions,
   runEditorAction,
 } from "./action-registry";
+import { parseBridgeFrame, type BridgeRequest } from "./bridge-request";
 import { editorClipboard } from "./editor-clipboard";
 import { useEditorUI } from "./editor-ui";
-import { isRecord, optionalFiniteNumber } from "./guards";
 import { ensureTranscriptForBridge } from "./live-mcp-transcript";
 import { clamp } from "./math";
-import { MCP_AGENT_TOOL_NAMES, operatorToolName } from "@mcut/mcp-server/contract";
+import { MCP_AGENT_TOOL_NAMES, MCP_TOOL_INPUTS, operatorToolName } from "@mcut/mcp-server/contract";
 
-interface BridgeRequest {
-  id: string;
-  type: string;
-  payload?: unknown;
-}
-
-interface CommandPayload {
-  commandName: string;
-  input?: Record<string, unknown>;
-}
-
-interface OperatorPayload {
-  operatorId: OperatorId;
-  input?: unknown;
-}
-
-interface ActionPayload {
-  actionId: string;
-  input?: unknown;
-}
-
-interface ApplyCommandsPayload {
-  commands: BuiltinCommand[];
-}
-
-interface AudioActivityPayload extends AudioActivityOptions {
-  elementId?: string;
-  includeWaveform?: boolean;
-}
+type AudioActivityPayload = z.infer<typeof MCP_TOOL_INPUTS.get_audio_activity>;
 
 interface AudioActivitySource {
   asset: AssetRef;
@@ -116,18 +86,6 @@ export function liveMcpOperatorToolName(operatorId: OperatorId): string {
   return operatorToolName(operatorId);
 }
 
-function transcriptOptions(value: unknown): ProjectTranscriptOptions {
-  if (!isRecord(value)) return {};
-  return { includeWords: value.includeWords === true };
-}
-
-function transcriptQuery(value: unknown): string {
-  if (!isRecord(value) || typeof value.query !== "string" || !value.query.trim()) {
-    throw new Error("search_transcript requires a non-empty query string.");
-  }
-  return value.query.trim();
-}
-
 function searchProjectTranscript(project: Project, query: string): unknown {
   const captionRefs = getProjectCaptions(project);
   const captions = captionRefs.map((ref) => ref.caption);
@@ -150,42 +108,6 @@ function searchProjectTranscript(project: Project, query: string): unknown {
   return { query, count: matches.length, matches };
 }
 
-function commandPayload(value: unknown): CommandPayload {
-  if (!isRecord(value) || typeof value.commandName !== "string") {
-    throw new Error("Invalid dispatch_command payload.");
-  }
-  return {
-    commandName: value.commandName,
-    input: isRecord(value.input) ? value.input : {},
-  };
-}
-
-function applyCommandsPayload(value: unknown): ApplyCommandsPayload {
-  if (!isRecord(value) || !Array.isArray(value.commands)) {
-    throw new Error("Invalid apply_commands payload.");
-  }
-  const commands = value.commands.map(parseCommand);
-  if (commands.length === 0) throw new Error("apply_commands requires at least one command.");
-  return { commands };
-}
-
-function operatorPayload(value: unknown): OperatorPayload {
-  if (!isRecord(value) || typeof value.operatorId !== "string") {
-    throw new Error("Invalid run_operator payload.");
-  }
-  return {
-    operatorId: parseOperatorId(value.operatorId),
-    input: value.input ?? {},
-  };
-}
-
-function actionPayload(value: unknown): ActionPayload {
-  if (!isRecord(value) || typeof value.actionId !== "string") {
-    throw new Error("Invalid run_action payload.");
-  }
-  return { actionId: value.actionId, input: value.input ?? {} };
-}
-
 function isAudioActivityElement(element: unknown): element is VideoElement | AudioElement {
   return (
     typeof element === "object" &&
@@ -195,37 +117,13 @@ function isAudioActivityElement(element: unknown): element is VideoElement | Aud
   );
 }
 
-function audioActivityPayload(value: unknown): AudioActivityPayload {
-  if (!isRecord(value)) return {};
-  const startMs = optionalFiniteNumber(value.startMs);
-  const endMs = optionalFiniteNumber(value.endMs);
-  const frameMs = optionalFiniteNumber(value.frameMs);
-  const threshold = optionalFiniteNumber(value.threshold);
-  const minSoundMs = optionalFiniteNumber(value.minSoundMs);
-  const minSilenceMs = optionalFiniteNumber(value.minSilenceMs);
-  const paddingMs = optionalFiniteNumber(value.paddingMs);
-  const waveformBuckets = optionalFiniteNumber(value.waveformBuckets);
-  return {
-    ...(typeof value.elementId === "string" ? { elementId: value.elementId } : {}),
-    ...(typeof value.includeWaveform === "boolean" ? { includeWaveform: value.includeWaveform } : {}),
-    ...(startMs !== undefined ? { startMs } : {}),
-    ...(endMs !== undefined ? { endMs } : {}),
-    ...(frameMs !== undefined ? { frameMs } : {}),
-    ...(threshold !== undefined ? { threshold } : {}),
-    ...(minSoundMs !== undefined ? { minSoundMs } : {}),
-    ...(minSilenceMs !== undefined ? { minSilenceMs } : {}),
-    ...(paddingMs !== undefined ? { paddingMs } : {}),
-    ...(waveformBuckets !== undefined ? { waveformBuckets } : {}),
-  };
-}
-
 function pickAudioActivitySource(
   engine: EditorEngine,
   payload: AudioActivityPayload,
 ): AudioActivitySource {
   const project = engine.project;
   if (payload.elementId) {
-    const location = getElementLocation(project, payload.elementId as ElementId);
+    const location = getElementLocation(project, payload.elementId);
     if (!location || !isAudioActivityElement(location.element)) {
       throw new Error(`Element "${payload.elementId}" is not a video or audio clip.`);
     }
@@ -289,10 +187,9 @@ function silentSummary(durationMs: number): AudioActivity["summary"] {
 
 export async function handleGetAudioActivity(
   engine: EditorEngine,
-  value: unknown,
+  payload: AudioActivityPayload,
   analyzer: AudioActivityAnalyzer = analyzeAudioActivity,
 ): Promise<unknown> {
-  const payload = audioActivityPayload(value);
   const source = pickAudioActivitySource(engine, payload);
   const range = audioActivityRange(source, payload);
   const waveformBuckets =
@@ -397,9 +294,9 @@ export async function handleLiveMcpRequest(
         selection: engine.selection,
       });
     case "get_transcript":
-      return getProjectTranscript(engine.project, transcriptOptions(request.payload));
+      return getProjectTranscript(engine.project, request.payload);
     case "search_transcript":
-      return searchProjectTranscript(engine.project, transcriptQuery(request.payload));
+      return searchProjectTranscript(engine.project, request.payload.query);
     case "ensure_transcript":
       return await ensureTranscriptForBridge(engine, request.payload);
     case "get_audio_activity":
@@ -407,7 +304,7 @@ export async function handleLiveMcpRequest(
     case "list_commands":
       return listToolDefinitions();
     case "apply_commands": {
-      const { commands } = applyCommandsPayload(request.payload);
+      const commands = request.payload.commands.map(parseCommand);
       applyCommands(engine, commands);
       return { applied: commands.length, summary: summarizeEngine(engine) };
     }
@@ -438,16 +335,16 @@ export async function handleLiveMcpRequest(
     case "redo":
       return engine.redo();
     case "run_operator": {
-      const { operatorId, input } = operatorPayload(request.payload);
-      return await runOperator(operatorId, { engine }, input);
+      const { operatorId, input } = request.payload;
+      return await runOperator(parseOperatorId(operatorId), { engine }, input);
     }
     case "dispatch_command": {
-      const { commandName, input } = commandPayload(request.payload);
+      const { commandName, input } = request.payload;
       engine.dispatch(parseCommand({ ...input, type: commandName }));
       return null;
     }
     case "run_action": {
-      const { actionId, input } = actionPayload(request.payload);
+      const { actionId, input } = request.payload;
       const action = getEditorAction(actionId);
       if (!action) throw new Error(`Unknown editor action "${actionId}".`);
       if (!isActionEnabled(action, context)) {
@@ -455,21 +352,25 @@ export async function handleLiveMcpRequest(
       }
       return runEditorAction(action, { ...context, input, throwOnError: true }) ?? null;
     }
-    default:
-      throw new Error(`Unknown live MCP request "${request.type}".`);
+    default: {
+      const unhandled: never = request;
+      throw new Error(`Unknown live MCP request ${JSON.stringify(unhandled)}.`);
+    }
   }
 }
+
+const storedBridgeConfigSchema = z.object({
+  port: z.string(),
+  token: z.string().nullable().catch(null),
+});
 
 function readStoredBridgeConfig(): { port: string; token: string | null } | null {
   try {
     const raw = window.sessionStorage.getItem(BRIDGE_CONFIG_STORAGE_KEY);
     if (!raw) return null;
-    const value = JSON.parse(raw) as unknown;
-    if (!isRecord(value) || typeof value.port !== "string") return null;
-    return {
-      port: value.port || DEFAULT_BRIDGE_PORT,
-      token: typeof value.token === "string" ? value.token : null,
-    };
+    const stored = storedBridgeConfigSchema.safeParse(JSON.parse(raw));
+    if (!stored.success) return null;
+    return { port: stored.data.port || DEFAULT_BRIDGE_PORT, token: stored.data.token };
   } catch {
     return null;
   }
@@ -547,19 +448,17 @@ export function LiveMcpBridge() {
 
       socket.addEventListener("message", (event) => {
         void (async () => {
-          let request: BridgeRequest | null = null;
+          const frame = parseBridgeFrame(event.data);
+          if (!frame.ok) {
+            socket?.send(JSON.stringify({ id: frame.id, ok: false, error: frame.error }));
+            return;
+          }
+          const { request } = frame;
           try {
-            request = JSON.parse(String(event.data)) as BridgeRequest;
             const result = await handleLiveMcpRequest(engine, ui, request);
             socket?.send(JSON.stringify({ id: request.id, ok: true, result }));
           } catch (error) {
-            socket?.send(
-              JSON.stringify({
-                id: request?.id,
-                ok: false,
-                error: serializeError(error),
-              }),
-            );
+            socket?.send(JSON.stringify({ id: request.id, ok: false, error: serializeError(error) }));
           }
         })();
       });

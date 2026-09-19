@@ -1,0 +1,323 @@
+---
+title: "Types"
+description: "Types and Zod schemas exported by @mcut/media."
+---
+
+## Types
+
+### MediaProbe
+
+```ts
+interface MediaProbe {
+  durationMs: number
+  hasVideo: boolean
+  hasAudio: boolean
+  width?: number
+  height?: number
+  mimeType?: string
+}
+```
+
+The result of `probeMedia`, duration, which tracks exist, optional dimensions, and MIME type.
+
+### MediaSourceLike
+
+```ts
+type MediaSourceLike = Blob | string
+```
+
+A media source given as a blob or a URL string.
+
+### ThumbnailOptions
+
+```ts
+interface ThumbnailOptions {
+  width?: number
+  timeMs?: number
+}
+```
+
+Options for thumbnails, the output width and the source time to capture.
+
+### ExtractAudioOptions
+
+```ts
+interface ExtractAudioOptions {
+  sampleRate?: number
+  numberOfChannels?: number
+  onProgress?: (progress: number) => void
+}
+```
+
+Options for `extractAudioToWav`, the output sample rate and channel count and a progress callback.
+
+### ActiveMediaItem
+
+```ts
+interface ActiveMediaItem {
+  assetId: AssetId
+  kind: 'video' | 'audio'
+  sourceTimeMs: number
+  rate: number
+  volume: number
+  reversed?: boolean
+}
+```
+
+One media asset that is playing at a moment, with its source time, playback rate, volume, and reversal.
+
+### PreviewSyncOptions
+
+```ts
+interface PreviewSyncOptions {
+  isPlaying: boolean
+  playbackRate: number
+  masterVolume: number
+  muted: boolean
+}
+```
+
+The playback clock state passed to `PreviewMediaPool.sync`, playing flag, rate, master volume, and mute.
+
+### ContainerFormatId
+
+```ts
+type ContainerFormatId = 'mp4' | 'webm' | 'mkv' | (string & {})
+```
+
+A registered container format id, one of the built-in `mp4`, `webm`, and `mkv` or a custom id.
+
+### ExportFontFaceInit
+
+```ts
+interface ExportFontFaceInit {
+  family: string
+  weight?: string
+  style?: string
+  unicodeRange?: string
+  source: ArrayBuffer | string
+}
+```
+
+A font face the export worker registers before rendering, given as binary data or a URL.
+
+### ExportProgress
+
+```ts
+interface ExportProgress {
+  progress: number
+  phase: 'audio' | 'video' | 'finalize'
+}
+```
+
+Export progress as a 0 to 1 fraction within the audio, video, or finalize phase.
+
+### ExportProjectOptions
+
+```ts
+interface ExportProjectOptions {
+  format?: ContainerFormatId
+  videoBitrate?: number | Quality
+  fonts?: ExportFontFaceInit[]
+  onProgress?: (progress: ExportProgress) => void
+  signal?: AbortSignal
+}
+```
+
+Options for `exportProject`, the container format, video bitrate or quality, fonts, progress callback, and abort signal.
+
+### ExportResult
+
+```ts
+interface ExportResult {
+  blob: Blob
+  extension: string
+}
+```
+
+The exported file as a blob together with its file extension.
+
+### ContainerFormatEntry
+
+```ts
+interface ContainerFormatEntry {
+  id: string
+  label: string
+  extension: string
+  mimeType: string
+  createOutputFormat: () => OutputFormat
+}
+```
+
+A container format's id, label, file extension, MIME type, and factory for the Mediabunny output format that muxes it.
+
+### Filmstrip
+
+```ts
+interface Filmstrip {
+  canvas: HTMLCanvasElement | OffscreenCanvas
+  frameWidth: number
+  frameHeight: number
+  frameCount: number
+  timestampsMs: number[]
+}
+```
+
+The filmstrip canvas with its frame size, frame count, and the source timestamp of each frame.
+
+### FilmstripOptions
+
+```ts
+interface FilmstripOptions {
+  frameCount: number
+  frameWidth?: number
+  startMs?: number
+  endMs?: number
+}
+```
+
+Options for `getFilmstrip`, the frame count, frame width, and source range.
+
+### VideoPreviewCapability
+
+```ts
+interface VideoPreviewCapability {
+  name?: string
+  mimeType?: string
+  nativePreview?: boolean
+}
+```
+
+The asset fields that decide native preview eligibility, name, MIME type, and an explicit `nativePreview` override.
+
+### AudioPeaks
+
+```ts
+interface AudioPeaks {
+  peaks: Float32Array
+  durationMs: number
+}
+```
+
+Waveform peak buckets and the duration they cover.
+
+### AudioPeaksOptions
+
+```ts
+interface AudioPeaksOptions {
+  buckets?: number
+  startMs?: number
+  endMs?: number
+}
+```
+
+Options for `extractAudioPeaks`, the bucket count and the source range.
+
+### AudioActivity
+
+```ts
+interface AudioActivity {
+  durationMs: number
+  soundWindows: AudioActivityWindow[]
+  silenceWindows: AudioActivityWindow[]
+  summary: AudioActivitySummary
+  waveform?: number[]
+}
+```
+
+Sound and silence windows over a duration, a summary, and an optional waveform.
+
+### AudioActivityOptions
+
+```ts
+interface AudioActivityOptions {
+  startMs?: number
+  endMs?: number
+  frameMs?: number
+  threshold?: number
+  minSoundMs?: number
+  minSilenceMs?: number
+  paddingMs?: number
+  waveformBuckets?: number
+}
+```
+
+Options for activity analysis, the source range, frame size, threshold, minimum run lengths, padding, and waveform bucket count.
+
+### AudioActivitySummary
+
+```ts
+interface AudioActivitySummary {
+  soundMs: number
+  silenceMs: number
+  soundFraction: number
+  silenceFraction: number
+  peakRms: number
+  peakAmplitude: number
+}
+```
+
+Totals and fractions of sound and silence plus the peak RMS and peak amplitude.
+
+### AudioActivityWindow
+
+```ts
+interface AudioActivityWindow {
+  startMs: number
+  endMs: number
+  durationMs: number
+  rms: number
+  peakRms: number
+  peakAmplitude: number
+}
+```
+
+One sound or silence window with its bounds, duration, mean RMS, peak RMS, and peak amplitude.
+
+### ConstantSpeed
+
+```ts
+interface ConstantSpeed {
+  rate: number
+  sourceStartOffsetMs: number
+  sourceSpanMs: number
+}
+```
+
+A constant playback rate with the source offset where it starts and the source span it consumes.
+
+### StereoData
+
+```ts
+interface StereoData {
+  left: Float32Array
+  right: Float32Array
+  sampleRate: number
+}
+```
+
+Left and right PCM channels with their sample rate.
+
+### AudioSyncOptions
+
+```ts
+interface AudioSyncOptions {
+  windowS?: number
+  maxLagS?: number
+  rateHz?: number
+  signal?: AbortSignal
+}
+```
+
+Options for audio sync, the analysis window in seconds, the maximum lag, the envelope rate, and an abort signal.
+
+### SyncResult
+
+```ts
+interface SyncResult {
+  offsetMs: number
+  confidence: number
+}
+```
+
+A sync offset in milliseconds and the confidence of the match.

@@ -310,8 +310,8 @@ export class LiveMcutBridge {
     return new LiveBridgeError(
       'browser-not-connected',
       openEditorUrl
-        ? `No mcut editor tab is connected to the live bridge. Open ${openEditorUrl}, or run \`bun run setup\` to print the current workspace URL.`
-        : 'No mcut editor tab is connected to the live bridge. Open the connected editor URL, or run `bun run setup` to print the current workspace URL.',
+        ? `No mcut editor tab is connected to the live bridge. Open ${openEditorUrl}, or run \`bun run dev\` and use the printed MCP URL.`
+        : 'No mcut editor tab is connected to the live bridge. Open the connected editor URL, or run `bun run dev` and use the printed MCP URL.',
     )
   }
 
