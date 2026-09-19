@@ -23,10 +23,10 @@ The result of `probeMedia`, duration, which tracks exist, optional dimensions, a
 ### MediaProbeErrorCode
 
 ```ts
-type MediaProbeErrorCode = 'unreadable' | 'no-tracks'
+type MediaProbeErrorCode = 'unreadable' | 'no-tracks' | 'no-duration'
 ```
 
-Why a probe was rejected. `unreadable` when no demuxer or the browser can parse the file, `no-tracks` when it parses but has no audio or video track.
+Why a probe was rejected. `unreadable` when no demuxer or the browser can parse the file, `no-tracks` when it parses but has no audio or video track, `no-duration` when it has tracks but no measurable duration.
 
 ### MediaSourceLike
 
