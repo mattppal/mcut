@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * Live browser entry point:
- *
- *   mcut-mcp-live [--port 54319] [--editor-url http://localhost:3000/editor]
- *
- * Starts an MCP server over stdio and a localhost WebSocket bridge. Open the
- * printed editor URL so the browser tab becomes the source of truth.
- */
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { LiveMcutBridge, parseLiveBridgePort } from './live-bridge'
 import { createMcutMcpServerForTarget } from './server'

@@ -12,12 +12,10 @@ import {
 } from '@mcut/timeline'
 import { useEditorContext } from './context'
 
-/** The editor engine: dispatch commands, undo/redo, transport. */
 export function useEditor(): EditorEngine {
   return useEditorContext().engine
 }
 
-/** Subscribe to a slice of editor state (project, selection, history flags). */
 export function useEditorState<TSelected = EditorState>(
   selector?: (state: EditorState) => TSelected,
   compare?: (a: TSelected, b: TSelected) => boolean,
@@ -26,7 +24,6 @@ export function useEditorState<TSelected = EditorState>(
   return useSelector(engine.store, selector, compare ? { compare } : undefined)
 }
 
-/** Subscribe to a slice of playback state (time, playing, volume). */
 export function usePlayback<TSelected = PlaybackState>(
   selector?: (state: PlaybackState) => TSelected,
   compare?: (a: TSelected, b: TSelected) => boolean,
@@ -43,7 +40,6 @@ export function useSelection(): SelectionState {
   return useEditorState((state) => state.selection)
 }
 
-/** The first selected element with its track, if any. */
 export function useSelectedElement(): ElementLocation | undefined {
   return useEditorState(
     (state) => {

@@ -42,39 +42,15 @@ import { useEditorContext } from './context'
 import { applyBoxResize, applyMove, applyResize, applyRotate, type GesturePoint } from './gestures'
 import { usePlaybackLoop } from './use-playback-loop'
 
-/**
- * Preview raster resolution. `'auto'` renders at the displayed size,
- * a number caps the project's short side (720 ≈ 720p), `'full'` always
- * rasters at full project resolution. Every mode is capped at project
- * resolution — CSS scales the canvas to fit either way.
- */
 export type PreviewQuality = 'auto' | 'full' | number
 
 export interface PlayerCanvasProps {
   className?: string
-  /** Enable canvas selection/move/resize/rotate. Default true. */
   interactive?: boolean
-  /** Project background color. Default black. */
   background?: string
-  /**
-   * Elements left out of the render — e.g. a text element while a DOM
-   * inline editor overlays it (renderFrame's skipElementIds).
-   */
   hiddenElementIds?: ReadonlySet<string>
-  /** Double-click on an element (topmost hit). Hosts use it to open editors. */
   onElementDoubleClick?: (elementId: ElementId) => void
-  /**
-   * Preview raster resolution; `'auto'` (default) matches the displayed
-   * size. A 4K project in an ~800px pane rasters ~20× fewer pixels per
-   * frame than `'full'`, which is usually the difference between smooth
-   * and dropped playback on big projects.
-   */
   quality?: PreviewQuality
-  /**
-   * Compositor backend. `'webgpu'` renders through the WebGPU pass
-   * pipeline (requires `navigator.gpu`; falls back to canvas2d when
-   * unavailable or when device initialization fails). Default `'webgpu'`.
-   */
   renderer?: 'canvas2d' | 'webgpu'
 }
 
@@ -129,6 +105,8 @@ interface OverlayView {
 }
 
 const CENTER_SNAP_PX = 10
+const DISPLAY_WIDTH_QUANTUM_PX = 64
+const PROJECT_RESOLUTION_SCALE = 1
 const NO_GUIDES = { guideVertical: false, guideHorizontal: false }
 
 const GESTURE_PROPERTIES: Array<[AnimatableProperty, keyof Transform]> = [
@@ -139,11 +117,6 @@ const GESTURE_PROPERTIES: Array<[AnimatableProperty, keyof Transform]> = [
   ['rotation', 'rotation'],
 ]
 
-/**
- * Apply a gesture's transform: armed properties (Premiere stopwatch on)
- * auto-key at the playhead; unarmed properties patch the static transform.
- * Runs inside the gesture transaction, so a whole drag is one undo entry.
- */
 function applyGestureTransform(
   engine: EditorEngine,
   elementId: ElementId,
@@ -152,8 +125,10 @@ function applyGestureTransform(
 ): void {
   const element = getElement(engine.project, elementId)
   if (!element || !('transform' in element)) return
-  const armed = GESTURE_PROPERTIES.filter(([property]) => hasKeyframes(element, property))
-  if (armed.length === 0) {
+  const propertiesWithKeyframes = GESTURE_PROPERTIES.filter(([property]) =>
+    hasKeyframes(element, property),
+  )
+  if (propertiesWithKeyframes.length === 0) {
     engine.dispatch({ type: 'updateElement', elementId, patch: { transform } })
     return
   }
@@ -379,25 +354,23 @@ class WebGPUSlot {
   }
 }
 
-/**
- * The raster scale for one preview frame: displayed size for `'auto'`
- * (quantized so sub-pixel layout jitter doesn't reallocate the canvas),
- * short-side cap for numeric presets, 1 for `'full'`. Never upscales
- * beyond project resolution.
- */
 function getRenderScale(
   project: Project,
   quality: PreviewQuality,
   container: HTMLElement | null,
 ): number {
-  if (quality === 'full') return 1
+  if (quality === 'full') return PROJECT_RESOLUTION_SCALE
   if (typeof quality === 'number') {
     const shortSide = Math.min(project.width, project.height)
-    return shortSide > 0 ? Math.min(1, quality / shortSide) : 1
+    return shortSide > 0
+      ? Math.min(PROJECT_RESOLUTION_SCALE, quality / shortSide)
+      : PROJECT_RESOLUTION_SCALE
   }
   const displayWidth = (container?.clientWidth ?? 0) * (window.devicePixelRatio || 1)
-  if (displayWidth <= 0 || project.width <= 0) return 1
-  return Math.min(1, (Math.ceil(displayWidth / 64) * 64) / project.width)
+  if (displayWidth <= 0 || project.width <= 0) return PROJECT_RESOLUTION_SCALE
+  const quantizedDisplayWidth =
+    Math.ceil(displayWidth / DISPLAY_WIDTH_QUANTUM_PX) * DISPLAY_WIDTH_QUANTUM_PX
+  return Math.min(PROJECT_RESOLUTION_SCALE, quantizedDisplayWidth / project.width)
 }
 
 function renderPreview(

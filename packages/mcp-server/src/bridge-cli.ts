@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-/**
- * Local bridge entry point:
- *
- *   mcut-bridge start
- *   mcut-bridge get-summary
- *   mcut-bridge get-transcript
- *   mcut-bridge dispatch addTrack --json '{"name":"B-roll"}'
- *   mcut-bridge mcp
- */
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   DEFAULT_BRIDGE_PORT,
