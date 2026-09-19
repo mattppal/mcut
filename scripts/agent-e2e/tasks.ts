@@ -308,10 +308,7 @@ export const TASKS: E2ETask[] = [
       },
     ],
     score: (project, transcript) =>
-      verdictOf([
-        [`the ${SILENCE_ACTION} action ran through run_action`, ranAction(transcript, SILENCE_ACTION)],
-        ...silenceChecks(project),
-      ]),
+      verdictOf([[`the ${SILENCE_ACTION} action ran through run_action`, ranAction(transcript, SILENCE_ACTION)], ...silenceChecks(project)]),
   },
 ]
 

@@ -56,11 +56,7 @@ function readManifest(): Map<string, Fixture> {
   const file = join(repoRoot, MANIFEST_DIR, 'manifest.json')
   if (!existsSync(file)) return new Map()
   const parsed = parseManifest(JSON.parse(readFileSync(file, 'utf8')))
-  return new Map(
-    parsed.fixtures
-      .filter((entry) => entry.skipped === null)
-      .map((entry): [string, Fixture] => [entry.id, fromManifest(entry)]),
-  )
+  return new Map(parsed.fixtures.filter((entry) => entry.skipped === null).map((entry): [string, Fixture] => [entry.id, fromManifest(entry)]))
 }
 
 const manifest = readManifest()

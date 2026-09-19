@@ -127,10 +127,7 @@ class ProcessGroup {
         child.waiters.delete(waiter)
         reject(new BridgeSessionError(`${message}\n${child.tail.join('\n')}`))
       }
-      const timer = setTimeout(
-        () => fail(`${child.name} did not print its ${what} line within the ready timeout.`),
-        remainingMs(deadline),
-      )
+      const timer = setTimeout(() => fail(`${child.name} did not print its ${what} line within the ready timeout.`), remainingMs(deadline))
       child.waiters.add(waiter)
       void child.proc.exited.then((code) => fail(`${child.name} exited with code ${code} before it printed its ${what} line.`))
     })
