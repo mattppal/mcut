@@ -199,8 +199,6 @@ export const applyAnimationPreset = defineCommand({
       mustSupportProperty(element, property)
     }
     const nextElement: TimelineElement = { ...element, keyframes: expanded }
-    // Whips and punches read as motion blur; switch it on unless the user
-    // already made a motion-blur choice for this element.
     if (
       MOTION_BLUR_PRESETS.has(payload.preset) &&
       (nextElement.type === 'video' || nextElement.type === 'image' || nextElement.type === 'text') &&

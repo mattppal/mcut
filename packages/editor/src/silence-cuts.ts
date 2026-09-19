@@ -46,30 +46,18 @@ export const silenceCutOptionsSchema = z.object({
 
 export type SilenceCutOptions = z.infer<typeof silenceCutOptionsSchema>
 
-/** A window of source-media time (same clock as the transcript). */
 export interface SilenceWindow {
   startMs: number
   endMs: number
 }
 
 export interface SilenceCutPlan {
-  /** The cuts, in source-media time, padding already applied. */
   silences: SilenceWindow[]
-  /** Every command dispatched, in order; replayable on the input project. */
   commands: BuiltinCommand[]
   removedMs: number
-  /** The project with all cuts applied. */
   project: Project
 }
 
-/**
- * Plan and apply silence cuts on one video/audio element from transcript word timings.
- *
- * Word timings are source-media times, so the element must play at 1x (no
- * timeMap). Interior and leading silences become split + rippleDelete; trailing
- * silence becomes a trim. Cuts are applied last-to-first so earlier timeline
- * positions stay valid throughout.
- */
 export function planSilenceCuts(
   project: Project,
   elementId: string,

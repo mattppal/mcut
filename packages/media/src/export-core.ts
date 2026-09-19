@@ -31,17 +31,10 @@ import {
   type MixedAudioData,
 } from './export-types'
 
-/**
- * The decode→composite→encode→mux pipeline. Everything here is worker-safe:
- * no `OfflineAudioContext`, no `AudioBuffer`, no DOM — the audio mix arrives
- * pre-rendered as planar PCM and is encoded via `AudioSampleSource`.
- */
-
 export function resolveContainerFormat(id: ContainerFormatId = 'mp4'): ContainerFormat {
   return containerFormats[id]
 }
 
-/** Can this browser encode video (and audio) for the given format? */
 export async function getExportSupport(format: ContainerFormatId = 'mp4'): Promise<{
   video: boolean
   audio: boolean
@@ -67,7 +60,6 @@ export async function getExportSupport(format: ContainerFormatId = 'mp4'): Promi
 export interface ExportPipelineOptions {
   format?: ContainerFormatId
   videoBitrate?: number | Quality
-  /** Pre-rendered audio mix; null exports a silent (video-only) file. */
   mixedAudio: MixedAudioData | null
   onProgress?: (progress: ExportProgress) => void
   signal?: AbortSignal
@@ -79,13 +71,8 @@ export interface ExportPipelineResult {
   extension: string
 }
 
-/** ~1s encode chunks: bounded AudioData allocations, steady backpressure. */
 const AUDIO_CHUNK_FRAMES = 48_000
 
-/**
- * Slice planar stereo PCM into `[left|right]` chunks for `AudioSample`
- * (f32-planar layout = each channel contiguous within a chunk).
- */
 export function* planarAudioChunks(
   mixed: MixedAudioData,
   chunkFrames = AUDIO_CHUNK_FRAMES,
@@ -100,12 +87,6 @@ export function* planarAudioChunks(
   }
 }
 
-/**
- * Render a project to a video file, fully client-side and deterministically:
- * exact decoded samples per output frame (no `<video>` seeking), WebCodecs
- * encoding, Mediabunny muxing. Runs in the export worker (or inline as the
- * main-thread fallback).
- */
 export async function runExportPipeline(
   project: Project,
   options: ExportPipelineOptions,
@@ -173,10 +154,8 @@ export async function runExportPipeline(
 
     for (let frame = 0; frame < totalFrames; frame++) {
       signal?.throwIfAborted()
-      // Sample each frame at its midpoint so boundaries land unambiguously.
       const midMs = ((frame + 0.5) * 1000) / fps
       await frameSource.prepare(midMs)
-      // Extra motion-blur passes are cheap here (transform-only redraws).
       renderFrame(ctx, project, midMs, { source: frameSource, motionBlurSamples: 16 })
       await videoSource.add(frame / fps, 1 / fps)
       frameSource.releaseFrameTemporaries()
@@ -205,10 +184,8 @@ export async function runExportPipeline(
   }
 }
 
-// ---------------------------------------------------------------------------
-
 const frameKey = (assetId: string, sourceTimeMs: number): string =>
-  `${assetId}@${Math.round(sourceTimeMs * 1000)}` // µs precision
+  `${assetId}@${Math.round(sourceTimeMs * 1000)}`
 
 interface ElementVideoState {
   iterator: AsyncGenerator<VideoSample, void, unknown>
@@ -218,12 +195,6 @@ interface ElementVideoState {
   lastTargetS: number
 }
 
-/**
- * The exact {@link FrameSource} for export: per-element decoded sample
- * iterators (monotonic within an element), advanced frame-by-frame. The
- * async `prepare()` populates a per-frame cache that the synchronous
- * compositor then reads.
- */
 class ExportFrameSource implements FrameSource {
   private inputs = new Map<AssetId, { input: Input; sink: VideoSampleSink | null }>()
   private states = new Map<string, ElementVideoState>()
@@ -235,15 +206,12 @@ class ExportFrameSource implements FrameSource {
 
   async prepare(timeMs: number): Promise<void> {
     this.frameCache.clear()
-    // Transition-aware: partners render outside their own active ranges.
     for (const { track, element } of getRenderableElements(this.project, timeMs)) {
       if (track.hidden) continue
       if (element.type === 'image') {
         const bitmap = await this.ensureImage(element.assetId)
         if (bitmap) this.frameCache.set(frameKey(element.assetId, 0), bitmap)
       } else if (element.type === 'video' || element.type === 'multicam') {
-        // getFrameRequests is the shared render/decode seam — keys here must
-        // match the compositor's requests to the millisecond.
         for (const request of getFrameRequests(this.project, element, timeMs)) {
           const sample = await this.advance(
             `${element.id}:${request.assetId}`,
@@ -264,7 +232,6 @@ class ExportFrameSource implements FrameSource {
     return this.frameCache.get(frameKey(assetId, sourceTimeMs)) ?? null
   }
 
-  /** Close per-frame image snapshots after the frame has been encoded. */
   releaseFrameTemporaries(): void {
     for (const frame of this.temporaries) frame.close()
     this.temporaries = []
@@ -316,7 +283,6 @@ class ExportFrameSource implements FrameSource {
   private async advance(stateKey: string, assetId: AssetId, targetS: number): Promise<VideoSample | null> {
     let state = this.states.get(stateKey)
     if (state && targetS < state.lastTargetS) {
-      // Backward jump (shouldn't happen during a linear export): restart.
       state.current?.close()
       state.pending?.close()
       void state.iterator.return(undefined)

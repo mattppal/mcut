@@ -1,13 +1,9 @@
 import { MkvOutputFormat, Mp4OutputFormat, WebMOutputFormat, type OutputFormat } from 'mediabunny'
 
 export interface ContainerFormat {
-  /** UI label (e.g. `'MP4'`). */
   label: string
-  /** Suggested file extension, without the dot. */
   extension: string
-  /** Output MIME type (e.g. `'video/mp4'`). */
   mimeType: string
-  /** Build a fresh Mediabunny output format for one export. */
   createOutputFormat: () => OutputFormat
 }
 

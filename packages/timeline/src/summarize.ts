@@ -81,11 +81,6 @@ function describeElement(project: Project, element: TimelineElement): string {
   return `${element.id} ${what} @ ${range}${suffix}`
 }
 
-/**
- * A compact, deterministic textual rendering of the project in editor
- * vocabulary — what an agent reads before dispatching commands. Tracks are
- * listed top-most first (render order reversed), like a timeline reads.
- */
 export function summarizeProject(project: Project): string {
   const lines: string[] = [
     `Project "${project.name}" ${project.width}×${project.height} @ ${project.fps}fps, ` +

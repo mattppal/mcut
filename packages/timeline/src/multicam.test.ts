@@ -38,7 +38,7 @@ function projectWithRecordings(): { project: Project; trackId: `t-${string}` } {
       type: 'video',
       id: 'e-cam',
       assetId: 'a-cam',
-      startMs: 2000, // camera started 2s late on the timeline
+      startMs: 2000,
       durationMs: 28_000,
       trimStartMs: 500,
     },
@@ -64,13 +64,10 @@ describe('createMulticam', () => {
 
     expect(element.startMs).toBe(0)
     expect(element.durationMs).toBe(30_000)
-    // Bottom layer = screen, top layer = camera.
     const screen = element.sources.find((s) => s.key === 'screen')!
     const camera = element.sources.find((s) => s.key === 'camera')!
     expect(screen.assetId).toBe('a-screen')
     expect(camera.assetId).toBe('a-cam')
-    // Camera started 2s later with 500ms trim: at multicam 0 it has no
-    // content yet → clamped to 0 (trim 500 - 2000 offset).
     expect(screen.trimStartMs).toBe(0)
     expect(camera.trimStartMs).toBe(0)
     expect(element.audioSource).toBe('camera')
@@ -82,7 +79,6 @@ describe('createMulticam', () => {
       expect(slot.fit).toBe('cover')
       expect((slot.rect.w * next.width) / (slot.rect.h * next.height)).toBeCloseTo(3 / 4, 2)
     }
-    // Originals consumed.
     expect(getElement(next, 'e-screen' as `e-${string}`)).toBeUndefined()
     expect(getElement(next, 'e-cam' as `e-${string}`)).toBeUndefined()
   })
@@ -109,7 +105,6 @@ describe('createMulticam', () => {
       trackId: project.tracks[1]!.id,
       element: { type: 'video', id: 'e-top', assetId: 'a-wide', startMs: 0, durationMs: 10_000 },
     })
-    // Selection order must not matter either: top listed first.
     const next = applyCommand(project, {
       type: 'createMulticam',
       elementIds: ['e-top', 'e-bottom'],
@@ -210,7 +205,6 @@ describe('setMulticamSourceKey', () => {
     const element = mc(next)
     expect(element.sources.find((s) => s.key === 'screen')!.assetId).toBe('a-cam')
     expect(element.sources.find((s) => s.key === 'camera')!.assetId).toBe('a-screen')
-    // Audio keeps the 'camera' role, which now resolves to the other asset.
     expect(element.audioSource).toBe('camera')
   })
 
@@ -249,7 +243,6 @@ describe('setMulticamSourceKey', () => {
 })
 
 describe('angle transitions', () => {
-  /** Screen-only at 0 → Camera-only at 5000, fade-black across every cut. */
   function withAngleTransition(durationMs = 1000) {
     const { project } = projectWithRecordings()
     let next = createMc(project)
@@ -307,7 +300,6 @@ describe('angle transitions', () => {
       layoutId: screenLayout.id,
     })
     const element = mc(crowded)
-    // Cut at 5000: next cut 400ms away → half clamps to 200ms.
     expect(getAngleTransitionAt(element, 4810)!.durationMs).toBe(400)
     expect(getAngleTransitionAt(element, 4790)).toBeNull()
   })
@@ -338,11 +330,9 @@ describe('source time + frame requests', () => {
     const camera = element.sources.find((s) => s.key === 'camera')!
     expect(getMulticamSourceTimeMs(element, camera, 4000)).toBe(5500)
 
-    // Default first layout is Screen + Cam → two requests.
     const both = getFrameRequests(next, element, 4000)
     expect(both.map((r) => r.assetId).sort()).toEqual(['a-cam', 'a-screen'])
 
-    // Switch to Camera-only → one request.
     const camLayout = next.layouts.find((l) => l.name === 'Camera')!
     next = applyCommand(next, { type: 'addAngleCut', elementId: 'e-mc', atMs: 0, layoutId: camLayout.id })
     const one = getFrameRequests(next, mc(next), 4000)
@@ -362,7 +352,6 @@ describe('split + flatten', () => {
     const right = getElement(next, 'e-mc2' as `e-${string}`) as MulticamElement
     expect(left.angles).toEqual([{ atMs: 0, layoutId: next.layouts[0]!.id }])
     expect(right.angles.map((a) => a.atMs)).toEqual([0, 4000])
-    // Source continuity: right half's sources advanced by the offset.
     expect(right.sources.find((s) => s.key === 'screen')!.trimStartMs).toBe(6000)
   })
 
@@ -392,11 +381,9 @@ describe('split + flatten', () => {
     const all = next.tracks.flatMap((t) => t.elements)
     const videos = all.filter((e) => e.type === 'video')
     const audios = all.filter((e) => e.type === 'audio')
-    // Span 1 (Screen + Cam) → 2 clips; span 2 (Camera) → 1 clip.
     expect(videos).toHaveLength(3)
     expect(audios).toHaveLength(1)
     expect(audios[0]).toMatchObject({ assetId: 'a-cam', startMs: 0, durationMs: 30_000 })
-    // All flattened videos are muted (audio comes from the audio element).
     expect(videos.every((v) => v.type === 'video' && v.muted)).toBe(true)
   })
 })

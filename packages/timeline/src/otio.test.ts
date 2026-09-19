@@ -74,7 +74,6 @@ describe('toOtio', () => {
     expect(transition.transition_type).toBe('SMPTE_Dissolve')
     expect(transition.in_offset.value).toBe(200)
     expect(transition.out_offset.value).toBe(200)
-    // The track's playback length is unaffected: gap 1000 + 2000 + 1000.
     const total = children
       .filter((c) => c.OTIO_SCHEMA !== 'Transition.1')
       .reduce((sum, c) => sum + c.source_range.duration.value, 0)

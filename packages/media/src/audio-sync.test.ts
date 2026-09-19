@@ -1,11 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { crossCorrelateEnvelopes } from './audio-sync'
 
-/** Synthetic "speech" envelope: bursts at known positions over noise. */
 function envelope(length: number, bursts: number[], seedNoise = 0.02): Float32Array {
   const env = new Float32Array(length)
   for (let i = 0; i < length; i++) {
-    // Deterministic pseudo-noise (no Math.random in tests).
     env[i] = seedNoise * Math.abs(Math.sin(i * 12.9898) * 43758.5453 % 1)
   }
   for (const at of bursts) {

@@ -10,12 +10,6 @@ export interface SelectionState {
 interface HistoryEntry {
   project: Project
   selection: SelectionState
-  /**
-   * True when the edit declared a selection override (see DispatchOptions):
-   * undo restores `selection`, redo re-applies the override. Entries without
-   * one leave the user's current selection alone (pruned against the restored
-   * project), so UI-driven selection made after the edit survives undo.
-   */
   restoresSelection: boolean
 }
 
@@ -36,37 +30,18 @@ export interface PlaybackState {
 
 export interface EditorEngineOptions {
   project?: Project
-  /** History entries kept for undo. Default 100. */
   maxHistorySize?: number
 }
 
 export interface DispatchOptions {
-  /** Record this edit in undo history (default true). */
   history?: boolean
-  /**
-   * Selection this edit conceptually produces (e.g. `[]` for a delete, the
-   * new ids for a paste). Applied after the command, and it marks the history
-   * entry: undoing restores the pre-edit selection, redoing re-applies this
-   * one. Edits that don't declare it leave selection untouched across
-   * undo/redo (beyond pruning removed ids).
-   */
   selection?: ElementId[]
 }
 
 export interface TransactionOptions {
-  /** Selection override for the whole gesture; see DispatchOptions.selection. */
   selection?: ElementId[]
 }
 
-/**
- * The headless editor: one validated, undoable command stream over a project,
- * plus a playback store for transport state.
- *
- * This facade is the only public surface over the underlying reactive stores,
- * which keeps the (alpha) `@tanstack/store` dependency contained to this
- * package. UIs read via `engine.store`/`engine.playback` subscriptions; all
- * writes go through {@link dispatch} (or the transport setters).
- */
 export class EditorEngine {
   readonly store: Store<EditorState>
   readonly playback: Store<PlaybackState>
@@ -103,14 +78,11 @@ export class EditorEngine {
     return this.store.state.selection
   }
 
-  /** Apply a command. Returns the resulting project. */
   dispatch(command: BuiltinCommand, options: DispatchOptions = {}): Project {
     const previous = this.project
     const previousSelection = this.selection
     const next = applyCommand(previous, command)
     if (next === previous) {
-      // No project change: apply any declared selection without recording a
-      // no-op history entry.
       if (options.selection !== undefined) {
         this.commitProject(next, { elementIds: options.selection })
       }
@@ -132,10 +104,6 @@ export class EditorEngine {
     return next
   }
 
-  /**
-   * Group multiple dispatches into a single undo entry (and a single store
-   * notification). Used for drag gestures and multi-step operations.
-   */
   transact(fn: () => void, options: TransactionOptions = {}): void {
     this.beginTransaction()
     try {
@@ -149,12 +117,6 @@ export class EditorEngine {
     }
   }
 
-  /**
-   * Open a transaction that spans multiple event-loop turns (e.g. a pointer
-   * drag): dispatches in between record no history; `endTransaction` pushes
-   * one entry for the whole gesture. Prefer {@link transact} for synchronous
-   * batches.
-   */
   beginTransaction(): void {
     if (this.transactionDepth === 0) {
       this.transactionBase = {
@@ -181,11 +143,6 @@ export class EditorEngine {
     }
   }
 
-  /**
-   * Abort the open transaction (the whole stack, if nested): restore the
-   * project and selection from when it began, recording no history. Used by
-   * escape-to-cancel on drag gestures. No-op without an open transaction.
-   */
   cancelTransaction(): void {
     if (this.transactionDepth === 0) return
     const base = this.transactionBase
@@ -237,7 +194,6 @@ export class EditorEngine {
     this.select([])
   }
 
-  /** Replace the project (e.g. loading a saved file). Resets history. */
   loadProject(project: Project): void {
     const parsed = parseProject(project)
     this.past = []
@@ -252,7 +208,6 @@ export class EditorEngine {
     }))
   }
 
-  /** The project as a JSON-serializable value. */
   toJSON(): Project {
     return this.project
   }
@@ -260,8 +215,6 @@ export class EditorEngine {
   static fromJSON(data: unknown, options: Omit<EditorEngineOptions, 'project'> = {}): EditorEngine {
     return new EditorEngine({ ...options, project: parseProject(data) })
   }
-
-  // -- transport ------------------------------------------------------------
 
   seek(timeMs: number): void {
     const clamped = Math.max(0, timeMs)
@@ -288,8 +241,6 @@ export class EditorEngine {
     this.playback.setState((s) => ({ ...s, playbackRate }))
   }
 
-  // -- internals ------------------------------------------------------------
-
   private pushHistory(entry: HistoryEntry): void {
     this.past.push(entry)
     if (this.past.length > this.maxHistorySize) {
@@ -298,12 +249,6 @@ export class EditorEngine {
     this.future = []
   }
 
-  /**
-   * Commit a project, pruning selection against it. Undo/redo pass the
-   * recorded selection only for entries whose edit declared one (delete,
-   * paste, ...), so restoring a deleted clip restores its selection while
-   * plain edits leave UI-driven selection alone.
-   */
   private commitProject(project: Project, selection?: SelectionState): void {
     this.store.setState((s) => ({
       ...s,
