@@ -1,11 +1,5 @@
 import { getRunStyleAt, type CaptionStyle, type TextBox, type TextRun, type TextRunStyle, type TextStyle } from '@mcut/timeline'
 
-/**
- * Width of `text` drawn with `font` and `letterSpacingPx` of tracking.
- * Implementations should set `ctx.letterSpacing` when the engine supports it
- * so measurement matches drawing; engines without it ignore the parameter
- * (and the renderer draws without tracking — consistent both ways).
- */
 export type MeasureFn = (text: string, font: string, letterSpacingPx?: number) => number
 
 export function buildFont(style: {
@@ -32,49 +26,37 @@ const GENERIC_FAMILIES = new Set([
   'ui-rounded',
 ])
 
-/**
- * Quote a single family name for the canvas font shorthand ("Bebas Neue"
- * breaks the parse unquoted). Generic keywords and pre-built stacks
- * (commas/quotes) pass through untouched.
- */
 function quoteFamily(family: string): string {
   const trimmed = family.trim()
   if (GENERIC_FAMILIES.has(trimmed) || /[,"']/.test(trimmed)) return trimmed
   return `"${trimmed}"`
 }
 
-/** Render-time case transform; the stored text keeps the user's casing. */
 export function applyTextTransform(text: string, transform: TextStyle['textTransform']): string {
   if (transform === 'uppercase') return text.toUpperCase()
   if (transform === 'lowercase') return text.toLowerCase()
   return text
 }
 
-/** One same-style stretch of a visual line (rich-text runs; see rich-text.ts). */
 export interface TextSegment {
-  /** Case-transformed slice, ready to paint. */
   text: string
   width: number
   font: string
-  /** Fill override from the segment's run (base style color otherwise). */
   color?: string
 }
 
 export interface TextBlockLayout {
-  /** `segments` present only when the element has style runs. */
   lines: { text: string; width: number; segments?: TextSegment[] }[]
   font: string
   lineHeight: number
   padding: number
   overflow: TextBox['overflow'] | null
-  /** Box size including padding — matches what the renderer draws. */
   width: number
   height: number
 }
 
 export interface TextBlockOptions {
   box?: TextBox
-  /** Per-range style overrides (character offsets into the text). */
   runs?: readonly TextRun[]
 }
 
@@ -87,11 +69,6 @@ function segmentFont(style: TextStyle, run: TextRunStyle): string {
   })
 }
 
-/**
- * Slice [from, to) of the SOURCE text into measured segments, splitting at
- * run boundaries. Case transform applies per segment (after slicing), so
- * run offsets stay valid even for case-changing transforms.
- */
 function sliceSegments(
   measure: MeasureFn,
   text: string,
@@ -124,7 +101,6 @@ function sliceSegments(
   return segments
 }
 
-/** Sum of segment widths over a source range (wrap candidate measure). */
 function rangeWidth(
   measure: MeasureFn,
   text: string,
@@ -172,11 +148,6 @@ function wrapLine(
   return lines
 }
 
-/**
- * Run-aware layout: lines slice at run boundaries into measured segments.
- * Font size is element-global (runs vary only color/weight/italic), so line
- * metrics stay uniform; only widths differ per segment.
- */
 function layoutRunLines(
   measure: MeasureFn,
   text: string,
@@ -209,8 +180,6 @@ function layoutRunLines(
       finishLine(source.start, source.end)
       continue
     }
-    // Greedy word wrap by source offsets, measuring candidate ranges
-    // segment-by-segment so mixed weights wrap where they truly fit.
     const lineText = text.slice(source.start, source.end)
     const words: Array<{ start: number; end: number }> = []
     const matcher = /\S+/g
@@ -239,10 +208,6 @@ function layoutRunLines(
   return lines
 }
 
-/**
- * Lay out a (possibly multi-line) text element. Lines come from explicit
- * newlines only unless a text box width is provided.
- */
 export function layoutTextBlock(
   measure: MeasureFn,
   text: string,
@@ -280,10 +245,8 @@ export function layoutTextBlock(
 
 export interface CaptionWordBox {
   text: string
-  /** X offset from the line's left edge. */
   x: number
   width: number
-  /** Word timing relative to the element start, when known. */
   startMs?: number
   endMs?: number
 }
@@ -295,10 +258,6 @@ export interface CaptionLayout {
   spaceWidth: number
 }
 
-/**
- * Greedily wrap caption words into centered lines no wider than `maxWidth`.
- * Falls back to whitespace-split text when word timings are absent.
- */
 export function layoutCaption(
   measure: MeasureFn,
   element: { text: string; words?: { text: string; startMs: number; endMs: number }[] },

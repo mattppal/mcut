@@ -25,6 +25,7 @@ export { useEngineSubscription, type EngineStore } from './sync/use-engine-subsc
 export { useDocumentRootClass } from './sync/use-document-root-class'
 export { useDocumentRootAttribute } from './sync/use-document-root-attribute'
 export { useDisposable, type Disposable } from './sync/use-disposable'
+export { useLatest } from './sync/use-latest'
 
 export {
   applyMove,

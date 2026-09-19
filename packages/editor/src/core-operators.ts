@@ -51,10 +51,9 @@ const hasClips = ({ engine }: { engine: import('@mcut/timeline').EditorEngine })
 
 const propertiesSchema = z.array(animatablePropertySchema).optional()
 
-// Toggle within half a frame: pressing M on an existing marker removes it.
 const markerNear = (engine: import('@mcut/timeline').EditorEngine, timeMs: number) => {
-  const toleranceMs = 500 / engine.project.fps
-  return engine.project.markers.find((m) => Math.abs(m.timeMs - timeMs) <= toleranceMs)
+  const halfFrameMs = 500 / engine.project.fps
+  return engine.project.markers.find((m) => Math.abs(m.timeMs - timeMs) <= halfFrameMs)
 }
 
 export const operators = {
@@ -218,7 +217,6 @@ export const operators = {
     run: ({ engine }) =>
       engine.dispatch(
         { type: 'rippleDelete', elementIds: [...engine.selection.elementIds] },
-        // Declared so undo restores the deleted clips' selection.
         { selection: [] },
       ),
   }),
@@ -493,9 +491,7 @@ export const operators = {
         for (const elementId of ids) {
           try {
             engine.dispatch({ type: 'slipElement', elementId, deltaMs })
-          } catch {
-            // Not slippable or out of media: skip this clip.
-          }
+          } catch {}
         }
       })
     },

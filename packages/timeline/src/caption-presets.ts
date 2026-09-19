@@ -1,11 +1,5 @@
 import type { CaptionStyle } from './model'
 
-/**
- * Named caption looks (the Twick/CapCut pattern: presets are data, not
- * code) — style patches merged over each caption's current style. Karaoke
- * variants drive the per-word `activeWordColor` highlight the renderer
- * already supports; word timings come from transcription.
- */
 export interface CaptionStylePreset {
   id: string
   label: string

@@ -79,7 +79,7 @@ describe('getEffectiveVolume', () => {
   test('static volume × fade gain', () => {
     const project = projectWithAudio({ fadeInMs: 500 })
     const element = getElement(project, 'e-a') as AudioElement
-    expect(getEffectiveVolume(element, 1000)).toBe(0) // clip start
+    expect(getEffectiveVolume(element, 1000)).toBe(0)
     expect(getEffectiveVolume(element, 1250)).toBeCloseTo(0.4, 5)
     expect(getEffectiveVolume(element, 2000)).toBeCloseTo(0.8, 5)
   })
@@ -94,7 +94,6 @@ describe('getEffectiveVolume', () => {
       value: 1,
     })
     const element = getElement(project, 'e-a') as AudioElement
-    // Keyframed at 1.0; fade-out halves it at the midpoint of the ramp.
     expect(getEffectiveVolume(element, 2500)).toBeCloseTo(0.5, 5)
   })
 

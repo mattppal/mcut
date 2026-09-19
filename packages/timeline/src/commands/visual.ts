@@ -3,7 +3,7 @@ import { blendModeSchema, effectSchema, motionBlurSchema, type Effect } from '..
 import { CommandError } from '../errors'
 import type { ElementId } from '../id'
 import { elementIdSchema, type Project, type TimelineElement } from '../model'
-import { getTransitionPair, transitionSchema } from '../transitions'
+import { getTransitionPair, MIN_TRANSITION_DURATION_MS, transitionSchema } from '../transitions'
 import { defineCommand, mustLocate, replaceTrack } from './shared'
 
 type VisualElement = TimelineElement & { type: 'video' | 'image' | 'text' | 'multicam' }
@@ -197,9 +197,7 @@ export const setTransition = defineCommand({
             '(transitions require a butt cut)',
         )
       }
-      // OTIO offset constraint, stored: the window may not exceed either
-      // adjacent clip. getTransitionPair already computes the clamped window.
-      if (pair.durationMs < 100) {
+      if (pair.durationMs < MIN_TRANSITION_DURATION_MS) {
         throw new CommandError(
           'out-of-bounds',
           `clips at this cut are too short for a transition (max window ${pair.durationMs}ms)`,

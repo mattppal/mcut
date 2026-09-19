@@ -1,17 +1,13 @@
 import type { Project, TransitionPair, TransitionType } from '@mcut/timeline'
 import type { Canvas2D } from './types'
 
-/** Everything a transition renderer needs to blend its pair. */
 export interface TransitionRenderContext {
   ctx: Canvas2D
   project: Project
   pair: TransitionPair
   timeMs: number
-  /** Blend completion 0→1 across the window (0.5 at the cut). */
   completion: number
-  /** Draw the outgoing clip (already extended past its out point). */
   drawLeft: () => void
-  /** Draw the incoming clip (already pre-rolling before its in point). */
   drawRight: () => void
 }
 
@@ -44,7 +40,6 @@ const slide =
   (direction: 1 | -1): TransitionRenderer =>
   ({ ctx, project, completion, drawLeft, drawRight }) => {
     drawLeft()
-    // Ease-out square: fast entry settling into place.
     const remaining = (1 - completion) * (1 - completion)
     ctx.save()
     ctx.translate(remaining * project.width * direction, 0)

@@ -1,6 +1,6 @@
 import type { z } from 'zod'
 import { CommandError } from '../errors'
-import type { ElementId, TrackId } from '../id'
+import { createElementId, type ElementId, type TrackId } from '../id'
 import type { Project, TimelineElement, Track } from '../model'
 import { compactTimelineIfMagnetic } from '../placement'
 import { getElementLocation, getTrack } from '../selectors'
@@ -43,6 +43,14 @@ export function mustGetTrack(project: Project, trackId: TrackId): Track {
   const track = getTrack(project, trackId)
   if (!track) throw new CommandError('unknown-track', `no track "${trackId}"`)
   return track
+}
+
+export function mintElementId(project: Project, requested: ElementId | undefined): ElementId {
+  if (requested === undefined) return createElementId()
+  if (getElementLocation(project, requested)) {
+    throw new CommandError('duplicate-element', `element "${requested}" already exists`)
+  }
+  return requested
 }
 
 export function mustLocate(project: Project, elementId: ElementId) {

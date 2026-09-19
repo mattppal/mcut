@@ -5,7 +5,6 @@ import { isMatroskaLike } from './video-capabilities'
 
 export type MediaSourceLike = Blob | string
 
-/** Open a Mediabunny input over a Blob/File or a (blob:/http:) URL. */
 export function inputFor(src: MediaSourceLike): Input {
   return new Input({
     formats: ALL_FORMATS,
@@ -74,10 +73,6 @@ function loadNativeMetadata(
   })
 }
 
-/**
- * Browser-native metadata fallback for files the browser can play but
- * Mediabunny cannot parse, e.g. MP4s with an extra unsupported first stream.
- */
 async function probeNativeMedia(src: MediaSourceLike): Promise<MediaProbe | null> {
   if (typeof document === 'undefined') return null
   const mimeType = typeof src === 'string' ? undefined : src.type || undefined
@@ -88,9 +83,7 @@ async function probeNativeMedia(src: MediaSourceLike): Promise<MediaProbe | null
       return {
         durationMs: video.durationMs,
         hasVideo: true,
-        // Native media metadata APIs don't reliably expose audio track
-        // presence in every browser; for video assets this only affects
-        // metadata, because preview audio comes from the same <video>.
+        // audioTracks is absent in most engines per https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/audioTracks#browser_compatibility
         hasAudio: video.audioTracks === undefined ? true : video.audioTracks > 0,
         width: video.width,
         height: video.height,
@@ -112,7 +105,6 @@ async function probeNativeMedia(src: MediaSourceLike): Promise<MediaProbe | null
   }
 }
 
-/** Resolve true once a throwaway `<video>` decodes the file's first frame. */
 function canDecodeNatively(file: File): Promise<boolean> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file)
@@ -126,8 +118,7 @@ function canDecodeNatively(file: File): Promise<boolean> {
     const timer = setTimeout(() => settle(false), 5000)
     video.preload = 'auto'
     video.muted = true
-    // loadeddata (not loadedmetadata): proves the demuxer AND the video
-    // decoder both handle the file, not just that the container parses.
+    // loadeddata fires once the first frame has decoded, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/loadeddata_event
     video.onloadeddata = () => {
       clearTimeout(timer)
       settle(video.videoWidth > 0)
@@ -140,21 +131,15 @@ function canDecodeNatively(file: File): Promise<boolean> {
   })
 }
 
-/** Whether a video can use native `<video>` preview instead of decoded frames. */
 async function hasNativeVideoPreview(file: File, mimeType?: string): Promise<boolean> {
   if (isMatroskaLike({ name: file.name, mimeType: mimeType || file.type })) return false
   if (typeof document === 'undefined') return true
   const type = mimeType || file.type
   if (!type) return true
   if (document.createElement('video').canPlayType(type) !== '') return true
-  // canPlayType under-reports: Chrome answers "" for QuickTime containers it
-  // demuxes and decodes fine (.mov screen recordings, iPhone footage). Probe
-  // by actually decoding a frame before banishing the asset to the decoded
-  // path, which costs smooth preview and (without a pooled element) audio.
   return canDecodeNatively(file)
 }
 
-/** Read duration, dimensions, and track layout of an audio/video file. */
 export async function probeMedia(src: MediaSourceLike): Promise<MediaProbe> {
   const input = inputFor(src)
   try {
@@ -180,7 +165,6 @@ export async function probeMedia(src: MediaSourceLike): Promise<MediaProbe> {
   }
 }
 
-/** Read intrinsic dimensions of an image URL (browser only). */
 export function probeImage(src: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const image = new Image()
@@ -190,12 +174,6 @@ export function probeImage(src: string): Promise<{ width: number; height: number
   })
 }
 
-/**
- * Turn a dropped/picked file into a probed {@link AssetRef} ready for the
- * `addAsset` command. Creates an object URL for `src` — callers own its
- * lifetime (revoke when the asset is removed). `hash` (SHA-256) is the
- * asset's stable identity for persistence/relink; very large files skip it.
- */
 export async function createAssetFromFile(file: File): Promise<AssetRef> {
   const src = URL.createObjectURL(file)
   const hash = await hashBlob(file).catch(() => null)

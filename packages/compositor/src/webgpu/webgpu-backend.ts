@@ -8,7 +8,7 @@ import {
 import { getImageSize } from '../renderers'
 import type { Canvas2D } from '../types'
 import { parseCssColor } from './color'
-import { planEffects, type EffectPass, type EffectPlan } from './effect-plan'
+import { MAX_COLOR_OPS, planEffects, type EffectPass, type EffectPlan } from './effect-plan'
 import {
   BLEND_MODE_IDS,
   BLUR_SHADER,
@@ -21,33 +21,13 @@ import {
 } from './shaders'
 import { gaussianKernel, invertChrome } from './transform'
 
-/**
- * The WebGPU compositor backend. Image quads (video/image elements)
- * composite as full-frame passes over a ping-pong texture pair —
- * `importExternalTexture` keeps `VideoFrame`s zero-copy — with effects as
- * WGSL passes and every blend mode in one shader (mode uniform). Raster
- * content (text, captions, multicam chrome, transitions, custom renderers)
- * still paints through canvas2d in frame space and uploads as a texture
- * layer in z-order, so output matches the reference Canvas2D backend.
- *
- * Lifecycle: `WebGPUBackend.create({ canvas, width, height })` once, then
- * `renderFrameWith(backend, project, timeMs, options)` per frame, `resize`
- * on project dimension changes, `dispose` when done. For export, pass the
- * GPUTexture-backed canvas straight to Mediabunny's CanvasSource — no CPU
- * readback.
- */
-
 export interface WebGPUBackendOptions {
-  /** Presentation canvas; the backend configures its 'webgpu' context. */
   canvas: HTMLCanvasElement | OffscreenCanvas
-  /** Project (composition) size — passes render at this resolution. */
   width: number
   height: number
-  /** Bring your own device (tests/sharing); otherwise adapter-requested. */
   device?: GPUDevice
 }
 
-/** Whether this runtime exposes WebGPU at all (Chrome 113+/Safari 26+/Firefox 141+). */
 export function isWebGPUSupported(): boolean {
   return typeof navigator !== 'undefined' && 'gpu' in navigator && !!navigator.gpu
 }
@@ -84,8 +64,7 @@ interface PooledTexture {
 
 const FORMAT: GPUTextureFormat = 'rgba8unorm'
 
-// Spec bit-flag constants: the GPUTextureUsage/GPUBufferUsage value globals
-// are runtime-only (lib.dom declares the types but not the namespaces).
+// Flag values from https://developer.mozilla.org/en-US/docs/Web/API/GPUTexture/usage and https://developer.mozilla.org/en-US/docs/Web/API/GPUBuffer/usage
 const TEXTURE_USAGE = {
   COPY_DST: 0x02,
   TEXTURE_BINDING: 0x04,
@@ -106,11 +85,9 @@ export class WebGPUBackend implements RenderBackend {
   private readonly context: GPUCanvasContext
   private readonly presentationFormat: GPUTextureFormat
 
-  // Ping-pong accumulation at project resolution.
   private acc: [GPUTexture, GPUTexture]
   private accIndex: 0 | 1 = 0
 
-  // Raster surface for canvas2d content, composited lazily in z-order.
   private readonly rasterCanvas: OffscreenCanvas
   private readonly rasterCtx: Canvas2D
   private rasterDirty = false
@@ -192,7 +169,6 @@ export class WebGPUBackend implements RenderBackend {
       present: fullscreen(PRESENT_SHADER, this.presentationFormat),
     }
 
-    // Identity curves LUT so the color pipeline always has a binding.
     this.identityCurves = device.createTexture({
       size: { width: 256, height: 1 },
       format: FORMAT,
@@ -213,10 +189,6 @@ export class WebGPUBackend implements RenderBackend {
     )
   }
 
-  /**
-   * Register a 3D LUT for `lut3d` effects: `data` is size³ RGB triples
-   * (0..1, red fastest), flattened to a (size² × size) 2D texture.
-   */
   registerLut3D(lutId: string, size: number, data: Float32Array): void {
     if (data.length < size * size * size * 3) throw new Error('LUT data is too short for its size')
     const width = size * size
@@ -243,10 +215,6 @@ export class WebGPUBackend implements RenderBackend {
     this.luts.get(lutId)?.texture.destroy()
     this.luts.set(lutId, { texture, size })
   }
-
-  // -------------------------------------------------------------------------
-  // RenderBackend
-  // -------------------------------------------------------------------------
 
   beginFrame(backgroundColor: string): void {
     const [r, g, b] = parseCssColor(backgroundColor)
@@ -316,8 +284,6 @@ export class WebGPUBackend implements RenderBackend {
     if (chrome.opacity <= 0) return
     const plan = planEffects(chrome.effects)
     if (this.rasterScope > 0 || plan.unsupported) {
-      // Canvas2d-correct fallback: transition scopes need the caller's
-      // canvas state; raw `css` filters only exist there.
       const ctx = this.acquireRaster()
       applyChrome(ctx, chrome, () => drawImageQuad2D(ctx, quad))
       return
@@ -329,14 +295,11 @@ export class WebGPUBackend implements RenderBackend {
     try {
       this.drawQuadOnGpu(quad, chrome, plan, inverse)
     } catch {
-      // Source not GPU-importable (rare: SVG images, detached frames) —
-      // the raster path always works.
       const ctx = this.acquireRaster()
       applyChrome(ctx, chrome, () => drawImageQuad2D(ctx, quad))
     }
   }
 
-  /** Free GPU resources. The backend is unusable afterwards. */
   dispose(): void {
     for (const pooled of this.texturePool) pooled.texture.destroy()
     this.texturePool.length = 0
@@ -349,10 +312,6 @@ export class WebGPUBackend implements RenderBackend {
     this.luts.clear()
     this.context.unconfigure()
   }
-
-  // -------------------------------------------------------------------------
-  // Internals
-  // -------------------------------------------------------------------------
 
   private createAccTexture(): GPUTexture {
     return this.device.createTexture({
@@ -407,7 +366,6 @@ export class WebGPUBackend implements RenderBackend {
     return buffer
   }
 
-  /** Upload the raster scratch and composite it as a normal full-frame layer. */
   private flushRaster(): void {
     if (!this.rasterDirty) return
     this.rasterDirty = false
@@ -428,7 +386,6 @@ export class WebGPUBackend implements RenderBackend {
     plan: EffectPlan,
     inverse: ReturnType<typeof invertChrome>,
   ): void {
-    // Layer texture at the destination's intrinsic size (pre chrome scale).
     const limits = this.device.limits.maxTextureDimension2D
     const lw = Math.max(1, Math.min(limits, Math.round(quad.dw)))
     const lh = Math.max(1, Math.min(limits, Math.round(quad.dh)))
@@ -450,7 +407,6 @@ export class WebGPUBackend implements RenderBackend {
     this.releaseTexture(layer)
   }
 
-  /** Sample (and crop) the source into a fresh layer texture. */
   private prepareLayer(quad: ImageQuad, lw: number, lh: number): GPUTexture {
     const layer = this.acquireTexture(lw, lh)
     const { width: iw, height: ih } = getImageSize(quad.image)
@@ -487,7 +443,6 @@ export class WebGPUBackend implements RenderBackend {
         }),
       )
     } else {
-      // Bitmap-style sources upload through a staging texture.
       const sw = Math.max(1, iw)
       const sh = Math.max(1, ih)
       const staging = this.acquireTexture(sw, sh)
@@ -523,7 +478,6 @@ export class WebGPUBackend implements RenderBackend {
       case 'blur':
         return this.runBlurPasses(layer, pass.radius, lw, lh)
       case 'shadow': {
-        // Shadow = blur of the layer's alpha, offset + tinted, under the layer.
         const blurred = this.runBlurPasses(layer, pass.blur, lw, lh, true)
         const out = this.acquireTexture(lw, lh)
         const uniforms = new Float32Array(8)
@@ -541,7 +495,7 @@ export class WebGPUBackend implements RenderBackend {
       }
       case 'lut3d': {
         const lut = this.luts.get(pass.lutId)
-        if (!lut) return layer // unregistered: render ungraded
+        if (!lut) return layer
         const out = this.acquireTexture(lw, lh)
         const uniforms = new Float32Array(4)
         uniforms.set([lut.size, pass.intensity])
@@ -566,11 +520,10 @@ export class WebGPUBackend implements RenderBackend {
     if (pass.ops.length === 0) return layer
     const out = this.acquireTexture(lw, lh)
 
-    // ColorUniforms: count vec4u + 16 × { kind vec4u, a vec4f, b vec4f }.
-    const buffer = new ArrayBuffer(16 + 16 * 48)
+    const buffer = new ArrayBuffer(16 + MAX_COLOR_OPS * 48)
     const u32 = new Uint32Array(buffer)
     const f32 = new Float32Array(buffer)
-    const ops = pass.ops.slice(0, 16)
+    const ops = pass.ops.slice(0, MAX_COLOR_OPS)
     u32[0] = ops.length
     for (const [i, op] of ops.entries()) {
       const base = (16 + i * 48) / 4

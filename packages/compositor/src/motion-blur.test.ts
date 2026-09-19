@@ -6,9 +6,8 @@ import type { Canvas2D } from './types'
 
 const asCtx = (fake: FakeContext2D): Canvas2D => fake as unknown as Canvas2D
 
-/** Text clip whose position.x sweeps 0 → 400 across 1s, with motion blur on. */
 function movingTextProject(): Project {
-  let project = createProject() // 1920×1080 @ 30fps
+  let project = createProject()
   const trackId = project.tracks[0]!.id
   project = applyCommand(project, {
     type: 'addElement',
@@ -47,7 +46,6 @@ describe('motion blur', () => {
       createScratchContext: () => asCtx(scratch),
     })
 
-    // Four passes in the scratch, each at 1/4 alpha, accumulated additively.
     const passes = scratch.callsTo('fillText')
     expect(passes).toHaveLength(4)
     for (const pass of passes) {
@@ -55,20 +53,16 @@ describe('motion blur', () => {
       expect(pass.globalCompositeOperation).toBe('lighter')
     }
 
-    // The transform sweeps across the shutter window: at 30fps and 180°,
-    // ±8.33ms around the frame at 0.4px/ms → ~6.7px of travel, centered.
     const xs = scratch.callsTo('translate').map((c) => c.args[0] as number)
     expect(xs).toHaveLength(4)
     for (let i = 1; i < xs.length; i++) expect(xs[i]!).toBeGreaterThan(xs[i - 1]!)
     expect(xs[0]!).toBeCloseTo(960 + 197.5, 1)
     expect(xs[3]!).toBeCloseTo(960 + 202.5, 1)
 
-    // Nothing drawn directly on the main ctx; one composite of the scratch.
     expect(main.callsTo('fillText')).toHaveLength(0)
     const composites = main.callsTo('drawImage')
     expect(composites).toHaveLength(1)
     expect(composites[0]!.args[0]).toBe(scratch.canvas)
-    // Scratch state restored after accumulation.
     expect(scratch.globalCompositeOperation).toBe('source-over')
     expect(scratch.globalAlpha).toBe(1)
   })
@@ -112,7 +106,6 @@ describe('motion blur', () => {
 
   test('skips the blur passes when travel inside the window is sub-pixel', () => {
     let project = movingTextProject()
-    // Replace the sweep with a crawl: 2px over the whole second.
     project = applyCommand(project, {
       type: 'setKeyframe',
       elementId: 'e-mb',
