@@ -45,10 +45,6 @@ async function canvasToPngFile(canvas: HTMLCanvasElement, filename: string): Pro
   return new File([blob], filename, { type: "image/png" });
 }
 
-/**
- * Render the current playhead frame into a PNG, register it as a normal image
- * asset, and persist the blob so it survives reload with the rest of the bin.
- */
 export async function captureViewportStill(
   engine: EditorEngine,
   options: CaptureViewportStillOptions = {},

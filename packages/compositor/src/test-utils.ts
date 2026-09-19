@@ -1,19 +1,14 @@
-/** Recording fake 2D context for tests (no real canvas in Bun). */
 export interface RecordedCall {
   method: string
   args: unknown[]
-  /** Snapshot of fillStyle at call time. */
   fillStyle: unknown
   globalAlpha: number
-  /** Snapshot of the effect filter string at call time. */
   filter: string
-  /** Snapshot of the blend mode at call time. */
   globalCompositeOperation: string
 }
 
 export class FakeContext2D {
   calls: RecordedCall[] = []
-  /** Stand-in backing surface, so drawImage(fake.canvas, ...) is identifiable. */
   readonly canvas = { fake: true, owner: this }
   fillStyle: unknown = '#000'
   strokeStyle: unknown = '#000'
@@ -91,7 +86,6 @@ export class FakeContext2D {
     this.record('stroke', [])
   }
   measureText(text: string): { width: number } {
-    // Deterministic: 10px per character regardless of font.
     return { width: text.length * 10 }
   }
 

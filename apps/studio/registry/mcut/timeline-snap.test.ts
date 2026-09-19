@@ -35,9 +35,7 @@ describe("snapTime", () => {
 
 describe("snapClip", () => {
   test("snaps by trailing edge when that edge is closer", () => {
-    // Clip [950, 1950): end is 50 from 2000, start is 50 from 1000 — tie → start wins.
     expect(snapClip(950, 1000, at(1000, 2000), 60)).toMatchObject({ ms: 1000, guideMs: 1000 });
-    // Clip [940, 1960): end is 40 from 2000, start 60 from 1000 → end wins, start shifts.
     expect(snapClip(940, 1020, at(1000, 2000), 60)).toMatchObject({ ms: 980, guideMs: 2000 });
   });
 });
@@ -60,6 +58,6 @@ describe("collectSnapTargets", () => {
 describe("pointerToTimelineMs", () => {
   test("maps clientX through lane origin and zoom", () => {
     expect(pointerToTimelineMs(300, { left: 100 }, 0.05)).toBe(4000);
-    expect(pointerToTimelineMs(50, { left: 100 }, 0.05)).toBe(0); // clamped
+    expect(pointerToTimelineMs(50, { left: 100 }, 0.05)).toBe(0);
   });
 });

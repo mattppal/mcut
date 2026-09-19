@@ -68,7 +68,10 @@ describe("MCP tool manifest", () => {
     expect(body.profile).toBe("agent");
     expect(tools).toEqual(listMcpToolDefinitions("agent"));
     expect(tools).toEqual(JSON.parse(JSON.stringify(MCP_AGENT_TOOL_DEFINITIONS)));
-    expect(tools.length).toBe(19);
+    expect(
+      tools.length,
+      "16 server static tools + 3 bridge-only tools (list_commands, apply_commands, run_operator)",
+    ).toBe(19);
     expect(toolNames.size).toBe(tools.length);
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true);
     for (const command of listCommands()) expect(toolNames.has(command.type)).toBe(false);
@@ -92,7 +95,10 @@ describe("MCP tool manifest", () => {
 
     expect(body.profile).toBe("full");
     expect(tools).toEqual(listMcpToolDefinitions("full"));
-    expect(tools.length).toBe(120);
+    expect(
+      tools.length,
+      "19 agent tools + 42 editor operators + 59 timeline commands",
+    ).toBe(120);
     expect(toolNames.size).toBe(tools.length);
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true);
     for (const id of operatorIds) expect(toolNames.has(liveMcpOperatorToolName(id))).toBe(true);
@@ -125,8 +131,6 @@ describe("Studio action/operator MCP surface", () => {
 
     expect(JSON.parse(JSON.stringify(result.tools))).toEqual(JSON.parse(JSON.stringify(expected)));
 
-    // Every agent tool is either registered on the server or handled by the
-    // bridge in the browser — a third category means the contract drifted.
     const serverNames = new Set(result.tools.map((tool) => tool.name));
     const bridgeOnly = new Set<string>(MCP_BRIDGE_ONLY_TOOL_NAMES);
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) {

@@ -45,7 +45,6 @@ describe('marker commands', () => {
     const reloaded = parseProject(JSON.parse(JSON.stringify(project)))
     expect(reloaded.markers).toEqual(project.markers)
 
-    // A pre-markers document (no `markers` key) parses with an empty list.
     const { markers: _markers, ...legacy } = JSON.parse(JSON.stringify(project))
     expect(parseProject(legacy).markers).toEqual([])
   })

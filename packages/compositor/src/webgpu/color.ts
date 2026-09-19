@@ -1,5 +1,3 @@
-/** Minimal CSS color → linear-ish RGBA for GPU clear values (0..1, straight). */
-
 const NAMED: Record<string, [number, number, number, number]> = {
   black: [0, 0, 0, 1],
   white: [1, 1, 1, 1],
@@ -27,11 +25,6 @@ function hexChannels(hex: string, width: 1 | 2): [number, number, number, number
   return channels.every((p) => Number.isFinite(p)) ? channels : null
 }
 
-/**
- * Parse the CSS colors the compositor actually meets (#hex, rgb()/rgba(),
- * a few names). Unknown input falls back to opaque black — the same color
- * the canvas2d path would effectively paint for an invalid background.
- */
 export function parseCssColor(input: string): [number, number, number, number] {
   const value = input.trim().toLowerCase()
   const named = NAMED[value]

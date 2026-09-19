@@ -39,10 +39,6 @@ import {
 
 export interface CaptionsPanelProps {
   className?: string;
-  /**
-   * Uploads audio and returns a transcript — typically a POST to your own
-   * `/api/transcribe` route so provider API keys stay server-side.
-   */
   transcribe?: (audio: Blob) => Promise<TranscriptResult>;
 }
 
@@ -53,7 +49,6 @@ function captionsOf(project: Project): CaptionElement[] {
     .sort((a, b) => a.startMs - b.startMs);
 }
 
-/** The timeline clip transcription should listen to: selected source-audio element, else first source-audio element. */
 function pickTranscriptionSource(project: Project, selectedElementIds: readonly string[]): ElementAudioSource | null {
   for (const elementId of selectedElementIds) {
     const source = resolveElementAudioSource(project, elementId as ElementId);
@@ -76,12 +71,15 @@ function downloadText(filename: string, text: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
+function retypedTextWithoutWordTimings(text: string): Pick<CaptionElement, "text" | "words"> {
+  return { text, words: [] };
+}
+
 function CaptionRow({ caption }: { caption: CaptionElement }) {
   const engine = useEditor();
   const active = usePlayback((s) => isElementActiveAt(caption, s.currentTimeMs));
   const isPlaying = usePlayback((s) => s.isPlaying);
 
-  // Follow the playhead while playing; never fight a manual scroll or edit.
   const followPlayhead = useCallback(
     (node: HTMLDivElement | null) => {
       if (node && active && isPlaying) {
@@ -128,11 +126,9 @@ function CaptionRow({ caption }: { caption: CaptionElement }) {
             engine.dispatch({
               type: "updateElement",
               elementId: caption.id,
-              // Manual edits invalidate word-level (karaoke) timings.
-              patch: { text: event.target.value, words: [] },
+              patch: retypedTextWithoutWordTimings(event.target.value),
             });
           } catch {
-            // Ignore invalid intermediate states.
           }
         }}
       />
@@ -140,10 +136,6 @@ function CaptionRow({ caption }: { caption: CaptionElement }) {
   );
 }
 
-/**
- * Opt-in for on-device Whisper, shown only where it can actually run
- * (WebGPU + enough memory). Off = the app's server transcription provider.
- */
 function OnDeviceToggle() {
   const enabled = useOnDeviceTranscription();
   if (!isLocalTranscriptionSupported()) return null;
@@ -157,14 +149,12 @@ function OnDeviceToggle() {
   );
 }
 
-/** Apply a named caption look to every caption in one undoable gesture. */
 function CaptionStylePresets({ captions }: { captions: CaptionElement[] }) {
   const engine = useEditor();
   const apply = (preset: CaptionStylePreset) => {
     engine.transact(() => {
       for (const caption of captions) {
         const style = { ...caption.style, ...preset.style };
-        // A preset without a karaoke highlight clears any previous one.
         if (!("activeWordColor" in preset.style)) delete style.activeWordColor;
         try {
           engine.dispatch({
@@ -173,7 +163,6 @@ function CaptionStylePresets({ captions }: { captions: CaptionElement[] }) {
             patch: { style },
           });
         } catch {
-          // Caption vanished mid-apply.
         }
       }
     });
@@ -202,11 +191,6 @@ function CaptionStylePresets({ captions }: { captions: CaptionElement[] }) {
   );
 }
 
-/**
- * Caption workflow: extract audio client-side (Mediabunny → 16kHz WAV),
- * transcribe through the pluggable provider, apply word-timed captions as
- * editable timeline elements, export SRT/VTT.
- */
 export function CaptionsPanel({ className, transcribe }: CaptionsPanelProps) {
   const engine = useEditor();
   const project = useProject();
@@ -255,7 +239,6 @@ export function CaptionsPanel({ className, transcribe }: CaptionsPanelProps) {
       <PanelHeader>
         <PanelSectionLabel>Captions</PanelSectionLabel>
       </PanelHeader>
-      {/* Actions stay pinned; only the transcript below scrolls. */}
       <div className="flex shrink-0 flex-col gap-3 px-3 pb-3">
         <Button
           className="w-full"

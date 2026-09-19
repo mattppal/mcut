@@ -59,10 +59,6 @@ import { TextPanel } from "./text-panel";
 import { TimelinePanel } from "./timeline-panel";
 import { TransportBar } from "./transport-bar";
 
-// ---------------------------------------------------------------------------
-// Hotkeys
-// ---------------------------------------------------------------------------
-
 function isTypingTarget(target: EventTarget | null): target is HTMLElement {
   if (!(target instanceof HTMLElement)) return false;
   return (
@@ -72,7 +68,6 @@ function isTypingTarget(target: EventTarget | null): target is HTMLElement {
   );
 }
 
-/** Fonts referenced by the project load as soon as they appear in it. */
 function ProjectFontLoader() {
   useProjectFontLoader();
   return null;
@@ -103,10 +98,6 @@ function EditorHotkeys() {
   });
   return null;
 }
-
-// ---------------------------------------------------------------------------
-// Autosave + restore
-// ---------------------------------------------------------------------------
 
 let persistenceRequested = false;
 
@@ -178,10 +169,6 @@ function SessionPersistence() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Layout
-// ---------------------------------------------------------------------------
-
 function readPersistedLayout(key: string, resetToken: number): GroupProps["defaultLayout"] | undefined {
   void resetToken;
   if (typeof window === "undefined") return undefined;
@@ -193,7 +180,6 @@ function readPersistedLayout(key: string, resetToken: number): GroupProps["defau
   }
 }
 
-/** Persist a panel-group layout to localStorage (panels need stable `id`s). */
 function usePersistedLayout(
   key: string,
   resetToken: number,
@@ -204,7 +190,6 @@ function usePersistedLayout(
       try {
         window.localStorage.setItem(key, JSON.stringify(layout));
       } catch {
-        // Private mode: layout just doesn't persist.
       }
     },
     [key],
@@ -244,11 +229,6 @@ const LEFT_TABS: Array<{ id: LeftTab; label: string; icon: typeof FolderOpenIcon
   { id: "transcript", label: "Find", icon: SearchIcon },
 ];
 
-/**
- * The outer chrome's left rail: tab icons sit directly on the backdrop (no
- * borders). The active tab adopts the panel surface so it reads as attached
- * to the window beside it; clicking it again collapses the panel.
- */
 function ChromeRail({
   tab,
   collapsed,
@@ -291,7 +271,6 @@ function ChromeRail({
 }
 
 function LeftPanel({ tab, transcribe }: { tab: LeftTab } & Pick<EditorShellProps, "transcribe">) {
-  // Media and captions pin their own headers/actions and scroll themselves.
   if (tab === "media") {
     return (
       <PanelCard>
@@ -325,13 +304,6 @@ function LeftPanel({ tab, transcribe }: { tab: LeftTab } & Pick<EditorShellProps
   );
 }
 
-/**
- * Compositor selection: `?renderer=webgpu` opts the preview into the WebGPU
- * pass pipeline (and `?renderer=canvas2d` stays the escape hatch once the
- * default flips). Requesting WebGPU on a browser without `navigator.gpu`
- * (Chrome 113+/Safari 26+/Firefox 141+) surfaces a clear message and renders
- * with canvas2d instead.
- */
 function usePreviewRenderer(): "canvas2d" | "webgpu" {
   const [renderer] = useState<"canvas2d" | "webgpu">(() => {
     if (typeof window === "undefined") return "canvas2d";
@@ -380,7 +352,6 @@ function PreviewArea() {
             className="overflow-hidden rounded-lg shadow-xl ring-1 ring-foreground/10"
             {...(editingTextId ? { hiddenElementIds: new Set([editingTextId]) } : {})}
             onElementDoubleClick={(elementId) => {
-              // Text edits inline on the canvas; other types just select.
               const element = getElement(engine.project, elementId);
               if (element?.type === "text") setEditingTextId(elementId);
             }}
@@ -409,7 +380,6 @@ function TrackSorter({ children }: { children: React.ReactNode }) {
             toIndex,
           });
         } catch {
-          // Track vanished mid-drag.
         }
       }}
     >
@@ -418,27 +388,11 @@ function TrackSorter({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Shell
-// ---------------------------------------------------------------------------
-
 export interface EditorShellProps {
-  /** Initial project; an empty 1920×1080/30fps project by default. */
   project?: Project;
-  /**
-   * Audio → transcript handler used by the captions panel. Point it at your
-   * own API route (see `app/api/transcribe/route.ts` in the mcut demo) or
-   * any `@mcut/transcription` provider running server-side.
-   */
   transcribe?: (audio: Blob) => Promise<TranscriptResult>;
 }
 
-/**
- * Everything inside the providers: the outer chrome (toolbar across the top,
- * tab rail down the left, both directly on the warm backdrop) framing the
- * editor windows — left panel, preview, inspector, timeline — which float as
- * rounded cards separated by gaps instead of divider lines.
- */
 function Shell({
   transcribe,
   leftPanelRef,
@@ -542,13 +496,6 @@ function Shell({
   );
 }
 
-/**
- * The full mcut editor: warm-grey outer chrome (toolbar + tab rail) around
- * floating panel windows (media · preview · inspector over a multi-track
- * timeline), drag-and-drop from the bin, magnetic editing, ⌘K palette,
- * light/dark themes, and IndexedDB session restore. Installed as source —
- * every panel is yours to modify.
- */
 export function EditorShell({ project, transcribe }: EditorShellProps) {
   const [queryClient] = useState(() => new QueryClient());
   const leftPanelRef = usePanelRef();

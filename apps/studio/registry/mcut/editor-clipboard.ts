@@ -7,17 +7,9 @@ import {
   type TimelineElement,
 } from "@mcut/timeline";
 
-/**
- * The editor's internal clipboard: serialized clips with their original
- * track positions, pasted relative to the playhead. Survives within the
- * session; OS-clipboard JSON interop is a parity-list follow-up.
- */
-
 interface ClipboardEntry {
   element: TimelineElement;
-  /** Model track index at copy time (pasted to the same lane when possible). */
   trackIndex: number;
-  /** Offset from the earliest copied element's startMs. */
   offsetMs: number;
 }
 
@@ -43,18 +35,15 @@ function isEnvelope(value: unknown): value is ClipboardEnvelope {
   );
 }
 
-/** Mirror the internal clipboard to the OS clipboard (cross-tab/project paste). */
 function writeOsClipboard(): void {
   const envelope: ClipboardEnvelope = {
     mcutClipboard: ENVELOPE_VERSION,
     entries: editorClipboard.entries,
   };
   navigator.clipboard?.writeText(JSON.stringify(envelope)).catch(() => {
-    // Permission denied / insecure context: internal clipboard still works.
   });
 }
 
-/** Copy the selection. Returns how many clips were copied. */
 export function copySelection(engine: EditorEngine): number {
   const located = engine.selection.elementIds
     .map((id) => getElementLocation(engine.project, id))
@@ -78,18 +67,12 @@ export function cutSelection(engine: EditorEngine): number {
       try {
         engine.dispatch({ type: "removeElement", elementId });
       } catch {
-        // Already removed.
       }
     }
   });
   return count;
 }
 
-/**
- * Paste at the playhead: the earliest copied clip lands there, the rest keep
- * their relative offsets and lanes (clamped to existing tracks, nudged to
- * free space). The pasted clips become the selection.
- */
 export function pasteAtPlayhead(engine: EditorEngine): ElementId[] {
   if (editorClipboard.entries.length === 0) return [];
   const anchorMs = Math.max(0, Math.round(engine.playback.state.currentTimeMs));
@@ -113,7 +96,6 @@ export function pasteAtPlayhead(engine: EditorEngine): ElementId[] {
         });
         pastedIds.push(id);
       } catch {
-        // Asset was removed since copy, or no room: skip this clip.
       }
     }
   });
@@ -121,11 +103,6 @@ export function pasteAtPlayhead(engine: EditorEngine): ElementId[] {
   return pastedIds;
 }
 
-/**
- * Paste from wherever has content: an mcut envelope on the OS clipboard
- * (written by copy in any mcut tab) wins; the internal clipboard is the
- * fallback when reading is denied or holds something else.
- */
 export async function pasteAtPlayheadFromAnywhere(engine: EditorEngine): Promise<ElementId[]> {
   try {
     const text = await navigator.clipboard?.readText();
@@ -136,7 +113,6 @@ export async function pasteAtPlayheadFromAnywhere(engine: EditorEngine): Promise
       }
     }
   } catch {
-    // Read permission denied or non-JSON content: use the internal entries.
   }
   return pasteAtPlayhead(engine);
 }

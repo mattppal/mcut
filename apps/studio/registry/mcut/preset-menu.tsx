@@ -9,26 +9,14 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-/**
- * The ONE preset affordance, shared by every inspector section that opts in
- * (Figma styles, loosely): a swatch button on the section header that lists
- * the project's presets for this surface, applies one on click, and saves
- * the current values under a name. Presets are pure data on the project
- * (`project.presets`); this menu never interprets `values` — the section
- * captures them in `getValues` and writes them back in `onApply`, so the
- * same component serves element styles and multicam slot styles alike.
- */
 export function PresetMenu({
   kind,
   getValues,
   onApply,
   className,
 }: {
-  /** Preset namespace this section saves into (e.g. "effects", "slot-style"). */
   kind: string;
-  /** Capture the section's current values for "Save preset". */
   getValues: () => Record<string, unknown>;
-  /** Write a preset's values back through the section's normal commands. */
   onApply: (values: Record<string, unknown>) => void;
   className?: string;
 }) {

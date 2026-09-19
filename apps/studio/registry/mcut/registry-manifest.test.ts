@@ -2,12 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
-/**
- * Guards registry.json against drift: every file a registry item's code
- * reaches through imports must ship with that item, and every npm package
- * it imports must be declared, or `shadcn add` installs broken code.
- */
-
 const studioRoot = path.resolve(import.meta.dir, "..", "..");
 
 interface RegistryFile {
@@ -29,7 +23,6 @@ const registry = JSON.parse(
 
 const IMPORT_RE = /(?:from|import)\s+["']([^"']+)["']/g;
 
-/** Packages every Next.js consumer app has without declaring. */
 const FRAMEWORK_PACKAGES = new Set(["react", "react-dom", "next"]);
 
 function resolveRelative(fromFile: string, spec: string): string | undefined {
@@ -52,7 +45,6 @@ function packageName(spec: string): string {
   return spec.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0]!;
 }
 
-/** Strip a version pin like `unicode-animations@1.0.3`. */
 function dependencyName(dep: string): string {
   if (dep.startsWith("@")) return `@${dep.slice(1).split("@")[0]}`;
   return dep.split("@")[0]!;
@@ -64,12 +56,6 @@ interface Closure {
   packages: Set<string>;
 }
 
-/**
- * Walk the transitive import closure of the item's listed files. Stops at
- * `components/ui/*` and `lib/utils.ts`: those are installed via shadcn
- * registryDependencies, so their own imports are the upstream item's
- * responsibility.
- */
 function collectClosure(startFiles: string[]): Closure {
   const files = new Set<string>();
   const uiImports = new Set<string>();

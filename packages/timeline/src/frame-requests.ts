@@ -6,7 +6,6 @@ import { getSourceTimeMs } from './speed'
 
 export interface FrameRequest {
   assetId: string
-  /** Source media time in ms, clamped ≥ 0 (matches renderer clamping). */
   sourceTimeMs: number
 }
 

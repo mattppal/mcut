@@ -120,29 +120,13 @@ export function buildFilterString(effects: readonly Effect[] | undefined): strin
   return parts.join(' ')
 }
 
-/**
- * Per-element motion blur (After Effects' layer motion blur model): the
- * compositor re-samples the element's animated transform at sub-frame times
- * inside a shutter window centered on the frame and accumulates the passes.
- * Only KEYFRAMED transform motion blurs — static clips and source-footage
- * motion are unaffected. Deterministic: the same frame always blurs the same
- * way, in preview and export.
- */
 export const motionBlurSchema = z.object({
   enabled: z.boolean().default(true),
-  /**
-   * Shutter angle in degrees: 360° exposes the full frame interval, 180°
-   * (the default) is the film-camera look — half the interval.
-   */
   shutterAngle: z.number().min(15).max(720).default(180),
 })
 
 export type MotionBlur = z.infer<typeof motionBlurSchema>
 
-/**
- * Compositing blend modes (canvas `globalCompositeOperation` subset that maps
- * 1:1 onto the CSS/Photoshop blend modes).
- */
 export const blendModeSchema = z.enum([
   'normal',
   'multiply',

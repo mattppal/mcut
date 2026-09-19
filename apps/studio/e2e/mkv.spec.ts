@@ -8,19 +8,7 @@ import {
   previewPixels,
 } from "./helpers";
 
-/**
- * MKV has no native <video> support in Chromium, so the editor must fall
- * back to Mediabunny-decoded frames for the bin thumbnail, the clip
- * filmstrip, and the preview canvas. VP9 keeps the committed fixture
- * decodable in the codec-stripped Playwright Chromium build. To cover the
- * codecs real MKVs ship with, generate a fixture and point MCUT_CHROME_PATH
- * at an installed Chrome:
- *
- *   ffmpeg -f lavfi -i testsrc2=duration=2:size=640x360:rate=30 \
- *     -f lavfi -i sine=frequency=220:duration=2 \
- *     -c:v libx264 -pix_fmt yuv420p -c:a aac e2e/fixtures/fixture-h264.mkv
- *   MKV_FIXTURE=fixture-h264 MCUT_CHROME_PATH=... bunx playwright test e2e/mkv.spec.ts
- */
+// Playwright's Chromium lacks the licensed codecs Chrome bundles, so the committed MKV fixture is VP9 rather than H.264. https://playwright.dev/docs/browsers#media-codecs
 const fixture = process.env.MKV_FIXTURE ?? "fixture-vp9";
 
 test("mkv imports, shows a filmstrip, and renders preview frames", async ({ page }) => {
@@ -37,7 +25,6 @@ test("mkv imports, shows a filmstrip, and renders preview frames", async ({ page
   await dragAssetToLane(page, new RegExp(`${fixture}\\.mkv`), { offsetX: 120 });
   await expect(clip(page)).toHaveCount(1);
 
-  // Filmstrip canvas inside the clip eventually paints real pixels.
   await expect
     .poll(
       () =>
@@ -58,12 +45,9 @@ test("mkv imports, shows a filmstrip, and renders preview frames", async ({ page
     )
     .toBeGreaterThan(100);
 
-  // Park the playhead inside the clip (ruler shares the clip's x space);
-  // decoded frames land asynchronously.
   const clipBox = (await clip(page).first().boundingBox())!;
   const ruler = page.locator("div.cursor-col-resize.bg-card").first();
   const rulerBox = (await ruler.boundingBox())!;
-  // ~15% in: leaves most of the 2s clip ahead of the playback check below.
   await ruler.click({
     position: { x: clipBox.x + clipBox.width * 0.15 - rulerBox.x, y: rulerBox.height / 2 },
   });
@@ -71,7 +55,6 @@ test("mkv imports, shows a filmstrip, and renders preview frames", async ({ page
     .poll(() => previewPixels(page), { timeout: 15_000 })
     .toBeGreaterThan(100);
 
-  // Playback keeps rendering decoded frames (no native <video> behind this).
   await page.keyboard.press("Space");
   await page.waitForTimeout(1000);
   expect(await previewPixels(page)).toBeGreaterThan(100);

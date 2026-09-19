@@ -1,7 +1,5 @@
 "use client";
 
-// Multicam: source roles, audio pick, sync nudges, waveform autosync, and the angle cut style.
-
 import { useState } from "react";
 import { useEditor } from "@mcut/react";
 import {
@@ -23,6 +21,14 @@ import {
 import { Spinner } from "./editor-primitives";
 import { NumberField, Section } from "./inspector-fields";
 
+function trimCompensatingALaterStart(referenceTrimStartMs: number, startedAfterReferenceMs: number): number {
+  return referenceTrimStartMs - startedAfterReferenceMs;
+}
+
+function liftThatKeepsEveryTrimNonNegative(trims: Iterable<number>): number {
+  return Math.max(0, -Math.min(...trims));
+}
+
 export function MulticamSection({ element }: { element: TimelineElement & { type: "multicam" } }) {
   const engine = useEditor();
   const [syncing, setSyncing] = useState(false);
@@ -30,16 +36,10 @@ export function MulticamSection({ element }: { element: TimelineElement & { type
     try {
       engine.dispatch(command);
     } catch (error) {
-      // "Nothing happened" reads as a bug — say why the edit was refused.
       toast.error(error instanceof Error ? error.message : "Edit failed");
     }
   };
 
-  /**
-   * Waveform autosync: correlate every source's loudness envelope against
-   * the first source and rewrite trims so the room audio lines up. The sync
-   * nudge fields stay for the last word.
-   */
   const autoSync = async () => {
     if (element.sources.length < 2 || syncing) return;
     setSyncing(true);
@@ -56,13 +56,9 @@ export function MulticamSection({ element }: { element: TimelineElement & { type
         const result = await findSyncOffsetMs(referenceAsset.src, asset.src);
         if (!result) throw new Error(`"${source.key}" has no audio track to sync with`);
         if (result.confidence < 1.3) lowConfidence = true;
-        // offsetMs = how much this source started AFTER the reference; its
-        // trim compensates in the opposite direction.
-        trims.set(source.key, reference.trimStartMs - result.offsetMs);
+        trims.set(source.key, trimCompensatingALaterStart(reference.trimStartMs, result.offsetMs));
       }
-      // Negative trims mean a source has no content yet at multicam start:
-      // shift every trim up equally (relative sync is what matters).
-      const lift = Math.max(0, -Math.min(...trims.values()));
+      const lift = liftThatKeepsEveryTrimNonNegative(trims.values());
       engine.transact(() => {
         for (const [sourceKey, trimStartMs] of trims) {
           dispatch({
@@ -85,8 +81,6 @@ export function MulticamSection({ element }: { element: TimelineElement & { type
     }
   };
 
-  // Roles a source can take: every key the project's layout slots reference,
-  // plus whatever the sources currently hold.
   const roleOptions = Array.from(
     new Set([
       ...engine.project.layouts.flatMap((layout) => layout.slots.map((slot) => slot.source)),

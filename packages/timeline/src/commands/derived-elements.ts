@@ -17,9 +17,7 @@ import { applyThumbnailTemplate, thumbnailTemplateSchema } from '../thumbnails'
 import { defineCommand, insertSorted, mintElementId, mustGetTrack, mustLocate, replaceTrack } from './shared'
 
 const applyCaptionsSchema = z.object({
-  /** Target track; when omitted, a "Captions" track is created on top. */
   trackId: trackIdSchema.optional(),
-  /** Replace existing captions on the target track (default true). */
   replace: z.boolean().default(true),
   captions: z.array(
     z.object({
@@ -104,7 +102,6 @@ export const createMulticam = defineCommand({
     'the camera.',
   payloadSchema: z.object({
     elementIds: z.array(elementIdSchema).min(1),
-    /** Id for the new multicam element; generated when omitted. */
     multicamId: elementIdSchema.optional(),
   }),
   reduce: (project, payload) => {
@@ -119,8 +116,6 @@ export const createMulticam = defineCommand({
     const startMs = Math.min(...videos.map((v) => v.startMs))
     const endMs = Math.max(...videos.map((v) => v.startMs + v.durationMs))
 
-    // Role keys: bottom layer = screen, top layer = camera (the user can
-    // reassign roles afterwards via the multicam source-role controls).
     let keys: string[]
     if (videos.length === 2) {
       const screen = located[0]!.trackIndex <= located[1]!.trackIndex ? 0 : 1
@@ -139,8 +134,6 @@ export const createMulticam = defineCommand({
     const sources = videos.map((video, i) => ({
       key: keys[i]!,
       assetId: video.assetId,
-      // Align: at multicam-local 0 every source plays what it was playing at
-      // the earliest selected clip's start (negative clamps to 0 = freeze-in).
       trimStartMs: Math.max(0, video.trimStartMs - (video.startMs - startMs)),
     }))
 
@@ -159,7 +152,6 @@ export const createMulticam = defineCommand({
       muted: false,
     }
 
-    // Remove the originals, then place the multicam on the first one's track.
     const ids = new Set(payload.elementIds)
     next = {
       ...next,
@@ -184,9 +176,7 @@ export const detachAudio = defineCommand({
     'audio when `toTrackId` is omitted.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
-    /** Track for the audio element; a new bottom track is created when omitted. */
     toTrackId: trackIdSchema.optional(),
-    /** Id for the new audio element; generated when omitted. */
     audioElementId: elementIdSchema.optional(),
   }),
   reduce: (project, payload) => {
@@ -244,7 +234,6 @@ export const detachAudio = defineCommand({
       magnetic: isTimelineMagnetic(next),
       elements: [audio],
     }
-    // Bottom of the paint order: audio has no visuals to occlude.
     return { ...next, tracks: [audioTrack, ...next.tracks] }
   },
 })

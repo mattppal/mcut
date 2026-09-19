@@ -61,7 +61,7 @@ One entry in a multicam element's angle list, the element-local time a layout ta
 
 ```ts
 interface AngleTransitionWindow {
-  type: string
+  type: TransitionType
   durationMs: number
   cutMs: number
   fromLayoutId: string
@@ -191,4 +191,4 @@ function getFrameRequests(
 ): FrameRequest[]
 ```
 
-Returns the frame requests an element makes at a timeline time by calling the `frameRequests` hook of its registered type, or an empty array.
+Returns the source frames an element needs at a timeline time, one request for a video or image, one per visible angle for a multicam element, and none for audio, text, or captions.

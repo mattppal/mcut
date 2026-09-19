@@ -1,7 +1,5 @@
 "use client";
 
-// Timeline clips: filmstrip/waveform media, multicam cut ticks, trim handles, and the clip context menu.
-
 import { memo, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { LinkIcon } from "@/lib/hugeicons";
 import { useEditor, useEditorState } from "@mcut/react";
@@ -41,10 +39,6 @@ import { TRACK_HEIGHT, useClipDrag, type ClipDragMode } from "./timeline-drag";
 
 const TRIM_HANDLE_PX = 9;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function clipLabel(element: TimelineElement, asset?: AssetRef): string {
   if (element.type === "text" || element.type === "caption") return element.text;
   if (element.type === "multicam") {
@@ -64,17 +58,6 @@ function canTrimFromTimeline(element: TimelineElement): boolean {
   return element.type === "video" && !isFlatFreezeVideo(element);
 }
 
-// ---------------------------------------------------------------------------
-// Clip
-// ---------------------------------------------------------------------------
-
-// Clip-type color tokens live in globals.css under [data-editor]; alpha is
-// baked into the tokens, so no opacity modifiers here.
-
-/**
- * Waveform of the multicam's playing audio: the source named by
- * `audioSource` (all sources are muted when it's unset, so draw nothing).
- */
 function MulticamWaveform({
   element,
   widthPx,
@@ -101,11 +84,10 @@ function MulticamWaveform({
   );
 }
 
-/**
- * Multicam clip internals: one label per cut span (the layout it shows) and
- * a draggable tick at every cut. Drag retimes (moveAngleCut, one undo per
- * gesture); alt-click removes the cut.
- */
+function tickKeyStableAcrossRetiming(cutIndex: number): string {
+  return `tick-${cutIndex}`;
+}
+
 function MulticamCutTicks({
   element,
   pxPerMs,
@@ -135,12 +117,9 @@ function MulticamCutTicks({
           </span>
         );
       })}
-      {/* Keyed by index, not atMs: retiming changes atMs on every move, and a
-          key change would remount the tick mid-drag and kill its pointer
-          capture (stranding the open transaction). */}
       {element.angles.slice(1).map((cut, i) => (
         <span
-          key={`tick-${i}`}
+          key={tickKeyStableAcrossRetiming(i)}
           title="Drag to retime the cut · ⌥-click to remove"
           className="absolute inset-y-0 z-30 w-[7px] -translate-x-1/2 cursor-col-resize"
           style={{ left: cut.atMs * pxPerMs }}
@@ -150,7 +129,6 @@ function MulticamCutTicks({
               try {
                 engine.dispatch({ type: "removeAngleCut", elementId: element.id, atMs: cut.atMs });
               } catch {
-                // Cut vanished.
               }
               return;
             }
@@ -171,7 +149,6 @@ function MulticamCutTicks({
               });
               drag.fromMs = Math.max(1, toMs);
             } catch {
-              // Clamped into a neighbor: keep the last good position.
             }
           }}
           onPointerUp={(event) => {
@@ -188,10 +165,6 @@ function MulticamCutTicks({
   );
 }
 
-// Memoized: a clip drag dispatches per frame and re-renders its lane; with
-// structural sharing only the moved element changes identity, so sibling
-// clips bail here. Subscriptions are narrow (own selection flag, own asset)
-// for the same reason — never the whole project.
 export const Clip = memo(function Clip({
   element,
   track,
@@ -213,16 +186,11 @@ export const Clip = memo(function Clip({
   const heightPx = TRACK_HEIGHT - 8;
   const label = clipLabel(element, asset);
 
-  // The press only picks the gesture (selection + move vs trim); the shared
-  // controller owns it from here via window listeners, so the gesture
-  // survives this clip remounting under another lane mid-drag.
   const beginDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     event.stopPropagation();
 
     const selectionIds = engine.selection.elementIds;
-    // Linked partners (shared linkId, e.g. a video and its detached audio)
-    // select, move, and trim as one; this clip first so it anchors gestures.
     const linkGroup = getLinkedElementIds(engine.project, element.id);
     const groupMembers = getGroupedElementIds(engine.project, element.id);
     const groupedIds = [
@@ -236,11 +204,6 @@ export const Clip = memo(function Clip({
 
     const rect = event.currentTarget.getBoundingClientRect();
     const offsetX = event.clientX - rect.left;
-    // Trim when the gesture is just this clip (plus linked partners, which
-    // the drag controller trims in lockstep). The active tool decides what
-    // the handles and the body do; the controller degrades unmet tool
-    // gestures (no neighbor to roll/slide against, nothing to slip) back to
-    // the plain trim/move.
     let mode: ClipDragMode = "move";
     const canTrim = canTrimFromTimeline(element);
     if (canTrim && timelineTool === "slip") mode = "slip";
@@ -287,7 +250,6 @@ export const Clip = memo(function Clip({
     try {
       engine.dispatch(command);
     } catch {
-      // Rejected (overlap/bounds): timeline resyncs from state.
     }
   };
   const showTrimHandles = canTrimFromTimeline(element);
@@ -299,8 +261,6 @@ export const Clip = memo(function Clip({
           <div
             data-mcut-clip={element.type}
             className={cn(
-              // left-0 + translateX: moves stay off the layout path (left
-              // would relayout every absolutely-positioned sibling per frame).
               "group absolute top-1 bottom-1 left-0 flex cursor-grab items-center overflow-hidden rounded-lg text-xs font-medium shadow-sm select-none active:cursor-grabbing",
               getElementUI(element.type).clipClassName,
               selected
@@ -409,10 +369,8 @@ export const Clip = memo(function Clip({
         </span>
         {showTrimHandles && (
           <>
-            {/* Trim brackets */}
             <span
               className={cn(
-                // w-[9px]: trim-handle hit target tuned to sit inside the clip's 10px end caps.
                 "absolute inset-y-0 left-0 z-20 flex w-[9px] cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors",
                 selected ? "bg-overlay-foreground/90" : "group-hover:bg-overlay-foreground/40",
               )}
@@ -481,7 +439,6 @@ export const Clip = memo(function Clip({
           <ContextMenuSub>
             <ContextMenuSubTrigger>Speed</ContextMenuSubTrigger>
             <ContextMenuSubContent>
-              {/* Signed percentages: negative plays the source backward. */}
               {[25, 50, 100, 150, 200, 400, -100].map((pct) => (
                 <ContextMenuItem
                   key={pct}
@@ -502,7 +459,6 @@ export const Clip = memo(function Clip({
                         }
                       });
                     } catch {
-                      // Rejected (overlap after rescale): timeline resyncs.
                     }
                   }}
                 >

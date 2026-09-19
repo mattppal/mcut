@@ -38,15 +38,10 @@ function getFitScale(project: { width: number; height: number }, width: number, 
   return Math.min(project.width / width, project.height / height)
 }
 
-/** Tracks that hold only captions are reserved for the caption workflow. */
 function isCaptionTrack(track: Track): boolean {
   return track.elements.length > 0 && track.elements.every((e) => e.type === 'caption')
 }
 
-/**
- * Insert an element at the playhead on the topmost unlocked track with room,
- * creating a new track when none fits. Returns the new element's id.
- */
 export function insertElementAtPlayhead(engine: EditorEngine, element: TimelineElementInput): ElementId {
   const startMs = quantizeMsToFrame(engine.playback.state.currentTimeMs, engine.project.fps)
   const id = element.id ?? createElementId()
@@ -76,7 +71,6 @@ export function insertElementAtPlayhead(engine: EditorEngine, element: TimelineE
   return id
 }
 
-/** Default timeline element for a media-bin asset. */
 export function elementForAsset(engine: EditorEngine, asset: AssetRef): TimelineElementInput {
   const fit = asset.width && asset.height ? getFitScale(engine.project, asset.width, asset.height) : 1
   const transform = { x: 0, y: 0, scaleX: fit, scaleY: fit, rotation: 0 }
@@ -117,17 +111,11 @@ export function elementForAsset(engine: EditorEngine, asset: AssetRef): Timeline
 export type SequentialCollageLayout = 'horizontal' | 'vertical' | 'auto'
 
 export interface SequentialVideoCollageOptions {
-  /** Natural order of playback and visual slots. */
   assets: readonly AssetRef[]
-  /** `auto`: landscape stacks vertically; portrait/square lays out horizontally. */
   layout?: SequentialCollageLayout
-  /** Per-video punch-in. Values >1 crop toward the center while preserving the slot size. */
   zooms?: readonly number[]
-  /** Replace timeline tracks while keeping project assets. Default true. */
   replaceTimeline?: boolean
-  /** Lock generated tracks against accidental clip edits. Default false. */
   lockTracks?: boolean
-  /** Make generated tracks magnetic so their clips stay snapped left. Default false. */
   magnetic?: boolean
 }
 
@@ -140,7 +128,6 @@ export interface SequentialVideoCollageResult {
   freezeElementIds: `e-${string}`[]
   audioElementIds: `e-${string}`[]
   trackIds: `t-${string}`[]
-  /** @deprecated Use activeVideoElementIds. */
   videoElementIds: `e-${string}`[]
 }
 
@@ -290,7 +277,6 @@ function orderedCollageGroups(
   return ordered
 }
 
-/** Fit the project canvas to the natural bounds of an equal-aspect video collage. */
 export function fitCanvasToVideoCollage(
   engine: EditorEngine,
   assets: readonly AssetRef[],
@@ -306,11 +292,6 @@ export function fitCanvasToVideoCollage(
   return { width, height }
 }
 
-/**
- * Build a sequential video collage from editable primitives:
- * each visual item is a grouped freeze-before / active / freeze-after sequence,
- * with matching audio on one shared audio lane.
- */
 export function createSequentialVideoCollage(
   engine: EditorEngine,
   options: SequentialVideoCollageOptions,
@@ -475,10 +456,6 @@ export function createSequentialVideoCollage(
   }
 }
 
-/**
- * Rebuild freeze regions and sequential audio positions around each collage
- * group's directly editable active video clip.
- */
 export function retimeSequentialCollage(
   engine: EditorEngine,
   groupOrder?: readonly GroupId[],
@@ -598,14 +575,7 @@ export function retimeSequentialCollage(
   }
 }
 
-/**
- * Split every selected element at the playhead, when it crosses one. Linked
- * partners (shared `linkId`, e.g. detached audio) split along with their
- * selected element, and the right halves are re-paired under a fresh linkId
- * so each side stays a coherent pair.
- */
 export function splitSelectionAtPlayhead(engine: EditorEngine): void {
-  // Cuts land on frame boundaries (the documented editing-surface contract).
   const atMs = quantizeMsToFrame(engine.playback.state.currentTimeMs, engine.project.fps)
   if (engine.selection.elementIds.length === 0) return
   const ids = [
@@ -614,7 +584,6 @@ export function splitSelectionAtPlayhead(engine: EditorEngine): void {
     ),
   ]
   engine.transact(() => {
-    // Right-half ids grouped by the original linkId, for re-pairing below.
     const rightsByLink = new Map<string, `e-${string}`[]>()
     for (const elementId of ids) {
       const location = getElementLocation(engine.project, elementId)
@@ -625,7 +594,6 @@ export function splitSelectionAtPlayhead(engine: EditorEngine): void {
       try {
         engine.dispatch({ type: 'splitElement', elementId, atMs, rightElementId })
       } catch {
-        // Split point too close to an edge: skip this element.
         continue
       }
       if (element.linkId) {
@@ -635,15 +603,12 @@ export function splitSelectionAtPlayhead(engine: EditorEngine): void {
     for (const rightIds of rightsByLink.values()) {
       const linkId = rightIds.length > 1 ? createLinkId() : undefined
       for (const elementId of rightIds) {
-        // Single right half (partner didn't split): drop the stale link
-        // rather than leave it paired with the partner's left half.
         engine.dispatch({ type: 'updateElement', elementId, patch: { linkId } })
       }
     }
   })
 }
 
-/** Clear the `linkId` pairing on an element and all its linked partners. */
 export function unlinkElements(engine: EditorEngine, elementId: `e-${string}`): void {
   const ids = getLinkedElementIds(engine.project, elementId)
   engine.transact(() => {
@@ -653,7 +618,6 @@ export function unlinkElements(engine: EditorEngine, elementId: `e-${string}`): 
   })
 }
 
-/** Remove every selected element. */
 export function removeSelection(engine: EditorEngine): void {
   const ids = engine.selection.elementIds
   if (ids.length === 0) return
@@ -662,17 +626,13 @@ export function removeSelection(engine: EditorEngine): void {
       for (const elementId of ids) {
         try {
           engine.dispatch({ type: 'removeElement', elementId })
-        } catch {
-          // Already removed.
-        }
+        } catch {}
       }
     },
-    // Declared so undo restores the deleted clips' selection.
     { selection: [] },
   )
 }
 
-/** Insert a default text element at the playhead. */
 export function addTextAtPlayhead(engine: EditorEngine, text = 'Your text'): ElementId {
   return insertElementAtPlayhead(engine, {
     type: 'text',
@@ -693,11 +653,6 @@ export function addTextAtPlayhead(engine: EditorEngine, text = 'Your text'): Ele
   })
 }
 
-/**
- * Place an element on a specific track near `startMs`. In `normal` mode the
- * position clamps to free space; `overwrite` and `insert` keep the requested
- * position and let the engine carve or ripple (see addElement's editMode).
- */
 export function insertElementOnTrack(
   engine: EditorEngine,
   trackId: TrackId,
@@ -723,7 +678,6 @@ export function insertElementOnTrack(
   return id
 }
 
-/** Create a new topmost track and place the element there. */
 export function insertElementOnNewTrack(
   engine: EditorEngine,
   element: TimelineElementInput,
@@ -745,7 +699,6 @@ export function insertElementOnNewTrack(
   return id
 }
 
-/** Duplicate an element right after itself on the same track. */
 export function duplicateElement(engine: EditorEngine, elementId: ElementId): ElementId | null {
   const location = getElementLocation(engine.project, elementId)
   if (!location) return null
@@ -768,7 +721,6 @@ export interface TextPreset {
   text: string
   durationMs: number
   style: Partial<TextStyle>
-  /** Vertical offset in project px, center-origin. */
   y?: number
 }
 
@@ -818,25 +770,21 @@ export function elementForTextPreset(engine: EditorEngine, preset: TextPreset): 
   }
 }
 
-/** Every element id in the project. */
 export function allElementIds(engine: EditorEngine): `e-${string}`[] {
   return engine.project.tracks.flatMap((track) => track.elements.map((e) => e.id))
 }
 
-/** Select every clip on one track. */
 export function selectTrackElements(engine: EditorEngine, trackId: TrackId): void {
   const track = engine.project.tracks.find((t) => t.id === trackId)
   if (track) engine.select(track.elements.map((e) => e.id))
 }
 
-/** The track containing the current selection's first element, if any. */
 export function trackOfSelection(engine: EditorEngine): Track | undefined {
   const id = engine.selection.elementIds[0]
   if (!id) return undefined
   return getElementLocation(engine.project, id)?.track
 }
 
-/** Duplicate every selected element, one undo entry, duplicates selected. */
 export function duplicateSelection(engine: EditorEngine): void {
   const ids = [...engine.selection.elementIds]
   if (ids.length === 0) return
@@ -858,22 +806,14 @@ export function duplicateSelection(engine: EditorEngine): void {
             trackId: location.track.id,
             element: { ...location.element, id: newId, startMs },
           },
-          // Declared per dispatch (the full id list isn't known up front);
-          // the gesture's single history entry restores the old selection.
           { selection: [...duplicated, newId] },
         )
         duplicated.push(newId)
-      } catch {
-        // No room on this track: skip.
-      }
+      } catch {}
     }
   })
 }
 
-/**
- * Solo a track: mute every other track; toggling again unmutes everything.
- * No schema change is needed because solo is a derived mute state.
- */
 export function toggleSoloTrack(engine: EditorEngine, trackId: TrackId): void {
   const tracks = engine.project.tracks
   const target = tracks.find((t) => t.id === trackId)
@@ -894,7 +834,6 @@ export function toggleSoloTrack(engine: EditorEngine, trackId: TrackId): void {
   })
 }
 
-/** Is this track the current solo, unmuted while every other track is muted? */
 export function isSoloTrack(engine: EditorEngine, trackId: TrackId): boolean {
   const tracks = engine.project.tracks
   if (tracks.length < 2) return false
@@ -903,7 +842,6 @@ export function isSoloTrack(engine: EditorEngine, trackId: TrackId): boolean {
   return tracks.every((t) => t.id === trackId || t.muted)
 }
 
-/** Every clip boundary plus 0, sorted. */
 export function clipEdges(engine: EditorEngine): number[] {
   const edges = new Set<number>([0])
   for (const track of engine.project.tracks) {
@@ -915,7 +853,6 @@ export function clipEdges(engine: EditorEngine): number[] {
   return [...edges].sort((a, b) => a - b)
 }
 
-/** J/K/L shuttle behavior. */
 export function shuttle(engine: EditorEngine, direction: -1 | 0 | 1): void {
   if (direction === 0) {
     engine.pause()
@@ -929,7 +866,6 @@ export function shuttle(engine: EditorEngine, direction: -1 | 0 | 1): void {
   engine.play()
 }
 
-/** Trim the selected clips' start/end to the playhead. */
 export function trimSelectionToPlayhead(engine: EditorEngine, edge: 'start' | 'end'): void {
   const now = quantizeMsToFrame(engine.playback.state.currentTimeMs, engine.project.fps)
   const ids = engine.selection.elementIds
@@ -954,14 +890,11 @@ export function trimSelectionToPlayhead(engine: EditorEngine, edge: 'start' | 'e
             ...('trimStartMs' in element ? { trimStartMs: element.trimStartMs + shiftMs } : {}),
           })
         }
-      } catch {
-        // Min-duration or asset bounds: skip this clip.
-      }
+      } catch {}
     }
   })
 }
 
-/** Split every clip under the playhead on every unlocked track. */
 export function splitAllAtPlayhead(engine: EditorEngine): void {
   const atMs = quantizeMsToFrame(engine.playback.state.currentTimeMs, engine.project.fps)
   engine.transact(() => {
@@ -971,14 +904,11 @@ export function splitAllAtPlayhead(engine: EditorEngine): void {
       if (!hit) continue
       try {
         engine.dispatch({ type: 'splitElement', elementId: hit.id, atMs })
-      } catch {
-        // Too close to an edge.
-      }
+      } catch {}
     }
   })
 }
 
-/** Unique, sorted element-local keyframe times across every animatable property. */
 export function keyframeTimes(element: TimelineElement): number[] {
   const times = new Set<number>()
   for (const property of animatableProperties(element)) {
@@ -987,11 +917,6 @@ export function keyframeTimes(element: TimelineElement): number[] {
   return [...times].sort((a, b) => a - b)
 }
 
-/**
- * Toggle a keyframe at the playhead across the selected element's visual
- * properties. On a keyframe it removes armed keyframes; otherwise it adds
- * keyframes at current resolved values.
- */
 export function toggleMasterKeyframe(engine: EditorEngine): void {
   const id = engine.selection.elementIds[0]
   if (!id) return
@@ -1011,9 +936,7 @@ export function toggleMasterKeyframe(engine: EditorEngine): void {
         if (!isOnKeyframe(element, property, now)) continue
         try {
           engine.dispatch({ type: 'removeKeyframe', elementId: id, property, timeMs: localMs })
-        } catch {
-          // Keyframe at a slightly different ms: skip.
-        }
+        } catch {}
       }
     } else {
       const targets = armed.length > 0 ? armed : masterProperties
@@ -1045,9 +968,7 @@ export function moveKeyframesAtTime(
       if (!getKeyframes(element, property).some((k) => k.timeMs === fromTimeMs)) continue
       try {
         engine.dispatch({ type: 'moveKeyframe', elementId, property, fromTimeMs, toTimeMs })
-      } catch {
-        // Collision on this property: leave it.
-      }
+      } catch {}
     }
   })
 }
@@ -1066,9 +987,7 @@ export function removeKeyframesAtTime(
       if (!getKeyframes(element, property).some((k) => k.timeMs === timeMs)) continue
       try {
         engine.dispatch({ type: 'removeKeyframe', elementId, property, timeMs })
-      } catch {
-        // Already gone.
-      }
+      } catch {}
     }
   })
 }

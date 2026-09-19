@@ -1,11 +1,3 @@
-/**
- * Scrub frame cache (Diffusion Studio's recipe): a binary-searched ring of
- * downscaled frames captured opportunistically while a media element plays
- * or sits on a decoded frame. While the element is mid-seek the preview
- * serves the nearest cached frame instead of flashing black/stale — preview
- * never blocks on decode.
- */
-
 import { valueAt } from './value-at'
 
 interface CachedFrame {
@@ -13,22 +5,17 @@ interface CachedFrame {
   canvas: OffscreenCanvas
 }
 
-/** ≈576² area cap per cached frame — small enough to keep 150 around. */
 const MAX_FRAME_AREA = 331_776
 
 export class ScrubFrameCache {
-  /** Sorted by timeMs for binary search. */
   private frames: CachedFrame[] = []
-  /** Insertion order for FIFO eviction. */
   private order: CachedFrame[] = []
 
   constructor(
     private maxFrames = 150,
-    /** Frames closer together than this are considered duplicates. */
     private minGapMs = 90,
   ) {}
 
-  /** Capture the element's current frame if this instant isn't cached yet. */
   capture(source: HTMLVideoElement, timeMs: number): void {
     if (typeof OffscreenCanvas === 'undefined') return
     const sw = source.videoWidth
@@ -50,7 +37,7 @@ export class ScrubFrameCache {
     try {
       ctx.drawImage(source, 0, 0, canvas.width, canvas.height)
     } catch {
-      return // tainted or decode error: skip
+      return
     }
     const frame: CachedFrame = { timeMs, canvas }
     this.frames.splice(index, 0, frame)
@@ -61,7 +48,6 @@ export class ScrubFrameCache {
     }
   }
 
-  /** The cached frame nearest `timeMs`, or null when the cache is empty. */
   nearest(timeMs: number): OffscreenCanvas | null {
     const index = this.indexAtOrAfter(timeMs)
     const before = this.frames[index - 1]
@@ -79,7 +65,6 @@ export class ScrubFrameCache {
     this.order = []
   }
 
-  /** First index whose frame time is >= timeMs. */
   private indexAtOrAfter(timeMs: number): number {
     let lo = 0
     let hi = this.frames.length

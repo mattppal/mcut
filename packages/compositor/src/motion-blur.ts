@@ -9,25 +9,10 @@ import {
 import { Canvas2DBackend, createElementContext, type RenderBackend } from './backend'
 import type { Canvas2D, ElementRenderer, RenderFrameOptions } from './types'
 
-/**
- * Per-element motion blur, After Effects' layer model: the element renders
- * N times at sub-frame moments inside a shutter window centered on the
- * frame, each pass at 1/N alpha, accumulated additively in a scratch canvas
- * and composited once. Deterministic — sample times derive only from the
- * frame time and project fps, so preview, scrubbing in any order, and export
- * all blur identically.
- *
- * Only KEYFRAMED transform motion blurs (the keyframes give us the
- * sub-frame transforms analytically); static clips and motion inside the
- * source footage are untouched. Video sub-samples reuse the single source
- * frame at the frame's center time — only the transform sweeps.
- */
-
 const TRANSFORM_PROPERTIES = ['position.x', 'position.y', 'scale.x', 'scale.y', 'rotation'] as const
 
 const DEFAULT_SAMPLES = 8
 
-/** Movement gates: skip the N-pass cost when travel inside the window is invisible. */
 const MIN_TRAVEL_PX = 0.75
 const MIN_ROTATION_DEG = 0.05
 const MIN_SCALE_DELTA = 0.002
@@ -56,7 +41,6 @@ function isMovingBetween(element: TimelineElement, t0: number, t1: number): bool
   )
 }
 
-/** Cached accumulation surface; cleared before every use, so reuse is safe. */
 let cachedScratch: OffscreenCanvasRenderingContext2D | null = null
 
 function acquireScratch(
@@ -75,12 +59,6 @@ function acquireScratch(
   return cachedScratch
 }
 
-/**
- * Render `element` with motion blur into `ctx`. Returns false when motion
- * blur does not apply (off, no keyframed transform motion, sub-threshold
- * travel, or no scratch surface available) — the caller then renders the
- * plain single-sample pass.
- */
 export function renderElementWithMotionBlur(
   backend: RenderBackend,
   project: Project,
@@ -103,22 +81,15 @@ export function renderElementWithMotionBlur(
   const samples = Math.max(2, Math.min(64, Math.round(options.motionBlurSamples ?? DEFAULT_SAMPLES)))
   scratch.clearRect(0, 0, project.width, project.height)
   scratch.save()
-  // Additive accumulation: N passes at 1/N alpha sum to the element's own
-  // coverage wherever the samples overlap. The sub-passes always render
-  // through a canvas2d backend over the scratch — accumulation is a raster
-  // process regardless of the outer backend.
   scratch.globalCompositeOperation = 'lighter'
   scratch.globalAlpha = 1 / samples
   const subBackend = new Canvas2DBackend(scratch, project.width, project.height)
   for (let i = 0; i < samples; i++) {
     const resolved = resolveAnimatedElement(element, start + windowMs * ((i + 0.5) / samples))
-    // The element's blend mode applies once at the composite below; inside
-    // the scratch the passes must stay additive.
     const sub =
       'blendMode' in resolved && resolved.blendMode
         ? { ...resolved, blendMode: undefined }
         : resolved
-    // Center frame time → video sub-samples reuse one decoded source frame.
     renderer(sub, createElementContext(subBackend, project, track, timeMs, options.source))
   }
   scratch.restore()

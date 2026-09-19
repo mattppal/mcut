@@ -15,15 +15,6 @@ import { Button } from "@/components/ui/button";
 import { FieldRow, NumberField } from "./inspector-fields";
 import { roundTo } from "./math";
 
-/**
- * The Figma-basics frame editor — align, X/Y, W/H with an aspect lock, and
- * rotation — written once against {@link FrameTarget} so every surface that
- * can place a box on the canvas (timeline elements, multicam layout slots,
- * future overlays) gets the identical rows, gestures, and hotkeys instead of
- * a hand-rolled near-copy. Adapters translate the px-rect reads/writes into
- * whatever the surface stores (center-origin transforms, normalized rects).
- */
-
 export interface FrameRect {
   x: number;
   y: number;
@@ -34,21 +25,13 @@ export interface FrameRect {
 export type FrameField = "x" | "y" | "width" | "height" | "rotation";
 
 export interface FrameTarget {
-  /** Canvas size in px (the project frame). */
   canvas: { width: number; height: number };
-  /** Safe-area rect in canvas px; edge alignments land here. */
   safe: FrameRect;
-  /** Current frame in canvas px, top-left origin. */
   rect: FrameRect;
-  /** Commit a partial frame change in canvas px. */
   setRect: (patch: Partial<FrameRect>) => void;
-  /** Rotation in degrees, for surfaces that rotate. */
   rotation?: { value: number; set: (deg: number) => void };
-  /** Smallest width/height the surface accepts (px). */
   minSize?: number;
-  /** Force W/H edits to preserve aspect and hide the unlock affordance. */
   forceAspectLocked?: boolean;
-  /** Trailing per-row controls (keyframe cluster for elements). */
   controls?: (field: FrameField) => React.ReactNode;
 }
 
@@ -63,7 +46,6 @@ const ALIGNMENTS = [
 
 export type FrameAlignment = (typeof ALIGNMENTS)[number]["key"];
 
-/** Where the rect lands for an alignment: safe-area edges, canvas centers. */
 export function alignFrame(target: FrameTarget, alignment: FrameAlignment): Partial<FrameRect> {
   const { rect, safe, canvas } = target;
   switch (alignment) {
@@ -82,10 +64,6 @@ export function alignFrame(target: FrameTarget, alignment: FrameAlignment): Part
   }
 }
 
-/**
- * Frame rows for a {@link FrameTarget}. Renders bare rows (no Section
- * wrapper) so each surface keeps its own section title and extras.
- */
 export function FrameFields({ target }: { target: FrameTarget }) {
   const [aspectLocked, setAspectLocked] = useState(true);
   const { rect, minSize = 1 } = target;

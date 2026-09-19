@@ -82,10 +82,10 @@ The playback clock state passed to `PreviewMediaPool.sync`, playing flag, rate, 
 ### ContainerFormatId
 
 ```ts
-type ContainerFormatId = 'mp4' | 'webm' | 'mkv' | (string & {})
+type ContainerFormatId = keyof typeof containerFormats
 ```
 
-A registered container format id, one of the built-in `mp4`, `webm`, and `mkv` or a custom id.
+A key of the `containerFormats` table, `mp4`, `webm`, or `mkv`.
 
 ### ExportFontFaceInit
 
@@ -137,11 +137,10 @@ interface ExportResult {
 
 The exported file as a blob together with its file extension.
 
-### ContainerFormatEntry
+### ContainerFormat
 
 ```ts
-interface ContainerFormatEntry {
-  id: string
+interface ContainerFormat {
   label: string
   extension: string
   mimeType: string
@@ -149,7 +148,17 @@ interface ContainerFormatEntry {
 }
 ```
 
-A container format's id, label, file extension, MIME type, and factory for the Mediabunny output format that muxes it.
+A container format's label, file extension, MIME type, and factory for the Mediabunny output format that muxes it.
+
+### ContainerFormatEntry
+
+```ts
+interface ContainerFormatEntry extends ContainerFormat {
+  id: ContainerFormatId
+}
+```
+
+A `ContainerFormat` together with its id, as returned by `listContainerFormats`.
 
 ### Filmstrip
 
