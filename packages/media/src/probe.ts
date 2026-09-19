@@ -53,7 +53,10 @@ function trackListLength(trackList: unknown): number | undefined {
   return typeof trackList.length === 'number' ? trackList.length : undefined
 }
 
-function loadNativeMetadata(tag: 'video' | 'audio', src: string): Promise<NativeMediaMetadata | null> {
+function loadNativeMetadata(
+  tag: 'video' | 'audio',
+  src: string,
+): Promise<NativeMediaMetadata | null> {
   return new Promise((resolve) => {
     const media = document.createElement(tag)
     let settled = false
@@ -153,17 +156,21 @@ async function hasNativeVideoPreview(file: File, mimeType?: string): Promise<boo
   return canDecodeNatively(file)
 }
 
-async function computeDurationSeconds(input: Input): Promise<number> {
+async function probeDurationSeconds(input: Input): Promise<number> {
   const tracks = await input.getTracks()
-  const firstPackets = await Promise.all(tracks.map((track) => new EncodedPacketSink(track).getFirstPacket({ metadataOnly: true })))
-  return input.computeDuration(tracks.filter((_, index) => firstPackets[index] !== null))
+  const firstPackets = await Promise.all(
+    tracks.map((track) => new EncodedPacketSink(track).getFirstPacket({ metadataOnly: true })),
+  )
+  const computed = await input.computeDuration(tracks.filter((_, index) => firstPackets[index] !== null))
+  if (computed > 0) return computed
+  return (await input.getDurationFromMetadata(tracks)) ?? 0
 }
 
 export async function probeMedia(src: MediaSourceLike): Promise<MediaProbe> {
   const input = inputFor(src)
   try {
     const [durationSeconds, video, audio, mimeType] = await Promise.all([
-      computeDurationSeconds(input),
+      probeDurationSeconds(input),
       input.getPrimaryVideoTrack(),
       input.getPrimaryAudioTrack(),
       input.getMimeType().catch(() => undefined),
