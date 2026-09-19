@@ -18,6 +18,14 @@ export {
 
 export { PlayerCanvas, type PlayerCanvasProps, type PreviewQuality } from './player-canvas'
 
+export { useWindowEvent } from './sync/use-window-event'
+export { useDocumentEvent } from './sync/use-document-event'
+export { useElementEvent } from './sync/use-element-event'
+export { useEngineSubscription, type EngineStore } from './sync/use-engine-subscription'
+export { useDocumentRootClass } from './sync/use-document-root-class'
+export { useDocumentRootAttribute } from './sync/use-document-root-attribute'
+export { useDisposable, type Disposable } from './sync/use-disposable'
+
 export {
   applyMove,
   applyBoxResize,

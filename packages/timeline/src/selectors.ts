@@ -1,5 +1,6 @@
 import type { ElementId, TrackId } from './id'
 import type { Project, TimelineElement, Track } from './model'
+import { canPlace } from './placement'
 
 export interface ElementLocation {
   track: Track
@@ -94,29 +95,6 @@ export function getActiveElements(project: Project, timeMs: number): ActiveEleme
     }
   }
   return active
-}
-
-/** Ranges `[startMs, startMs + durationMs)` overlap. */
-export function rangesOverlap(
-  aStartMs: number,
-  aDurationMs: number,
-  bStartMs: number,
-  bDurationMs: number,
-): boolean {
-  return aStartMs < bStartMs + bDurationMs && bStartMs < aStartMs + aDurationMs
-}
-
-export function canPlace(
-  track: Track,
-  startMs: number,
-  durationMs: number,
-  ignoreElementId?: ElementId,
-): boolean {
-  if (startMs < 0) return false
-  return !track.elements.some(
-    (e) =>
-      e.id !== ignoreElementId && rangesOverlap(startMs, durationMs, e.startMs, e.durationMs),
-  )
 }
 
 /**

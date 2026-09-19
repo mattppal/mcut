@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -61,10 +61,15 @@ function FontRow({
   selected: boolean;
   onPick: (family: string) => void;
 }) {
-  // Lazy per-family preview subset so the row shows its real face.
-  useEffect(() => ensureFontPreview(option.family), [option.family]);
+  const previewRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node) ensureFontPreview(option.family);
+    },
+    [option.family],
+  );
   return (
     <CommandItem
+      ref={previewRef}
       value={option.family}
       keywords={[option.category]}
       className={cn("text-sm", selected && "bg-accent/60")}

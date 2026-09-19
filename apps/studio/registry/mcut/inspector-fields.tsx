@@ -87,31 +87,18 @@ export function NumberField({
 }) {
   const engine = useEditor();
   const id = useId();
-  const [text, setText] = useState(String(value));
-  const [scrubbing, setScrubbing] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const scrubRef = useRef<{ startX: number; base: number; moved: boolean } | null>(null);
-  // Enter commits and blurs in one tick; the blur handler must not commit
-  // AGAIN against the stale pre-dispatch `value` (that re-dispatch pushed a
-  // no-op history entry, so the first undo afterwards appeared to do nothing).
-  const skipBlurCommitRef = useRef(false);
+  const text = draft ?? String(value);
 
-  // Resync when the element changes underneath us (drag, undo, reselect).
-  const [lastValue, setLastValue] = useState(value);
-  if (value !== lastValue && !scrubbing && !editing) {
-    setLastValue(value);
-    setText(String(value));
-  }
-
-  const commitText = () => {
-    const parsed = Number(text);
-    if (!Number.isFinite(parsed)) {
-      setText(String(value));
-      return;
-    }
+  const commitDraft = () => {
+    if (draft === null) return;
+    setDraft(null);
+    const parsed = Number(draft);
+    if (!Number.isFinite(parsed)) return;
     const next = clamp(parsed, min, max);
     if (next !== value) onCommit(next);
-    setText(String(next));
   };
 
   const scrubDown = (event: ReactPointerEvent<HTMLElement>) => {
@@ -125,14 +112,11 @@ export function NumberField({
     if (!scrub.moved) {
       if (Math.abs(event.clientX - scrub.startX) < 3) return;
       scrub.moved = true;
-      setScrubbing(true);
     }
     const perPx = scrubPerPx ?? step / 2;
     const decimals = step < 1 ? 2 : 0;
     const raw = scrub.base + (event.clientX - scrub.startX) * perPx;
-    const next = clamp(Number(raw.toFixed(decimals)), min, max);
-    setText(String(next));
-    onCommit(next);
+    onCommit(clamp(Number(raw.toFixed(decimals)), min, max));
   };
   /** Ends a scrub; returns true when the pointer never moved (a click). */
   const scrubUp = (event: ReactPointerEvent<HTMLElement>): boolean => {
@@ -141,12 +125,7 @@ export function NumberField({
     scrubRef.current = null;
     engine.endTransaction();
     event.currentTarget.releasePointerCapture(event.pointerId);
-    if (scrub.moved) {
-      setScrubbing(false);
-      setLastValue(NaN); // force resync from store on next render
-      return false;
-    }
-    return true;
+    return !scrub.moved;
   };
 
   // The input surface scrubs too (Figma): preventDefault holds off focus;
@@ -192,23 +171,16 @@ export function NumberField({
           type="number"
           step={step}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => setDraft(e.target.value)}
           onFocus={() => setEditing(true)}
           onBlur={() => {
             setEditing(false);
-            if (skipBlurCommitRef.current) {
-              skipBlurCommitRef.current = false;
-              return;
-            }
-            commitText();
+            commitDraft();
           }}
           onKeyDown={(e) => {
-            if (e.key !== "Enter") return;
-            commitText();
             // Commit-and-exit (Figma/Premiere): leaving edit mode returns
             // keyboard shortcuts to the editor right away.
-            skipBlurCommitRef.current = true;
-            e.currentTarget.blur();
+            if (e.key === "Enter") e.currentTarget.blur();
           }}
           onPointerDown={onInputPointerDown}
           onPointerMove={(e) => !editing && scrubMove(e)}
@@ -245,14 +217,7 @@ export function ColorField({
   onCommit: (value: string) => void;
 }) {
   const engine = useEditor();
-  const [text, setText] = useState(value);
-  const [editing, setEditing] = useState(false);
-  // Resync the hex input when the element changes underneath us (undo, presets).
-  const [lastValue, setLastValue] = useState(value);
-  if (value !== lastValue && !editing) {
-    setLastValue(value);
-    setText(value);
-  }
+  const [draft, setDraft] = useState<string | null>(null);
 
   // One undo entry per picker gesture: the picker commits on every pointer
   // move, which used to record a history entry per tick — undo then crawled
@@ -304,14 +269,13 @@ export function ColorField({
         </PopoverContent>
       </Popover>
       <Input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onFocus={() => setEditing(true)}
+        value={draft ?? value}
+        onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {
-          setEditing(false);
           // Commit once on exit, not per keystroke (each keystroke was a
           // history entry — and invalid intermediate colors like "#f").
-          if (text !== value) onCommit(text);
+          if (draft !== null && draft !== value) onCommit(draft);
+          setDraft(null);
         }}
         onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
         className="h-7 flex-1 font-mono text-xs"

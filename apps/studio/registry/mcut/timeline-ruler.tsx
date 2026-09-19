@@ -2,8 +2,14 @@
 
 // Ruler + playhead: scrub-to-seek tick ruler, draggable marker flags and guide lines, the playhead, and the snap guide.
 
-import { useEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent } from "react";
-import { useEditor, useEditorState, usePlayback, useProject } from "@mcut/react";
+import { useMemo, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEditor,
+  useEditorState,
+  useEngineSubscription,
+  usePlayback,
+  useProject,
+} from "@mcut/react";
 import { type CaptionElement } from "@mcut/timeline";
 import { searchCaptions } from "@mcut/transcription";
 import { useTranscriptKeywords } from "./transcript-keywords";
@@ -142,7 +148,6 @@ export function MarkerLines({ pxPerMs, height }: { pxPerMs: number; height: numb
 
 export function Ruler({ pxPerMs, contentWidth }: { pxPerMs: number; contentWidth: number }) {
   const engine = useEditor();
-  const scrubbingRef = useRef(false);
 
   const seekFromEvent = (event: ReactPointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -167,15 +172,13 @@ export function Ruler({ pxPerMs, contentWidth }: { pxPerMs: number; contentWidth
         backgroundRepeat: "repeat-x",
       }}
       onPointerDown={(event) => {
-        scrubbingRef.current = true;
         event.currentTarget.setPointerCapture(event.pointerId);
         seekFromEvent(event);
       }}
-      onPointerMove={(event) => scrubbingRef.current && seekFromEvent(event)}
-      onPointerUp={(event) => {
-        scrubbingRef.current = false;
-        event.currentTarget.releasePointerCapture(event.pointerId);
+      onPointerMove={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) seekFromEvent(event);
       }}
+      onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}
     >
       {Array.from({ length: tickCount }, (_, i) => (
         <div
@@ -193,23 +196,22 @@ export function Ruler({ pxPerMs, contentWidth }: { pxPerMs: number; contentWidth
 }
 
 export function Playhead({ pxPerMs, height }: { pxPerMs: number; height: number }) {
+  const engine = useEditor();
   const currentTimeMs = usePlayback((s) => s.currentTimeMs);
-  const isPlaying = usePlayback((s) => s.isPlaying);
   const { timelineScrollRef } = useEditorUI();
 
   // Follow the playhead while playing (manual scrolling stays untouched
   // when paused).
-  useEffect(() => {
-    if (!isPlaying) return;
+  useEngineSubscription(engine.playback, (playback) => {
     const scroller = timelineScrollRef.current;
-    if (!scroller) return;
-    const playheadX = HEADER_WIDTH + currentTimeMs * pxPerMs;
+    if (!playback.isPlaying || !scroller) return;
+    const playheadX = HEADER_WIDTH + playback.currentTimeMs * pxPerMs;
     const viewLeft = scroller.scrollLeft + HEADER_WIDTH;
     const viewRight = scroller.scrollLeft + scroller.clientWidth - 40;
     if (playheadX < viewLeft || playheadX > viewRight) {
       scroller.scrollLeft = Math.max(0, playheadX - HEADER_WIDTH - 80);
     }
-  }, [currentTimeMs, isPlaying, pxPerMs, timelineScrollRef]);
+  });
 
   return (
     <div

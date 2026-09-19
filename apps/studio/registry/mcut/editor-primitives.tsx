@@ -12,6 +12,47 @@ import { cn } from "@/lib/utils";
 
 export type SpinnerAnimation = keyof typeof spinners;
 
+interface FrameClock {
+  subscribe: (listener: () => void) => () => void;
+  getFrame: () => number;
+}
+
+const frameClocks = new Map<number, FrameClock>();
+
+function frameClock(intervalMs: number): FrameClock {
+  const existing = frameClocks.get(intervalMs);
+  if (existing) return existing;
+  let frame = 0;
+  let timer: number | null = null;
+  const listeners = new Set<() => void>();
+  const clock: FrameClock = {
+    subscribe: (listener) => {
+      listeners.add(listener);
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (timer === null && !reduceMotion) {
+        timer = window.setInterval(() => {
+          frame += 1;
+          for (const notify of listeners) notify();
+        }, intervalMs);
+      }
+      return () => {
+        listeners.delete(listener);
+        if (listeners.size === 0 && timer !== null) {
+          window.clearInterval(timer);
+          timer = null;
+        }
+      };
+    },
+    getFrame: () => frame,
+  };
+  frameClocks.set(intervalMs, clock);
+  return clock;
+}
+
+function serverFrame(): number {
+  return 0;
+}
+
 /**
  * The editor's signature loader: a unicode glyph animation instead of a
  * spinning icon. Inherits color and size from the surrounding text, so it
@@ -28,15 +69,8 @@ export function Spinner({
   className?: string;
 }) {
   const { frames, interval } = spinners[animation];
-  const [frame, setFrame] = React.useState(0);
-
-  React.useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setInterval(() => {
-      setFrame((f) => (f + 1) % frames.length);
-    }, interval);
-    return () => window.clearInterval(timer);
-  }, [animation, frames.length, interval]);
+  const clock = frameClock(interval);
+  const frame = React.useSyncExternalStore(clock.subscribe, clock.getFrame, serverFrame);
 
   return (
     <span
