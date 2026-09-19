@@ -1,9 +1,9 @@
 import {
+  canPlace,
   createElementId as createTimelineElementId,
   createTrackId as createTimelineTrackId,
   getElementLocation,
   getSourceSpanMs,
-  rangesOverlap,
   type BuiltinCommand,
   type ElementId,
   type Project,
@@ -66,10 +66,8 @@ export function canPlaceIgnoring(
   durationMs: number,
   ignore: ReadonlySet<string>,
 ): boolean {
-  if (startMs < 0) return false
-  return !track.elements.some(
-    (e) => !ignore.has(e.id) && rangesOverlap(startMs, durationMs, e.startMs, e.durationMs),
-  )
+  const others = track.elements.filter((e) => !ignore.has(e.id))
+  return canPlace({ ...track, elements: others }, startMs, durationMs)
 }
 
 export function collectClipDragBases(
