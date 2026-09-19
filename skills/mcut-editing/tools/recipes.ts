@@ -52,13 +52,13 @@ export const RECIPES: Recipe[] = [
   {
     id: 'jump-cut',
     title: 'Cut a flub out of the middle',
-    intent: '“remove the part from 0:30 to 0:33” / “cut out the mistake”',
+    intent: '"remove the part from 0:30 to 0:33" or "cut out the mistake"',
     template: 'talking-head',
     notes:
-      'Two splits isolate the bad take, then `rippleDelete` removes it AND closes the gap — ' +
-      'later clips on the same track shift left. Plain `removeElement` would leave a hole. ' +
+      'Two splits isolate the bad take. Then `rippleDelete` removes it and closes the gap. ' +
+      'Later clips on the same track shift left. Plain `removeElement` would leave a hole. ' +
       'Naming the right-hand pieces (`rightElementId`) keeps follow-up commands deterministic. ' +
-      'Ripple is per-track: if captions or music must stay in sync, cut them too (or add them after).',
+      'Ripple is per-track. If captions or music must stay in sync, cut them too, or add them after.',
     commands: [
       { type: 'splitElement', elementId: 'e-camera', atMs: 30000, rightElementId: 'e-flub' },
       { type: 'splitElement', elementId: 'e-flub', atMs: 33000, rightElementId: 'e-keep' },
@@ -79,17 +79,16 @@ export const RECIPES: Recipe[] = [
   {
     id: 'silence-cut',
     title: 'Remove silence and dead air',
-    intent: '“cut the silences” / “tighten this up” / “remove the pauses”',
+    intent: '"cut the silences" or "tighten this up" or "remove the pauses"',
     template: 'talking-head',
     cli: 'mcut silence-cuts project.json --transcript transcript.json --element e-camera --min-gap 600 --padding 120',
     notes:
-      'Dozens of millisecond-precise split points is exactly the work to delegate to the CLI: ' +
-      'it finds word gaps in the transcript, pads each cut by 120ms so speech never clips, ' +
-      'turns silences into split + rippleDelete (trailing silence into a trim), and applies ' +
-      'cuts last-to-first so timeline positions stay valid. Add `--dry-run` to print the plan ' +
-      'as commands JSON without writing. Requires 1x playback (no timeMap) on the element; ' +
-      'transcript times are source-media times, so trims/offsets are handled for you. Cutting ' +
-      'leading silence replaces the element id with a fresh one — re-read the summary after.',
+      'The CLI finds word gaps in the transcript and pads each cut by 120ms so speech never clips. ' +
+      'It turns silences into split plus rippleDelete, and trailing silence into a trim. ' +
+      'It applies cuts last-to-first so timeline positions stay valid. Add `--dry-run` to print the plan ' +
+      'as commands JSON without writing. The element must play at 1x, with no timeMap. ' +
+      'Transcript times are source-media times, so trims and offsets are handled for you. Cutting ' +
+      'leading silence replaces the element id with a fresh one. Re-read the summary after.',
     apply: (project) =>
       planSilenceCuts(project, 'e-camera', SAMPLE_TRANSCRIPT, { minGapMs: 600, paddingMs: 120 })
         .project,
@@ -113,13 +112,13 @@ export const RECIPES: Recipe[] = [
   {
     id: 'punch-in',
     title: 'Punch in on the speaker',
-    intent: '“zoom in at 4 seconds” / “punch in for emphasis”',
+    intent: '"zoom in at 4 seconds" or "punch in for emphasis"',
     template: 'talking-head',
     notes:
-      'A pair of keyframes per axis: the first keyframe arms the property (stopwatch on) and its ' +
-      '`easing` shapes the curve TOWARD the second. 1.0 → 1.12 over 400ms with `easeOut` reads as ' +
-      'a deliberate camera move; the zoom holds after the last keyframe. Times are element-local ' +
-      '(0 = clip start), so the move survives the clip being dragged. To punch back out later, add ' +
+      'A pair of keyframes per axis. The first keyframe arms the property (stopwatch on) and its ' +
+      '`easing` shapes the curve toward the second. 1.0 to 1.12 over 400ms with `easeOut` reads as ' +
+      'a deliberate camera move. The zoom holds after the last keyframe. Times are element-local ' +
+      '(0 is clip start), so the move survives the clip being dragged. To punch back out later, add ' +
       'another pair returning to 1.0.',
     commands: [
       { type: 'setKeyframe', elementId: 'e-camera', property: 'scale.x', timeMs: 4000, value: 1, easing: 'easeOut' },
@@ -138,14 +137,14 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: 'j-cut',
-    title: 'J-cut: audio leads the picture',
-    intent: '“start the audio before the video” / “make the intro feel less abrupt”',
+    title: 'J-cut, audio leads the picture',
+    intent: '"start the audio before the video" or "make the intro feel less abrupt"',
     template: 'talking-head',
     notes:
-      '`detachAudio` puts the clip\'s sound on its own element (the video mutes; both share a ' +
-      '`linkId`). Delaying the VIDEO by 500ms while trimming its in-point by the same amount keeps ' +
-      'picture and sound in sync — the audio simply starts first. The same shape against the next ' +
-      'clip on a track gives the classic conversation J-cut; swap which element you delay for an L-cut.',
+      '`detachAudio` puts the clip\'s sound on its own element. The video mutes. Both share a ' +
+      '`linkId`. Delaying the VIDEO by 500ms while trimming its in-point by the same amount keeps ' +
+      'picture and sound in sync. The audio starts first. The same shape against the next ' +
+      'clip on a track gives the classic conversation J-cut. Swap which element you delay for an L-cut.',
     commands: [
       { type: 'detachAudio', elementId: 'e-camera', audioElementId: 'e-camera-audio' },
       { type: 'trimElement', elementId: 'e-camera', startMs: 500, durationMs: 89500, trimStartMs: 500 },
@@ -162,13 +161,13 @@ export const RECIPES: Recipe[] = [
   {
     id: 'intro-title',
     title: 'Animated intro title',
-    intent: '“add a title” / “put the video name on screen at the start”',
+    intent: '"add a title" or "put the video name on screen at the start"',
     template: 'talking-head',
     notes:
-      'Titles get their own top track so they composite over everything. Presets EXPAND into ' +
-      'editable keyframes and MERGE, so an in + an out preset compose on one element: `pop-in` ' +
+      'Titles get their own top track so they composite over everything. Presets expand into ' +
+      'editable keyframes and merge, so an in and an out preset compose on one element. `pop-in` ' +
       'animates the first ~350ms, `fade-out` the last. Hold a title at least 1.5s per line of ' +
-      'text. Style is data — bump `fontSize`/`fontWeight` rather than stacking effects.',
+      'text. Style is data. Bump `fontSize` or `fontWeight` rather than stacking effects.',
     commands: [
       { type: 'addTrack', id: 't-titles', name: 'Titles' },
       {
@@ -195,14 +194,14 @@ export const RECIPES: Recipe[] = [
   {
     id: 'freeze-frame',
     title: 'Freeze frame mid-clip',
-    intent: '“freeze on my face at 5 seconds” / “hold that frame for 2 seconds”',
+    intent: '"freeze on my face at 5 seconds" or "hold that frame for 2 seconds"',
     template: 'talking-head',
     notes:
-      'A timeMap maps element-local output time → source time (relative to `trimStartMs`); a flat ' +
+      'A timeMap maps element-local output time to source time, relative to `trimStartMs`. A flat ' +
       'segment is a freeze. Here playback is 1:1 until 5s, holds source 5s for two seconds, then ' +
-      'runs 1:1 again — the clip duration stays 90s, so the last 2s of source fall off the end ' +
-      '(extend `durationMs` first if you need them). Bezier-eased value changes between points ' +
-      'give speed ramps; `setElementSpeed` is the shortcut for a constant change.',
+      'runs 1:1 again. The clip duration stays 90s, so the last 2s of source fall off the end. ' +
+      'Extend `durationMs` first if you need them. Bezier-eased value changes between points ' +
+      'give speed ramps. `setElementSpeed` is the shortcut for a constant change.',
     commands: [
       {
         type: 'setTimeMap',
@@ -228,12 +227,12 @@ export const RECIPES: Recipe[] = [
   {
     id: 'speed-up',
     title: 'Speed up the whole clip',
-    intent: '“make this 1.25x” / “speed it up a little”',
+    intent: '"make this 1.25x" or "speed it up a little"',
     template: 'talking-head',
     notes:
-      'Constant speed rescales the clip\'s timeline duration to play the same source span — 90s of ' +
-      'source at 1.25x occupies 72s. The in-point is kept. Later clips on the track do NOT move; ' +
-      'follow with `compactTrackGaps` (or cut the music to match) if the change opens a gap. ' +
+      'Constant speed rescales the clip\'s timeline duration to play the same source span. 90s of ' +
+      'source at 1.25x occupies 72s. The in-point is kept. Later clips on the track do not move. ' +
+      'Follow with `compactTrackGaps`, or cut the music to match, if the change opens a gap. ' +
       'Speed 1 removes the map.',
     commands: [{ type: 'setElementSpeed', elementId: 'e-camera', speed: 1.25 }],
     verify: (project) => {
@@ -245,14 +244,14 @@ export const RECIPES: Recipe[] = [
   {
     id: 'captions-karaoke',
     title: 'Word-highlight captions from a transcript',
-    intent: '“caption this” / “add subtitles with the karaoke effect”',
+    intent: '"caption this" or "add subtitles with the karaoke effect"',
     template: 'talking-head',
     cli: 'mcut captions project.json --transcript transcript.json --element e-camera --style karaoke',
     notes:
-      'One `applyCaptions` command carries every caption: the transcript is grouped to caption ' +
-      'length (≤36 chars by default), word timings ride along for the active-word highlight, and ' +
-      'a "Captions" track is created when missing. Scoping to an element (the CLI\'s `--element`, ' +
-      'or `timeOffsetMs`/`sourceStartMs`/`sourceEndMs` by hand) captions exactly the source span ' +
+      'One `applyCaptions` command carries every caption. The transcript is grouped to caption ' +
+      'length (36 chars or fewer by default). Word timings ride along for the active-word highlight. ' +
+      'A "Captions" track is created when missing. Scoping to an element (the CLI `--element` flag, ' +
+      'or `timeOffsetMs`, `sourceStartMs`, and `sourceEndMs` by hand) captions exactly the source span ' +
       'the clip plays, at its timeline position. The command below was built from the sample ' +
       'transcript with the `karaoke` style preset.',
     commands: [
@@ -274,14 +273,14 @@ export const RECIPES: Recipe[] = [
   {
     id: 'multicam-switching',
     title: 'Switch angles on a multicam',
-    intent: '“cut to the camera when they start talking, back to the screen after”',
+    intent: '"cut to the camera when they start talking, back to the screen after"',
     template: 'multicam-podcast',
     notes:
-      'Angle cuts are element-local times naming a LAYOUT (a composition), not just a camera: ' +
-      'full-screen camera, screen + PiP, side-by-side are all layouts. The cut holds until the ' +
-      'next one. `setMulticamAngleTransition` standardizes every cut (null = hard cuts — the ' +
-      'right default; use ≤300ms when you do blend). Switch on speaker changes, never mid-word, ' +
-      'and hold each angle ≥2s. Audio stays pinned to one source via `setMulticamAudio` so ' +
+      'Angle cuts are element-local times naming a layout (a composition), not only a camera. ' +
+      'Full-screen camera, screen plus PiP, and side-by-side are all layouts. The cut holds until the ' +
+      'next one. `setMulticamAngleTransition` standardizes every cut. Null is hard cuts, the ' +
+      'right default. Use 300ms or less when you do blend. Switch on speaker changes, never mid-word, ' +
+      'and hold each angle at least 2s. Audio stays pinned to one source via `setMulticamAudio` so ' +
       'switching angles never changes the sound.',
     commands: [
       { type: 'addAngleCut', elementId: 'e-multicam', atMs: 8000, layoutId: 'lay-camera' },
@@ -305,13 +304,13 @@ export const RECIPES: Recipe[] = [
   {
     id: 'ken-burns-slideshow',
     title: 'Ken Burns slideshow with dissolves',
-    intent: '“make the photos move” / “turn these pictures into a video”',
+    intent: '"make the photos move" or "turn these pictures into a video"',
     template: 'slideshow',
     notes:
-      'Stills need motion: `ken-burns` is an emphasis preset spanning the whole clip (a slow ' +
-      'push + drift, expanded into editable keyframes). Transitions live on the LEFT clip of ' +
+      'Stills need motion. `ken-burns` is an emphasis preset spanning the whole clip. It is a slow ' +
+      'push and drift, expanded into editable keyframes. Transitions live on the left clip of ' +
       'each butt cut, so three photos need two `setTransition` calls. Dissolves at 500ms read ' +
-      'as nostalgic; for energy, drop the dissolves and tighten each photo to 2–3s instead.',
+      'as nostalgic. For energy, drop the dissolves and tighten each photo to 2-3s instead.',
     commands: [
       { type: 'applyAnimationPreset', elementId: 'e-photo-1', preset: 'ken-burns' },
       { type: 'applyAnimationPreset', elementId: 'e-photo-2', preset: 'ken-burns' },
@@ -336,15 +335,15 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: 'vertical-reframe',
-    title: 'Reframe landscape for Shorts/TikTok',
-    intent: '“make a vertical version” / “turn this into a Short”',
+    title: 'Reframe landscape for Shorts or TikTok',
+    intent: '"make a vertical version" or "turn this into a Short"',
     template: 'talking-head',
     notes:
-      'Two moves: retarget the project geometry, then rescale the footage to cover the new ' +
-      'frame. A 1920×1080 source in a 1080×1920 canvas needs scale 1920/1080 ≈ 1.78 to cover ' +
-      '(transforms are center-origin, so x/y default to centered — nudge `x` to reframe toward ' +
-      'the subject). Keep text and captions inside the platform safe areas: chrome covers the ' +
-      'top ~10% and bottom ~25% on TikTok/Shorts/Reels.',
+      'Two moves. Retarget the project geometry, then rescale the footage to cover the new ' +
+      'frame. A 1920×1080 source in a 1080×1920 canvas needs scale 1920/1080 ≈ 1.78 to cover. ' +
+      'Transforms are center-origin, so x/y default to centered. Nudge `x` to reframe toward ' +
+      'the subject. Keep text and captions inside the platform safe areas. Chrome covers the ' +
+      'top ~10% and bottom ~25% on TikTok, Shorts, and Reels.',
     commands: [
       { type: 'updateProject', width: 1080, height: 1920 },
       {
