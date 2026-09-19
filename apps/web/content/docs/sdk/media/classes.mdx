@@ -19,8 +19,8 @@ Error thrown when a file has an audio track but the browser has no decoder for i
 
 ```ts
 class MediaProbeError extends Error {
+  readonly name = 'MediaProbeError'
   readonly code: MediaProbeErrorCode
-  constructor(code: MediaProbeErrorCode, message: string, options?: { cause?: unknown })
 }
 ```
 
