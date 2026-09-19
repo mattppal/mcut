@@ -5,14 +5,7 @@ import { parseArgs } from 'node:util'
 import { localMcpUrl } from '../mcut-local-dev'
 import { openBridgeSession, type BridgeSession } from './bridge-session'
 import { startFixtureServer } from './fixture-server'
-import {
-  GROK_INSTALL_COMMAND,
-  GrokBuildAuthError,
-  checkGrokHandshake,
-  findGrokBinary,
-  runGrokBuildTask,
-  writeGrokProject,
-} from './grok-build'
+import { GROK_INSTALL_COMMAND, GrokBuildAuthError, checkGrokHandshake, findGrokBinary, runGrokBuildTask, writeGrokProject } from './grok-build'
 import { DEFAULT_CAPS, runTask, type Caps } from './loop'
 import { connectMcp, createTransport, describeTarget, type McpSession, type McpTarget } from './mcp'
 import { createScriptedModel } from './model'
@@ -35,7 +28,7 @@ const USAGE = [
   'drivers  xai         the harness loop calls the xAI Responses API and executes its tool calls (default)',
   '         grok-build  the grok CLI runs headless against the bridge from a temp project dir; needs --target bridge',
   '',
-  'dry run  xai         replays each task\'s scripted tool calls, no model call',
+  "dry run  xai         replays each task's scripted tool calls, no model call",
   '         grok-build  checks that grok discovers the temp config and completes the MCP handshake, runs no task',
   '',
   'env  XAI_API_KEY        required unless --dry-run (grok reads it too)',

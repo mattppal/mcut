@@ -132,9 +132,7 @@ export function writeGrokProject(dir: string, mcpUrl: string): string {
   return file
 }
 
-export async function checkGrokHandshake(
-  options: Pick<GrokBuildOptions, 'binary' | 'projectDir' | 'runDir'>,
-): Promise<GrokHandshake> {
+export async function checkGrokHandshake(options: Pick<GrokBuildOptions, 'binary' | 'projectDir' | 'runDir'>): Promise<GrokHandshake> {
   const proc = Bun.spawn([options.binary, '--trust', 'mcp', 'doctor', GROK_SERVER_NAME, '--json'], {
     cwd: options.projectDir,
     env: process.env,
@@ -157,9 +155,7 @@ export async function checkGrokHandshake(
   if (server === undefined) {
     return { healthy: false, detail: `grok mcp doctor did not report ${GROK_SERVER_NAME}. ${stdout.trim()}` }
   }
-  const detail = server.checks
-    .map((check) => `${check.label} ${check.passed ? 'ok' : 'failed'}${check.detail ? ` (${check.detail})` : ''}`)
-    .join(', ')
+  const detail = server.checks.map((check) => `${check.label} ${check.passed ? 'ok' : 'failed'}${check.detail ? ` (${check.detail})` : ''}`).join(', ')
   return { healthy: server.healthy, detail }
 }
 

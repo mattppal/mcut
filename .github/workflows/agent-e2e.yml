@@ -21,6 +21,9 @@ on:
   pull_request:
     paths:
       - scripts/agent-e2e/**
+      - apps/studio/**
+      - packages/mcp-server/**
+      - packages/timeline/**
       - .github/workflows/agent-e2e.yml
 
 permissions:

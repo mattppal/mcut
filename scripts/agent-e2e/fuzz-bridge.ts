@@ -1,13 +1,7 @@
 import { parseArgs } from 'node:util'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { McpFuzzServer } from '../../packages/mcp-server/src/fuzz/stdio-harness'
-import {
-  addTallies,
-  emptyTallies,
-  formatMcpFailure,
-  runMcpPlan,
-  type FamilyTallies,
-} from '../../packages/mcp-server/src/fuzz/run-mcp'
+import { addTallies, emptyTallies, formatMcpFailure, runMcpPlan, type FamilyTallies } from '../../packages/mcp-server/src/fuzz/run-mcp'
 import { knownFailures } from '../../packages/timeline/src/fuzz/known-failures'
 import { minimizeSteps } from '../../packages/timeline/src/fuzz/minimize'
 import { commandOverrides, generatePlan, type FuzzTool, type StepTemplate } from '../../packages/timeline/src/fuzz/plan'
@@ -88,7 +82,9 @@ function printTallies(totals: FamilyTallies): void {
 async function fuzz(server: McpFuzzServer, options: Options): Promise<number> {
   const tools: FuzzTool[] = (await server.listTools()).filter((tool) => !SLOW_TOOLS.has(tool.name))
   const known = options.known ? knownFailures : []
-  log(`${options.seeds.length} sequences of ${options.length} steps over ${tools.length} tools (${[...SLOW_TOOLS].join(', ')} left out, transcription can take minutes)`)
+  log(
+    `${options.seeds.length} sequences of ${options.length} steps over ${tools.length} tools (${[...SLOW_TOOLS].join(', ')} left out, transcription can take minutes)`,
+  )
   const totals = emptyTallies()
   const startedAt = Date.now()
   for (const seed of options.seeds) {
