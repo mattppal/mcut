@@ -16,33 +16,18 @@ Distance in canvas pixels from the top edge of a box to its rotate handle.
 ### elementRenderers
 
 ```ts
-const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> } = {
-  video: renderVideo,
-  multicam: renderMulticam,
-  image: renderImage,
-  text: renderText,
-  caption: renderCaption,
-  audio: () => {},
-}
+const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> }
 ```
 
-The closed table of element renderers keyed by `ElementType`, where each renderer receives the element of its own kind and the audio renderer draws nothing.
+The closed table of element renderers keyed by `ElementType`, where each renderer receives the element of its own kind and the `audio` renderer draws nothing.
 
 ### transitionRenderers
 
 ```ts
-const transitionRenderers: { readonly [K in TransitionType]: TransitionRenderer } = {
-  dissolve,
-  'fade-black': fade('#000000'),
-  'fade-white': fade('#ffffff'),
-  'slide-left': slide(1),
-  'slide-right': slide(-1),
-  'wipe-left': wipe(false),
-  'wipe-right': wipe(true),
-}
+const transitionRenderers: { readonly [K in TransitionType]: TransitionRenderer }
 ```
 
-The closed table of transition renderers keyed by `TransitionType`.
+The closed table of transition renderers keyed by `TransitionType`, a dissolve, fades through black and white, slides, and wipes in both directions.
 
 ## Functions
 

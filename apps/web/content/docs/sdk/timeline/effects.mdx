@@ -138,42 +138,26 @@ Zod schema for the sixteen compositing blend modes, from `normal` to `luminosity
 ### effectSchema
 
 ```ts
-const effectSchema = z.discriminatedUnion('type', [
-  effectShape('blur', { radius: z.number().min(0).max(200).default(8) }),
-  effectShape('brightness', { amount: z.number().min(0).max(4).default(1.1) }),
-  effectShape('contrast', { amount: z.number().min(0).max(4).default(1.1) }),
-  effectShape('saturate', { amount: z.number().min(0).max(4).default(1.25) }),
-  effectShape('grayscale', amount01(1)),
-  effectShape('sepia', amount01(1)),
-  effectShape('hue-rotate', { degrees: z.number().min(-360).max(360).default(90) }),
-  effectShape('invert', amount01(1)),
-  effectShape('drop-shadow', {
-    offsetX: z.number().default(0),
-    offsetY: z.number().default(8),
-    blur: z.number().min(0).max(100).default(16),
-    color: z.string().default('rgba(0, 0, 0, 0.6)'),
-  }),
-  effectShape('css', { filter: z.string().min(1) }),
-  effectShape('chroma-key', {
-    keyColor: z.string().default('#00ff00'),
-    tolerance: z.number().min(0).max(1).default(0.25),
-    softness: z.number().min(0).max(1).default(0.1),
-    spillSuppression: z.number().min(0).max(1).default(0.5),
-  }),
-  effectShape('curves', {
-    rgb: z.array(curvePointSchema).optional(),
-    red: z.array(curvePointSchema).optional(),
-    green: z.array(curvePointSchema).optional(),
-    blue: z.array(curvePointSchema).optional(),
-  }),
-  effectShape('lut3d', {
-    lutId: z.string().min(1),
-    intensity: z.number().min(0).max(1).default(1),
-  }),
-])
+const effectSchema: z.ZodType<Effect>
 ```
 
-Zod discriminated union over the thirteen effect types, where `effectShape` adds the `type` literal and an `enabled` flag defaulting to `true` to each parameter shape.
+Zod discriminated union on `type` over the thirteen effect arms below, where every arm also carries an `enabled` flag defaulting to `true`.
+
+| Type | Parameters |
+| --- | --- |
+| `blur` | `radius` from 0 to 200, default 8 |
+| `brightness` | `amount` from 0 to 4, default 1.1 |
+| `contrast` | `amount` from 0 to 4, default 1.1 |
+| `saturate` | `amount` from 0 to 4, default 1.25 |
+| `grayscale` | `amount` from 0 to 1, default 1 |
+| `sepia` | `amount` from 0 to 1, default 1 |
+| `hue-rotate` | `degrees` from -360 to 360, default 90 |
+| `invert` | `amount` from 0 to 1, default 1 |
+| `drop-shadow` | `offsetX` default 0, `offsetY` default 8, `blur` from 0 to 100 default 16, `color` default `rgba(0, 0, 0, 0.6)` |
+| `css` | `filter`, a non-empty CSS filter string |
+| `chroma-key` | `keyColor` default `#00ff00`, `tolerance` from 0 to 1 default 0.25, `softness` from 0 to 1 default 0.1, `spillSuppression` from 0 to 1 default 0.5 |
+| `curves` | optional `rgb`, `red`, `green`, and `blue` arrays of `CurvePoint` |
+| `lut3d` | `lutId`, a non-empty string, and `intensity` from 0 to 1, default 1 |
 
 ### effectsSchema
 
