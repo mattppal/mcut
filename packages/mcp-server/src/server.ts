@@ -1,18 +1,5 @@
-/**
- * mcut as an MCP server: every editor command becomes an MCP tool, straight
- * from the zod command table, plus the user-level operators from @mcut/editor
- * and the static tools (summary, project, captions, silence cuts, lint,
- * presets, undo/redo).
- *
- * The target can be a local EditorEngine or a live browser tab. Export stays
- * in the browser (WebCodecs); MCP edits the project document/state.
- */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  type Tool,
-} from '@modelcontextprotocol/sdk/types.js'
+import { CallToolRequestSchema, ListToolsRequestSchema, type Tool } from '@modelcontextprotocol/sdk/types.js'
 import {
   OperatorError,
   PLATFORM_PRESETS,
@@ -68,7 +55,6 @@ export interface McutMcpTarget {
 
 export interface McutMcpServerOptions {
   engine: EditorEngine
-  /** Called after every successful edit — persist the project here. */
   onChange?: () => void | Promise<void>
   name?: string
   version?: string
@@ -83,20 +69,16 @@ export interface McutMcpServerForTargetOptions {
 const text = (value: string) => ({ content: [{ type: 'text' as const, text: value }] })
 const failure = (value: string) => ({ ...text(value), isError: true })
 
-const targetProject = async (target: McutMcpTarget): Promise<Project> =>
-  parseProject(await target.getProject())
+const targetProject = async (target: McutMcpTarget): Promise<Project> => parseProject(await target.getProject())
 
 type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure>
 
-const withResult = (lead: string, result: unknown) =>
-  result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`
+const withResult = (lead: string, result: unknown) => (result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`)
 
 function searchProjectTranscript(project: Project, query: string): unknown {
   const captionRefs = getProjectCaptions(project)
   const captions = captionRefs.map((ref) => ref.caption)
-  const byId = new Map<string, (typeof captionRefs)[number]>(
-    captionRefs.map((ref) => [ref.caption.id, ref]),
-  )
+  const byId = new Map<string, (typeof captionRefs)[number]>(captionRefs.map((ref) => [ref.caption.id, ref]))
   const matches = searchCaptions(captions, query).map((match) => {
     const ref = byId.get(match.captionId)
     const text = ref?.caption.text ?? ''
@@ -113,10 +95,7 @@ function searchProjectTranscript(project: Project, query: string): unknown {
   return { query, count: matches.length, matches }
 }
 
-function createEngineTarget(
-  engine: EditorEngine,
-  onChange: () => void | Promise<void>,
-): McutMcpTarget {
+function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise<void>): McutMcpTarget {
   return {
     getSummary: () => summarizeEngine(engine),
     getProject: () => engine.toJSON(),
@@ -232,10 +211,6 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
   }
 }
 
-/**
- * Build the server around an existing engine. The caller owns the transport:
- * `await createMcutMcpServer({ engine }).connect(new StdioServerTransport())`.
- */
 export function createMcutMcpServer(options: McutMcpServerOptions): Server {
   return createMcutMcpServerForTarget({
     target: createEngineTarget(options.engine, options.onChange ?? (() => {})),
@@ -244,16 +219,12 @@ export function createMcutMcpServer(options: McutMcpServerOptions): Server {
   })
 }
 
-/** Build the same MCP tool surface around any target, including a live browser tab. */
 export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOptions): Server {
   const { target } = options
   const tools = listServerToolDefinitions()
   const operatorIdsByTool = new Map(operatorIds.map((id) => [operatorToolName(id), id]))
 
-  const server = new Server(
-    { name: options.name ?? 'mcut', version: options.version ?? '0.1.0' },
-    { capabilities: { tools: {} } },
-  )
+  const server = new Server({ name: options.name ?? 'mcut', version: options.version ?? '0.1.0' }, { capabilities: { tools: {} } })
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: tools as unknown as Tool[],
@@ -275,11 +246,7 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
       await target.dispatchCommand(name, args ?? {})
       return text(`OK: ${name} applied.\n\n${await target.getSummary()}`)
     } catch (error) {
-      if (
-        error instanceof CommandError ||
-        error instanceof ProjectFormatError ||
-        error instanceof OperatorError
-      ) {
+      if (error instanceof CommandError || error instanceof ProjectFormatError || error instanceof OperatorError) {
         return failure(`${error.name} (${error.code}): ${error.message}`)
       }
       return failure(error instanceof Error ? error.message : String(error))

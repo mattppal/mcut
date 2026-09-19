@@ -12,24 +12,13 @@ export interface EditorContextValue {
 const EditorContext = createContext<EditorContextValue | null>(null)
 
 export interface EditorProviderProps {
-  /** Bring your own engine (e.g. created outside React); otherwise one is created. */
   engine?: EditorEngine
-  /** Initial project for the internally-created engine. */
   project?: Project
   maxHistorySize?: number
   children: ReactNode
 }
 
-/**
- * Provides the editor engine and the preview media pool to the component
- * tree. All mcut UI (PlayerCanvas, timeline panels, ...) lives under this.
- */
-export function EditorProvider({
-  engine: externalEngine,
-  project,
-  maxHistorySize,
-  children,
-}: EditorProviderProps) {
+export function EditorProvider({ engine: externalEngine, project, maxHistorySize, children }: EditorProviderProps) {
   const [value] = useState<EditorContextValue>(() => {
     const engine =
       externalEngine ??

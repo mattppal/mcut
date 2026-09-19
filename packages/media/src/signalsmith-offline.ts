@@ -1,22 +1,4 @@
-/**
- * Offline buffer driver for signalsmith-stretch.
- *
- * The official npm build only ships an AudioWorklet wrapper, but export is
- * offline: we want the stretch as a pure samples-in/samples-out call that
- * works anywhere — main thread, dedicated workers (no OfflineAudioContext),
- * and Bun tests (no Web Audio at all). The worklet file detects its scope by
- * looking for `AudioWorkletProcessor`/`registerProcessor` globals, so we
- * shim those for the import, capture the registered processor class, and
- * pump its `process()` blocks ourselves instead of letting an AudioContext
- * drive it. The WASM engine and scheduling logic are untouched — only the
- * realtime callback is replaced with a loop.
- *
- * The processor reads the worklet globals `sampleRate` and `currentTime` as
- * free variables, so renders are serialized through a queue while those sit
- * on `globalThis`.
- */
-
-/** Worklets process audio in fixed 128-frame quanta; the processor assumes the same. */
+// Audio worklets process 128-frame render quanta per https://webaudio.github.io/web-audio-api/#render-quantum-size
 const BLOCK_FRAMES = 128
 
 interface PortEvent {
@@ -28,7 +10,6 @@ interface PortEnd {
   postMessage(data: unknown[], transfer?: unknown): void
 }
 
-/** A same-realm MessageChannel stand-in delivering on microtasks. */
 function createPortPair(): { node: PortEnd; processor: PortEnd } {
   const node: PortEnd = {
     onmessage: null,
@@ -42,22 +23,13 @@ function createPortPair(): { node: PortEnd; processor: PortEnd } {
 }
 
 interface ProcessorInstance {
-  process(
-    inputList: Float32Array[][],
-    outputList: Float32Array[][],
-    parameters: Record<string, unknown>,
-  ): boolean
+  process(inputList: Float32Array[][], outputList: Float32Array[][], parameters: Record<string, unknown>): boolean
 }
 
-type ProcessorClass = new (options: {
-  numberOfInputs: number
-  numberOfOutputs: number
-  outputChannelCount: number[]
-}) => ProcessorInstance
+type ProcessorClass = new (options: { numberOfInputs: number; numberOfOutputs: number; outputChannelCount: number[] }) => ProcessorInstance
 
 const globals = globalThis as Record<string, unknown>
 
-/** Port handed to the next FakeAudioWorkletProcessor constructed. */
 let nextProcessorPort: PortEnd | null = null
 
 let processorClassPromise: Promise<ProcessorClass> | null = null
@@ -95,21 +67,9 @@ function loadProcessorClass(): Promise<ProcessorClass> {
   return processorClassPromise
 }
 
-/** Renders are serialized: the processor reads sampleRate/currentTime off globalThis. */
 let renderQueue: Promise<unknown> = Promise.resolve()
 
-/**
- * Stretch `channels` (equal-length planar PCM) by `tempo` (2 = twice as
- * fast), pitch preserved, producing exactly `outputFrames` frames per
- * channel. Same scheduling as the realtime node: play from input 0 at
- * `tempo` starting at output time 0.
- */
-export function renderStretchOffline(
-  channels: Float32Array[],
-  sampleRate: number,
-  tempo: number,
-  outputFrames: number,
-): Promise<Float32Array[]> {
+export function renderStretchOffline(channels: Float32Array[], sampleRate: number, tempo: number, outputFrames: number): Promise<Float32Array[]> {
   const run = renderQueue.then(
     () => doRender(channels, sampleRate, tempo, outputFrames),
     () => doRender(channels, sampleRate, tempo, outputFrames),
@@ -121,12 +81,7 @@ export function renderStretchOffline(
   return run
 }
 
-async function doRender(
-  channels: Float32Array[],
-  sampleRate: number,
-  tempo: number,
-  outputFrames: number,
-): Promise<Float32Array[]> {
+async function doRender(channels: Float32Array[], sampleRate: number, tempo: number, outputFrames: number): Promise<Float32Array[]> {
   if (channels.length === 0 || outputFrames <= 0) return channels.map(() => new Float32Array(0))
   const Processor = await loadProcessorClass()
 
@@ -151,7 +106,6 @@ async function doRender(
         pending.get(id)?.(value)
         pending.delete(id)
       }
-      // 'time' progress updates are irrelevant offline.
     }
 
     nextProcessorPort = processor

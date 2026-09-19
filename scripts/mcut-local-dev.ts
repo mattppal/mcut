@@ -57,14 +57,7 @@ function bunBin(): string {
 }
 
 async function prepareDevPackages(filters: string[]): Promise<void> {
-  const cmd = [
-    bunBin(),
-    'run',
-    'turbo',
-    'run',
-    'build',
-    ...filters.map((filter) => `--filter=${filter}`),
-  ]
+  const cmd = [bunBin(), 'run', 'turbo', 'run', 'build', ...filters.map((filter) => `--filter=${filter}`)]
   console.error(`[mcut dev] preparing package builds: ${cmd.join(' ')}`)
   const child = spawnProcess('package builds', cmd)
   const code = await child.exited
@@ -110,16 +103,7 @@ async function runDev(): Promise<void> {
   console.error(`[mcut dev] Open editor: ${localEditorBridgeUrl()}`)
 
   const children = [
-    spawnProcess('studio', [
-      bunBin(),
-      'run',
-      '--cwd',
-      'apps/studio',
-      'dev',
-      '--',
-      '--port',
-      String(studioPort),
-    ]),
+    spawnProcess('studio', [bunBin(), 'run', '--cwd', 'apps/studio', 'dev', '--', '--port', String(studioPort)]),
     spawnProcess('mcp bridge', [
       bunBin(),
       'packages/mcp-server/src/bridge-cli.ts',

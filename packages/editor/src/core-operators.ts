@@ -43,18 +43,15 @@ import {
   trimSelectionToPlayhead,
 } from './timeline-operators'
 
-const hasSelection = ({ engine }: { engine: import('@mcut/timeline').EditorEngine }) =>
-  engine.selection.elementIds.length > 0
+const hasSelection = ({ engine }: { engine: import('@mcut/timeline').EditorEngine }) => engine.selection.elementIds.length > 0
 
-const hasClips = ({ engine }: { engine: import('@mcut/timeline').EditorEngine }) =>
-  engine.project.tracks.some((track) => track.elements.length > 0)
+const hasClips = ({ engine }: { engine: import('@mcut/timeline').EditorEngine }) => engine.project.tracks.some((track) => track.elements.length > 0)
 
 const propertiesSchema = z.array(animatablePropertySchema).optional()
 
-// Toggle within half a frame: pressing M on an existing marker removes it.
 const markerNear = (engine: import('@mcut/timeline').EditorEngine, timeMs: number) => {
-  const toleranceMs = 500 / engine.project.fps
-  return engine.project.markers.find((m) => Math.abs(m.timeMs - timeMs) <= toleranceMs)
+  const halfFrameMs = 500 / engine.project.fps
+  return engine.project.markers.find((m) => Math.abs(m.timeMs - timeMs) <= halfFrameMs)
 }
 
 export const operators = {
@@ -215,12 +212,7 @@ export const operators = {
     category: 'edit',
     inputSchema: emptyInputSchema,
     enabled: hasSelection,
-    run: ({ engine }) =>
-      engine.dispatch(
-        { type: 'rippleDelete', elementIds: [...engine.selection.elementIds] },
-        // Declared so undo restores the deleted clips' selection.
-        { selection: [] },
-      ),
+    run: ({ engine }) => engine.dispatch({ type: 'rippleDelete', elementIds: [...engine.selection.elementIds] }, { selection: [] }),
   }),
 
   'edit.trimSelectionToPlayhead': defineOperator({
@@ -296,7 +288,7 @@ export const operators = {
     inputSchema: z.object({ assetId: assetIdSchema }),
     run: ({ engine }, { assetId }) => {
       const asset = engine.project.assets[assetId]
-      if (!asset) throw new Error(`no asset "${assetId}"`)
+      if (!asset) throw new OperatorError('unknown-asset', `no asset "${assetId}"`)
       return { elementId: insertElementAtPlayhead(engine, elementForAsset(engine, asset)) }
     },
   }),
@@ -360,8 +352,7 @@ export const operators = {
       toTimeMs: z.number().int().nonnegative(),
       properties: propertiesSchema,
     }),
-    run: ({ engine }, { elementId, fromTimeMs, toTimeMs, properties }) =>
-      moveKeyframesAtTime(engine, elementId, fromTimeMs, toTimeMs, properties),
+    run: ({ engine }, { elementId, fromTimeMs, toTimeMs, properties }) => moveKeyframesAtTime(engine, elementId, fromTimeMs, toTimeMs, properties),
   }),
 
   'keyframes.removeAtTime': defineOperator({
@@ -373,8 +364,7 @@ export const operators = {
       timeMs: z.number().int().nonnegative(),
       properties: propertiesSchema,
     }),
-    run: ({ engine }, { elementId, timeMs, properties }) =>
-      removeKeyframesAtTime(engine, elementId, timeMs, properties),
+    run: ({ engine }, { elementId, timeMs, properties }) => removeKeyframesAtTime(engine, elementId, timeMs, properties),
   }),
 
   'keyframes.setAtTime': defineOperator({
@@ -477,25 +467,17 @@ export const operators = {
 
   'edit.slipSelection': defineOperator({
     label: 'Slip selection',
-    description:
-      'Slip the selected clips: shift which part of the source plays without moving them. ' +
-      'Linked partners (detached audio) slip together.',
+    description: 'Slip the selected clips: shift which part of the source plays without moving them. ' + 'Linked partners (detached audio) slip together.',
     category: 'edit',
     inputSchema: z.object({ deltaMs: z.number().int() }),
     enabled: hasSelection,
     run: ({ engine }, { deltaMs }) => {
-      const ids = [
-        ...new Set(
-          engine.selection.elementIds.flatMap((id) => getLinkedElementIds(engine.project, id)),
-        ),
-      ]
+      const ids = [...new Set(engine.selection.elementIds.flatMap((id) => getLinkedElementIds(engine.project, id)))]
       engine.transact(() => {
         for (const elementId of ids) {
           try {
             engine.dispatch({ type: 'slipElement', elementId, deltaMs })
-          } catch {
-            // Not slippable or out of media: skip this clip.
-          }
+          } catch {}
         }
       })
     },
@@ -504,8 +486,7 @@ export const operators = {
   'edit.rollEdit': defineOperator({
     label: 'Roll edit',
     description:
-      'Roll the cut between the first selected clip and its exactly-adjacent next clip ' +
-      'by deltaMs. The boundary moves; everything else stays put.',
+      'Roll the cut between the first selected clip and its exactly-adjacent next clip ' + 'by deltaMs. The boundary moves; everything else stays put.',
     category: 'edit',
     inputSchema: z.object({ deltaMs: z.number().int(), elementId: elementIdSchema.optional() }),
     enabled: hasSelection,
@@ -534,7 +515,7 @@ export const operators = {
   'edit.rippleTrimToPlayhead': defineOperator({
     label: 'Ripple trim to playhead',
     description:
-      'Ripple-trim the first selected clip\'s start or end to the playhead: the clip edge ' +
+      "Ripple-trim the first selected clip's start or end to the playhead: the clip edge " +
       'moves to the playhead and everything downstream shifts to keep the timeline gap-free.',
     category: 'edit',
     inputSchema: z.object({
@@ -547,10 +528,7 @@ export const operators = {
       const element = id ? getElement(engine.project, id) : undefined
       if (!element) return
       const playheadMs = quantizeMsToFrame(engine.playback.state.currentTimeMs, engine.project.fps)
-      const deltaMs =
-        edge === 'end'
-          ? playheadMs - (element.startMs + element.durationMs)
-          : playheadMs - element.startMs
+      const deltaMs = edge === 'end' ? playheadMs - (element.startMs + element.durationMs) : playheadMs - element.startMs
       if (deltaMs === 0) return
       engine.dispatch({
         type: 'rippleTrim',
@@ -564,9 +542,7 @@ export const operators = {
 
   'media.exportOtio': defineOperator({
     label: 'Export OpenTimelineIO',
-    description:
-      'Serialize the project as an OpenTimelineIO (.otio) JSON document for interchange ' +
-      'with Resolve and other NLEs.',
+    description: 'Serialize the project as an OpenTimelineIO (.otio) JSON document for interchange ' + 'with Resolve and other NLEs.',
     category: 'media',
     inputSchema: emptyInputSchema,
     enabled: hasClips,
@@ -579,13 +555,9 @@ export const operators = {
     category: 'multicam',
     inputSchema: emptyInputSchema,
     enabled: ({ engine }) =>
-      engine.selection.elementIds.some((id) =>
-        engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video')),
-      ),
+      engine.selection.elementIds.some((id) => engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video'))),
     run: ({ engine }) => {
-      const videoIds = engine.selection.elementIds.filter((id) =>
-        engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video')),
-      )
+      const videoIds = engine.selection.elementIds.filter((id) => engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video')))
       engine.dispatch({ type: 'createMulticam', elementIds: videoIds })
     },
   }),
@@ -631,11 +603,7 @@ export function listOperators(context: EditorOperatorContext): ListedEditorOpera
   })
 }
 
-export async function runOperator(
-  id: OperatorId,
-  context: EditorOperatorContext,
-  input: unknown = {},
-): Promise<unknown> {
+export async function runOperator(id: OperatorId, context: EditorOperatorContext, input: unknown = {}): Promise<unknown> {
   const operator: OperatorDefinition = operators[id]
   const parsed = operator.inputSchema.safeParse(input)
   if (!parsed.success) {
@@ -645,10 +613,7 @@ export async function runOperator(
   }
   const status = enabledStatus(operator, context, parsed.data)
   if (!status.enabled) {
-    throw new OperatorError(
-      'operator-disabled',
-      status.reason ? `operator "${id}" is disabled: ${status.reason}` : `operator "${id}" is disabled`,
-    )
+    throw new OperatorError('operator-disabled', status.reason ? `operator "${id}" is disabled: ${status.reason}` : `operator "${id}" is disabled`)
   }
   return operator.run(context, parsed.data)
 }

@@ -12,24 +12,13 @@ import {
   type TransitionType,
 } from '@mcut/timeline'
 
-export type ClipDragMode =
-  | 'move'
-  | 'trim-start'
-  | 'trim-end'
-  | 'ripple-start'
-  | 'ripple-end'
-  | 'roll-start'
-  | 'roll-end'
-  | 'slip'
-  | 'slide'
+export type ClipDragMode = 'move' | 'trim-start' | 'trim-end' | 'ripple-start' | 'ripple-end' | 'roll-start' | 'roll-end' | 'slip' | 'slide'
 
 export interface ClipDragBase {
   startMs: number
   durationMs: number
   trimStartMs?: number
-  /** Plays its source span backward, so edge trims consume the other end. */
   reversed?: boolean
-  /** Speed-mapped clips freeze edge growth at the map boundary. */
   hasTimeMap?: boolean
   trackIndex: number
 }
@@ -60,20 +49,12 @@ export interface AutoCrossfadePlanInput {
   transitionType?: TransitionType
 }
 
-export function canPlaceIgnoring(
-  track: Track,
-  startMs: number,
-  durationMs: number,
-  ignore: ReadonlySet<string>,
-): boolean {
+export function canPlaceIgnoring(track: Track, startMs: number, durationMs: number, ignore: ReadonlySet<string>): boolean {
   const others = track.elements.filter((e) => !ignore.has(e.id))
   return canPlace({ ...track, elements: others }, startMs, durationMs)
 }
 
-export function collectClipDragBases(
-  project: Project,
-  ids: readonly ElementId[],
-): Map<ElementId, ClipDragBase> {
+export function collectClipDragBases(project: Project, ids: readonly ElementId[]): Map<ElementId, ClipDragBase> {
   const bases = new Map<ElementId, ClipDragBase>()
   for (const id of ids) {
     for (let t = 0; t < project.tracks.length; t++) {
@@ -84,9 +65,7 @@ export function collectClipDragBases(
           durationMs: found.durationMs,
           ...('trimStartMs' in found ? { trimStartMs: found.trimStartMs } : {}),
           ...('reversed' in found && found.reversed === true ? { reversed: true } : {}),
-          ...('timeMap' in found && Array.isArray(found.timeMap) && found.timeMap.length >= 2
-            ? { hasTimeMap: true }
-            : {}),
+          ...('timeMap' in found && Array.isArray(found.timeMap) && found.timeMap.length >= 2 ? { hasTimeMap: true } : {}),
           trackIndex: t,
         })
         break
@@ -96,26 +75,15 @@ export function collectClipDragBases(
   return bases
 }
 
-/**
- * Tool gestures degrade gracefully when their structural requirements are not met.
- */
-export function resolveToolMode(
-  project: Project,
-  mode: ClipDragMode,
-  ids: readonly ElementId[],
-): ResolvedClipDragMode {
+export function resolveToolMode(project: Project, mode: ClipDragMode, ids: readonly ElementId[]): ResolvedClipDragMode {
   const fallback = (m: ClipDragMode): ResolvedClipDragMode => ({ mode: m, rollTargetId: null })
   const anchorId = ids[0]
   if (!anchorId) return fallback(mode)
   const anchor = getElementLocation(project, anchorId)
   if (!anchor) return fallback(mode)
   const { track, element } = anchor
-  const previous = track.elements.find(
-    (e) => e.startMs + e.durationMs === element.startMs && e.id !== element.id,
-  )
-  const next = track.elements.find(
-    (e) => e.startMs === element.startMs + element.durationMs && e.id !== element.id,
-  )
+  const previous = track.elements.find((e) => e.startMs + e.durationMs === element.startMs && e.id !== element.id)
+  const next = track.elements.find((e) => e.startMs === element.startMs + element.durationMs && e.id !== element.id)
   switch (mode) {
     case 'roll-start':
       return previous ? { mode, rollTargetId: previous.id } : fallback('trim-start')
@@ -124,19 +92,13 @@ export function resolveToolMode(
     case 'slide':
       return previous && next ? fallback(mode) : fallback('move')
     case 'slip':
-      return element.type === 'video' || element.type === 'audio' || element.type === 'multicam'
-        ? fallback(mode)
-        : fallback('move')
+      return element.type === 'video' || element.type === 'audio' || element.type === 'multicam' ? fallback(mode) : fallback('move')
     default:
       return fallback(mode)
   }
 }
 
-/** How far the gesture's slippable members can slip without running out of media. */
-export function computeSlipRange(
-  project: Project,
-  ids: readonly ElementId[],
-): { minMs: number; maxMs: number } {
+export function computeSlipRange(project: Project, ids: readonly ElementId[]): { minMs: number; maxMs: number } {
   let minMs = -Infinity
   let maxMs = Infinity
   for (const id of ids) {
@@ -202,10 +164,7 @@ export function planDuplicateClipsToNewTracks(
   return { commands, ids: duplicatedIds, createdTrackIds }
 }
 
-export function planAutoCrossfade(
-  project: Project,
-  input: AutoCrossfadePlanInput,
-): BuiltinCommand | null {
+export function planAutoCrossfade(project: Project, input: AutoCrossfadePlanInput): BuiltinCommand | null {
   const location = getElementLocation(project, input.elementId)
   if (!location || location.track.magnetic) return null
 
@@ -218,12 +177,8 @@ export function planAutoCrossfade(
     transitionType = 'dissolve',
   } = input
   const { track, element } = location
-  const previous = track.elements.find(
-    (e) => e.startMs + e.durationMs === element.startMs && e.id !== element.id,
-  )
-  const next = track.elements.find(
-    (e) => e.startMs === element.startMs + element.durationMs && e.id !== element.id,
-  )
+  const previous = track.elements.find((e) => e.startMs + e.durationMs === element.startMs && e.id !== element.id)
+  const next = track.elements.find((e) => e.startMs === element.startMs + element.durationMs && e.id !== element.id)
   const commandFor = (left: TimelineElement, attemptedOverlapMs: number): BuiltinCommand | null => {
     if (attemptedOverlapMs < minAttemptedOverlapMs || attemptedOverlapMs > maxAttemptedOverlapMs) {
       return null

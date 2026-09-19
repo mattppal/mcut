@@ -1,8 +1,3 @@
-/**
- * Copies the publishable parts of the skill (SKILL.md, references/, assets/)
- * into the Studio app's .well-known directory, where they are served as static
- * files alongside the existing `mcut` integration skill.
- */
 import { createHash } from 'node:crypto'
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -25,7 +20,9 @@ interface SkillIndex {
 }
 
 async function digest(path: string): Promise<string> {
-  return `sha256:${createHash('sha256').update(await readFile(path)).digest('hex')}`
+  return `sha256:${createHash('sha256')
+    .update(await readFile(path))
+    .digest('hex')}`
 }
 
 function frontmatterValue(content: string, key: string): string {

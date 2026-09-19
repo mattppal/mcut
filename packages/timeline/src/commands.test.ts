@@ -1,14 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError, listCommands, listToolDefinitions } from './commands'
-import { createProject, type CaptionElement, type Project, type VideoElement } from './model'
-import {
-  findNearestFreeSlot,
-  getElement,
-  getGroupedElementIds,
-  getProjectDurationMs,
-  getTrack,
-} from './selectors'
-import { mustFind } from './test-helpers'
+import { EditorEngine } from './engine'
+import { createProject, parseProject, type CaptionElement, type Project, type VideoElement } from './model'
+import { findNearestFreeSlot, getElement, getGroupedElementIds, getProjectDurationMs, getTrack } from './selectors'
+import { mustFind, thrownBy } from './test-helpers'
+
+const captionWords = (project: Project) => project.tracks.flatMap((track) => track.elements.flatMap((e) => (e.type === 'caption' ? [e.words] : [])))
 
 function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
   let project = createProject({ name: 'test' })
@@ -21,6 +18,11 @@ function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
 }
 
 describe('track commands', () => {
+  test('createProject gives the default track the same id in every call', () => {
+    expect(createProject().tracks.map((t) => t.id)).toEqual(['t-default'])
+    expect(createProject({ name: 'other' }).tracks.map((t) => t.id)).toEqual(['t-default'])
+  })
+
   test('addTrack appends and inserts at index', () => {
     let project = createProject()
     project = applyCommand(project, { type: 'addTrack', name: 'Overlay' })
@@ -62,7 +64,10 @@ describe('track commands', () => {
   test('compactTrackGaps closes gaps without enabling magnet mode', () => {
     let project = createProject()
     const trackId = mustFind(project.tracks[0], 'first track').id
-    for (const [id, startMs] of [['e-a', 1000], ['e-b', 4000]] as const) {
+    for (const [id, startMs] of [
+      ['e-a', 1000],
+      ['e-b', 4000],
+    ] as const) {
       project = applyCommand(project, {
         type: 'addElement',
         trackId,
@@ -267,9 +272,7 @@ describe('element commands', () => {
     })
     expect(mustFind(getTrack(moved, trackId), trackId).elements).toHaveLength(0)
     expect(mustFind(getTrack(moved, trackB), trackB).elements.map((e) => e.id)).toEqual(['e-two', 'e-one'])
-    expect(() =>
-      applyCommand(project, { type: 'moveElement', elementId: 'e-one', startMs: 1000, toTrackId: trackB }),
-    ).toThrow('overlap')
+    expect(() => applyCommand(project, { type: 'moveElement', elementId: 'e-one', startMs: 1000, toTrackId: trackB })).toThrow('overlap')
   })
 
   test('trimElement updates timing within asset bounds', () => {
@@ -291,9 +294,7 @@ describe('element commands', () => {
       durationMs: 3000,
       trimStartMs: 1000,
     })
-    expect(() =>
-      applyCommand(project, { type: 'trimElement', elementId: 'e-one', durationMs: 11_000 }),
-    ).toThrow('plays past the end')
+    expect(() => applyCommand(project, { type: 'trimElement', elementId: 'e-one', durationMs: 11_000 })).toThrow('plays past the end')
   })
 
   test('magnetic tracks compact after remove, trim, and cross-track moves', () => {
@@ -335,9 +336,7 @@ describe('element commands', () => {
       startMs: 4000,
       toTrackId: targetTrackId,
     })
-    expect(mustFind(getTrack(project, sourceTrackId), sourceTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([
-      ['e-a', 0],
-    ])
+    expect(mustFind(getTrack(project, sourceTrackId), sourceTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([['e-a', 0]])
     expect(mustFind(getTrack(project, targetTrackId), targetTrackId).elements.map((e) => [e.id, e.startMs])).toEqual([
       ['e-x', 0],
       ['e-c', 1000],
@@ -404,6 +403,41 @@ describe('element commands', () => {
     expect(right.text).toBe('world')
   })
 
+  test('addElement rejects caption words whose endMs precedes startMs', () => {
+    const engine = new EditorEngine()
+    const caption = (words: CaptionElement['words']) => ({
+      type: 'addElement' as const,
+      trackId: 't-default' as const,
+      element: { type: 'caption' as const, text: 'hi', startMs: 0, durationMs: 5000, words },
+    })
+    const thrown = thrownBy(() => engine.dispatch(caption([{ text: 'hi', startMs: 3000, endMs: 1000 }])))
+    expect(thrown).toBeInstanceOf(CommandError)
+    expect(thrown).toMatchObject({ code: 'invalid-payload' })
+
+    engine.dispatch(caption([{ text: 'hi', startMs: 3000, endMs: 3000 }]))
+    expect(captionWords(engine.project)).toEqual([[{ text: 'hi', startMs: 3000, endMs: 3000 }]])
+  })
+
+  test('rippleTrim of a caption remaps word times and still parses', () => {
+    const engine = new EditorEngine()
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: {
+        id: 'e-caption',
+        type: 'caption',
+        text: 'hi',
+        startMs: 0,
+        durationMs: 5000,
+        words: [{ text: 'hi', startMs: 3000, endMs: 4000 }],
+      },
+    })
+    engine.dispatch({ type: 'rippleTrim', elementId: 'e-caption', edge: 'start', deltaMs: 2000 })
+    expect(captionWords(engine.project)).toEqual([[{ text: 'hi', startMs: 1000, endMs: 2000 }]])
+    const restored = parseProject(JSON.parse(JSON.stringify(engine.project)))
+    expect(captionWords(restored)).toEqual([[{ text: 'hi', startMs: 1000, endMs: 2000 }]])
+  })
+
   test('updateElement validates the merged element', () => {
     let project = createProject()
     const trackId = mustFind(project.tracks[0], 'first track').id
@@ -422,15 +456,9 @@ describe('element commands', () => {
       opacity: 0.5,
       box: { width: 320, overflow: 'clip' },
     })
-    expect(() =>
-      applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { opacity: 9 } }),
-    ).toThrow('invalid element')
-    expect(() =>
-      applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { box: { width: 0 } } }),
-    ).toThrow('invalid element')
-    expect(() =>
-      applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { type: 'image' } }),
-    ).toThrow('may not change')
+    expect(() => applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { opacity: 9 } })).toThrow('invalid element')
+    expect(() => applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { box: { width: 0 } } })).toThrow('invalid element')
+    expect(() => applyCommand(project, { type: 'updateElement', elementId: 'e-text', patch: { type: 'image' } })).toThrow('may not change')
   })
 
   test('removeAsset cascades to elements', () => {
@@ -464,7 +492,6 @@ describe('applyCaptions', () => {
     expect(project.tracks.map((t) => t.name)).toEqual(['Track 1', 'Captions'])
     expect(mustFind(project.tracks[1], 'second track').elements).toHaveLength(2)
 
-    // Re-applying replaces instead of stacking.
     project = applyCommand(project, {
       type: 'applyCaptions',
       captions: [{ startMs: 0, durationMs: 500, text: 'replaced' }],
@@ -472,6 +499,68 @@ describe('applyCaptions', () => {
     expect(project.tracks).toHaveLength(2)
     expect(mustFind(project.tracks[1], 'second track').elements).toHaveLength(1)
     expect(mustFind(project.tracks[1], 'second track').elements[0]).toMatchObject({ type: 'caption', text: 'replaced' })
+  })
+})
+
+describe('caller-supplied ids', () => {
+  function projectWithTwoVideos() {
+    const { project, trackId } = projectWithVideo()
+    let next = applyCommand(project, {
+      type: 'addElement',
+      trackId,
+      element: { id: 'e-one', type: 'video', assetId: 'a-vid', startMs: 0, durationMs: 2000 },
+    })
+    next = applyCommand(next, {
+      type: 'addElement',
+      trackId,
+      element: { id: 'e-two', type: 'video', assetId: 'a-vid', startMs: 3000, durationMs: 1000 },
+    })
+    return { project: next, trackId }
+  }
+
+  const allIds = (project: Project) => project.tracks.flatMap((t) => t.elements.map((e) => e.id))
+
+  test('splitElement rejects a rightElementId that already exists', () => {
+    const { project } = projectWithTwoVideos()
+    expect(() => applyCommand(project, { type: 'splitElement', elementId: 'e-one', atMs: 1000, rightElementId: 'e-two' })).toThrow(
+      'element "e-two" already exists',
+    )
+    const split = applyCommand(project, {
+      type: 'splitElement',
+      elementId: 'e-one',
+      atMs: 1000,
+      rightElementId: 'e-right',
+    })
+    expect(allIds(split)).toEqual(['e-one', 'e-right', 'e-two'])
+  })
+
+  test('createMulticam rejects a multicamId that already exists', () => {
+    const { project } = projectWithTwoVideos()
+    expect(() => applyCommand(project, { type: 'createMulticam', elementIds: ['e-one'], multicamId: 'e-two' })).toThrow('element "e-two" already exists')
+    const multicam = applyCommand(project, { type: 'createMulticam', elementIds: ['e-one'], multicamId: 'e-mc' })
+    expect(allIds(multicam)).toEqual(['e-mc', 'e-two'])
+  })
+
+  test('detachAudio rejects an audioElementId that already exists', () => {
+    const { project } = projectWithTwoVideos()
+    expect(() => applyCommand(project, { type: 'detachAudio', elementId: 'e-one', audioElementId: 'e-two' })).toThrow('element "e-two" already exists')
+    const detached = applyCommand(project, { type: 'detachAudio', elementId: 'e-one', audioElementId: 'e-aud' })
+    expect(allIds(detached)).toEqual(['e-aud', 'e-one', 'e-two'])
+  })
+
+  test('applyCaptions rejects a caption id that already exists', () => {
+    const { project } = projectWithTwoVideos()
+    expect(() =>
+      applyCommand(project, {
+        type: 'applyCaptions',
+        captions: [{ id: 'e-two', startMs: 0, durationMs: 1000, text: 'dup' }],
+      }),
+    ).toThrow('element "e-two" already exists')
+    const captioned = applyCommand(project, {
+      type: 'applyCaptions',
+      captions: [{ id: 'e-cap', startMs: 0, durationMs: 1000, text: 'ok' }],
+    })
+    expect(allIds(captioned)).toEqual(['e-one', 'e-two', 'e-cap'])
   })
 })
 
@@ -485,10 +574,8 @@ describe('selectors', () => {
     })
     expect(getProjectDurationMs(project)).toBe(3000)
     const track = mustFind(getTrack(project, trackId), trackId)
-    // Desired position overlaps; nearest free slot is flush after the clip.
     expect(findNearestFreeSlot(track, 2000, 1000)).toBe(3000)
     expect(findNearestFreeSlot(track, 4000, 1000)).toBe(4000)
-    // Fits exactly before the clip.
     expect(findNearestFreeSlot(track, 500, 1000)).toBe(0)
   })
 
@@ -543,7 +630,6 @@ describe('detachAudio', () => {
       volume: 1.5,
       muted: false,
     })
-    // Volume keyframes move to the audio element.
     expect(audio.keyframes?.volume).toHaveLength(2)
 
     const video = mustFind(getElement(next, 'e-vid' as `e-${string}`), 'e-vid') as VideoElement
@@ -563,7 +649,6 @@ describe('detachAudio', () => {
     expect(next.tracks).toHaveLength(2)
     const musicTrack = mustFind(getTrack(next, musicTrackId), musicTrackId)
     expect(mustFind(musicTrack.elements[0], 'detached audio').type).toBe('audio')
-    // Detaching again: video is now muted.
     expect(() => applyCommand(next, { type: 'detachAudio', elementId: 'e-vid' })).toThrow(CommandError)
   })
 
@@ -575,9 +660,7 @@ describe('detachAudio', () => {
       trackId,
       element: { type: 'text', id: 'e-txt', text: 'hi', startMs: 0, durationMs: 1000 },
     })
-    expect(() => applyCommand(project, { type: 'detachAudio', elementId: 'e-txt' })).toThrow(
-      CommandError,
-    )
+    expect(() => applyCommand(project, { type: 'detachAudio', elementId: 'e-txt' })).toThrow(CommandError)
   })
 })
 
@@ -625,7 +708,10 @@ describe('magnetic tracks', () => {
   }
 
   const order = (p: Project, trackId: string) =>
-    mustFind(p.tracks.find((t) => t.id === trackId), trackId).elements.map((e) => [e.id, e.startMs])
+    mustFind(
+      p.tracks.find((t) => t.id === trackId),
+      trackId,
+    ).elements.map((e) => [e.id, e.startMs])
 
   test('adding clips packs them with no gaps', () => {
     const { project, trackId } = magneticProject()
@@ -649,21 +735,16 @@ describe('magnetic tracks', () => {
 
   test('moving past the neighbor midpoint reorders; short drags do not', () => {
     const { project, trackId } = magneticProject()
-    // Threshold: A swaps when its RIGHT edge passes B's visible midpoint
-    // (1000 + 200) — i.e. startMs ≥ 200. A short nudge stays put.
     const same = applyCommand(project, { type: 'moveElement', elementId: 'e-a', startMs: 100 })
     expect(order(same, trackId)).toEqual([
       ['e-a', 0],
       ['e-b', 1000],
     ])
-    // Past it: reorder to B, A — and packed.
     const swapped = applyCommand(project, { type: 'moveElement', elementId: 'e-a', startMs: 300 })
     expect(order(swapped, trackId)).toEqual([
       ['e-b', 0],
       ['e-a', 400],
     ])
-    // And back (reversible mid-gesture): the threshold is unchanged after the
-    // swap (B's packed midpoint is 200), so the same pointer travel undoes it.
     const restored = applyCommand(swapped, { type: 'moveElement', elementId: 'e-a', startMs: 100 })
     expect(order(restored, trackId)).toEqual([
       ['e-a', 0],
@@ -693,7 +774,6 @@ describe('magnetic tracks', () => {
 
   test('dropping a new clip between others inserts at the slot', () => {
     const { project, trackId } = magneticProject()
-    // Left edge at 800 ≥ A's midpoint (500), before B's midpoint (1200) → slot 1.
     const next = applyCommand(project, {
       type: 'addElement',
       trackId,
@@ -726,11 +806,25 @@ describe('tool definitions', () => {
   test('every command is exposed as an MCP-shaped tool with JSON Schema params', () => {
     const tools = listToolDefinitions()
     expect(tools.length).toBe(listCommands().length)
-    const split = mustFind(tools.find((t) => t.name === 'splitElement'), 'splitElement tool')
+    const split = mustFind(
+      tools.find((t) => t.name === 'splitElement'),
+      'splitElement tool',
+    )
     expect(split.description).toContain('Split')
     expect(split.inputSchema.type).toBe('object')
     const properties = split.inputSchema.properties as Record<string, unknown>
     expect(Object.keys(properties)).toContain('elementId')
     expect(Object.keys(properties)).toContain('atMs')
+  })
+
+  test('branded id params serialize as prefixed string schemas', () => {
+    const split = mustFind(
+      listToolDefinitions().find((t) => t.name === 'splitElement'),
+      'splitElement tool',
+    )
+    expect(split.inputSchema.properties).toMatchObject({
+      elementId: { type: 'string', pattern: '^e-[\\w-]+$' },
+      rightElementId: { type: 'string', pattern: '^e-[\\w-]+$' },
+    })
   })
 })

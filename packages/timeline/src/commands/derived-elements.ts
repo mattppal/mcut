@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { CommandError } from '../errors'
-import { createElementId, createLinkId, createTrackId } from '../id'
+import { createLinkId, createTrackId } from '../id'
 import { createDefaultLayouts } from '../layouts'
 import {
   captionStyleSchema,
@@ -13,19 +13,11 @@ import {
   type Track,
 } from '../model'
 import { isTimelineMagnetic, placementFor } from '../placement'
-import { getElementLocation } from '../selectors'
-import {
-  expandThumbnailTemplate,
-  findThumbnailTrack,
-  THUMBNAIL_TRACK_NAME,
-  thumbnailTemplateSchema,
-} from '../thumbnails'
-import { defineCommand, insertSorted, mustGetTrack, mustLocate, replaceTrack } from './shared'
+import { applyThumbnailTemplate, thumbnailTemplateSchema } from '../thumbnails'
+import { defineCommand, insertSorted, mintElementId, mustGetTrack, mustLocate, replaceTrack } from './shared'
 
 const applyCaptionsSchema = z.object({
-  /** Target track; when omitted, a "Captions" track is created on top. */
   trackId: trackIdSchema.optional(),
-  /** Replace existing captions on the target track (default true). */
   replace: z.boolean().default(true),
   captions: z.array(
     z.object({
@@ -41,9 +33,7 @@ const applyCaptionsSchema = z.object({
 
 export const applyCaptions = defineCommand({
   type: 'applyCaptions',
-  description:
-    'Add caption elements (e.g. from a transcription) to a caption track, ' +
-    'creating the track when needed.',
+  description: 'Add caption elements (e.g. from a transcription) to a caption track, ' + 'creating the track when needed.',
   payloadSchema: applyCaptionsSchema,
   reduce: (project, payload) => {
     let next = project
@@ -51,9 +41,7 @@ export const applyCaptions = defineCommand({
     if (trackId) {
       mustGetTrack(next, trackId)
     } else {
-      const existing = next.tracks.find(
-        (t) => t.elements.length > 0 && t.elements.every((e) => e.type === 'caption'),
-      )
+      const existing = next.tracks.find((t) => t.elements.length > 0 && t.elements.every((e) => e.type === 'caption'))
       if (existing) {
         trackId = existing.id
       } else {
@@ -85,7 +73,7 @@ export const applyCaptions = defineCommand({
     for (const caption of payload.captions) {
       const element: CaptionElement = {
         ...caption,
-        id: caption.id ?? createElementId(),
+        id: mintElementId(next, caption.id),
         type: 'caption',
       }
       const track = mustGetTrack(next, finalTrackId)
@@ -110,7 +98,6 @@ export const createMulticam = defineCommand({
     'the camera.',
   payloadSchema: z.object({
     elementIds: z.array(elementIdSchema).min(1),
-    /** Id for the new multicam element; generated when omitted. */
     multicamId: elementIdSchema.optional(),
   }),
   reduce: (project, payload) => {
@@ -125,8 +112,6 @@ export const createMulticam = defineCommand({
     const startMs = Math.min(...videos.map((v) => v.startMs))
     const endMs = Math.max(...videos.map((v) => v.startMs + v.durationMs))
 
-    // Role keys: bottom layer = screen, top layer = camera (the user can
-    // reassign roles afterwards via the multicam source-role controls).
     let keys: string[]
     if (videos.length === 2) {
       const screen = located[0]!.trackIndex <= located[1]!.trackIndex ? 0 : 1
@@ -145,14 +130,12 @@ export const createMulticam = defineCommand({
     const sources = videos.map((video, i) => ({
       key: keys[i]!,
       assetId: video.assetId,
-      // Align: at multicam-local 0 every source plays what it was playing at
-      // the earliest selected clip's start (negative clamps to 0 = freeze-in).
       trimStartMs: Math.max(0, video.trimStartMs - (video.startMs - startMs)),
     }))
 
     const audioKey = keys.includes('camera') ? 'camera' : keys[0]!
     const element: TimelineElement = {
-      id: payload.multicamId ?? createElementId(),
+      id: mintElementId(project, payload.multicamId),
       type: 'multicam',
       startMs,
       durationMs: endMs - startMs,
@@ -165,7 +148,6 @@ export const createMulticam = defineCommand({
       muted: false,
     }
 
-    // Remove the originals, then place the multicam on the first one's track.
     const ids = new Set(payload.elementIds)
     next = {
       ...next,
@@ -184,15 +166,13 @@ export const createMulticam = defineCommand({
 export const detachAudio = defineCommand({
   type: 'detachAudio',
   description:
-    'Detach a video element\'s audio onto its own audio element. The video is ' +
+    "Detach a video element's audio onto its own audio element. The video is " +
     'muted, volume keyframes move to the new audio element, and both share a ' +
     '`linkId` so UIs can select/move them together. Creates a track for the ' +
     'audio when `toTrackId` is omitted.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
-    /** Track for the audio element; a new bottom track is created when omitted. */
     toTrackId: trackIdSchema.optional(),
-    /** Id for the new audio element; generated when omitted. */
     audioElementId: elementIdSchema.optional(),
   }),
   reduce: (project, payload) => {
@@ -207,7 +187,7 @@ export const detachAudio = defineCommand({
     const volumeKeyframes = element.keyframes?.volume
 
     const audio: TimelineElement = {
-      id: payload.audioElementId ?? createElementId(),
+      id: mintElementId(project, payload.audioElementId),
       type: 'audio',
       startMs: element.startMs,
       durationMs: element.durationMs,
@@ -219,10 +199,6 @@ export const detachAudio = defineCommand({
       ...(element.timeMap ? { timeMap: element.timeMap } : {}),
       ...(volumeKeyframes ? { keyframes: { volume: volumeKeyframes } } : {}),
     }
-    if (getElementLocation(project, audio.id)) {
-      throw new CommandError('duplicate-element', `element "${audio.id}" already exists`)
-    }
-
     const video: TimelineElement = { ...element, muted: true, volume: 1, linkId }
     if (video.type === 'video' && video.keyframes?.volume) {
       const keyframes = { ...video.keyframes }
@@ -254,7 +230,6 @@ export const detachAudio = defineCommand({
       magnetic: isTimelineMagnetic(next),
       elements: [audio],
     }
-    // Bottom of the paint order: audio has no visuals to occlude.
     return { ...next, tracks: [audioTrack, ...next.tracks] }
   },
 })
@@ -263,32 +238,9 @@ export const applyThumbnail = defineCommand({
   type: 'applyThumbnail',
   description:
     'Compose a cover over the first five frames: expands a thumbnail ' +
-    "template's text items into elements on the topmost \"Thumbnail\" track " +
-    '(created locked when missing, replaced when present). Unlike a metadata ' +
-    'cover, this is baked into the exported video.',
+    'template\'s text items into one locked topmost "Thumbnail" track per ' +
+    'text layer (existing thumbnail text is replaced; image layers stay). ' +
+    'Unlike a metadata cover, this is baked into the exported video.',
   payloadSchema: z.object({ template: thumbnailTemplateSchema }),
-  reduce: (project, payload) => {
-    const elements = expandThumbnailTemplate(project, payload.template)
-    const existing = findThumbnailTrack(project)
-    if (existing) {
-      return {
-        ...project,
-        tracks: project.tracks.map((t) =>
-          t.id === existing.id
-            ? { ...t, elements: [...t.elements.filter((e) => e.type === 'image'), ...elements] }
-            : t,
-        ),
-      }
-    }
-    const track: Track = {
-      id: createTrackId(),
-      name: THUMBNAIL_TRACK_NAME,
-      muted: false,
-      hidden: false,
-      locked: true,
-      magnetic: false,
-      elements,
-    }
-    return { ...project, tracks: [...project.tracks, track] }
-  },
+  reduce: (project, payload) => applyThumbnailTemplate(project, payload.template),
 })

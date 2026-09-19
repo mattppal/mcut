@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { applyCommand, createProject, type Project } from '@mcut/timeline'
+import { applyCommand, createProject, type Project, type TrackId } from '@mcut/timeline'
 import { renderFrame } from './render-frame'
 import { FakeContext2D } from './test-utils'
 import type { Canvas2D, FrameSource } from './types'
@@ -8,8 +8,8 @@ class FakeSource implements FrameSource {
   requests: Array<{ assetId: string; sourceTimeMs: number }> = []
   frame: CanvasImageSource | null
 
-  constructor(frame: CanvasImageSource | null = { width: 640, height: 360 } as CanvasImageSource) {
-    this.frame = frame
+  constructor(size: { width: number; height: number } | null = { width: 640, height: 360 }) {
+    this.frame = size as CanvasImageSource | null
   }
 
   getFrame(assetId: string, sourceTimeMs: number): CanvasImageSource | null {
@@ -42,6 +42,12 @@ function videoProject(): Project {
 
 const asCtx = (fake: FakeContext2D): Canvas2D => fake as unknown as Canvas2D
 
+function trackIdAt(project: Project, index: number): TrackId {
+  const track = project.tracks[index]
+  if (!track) throw new Error(`no track at index ${index}`)
+  return track.id
+}
+
 describe('renderFrame', () => {
   test('draws active video with trim-adjusted source time', () => {
     const project = videoProject()
@@ -50,7 +56,6 @@ describe('renderFrame', () => {
     renderFrame(asCtx(ctx), project, 3000, { source })
     expect(source.requests).toEqual([{ assetId: 'a-vid', sourceTimeMs: 4000 }])
     expect(ctx.callsTo('drawImage')).toHaveLength(1)
-    // Centered draw of a 640x360 frame.
     expect(ctx.callsTo('drawImage')[0]!.args.slice(1)).toEqual([-320, -180, 640, 360])
   })
 
@@ -104,7 +109,7 @@ describe('renderFrame', () => {
       },
     })
     const ctx = new FakeContext2D()
-    renderFrame(asCtx(ctx), project, 1700, {}) // 700ms in → "world" active
+    renderFrame(asCtx(ctx), project, 1700, {})
     const texts = ctx.callsTo('fillText')
     expect(texts.map((c) => c.args[0])).toEqual(['hello', 'world'])
     expect(texts[0]!.fillStyle).toBe('#ffffff')
@@ -116,6 +121,63 @@ describe('renderFrame', () => {
     const ctx = new FakeContext2D()
     renderFrame(asCtx(ctx), project, 3000, { source: new FakeSource(null) })
     expect(ctx.callsTo('drawImage')).toHaveLength(0)
+  })
+
+  test('video draws at the asset probed size when the source serves a downscaled frame', () => {
+    const project = videoProject()
+    const ctx = new FakeContext2D()
+    renderFrame(asCtx(ctx), project, 3000, { source: new FakeSource({ width: 320, height: 180 }) })
+    expect(ctx.callsTo('drawImage')[0]?.args.slice(1)).toEqual([-320, -180, 640, 360])
+  })
+
+  test('video source time clamps at zero while a transition pre-rolls the incoming clip', () => {
+    let project = videoProject()
+    const trackId = trackIdAt(project, 0)
+    project = applyCommand(project, {
+      type: 'addElement',
+      trackId,
+      element: {
+        id: 'e-in',
+        type: 'video',
+        assetId: 'a-vid',
+        startMs: 6000,
+        durationMs: 2000,
+        trimStartMs: 0,
+      },
+    })
+    project = applyCommand(project, {
+      type: 'setTransition',
+      elementId: 'e-vid',
+      transition: { type: 'dissolve', durationMs: 1000 },
+    })
+    const source = new FakeSource()
+    renderFrame(asCtx(new FakeContext2D()), project, 5750, { source })
+    expect(source.requests).toContainEqual({ assetId: 'a-vid', sourceTimeMs: 0 })
+    expect(source.requests.every((r) => r.sourceTimeMs >= 0)).toBe(true)
+  })
+
+  test('tracks paint bottom-up, so the higher track index draws last', () => {
+    let project = videoProject()
+    project = applyCommand(project, {
+      type: 'addAsset',
+      asset: { id: 'a-top', kind: 'video', src: 'blob:t', durationMs: 60_000, width: 640, height: 360 },
+    })
+    project = applyCommand(project, { type: 'addTrack' })
+    project = applyCommand(project, {
+      type: 'addElement',
+      trackId: trackIdAt(project, 1),
+      element: {
+        id: 'e-top',
+        type: 'video',
+        assetId: 'a-top',
+        startMs: 0,
+        durationMs: 5000,
+        trimStartMs: 0,
+      },
+    })
+    const source = new FakeSource()
+    renderFrame(asCtx(new FakeContext2D()), project, 3000, { source })
+    expect(source.requests.map((r) => r.assetId)).toEqual(['a-vid', 'a-top'])
   })
 })
 
@@ -144,7 +206,6 @@ describe('effects and blend modes', () => {
     expect(textCalls.length).toBeGreaterThan(0)
     expect(textCalls[0]!.filter).toBe('blur(6px)')
     expect(textCalls[0]!.globalCompositeOperation).toBe('screen')
-    // State restored after the element.
     expect(fake.filter).toBe('none')
     expect(fake.globalCompositeOperation).toBe('source-over')
   })
@@ -168,13 +229,11 @@ describe('transitions', () => {
     return project
   }
 
-  const textsDrawn = (fake: FakeContext2D) =>
-    fake.callsTo('fillText').map((c) => c.args[0])
+  const textsDrawn = (fake: FakeContext2D) => fake.callsTo('fillText').map((c) => c.args[0])
 
   test('dissolve renders both clips inside the window, right at partial alpha', () => {
     const project = adjacentTexts({ type: 'dissolve', durationMs: 1000 })
     const fake = new FakeContext2D()
-    // Window is [1500, 2500); at 1750 completion = 0.25.
     renderFrame(asCtx(fake), project, 1750)
     const texts = textsDrawn(fake)
     expect(texts).toContain('LEFT')
@@ -196,9 +255,8 @@ describe('transitions', () => {
   test('wipe clips the incoming side to the revealed region', () => {
     const project = adjacentTexts({ type: 'wipe-right', durationMs: 1000 })
     const fake = new FakeContext2D()
-    renderFrame(asCtx(fake), project, 2000) // completion = 0.5
+    renderFrame(asCtx(fake), project, 2000)
     const rects = fake.callsTo('rect')
-    // Reveal rect: half the project width at completion 0.5.
     expect(rects.some((c) => (c.args[2] as number) === project.width / 2)).toBe(true)
     expect(fake.callsTo('clip').length).toBeGreaterThan(0)
     expect(textsDrawn(fake)).toEqual(['LEFT', 'RIGHT'])
@@ -207,11 +265,9 @@ describe('transitions', () => {
   test('fade-black veils toward the cut then unveils the right clip', () => {
     const project = adjacentTexts({ type: 'fade-black', durationMs: 1000 })
     const fake = new FakeContext2D()
-    renderFrame(asCtx(fake), project, 1750) // completion 0.25 → veil 0.5, still left
+    renderFrame(asCtx(fake), project, 1750)
     expect(textsDrawn(fake)).toEqual(['LEFT'])
-    const veil = fake
-      .callsTo('fillRect')
-      .find((c) => c.fillStyle === '#000000' && c.globalAlpha > 0 && c.globalAlpha < 1)
+    const veil = fake.callsTo('fillRect').find((c) => c.fillStyle === '#000000' && c.globalAlpha > 0 && c.globalAlpha < 1)
     expect(veil).toBeDefined()
     expect(veil!.globalAlpha).toBeCloseTo(0.5, 5)
   })
@@ -247,7 +303,6 @@ describe('multicam rendering', () => {
       trackId,
       element: { type: 'video', id: 'e-c', assetId: 'a-cam', startMs: 10_000, durationMs: 10_000 },
     })
-    // Make them concurrent on separate tracks for a real multicam.
     project = applyCommand(project, { type: 'addTrack' })
     project = applyCommand(project, {
       type: 'moveElement',
@@ -272,14 +327,12 @@ describe('multicam rendering', () => {
 
     const fakeA = new FakeContext2D()
     renderFrame(asCtx(fakeA), project, 1000, { source })
-    // Screen + Cam: two drawImage calls (screen full + camera PiP).
     expect(fakeA.callsTo('drawImage')).toHaveLength(2)
     expect(source.requests.map((r) => r.assetId).sort()).toEqual(['a-cam', 'a-screen'])
 
     const fakeB = new FakeContext2D()
     source.requests = []
     renderFrame(asCtx(fakeB), project, 6000, { source })
-    // Camera only after the cut.
     expect(fakeB.callsTo('drawImage')).toHaveLength(1)
     expect(source.requests.map((r) => r.assetId)).toEqual(['a-cam'])
   })
@@ -288,7 +341,6 @@ describe('multicam rendering', () => {
     const { project } = multicamProject()
     const fake = new FakeContext2D()
     renderFrame(asCtx(fake), project, 1000, { source: new FakeSource() })
-    // The camera PiP has a corner radius → roundRect + clip.
     expect(fake.callsTo('roundRect').length).toBeGreaterThan(0)
     expect(fake.callsTo('clip').length).toBeGreaterThan(0)
   })
@@ -301,17 +353,14 @@ describe('multicam rendering', () => {
       transition: { type: 'fade-white', durationMs: 1000 },
     })
 
-    // At the cut the fade veil peaks: a full-canvas white fillRect.
     const atCut = new FakeContext2D()
     renderFrame(asCtx(atCut), project, 5000, { source: new FakeSource() })
     expect(atCut.callsTo('fillRect').some((c) => c.fillStyle === '#ffffff')).toBe(true)
 
-    // Outside the window: plain single-layout render, no veil.
     const outside = new FakeContext2D()
     renderFrame(asCtx(outside), project, 1000, { source: new FakeSource() })
     expect(outside.callsTo('fillRect').some((c) => c.fillStyle === '#ffffff')).toBe(false)
 
-    // A dissolve draws BOTH layouts inside the window (2 slots + 1 slot).
     project = applyCommand(project, {
       type: 'setMulticamAngleTransition',
       elementId: 'e-mc',

@@ -1,13 +1,7 @@
 import { z } from 'zod'
 import { CommandError } from '../errors'
 import { createElementId, createTrackId, type AssetId, type ElementId } from '../id'
-import {
-  elementIdSchema,
-  MIN_ELEMENT_DURATION_MS,
-  type Project,
-  type TimelineElement,
-  type Track,
-} from '../model'
+import { elementIdSchema, MIN_ELEMENT_DURATION_MS, type Project, type TimelineElement, type Track } from '../model'
 import { transitionSchema } from '../transitions'
 import { defineCommand, mustGetLayout, mustLocate, replaceTrack } from './shared'
 
@@ -19,11 +13,7 @@ function mustBeMulticam(element: TimelineElement): asserts element is TimelineEl
   }
 }
 
-function withMulticam(
-  project: Project,
-  elementId: ElementId,
-  update: (element: TimelineElement & { type: 'multicam' }) => TimelineElement,
-): Project {
+function withMulticam(project: Project, elementId: ElementId, update: (element: TimelineElement & { type: 'multicam' }) => TimelineElement): Project {
   const { track, element } = mustLocate(project, elementId)
   mustBeMulticam(element)
   const next = update(element)
@@ -75,10 +65,7 @@ export const moveAngleCut = defineCommand({
       }
       const previous = element.angles[index - 1]!
       const next = element.angles[index + 1]
-      const toMs = Math.max(
-        previous.atMs + 1,
-        Math.min(payload.toMs, next ? next.atMs - 1 : element.durationMs - 1),
-      )
+      const toMs = Math.max(previous.atMs + 1, Math.min(payload.toMs, next ? next.atMs - 1 : element.durationMs - 1))
       const angles = element.angles.map((a, i) => (i === index ? { ...a, atMs: toMs } : a))
       return { ...element, angles }
     }),
@@ -102,9 +89,7 @@ export const removeAngleCut = defineCommand({
 
 export const setAngleLayout = defineCommand({
   type: 'setAngleLayout',
-  description:
-    'Change which layout a multicam span uses without cutting (the paused ' +
-    '"correct this take" action; `atMs` is the span\'s cut time).',
+  description: 'Change which layout a multicam span uses without cutting (the paused ' + '"correct this take" action; `atMs` is the span\'s cut time).',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     atMs: z.number().int().nonnegative(),
@@ -117,9 +102,7 @@ export const setAngleLayout = defineCommand({
       if (index === -1) {
         throw new CommandError('unknown-cut', `no cut at ${payload.atMs}ms`)
       }
-      const angles = element.angles.map((a, i) =>
-        i === index ? { ...a, layoutId: payload.layoutId } : a,
-      )
+      const angles = element.angles.map((a, i) => (i === index ? { ...a, layoutId: payload.layoutId } : a))
       return { ...element, angles }
     })
   },
@@ -146,8 +129,7 @@ export const setMulticamAudio = defineCommand({
 
 export const setMulticamSourceTrim = defineCommand({
   type: 'setMulticamSourceTrim',
-  description:
-    "Nudge one multicam source's sync: its media time at the multicam's start (ms).",
+  description: "Nudge one multicam source's sync: its media time at the multicam's start (ms).",
   payloadSchema: z.object({
     elementId: elementIdSchema,
     sourceKey: z.string().min(1),
@@ -160,9 +142,7 @@ export const setMulticamSourceTrim = defineCommand({
       }
       return {
         ...element,
-        sources: element.sources.map((s) =>
-          s.key === payload.sourceKey ? { ...s, trimStartMs: payload.trimStartMs } : s,
-        ),
+        sources: element.sources.map((s) => (s.key === payload.sourceKey ? { ...s, trimStartMs: payload.trimStartMs } : s)),
       }
     }),
 })
@@ -207,15 +187,9 @@ export const setMulticamSourceKey = defineCommand({
       if (payload.newKey === payload.sourceKey) return element
       const taken = element.sources.some((s) => s.key === payload.newKey)
       const sources = element.sources.map((s) =>
-        s.key === payload.sourceKey
-          ? { ...s, key: payload.newKey }
-          : taken && s.key === payload.newKey
-            ? { ...s, key: payload.sourceKey }
-            : s,
+        s.key === payload.sourceKey ? { ...s, key: payload.newKey } : taken && s.key === payload.newKey ? { ...s, key: payload.sourceKey } : s,
       )
       const next = { ...element, sources }
-      // Swap keeps both keys alive, so audio stays with its role (fixing a
-      // wrong screen/camera guess should move the audio to the real camera).
       if (!taken && element.audioSource === payload.sourceKey) {
         next.audioSource = payload.newKey
       }
@@ -235,18 +209,11 @@ export const flattenMulticam = defineCommand({
     const { track, element } = mustLocate(project, payload.elementId)
     mustBeMulticam(element)
     if (element.timeMap) {
-      throw new CommandError(
-        'invalid-payload',
-        'flatten before changing speed (set speed 1, flatten, then re-apply)',
-      )
+      throw new CommandError('invalid-payload', 'flatten before changing speed (set speed 1, flatten, then re-apply)')
     }
 
-    const maxSlots = Math.max(
-      1,
-      ...element.angles.map((a) => mustGetLayout(project, a.layoutId).slots.length),
-    )
+    const maxSlots = Math.max(1, ...element.angles.map((a) => mustGetLayout(project, a.layoutId).slots.length))
 
-    // Spans: each cut until the next (or the element end).
     const spans = element.angles.map((cut, i) => ({
       cut,
       fromMs: cut.atMs,
@@ -276,8 +243,7 @@ export const flattenMulticam = defineCommand({
         const rh = slot.rect.h * project.height
         const aw = W(source.assetId)
         const ah = H(source.assetId)
-        const scale =
-          slot.fit === 'cover' ? Math.max(rw / aw, rh / ah) : Math.min(rw / aw, rh / ah)
+        const scale = slot.fit === 'cover' ? Math.max(rw / aw, rh / ah) : Math.min(rw / aw, rh / ah)
         slotTracks[slotIndex]!.elements.push({
           id: createElementId(),
           type: 'video',
@@ -324,12 +290,7 @@ export const flattenMulticam = defineCommand({
       : null
 
     const trackIndex = project.tracks.findIndex((t) => t.id === track.id)
-    const tracks = project.tracks.map((t) =>
-      t.id === track.id
-        ? { ...t, elements: t.elements.filter((e) => e.id !== element.id) }
-        : t,
-    )
-    // Slot tracks go where the multicam was (bottom slot first); audio below.
+    const tracks = project.tracks.map((t) => (t.id === track.id ? { ...t, elements: t.elements.filter((e) => e.id !== element.id) } : t))
     tracks.splice(trackIndex + 1, 0, ...slotTracks)
     if (audioTrack) tracks.splice(trackIndex, 0, audioTrack)
     return { ...project, tracks }

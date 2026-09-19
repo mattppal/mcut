@@ -3,20 +3,16 @@ import { inputFor, type MediaSourceLike } from './probe'
 import { valueAt } from './value-at'
 
 export interface AudioPeaksOptions {
-  /** Number of peak buckets across the range. Default 256. */
   buckets?: number
-  /** Source range. Defaults to the whole file. */
   startMs?: number
   endMs?: number
 }
 
 export interface AudioPeaks {
-  /** Max |sample| per bucket, 0–1. */
   peaks: Float32Array
   durationMs: number
 }
 
-/** Fold samples into `buckets` max-|amplitude| bins (pure; unit-tested). */
 export function bucketPeaks(samples: Float32Array, buckets: number): Float32Array {
   const peaks = new Float32Array(Math.max(1, buckets))
   if (samples.length === 0) return peaks
@@ -29,15 +25,7 @@ export function bucketPeaks(samples: Float32Array, buckets: number): Float32Arra
   return peaks
 }
 
-/**
- * Decode a file's audio and reduce it to waveform peaks for timeline clip
- * rendering. Returns `null` when the file has no audio track. Browser-only
- * (WebCodecs decode via Mediabunny).
- */
-export async function extractAudioPeaks(
-  src: MediaSourceLike,
-  options: AudioPeaksOptions = {},
-): Promise<AudioPeaks | null> {
+export async function extractAudioPeaks(src: MediaSourceLike, options: AudioPeaksOptions = {}): Promise<AudioPeaks | null> {
   const bucketCount = options.buckets ?? 256
   const input = inputFor(src)
   try {
@@ -53,7 +41,6 @@ export async function extractAudioPeaks(
       const channel = buffer.getChannelData(0)
       const bufferStartMs = timestamp * 1000
       const msPerSample = 1000 / buffer.sampleRate
-      // Stride so long files stay cheap; peaks are visual, not analytic.
       const stride = Math.max(1, Math.floor(channel.length / 4096))
       for (let i = 0; i < channel.length; i += stride) {
         const timeMs = bufferStartMs + i * msPerSample

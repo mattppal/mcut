@@ -1,15 +1,4 @@
-/**
- * Starter projects, built through the engine so they can never drift from the
- * schema. Every id is fixed: templates must be byte-stable across generate
- * runs (CI diffs them) and recipes reference these ids literally.
- */
-import {
-  EditorEngine,
-  createProject,
-  type BuiltinCommand,
-  type CommandOfType,
-  type Project,
-} from '@mcut/timeline'
+import { EditorEngine, createProject, type BuiltinCommand, type CommandOfType, type Project } from '@mcut/timeline'
 
 export interface TemplateDefinition {
   id: string
@@ -24,8 +13,7 @@ function dispatchAll(project: Project, commands: BuiltinCommand[]): Project {
   return engine.project
 }
 
-/** The default layouts, with fixed ids (createDefaultLayouts() randomizes them). */
-const LAYOUTS: CommandOfType<'saveLayout'>['layout'][] = [
+const FIXED_ID_LAYOUTS: CommandOfType<'saveLayout'>['layout'][] = [
   {
     id: 'lay-screen-cam',
     name: 'Screen + Cam',
@@ -37,16 +25,12 @@ const LAYOUTS: CommandOfType<'saveLayout'>['layout'][] = [
   {
     id: 'lay-camera',
     name: 'Camera',
-    slots: [
-      { source: 'camera', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0, shadow: false },
-    ],
+    slots: [{ source: 'camera', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0, shadow: false }],
   },
   {
     id: 'lay-screen',
     name: 'Screen',
-    slots: [
-      { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0, shadow: false },
-    ],
+    slots: [{ source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0, shadow: false }],
   },
   {
     id: 'lay-side-by-side',
@@ -66,37 +50,44 @@ export const TEMPLATES: TemplateDefinition[] = [
       'One 90s camera clip on an A-roll track plus a quiet music bed. The starting point ' +
       'for tutorials, demos, and social clips. Replace the asset srcs with your media.',
     build: () =>
-      dispatchAll(
-        createProject({ id: 'p-talking-head', name: 'Talking head', width: 1920, height: 1080, fps: 30 }),
-        [
-          {
-            type: 'addAsset',
-            asset: {
-              id: 'a-camera', kind: 'video', src: 'media/camera.mp4', name: 'camera.mp4',
-              mimeType: 'video/mp4', durationMs: 90000, width: 1920, height: 1080,
-            },
+      dispatchAll(createProject({ id: 'p-talking-head', name: 'Talking head', width: 1920, height: 1080, fps: 30 }), [
+        {
+          type: 'addAsset',
+          asset: {
+            id: 'a-camera',
+            kind: 'video',
+            src: 'media/camera.mp4',
+            name: 'camera.mp4',
+            mimeType: 'video/mp4',
+            durationMs: 90000,
+            width: 1920,
+            height: 1080,
           },
-          {
-            type: 'addAsset',
-            asset: {
-              id: 'a-music', kind: 'audio', src: 'media/music.mp3', name: 'music.mp3',
-              mimeType: 'audio/mpeg', durationMs: 120000,
-            },
+        },
+        {
+          type: 'addAsset',
+          asset: {
+            id: 'a-music',
+            kind: 'audio',
+            src: 'media/music.mp3',
+            name: 'music.mp3',
+            mimeType: 'audio/mpeg',
+            durationMs: 120000,
           },
-          { type: 'renameTrack', trackId: 't-default', name: 'A-roll' },
-          {
-            type: 'addElement',
-            trackId: 't-default',
-            element: { id: 'e-camera', type: 'video', startMs: 0, durationMs: 90000, assetId: 'a-camera' },
-          },
-          { type: 'addTrack', id: 't-music', name: 'Music', index: 0 },
-          {
-            type: 'addElement',
-            trackId: 't-music',
-            element: { id: 'e-music', type: 'audio', startMs: 0, durationMs: 90000, assetId: 'a-music', volume: 0.2 },
-          },
-        ],
-      ),
+        },
+        { type: 'renameTrack', trackId: 't-default', name: 'A-roll' },
+        {
+          type: 'addElement',
+          trackId: 't-default',
+          element: { id: 'e-camera', type: 'video', startMs: 0, durationMs: 90000, assetId: 'a-camera' },
+        },
+        { type: 'addTrack', id: 't-music', name: 'Music', index: 0 },
+        {
+          type: 'addElement',
+          trackId: 't-music',
+          element: { id: 'e-music', type: 'audio', startMs: 0, durationMs: 90000, assetId: 'a-music', volume: 0.2 },
+        },
+      ]),
   },
   {
     id: 'multicam-podcast',
@@ -105,76 +96,87 @@ export const TEMPLATES: TemplateDefinition[] = [
       'A screen recording and a camera combined into one multicam element with the four ' +
       'stock layouts saved. Add angle cuts to switch compositions; audio follows the camera.',
     build: () =>
-      dispatchAll(
-        createProject({ id: 'p-multicam-podcast', name: 'Multicam podcast', width: 1920, height: 1080, fps: 30 }),
-        [
-          {
-            type: 'addAsset',
-            asset: {
-              id: 'a-screen', kind: 'video', src: 'media/screen.mp4', name: 'screen.mp4',
-              mimeType: 'video/mp4', durationMs: 90000, width: 1920, height: 1080,
-            },
+      dispatchAll(createProject({ id: 'p-multicam-podcast', name: 'Multicam podcast', width: 1920, height: 1080, fps: 30 }), [
+        {
+          type: 'addAsset',
+          asset: {
+            id: 'a-screen',
+            kind: 'video',
+            src: 'media/screen.mp4',
+            name: 'screen.mp4',
+            mimeType: 'video/mp4',
+            durationMs: 90000,
+            width: 1920,
+            height: 1080,
           },
-          {
-            type: 'addAsset',
-            asset: {
-              id: 'a-camera', kind: 'video', src: 'media/camera.mp4', name: 'camera.mp4',
-              mimeType: 'video/mp4', durationMs: 90000, width: 1920, height: 1080,
-            },
+        },
+        {
+          type: 'addAsset',
+          asset: {
+            id: 'a-camera',
+            kind: 'video',
+            src: 'media/camera.mp4',
+            name: 'camera.mp4',
+            mimeType: 'video/mp4',
+            durationMs: 90000,
+            width: 1920,
+            height: 1080,
           },
-          { type: 'renameTrack', trackId: 't-default', name: 'Screen' },
-          {
-            type: 'addElement',
-            trackId: 't-default',
-            element: { id: 'e-screen', type: 'video', startMs: 0, durationMs: 90000, assetId: 'a-screen' },
-          },
-          { type: 'addTrack', id: 't-camera', name: 'Camera' },
-          {
-            type: 'addElement',
-            trackId: 't-camera',
-            element: { id: 'e-camera', type: 'video', startMs: 0, durationMs: 90000, assetId: 'a-camera' },
-          },
-          ...LAYOUTS.map((layout) => ({ type: 'saveLayout', layout }) satisfies BuiltinCommand),
-          // Bottom layer (t-default) becomes the "screen" role, top the "camera".
-          { type: 'createMulticam', elementIds: ['e-screen', 'e-camera'], multicamId: 'e-multicam' },
-          { type: 'removeTrack', trackId: 't-camera' },
-        ],
-      ),
+        },
+        { type: 'renameTrack', trackId: 't-default', name: 'Screen' },
+        {
+          type: 'addElement',
+          trackId: 't-default',
+          element: { id: 'e-screen', type: 'video', startMs: 0, durationMs: 90000, assetId: 'a-screen' },
+        },
+        { type: 'addTrack', id: 't-camera', name: 'Camera' },
+        {
+          type: 'addElement',
+          trackId: 't-camera',
+          element: { id: 'e-camera', type: 'video', startMs: 0, durationMs: 90000, assetId: 'a-camera' },
+        },
+        ...FIXED_ID_LAYOUTS.map((layout) => ({ type: 'saveLayout', layout }) satisfies BuiltinCommand),
+        { type: 'createMulticam', elementIds: ['e-screen', 'e-camera'], multicamId: 'e-multicam' },
+        { type: 'removeTrack', trackId: 't-camera' },
+      ]),
   },
   {
     id: 'slideshow',
     name: 'Slideshow',
-    description:
-      'Three photos butt-cut on one track in a vertical (9:16) frame. Add ken-burns ' +
-      'emphasis and dissolves to make it move.',
+    description: 'Three photos butt-cut on one track in a vertical (9:16) frame. Add ken-burns ' + 'emphasis and dissolves to make it move.',
     build: () =>
-      dispatchAll(
-        createProject({ id: 'p-slideshow', name: 'Slideshow', width: 1080, height: 1920, fps: 30 }),
-        [
-          ...[1, 2, 3].map(
-            (n) =>
-              ({
-                type: 'addAsset',
-                asset: {
-                  id: `a-photo-${n}`, kind: 'image', src: `media/photo-${n}.jpg`, name: `photo-${n}.jpg`,
-                  mimeType: 'image/jpeg', width: 2000, height: 1333,
-                },
-              }) satisfies BuiltinCommand,
-          ),
-          { type: 'renameTrack', trackId: 't-default', name: 'Photos' },
-          ...[1, 2, 3].map(
-            (n) =>
-              ({
-                type: 'addElement',
-                trackId: 't-default',
-                element: {
-                  id: `e-photo-${n}`, type: 'image', startMs: (n - 1) * 4000, durationMs: 4000,
-                  assetId: `a-photo-${n}`,
-                },
-              }) satisfies BuiltinCommand,
-          ),
-        ],
-      ),
+      dispatchAll(createProject({ id: 'p-slideshow', name: 'Slideshow', width: 1080, height: 1920, fps: 30 }), [
+        ...[1, 2, 3].map(
+          (n) =>
+            ({
+              type: 'addAsset',
+              asset: {
+                id: `a-photo-${n}`,
+                kind: 'image',
+                src: `media/photo-${n}.jpg`,
+                name: `photo-${n}.jpg`,
+                mimeType: 'image/jpeg',
+                width: 2000,
+                height: 1333,
+              },
+            }) satisfies BuiltinCommand,
+        ),
+        { type: 'renameTrack', trackId: 't-default', name: 'Photos' },
+        ...[1, 2, 3].map(
+          (n) =>
+            ({
+              type: 'addElement',
+              trackId: 't-default',
+              element: {
+                id: `e-photo-${n}`,
+                type: 'image',
+                startMs: (n - 1) * 4000,
+                durationMs: 4000,
+                assetId: `a-photo-${n}`,
+              },
+            }) satisfies BuiltinCommand,
+        ),
+      ]),
   },
 ]
 

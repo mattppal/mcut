@@ -3,34 +3,21 @@ import { createCanvasSurface, getNativeVideoFilmstrip, type CanvasSurface } from
 import { inputFor, type MediaSourceLike } from './probe'
 
 export interface FilmstripOptions {
-  /** Number of evenly spaced frames. */
   frameCount: number
-  /** Width of each frame in px (height follows aspect). Default 80. */
   frameWidth?: number
-  /** Source range to sample. Defaults to the whole file. */
   startMs?: number
   endMs?: number
 }
 
 export interface Filmstrip {
-  /** All frames drawn side-by-side, `frameCount × frameWidth` wide. */
   canvas: HTMLCanvasElement | OffscreenCanvas
   frameWidth: number
   frameHeight: number
   frameCount: number
-  /** Source timestamp of each frame, in ms. */
   timestampsMs: number[]
 }
 
-/**
- * Sample evenly spaced poster frames into one horizontal strip — the
- * filmstrip background of timeline video clips. Returns `null` for files
- * without a video track.
- */
-async function getCanvasSinkFilmstrip(
-  src: MediaSourceLike,
-  options: FilmstripOptions,
-): Promise<Filmstrip | null> {
+async function getCanvasSinkFilmstrip(src: MediaSourceLike, options: FilmstripOptions): Promise<Filmstrip | null> {
   const frameWidth = options.frameWidth ?? 80
   const frameCount = Math.max(1, Math.round(options.frameCount))
   const input = inputFor(src)
@@ -41,10 +28,7 @@ async function getCanvasSinkFilmstrip(
     const startMs = options.startMs ?? 0
     const spanMs = Math.max(1, durationMs - startMs)
 
-    const timestampsMs = Array.from(
-      { length: frameCount },
-      (_, i) => startMs + ((i + 0.5) / frameCount) * spanMs,
-    )
+    const timestampsMs = Array.from({ length: frameCount }, (_, i) => startMs + ((i + 0.5) / frameCount) * spanMs)
     const sink = new CanvasSink(track, { width: frameWidth, fit: 'cover' })
 
     let strip: CanvasSurface | null = null
@@ -67,12 +51,7 @@ async function getCanvasSinkFilmstrip(
   }
 }
 
-async function getNativeFilmstrip(
-  src: MediaSourceLike,
-  frameWidth: number,
-  frameCount: number,
-  options: FilmstripOptions,
-): Promise<Filmstrip | null> {
+async function getNativeFilmstrip(src: MediaSourceLike, frameWidth: number, frameCount: number, options: FilmstripOptions): Promise<Filmstrip | null> {
   return getNativeVideoFilmstrip(src, {
     frameWidth,
     frameCount,
@@ -89,10 +68,7 @@ function decodeUnavailable(_error: unknown): null {
   return null
 }
 
-export async function getFilmstrip(
-  src: MediaSourceLike,
-  options: FilmstripOptions,
-): Promise<Filmstrip | null> {
+export async function getFilmstrip(src: MediaSourceLike, options: FilmstripOptions): Promise<Filmstrip | null> {
   const frameWidth = options.frameWidth ?? 80
   const frameCount = Math.max(1, Math.round(options.frameCount))
 

@@ -1,6 +1,6 @@
 import type { z } from 'zod'
 import { CommandError } from '../errors'
-import type { ElementId, TrackId } from '../id'
+import { createElementId, type ElementId, type TrackId } from '../id'
 import type { Project, TimelineElement, Track } from '../model'
 import { compactTimelineIfMagnetic } from '../placement'
 import { getElementLocation, getTrack } from '../selectors'
@@ -12,23 +12,16 @@ export interface CommandSpec<K extends string, Shape extends z.ZodRawShape> {
   reduce: (project: Project, payload: z.output<z.ZodObject<Shape>>) => Project
 }
 
-export interface CommandEntry<K extends string, Shape extends z.ZodRawShape>
-  extends CommandSpec<K, Shape> {
+export interface CommandEntry<K extends string, Shape extends z.ZodRawShape> extends CommandSpec<K, Shape> {
   parse: (payload: unknown) => { type: K } & z.output<z.ZodObject<Shape>>
   apply: (project: Project, payload: unknown) => Project
 }
 
-export function defineCommand<const K extends string, Shape extends z.ZodRawShape>(
-  spec: CommandSpec<K, Shape>,
-): CommandEntry<K, Shape> {
+export function defineCommand<const K extends string, Shape extends z.ZodRawShape>(spec: CommandSpec<K, Shape>): CommandEntry<K, Shape> {
   const parsePayload = (payload: unknown): z.output<z.ZodObject<Shape>> => {
     const parsed = spec.payloadSchema.safeParse(payload)
     if (!parsed.success) {
-      throw new CommandError(
-        'invalid-payload',
-        `invalid payload for "${spec.type}": ${parsed.error.message}`,
-        { cause: parsed.error },
-      )
+      throw new CommandError('invalid-payload', `invalid payload for "${spec.type}": ${parsed.error.message}`, { cause: parsed.error })
     }
     return parsed.data
   }
@@ -45,17 +38,21 @@ export function mustGetTrack(project: Project, trackId: TrackId): Track {
   return track
 }
 
+export function mintElementId(project: Project, requested: ElementId | undefined): ElementId {
+  if (requested === undefined) return createElementId()
+  if (getElementLocation(project, requested)) {
+    throw new CommandError('duplicate-element', `element "${requested}" already exists`)
+  }
+  return requested
+}
+
 export function mustLocate(project: Project, elementId: ElementId) {
   const location = getElementLocation(project, elementId)
   if (!location) throw new CommandError('unknown-element', `no element "${elementId}"`)
   return location
 }
 
-export function replaceTrack(
-  project: Project,
-  trackId: TrackId,
-  update: (track: Track) => Track,
-): Project {
+export function replaceTrack(project: Project, trackId: TrackId, update: (track: Track) => Track): Project {
   const next = {
     ...project,
     tracks: project.tracks.map((t) => (t.id === trackId ? update(t) : t)),
@@ -75,5 +72,4 @@ export function mustGetLayout(project: Project, layoutId: string) {
   return layout
 }
 
-export const sortByStart = (elements: TimelineElement[]): TimelineElement[] =>
-  [...elements].sort((a, b) => a.startMs - b.startMs)
+export const sortByStart = (elements: TimelineElement[]): TimelineElement[] => [...elements].sort((a, b) => a.startMs - b.startMs)

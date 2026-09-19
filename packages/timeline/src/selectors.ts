@@ -13,10 +13,7 @@ export function getTrack(project: Project, trackId: TrackId): Track | undefined 
   return project.tracks.find((t) => t.id === trackId)
 }
 
-export function getElementLocation(
-  project: Project,
-  elementId: ElementId,
-): ElementLocation | undefined {
+export function getElementLocation(project: Project, elementId: ElementId): ElementLocation | undefined {
   for (const [trackIndex, track] of project.tracks.entries()) {
     for (const [elementIndex, element] of track.elements.entries()) {
       if (element.id === elementId) return { track, trackIndex, element, elementIndex }
@@ -29,10 +26,6 @@ export function getElement(project: Project, elementId: ElementId): TimelineElem
   return getElementLocation(project, elementId)?.element
 }
 
-/**
- * The element plus every element sharing its `linkId` (e.g. a video and its
- * detached audio), the element itself first. Just `[elementId]` when unlinked.
- */
 export function getLinkedElementIds(project: Project, elementId: ElementId): ElementId[] {
   const element = getElement(project, elementId)
   if (!element?.linkId) return [elementId]
@@ -45,10 +38,6 @@ export function getLinkedElementIds(project: Project, elementId: ElementId): Ele
   return [elementId, ...partners]
 }
 
-/**
- * The element plus every element sharing its `groupId`, the element itself
- * first. Just `[elementId]` when ungrouped.
- */
 export function getGroupedElementIds(project: Project, elementId: ElementId): ElementId[] {
   const element = getElement(project, elementId)
   if (!element?.groupId) return [elementId]
@@ -61,7 +50,6 @@ export function getGroupedElementIds(project: Project, elementId: ElementId): El
   return [elementId, ...members]
 }
 
-/** End of the last element across all tracks (0 for an empty project). */
 export function getProjectDurationMs(project: Project): number {
   let end = 0
   for (const track of project.tracks) {
@@ -81,38 +69,22 @@ export interface ActiveElement {
   element: TimelineElement
 }
 
-/**
- * Elements under the playhead in paint order (bottom track first).
- * Visual filtering (`track.hidden`) is the renderer's concern, audio
- * filtering (`track.muted`) the audio engine's — both are included here.
- */
 export function getActiveElements(project: Project, timeMs: number): ActiveElement[] {
   const active: ActiveElement[] = []
   for (const [trackIndex, track] of project.tracks.entries()) {
     for (const element of track.elements) {
-      if (element.startMs > timeMs) break // elements are sorted by startMs
+      if (element.startMs > timeMs) break
       if (isElementActiveAt(element, timeMs)) active.push({ track, trackIndex, element })
     }
   }
   return active
 }
 
-/**
- * Nearest start position to `desiredStartMs` where `[start, start+duration)`
- * fits in `track` without overlap. Used by UIs to clamp drags before
- * dispatching; the engine itself rejects overlapping commands.
- */
-export function findNearestFreeSlot(
-  track: Track,
-  desiredStartMs: number,
-  durationMs: number,
-  ignoreElementId?: ElementId,
-): number {
+export function findNearestFreeSlot(track: Track, desiredStartMs: number, durationMs: number, ignoreElementId?: ElementId): number {
   const desired = Math.max(0, Math.round(desiredStartMs))
   if (canPlace(track, desired, durationMs, ignoreElementId)) return desired
 
   const others = track.elements.filter((e) => e.id !== ignoreElementId)
-  // Candidate positions: flush against each element's start or end, plus 0.
   const candidates = new Set<number>([0])
   for (const e of others) {
     candidates.add(e.startMs + e.durationMs)
@@ -126,6 +98,5 @@ export function findNearestFreeSlot(
       best = candidate
     }
   }
-  // A track always has room at the end.
   return best ?? Math.max(desired, ...others.map((e) => e.startMs + e.durationMs), 0)
 }

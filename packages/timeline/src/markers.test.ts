@@ -15,9 +15,7 @@ describe('marker commands', () => {
     let project = createProject({ name: 'markers' })
     project = applyCommand(project, { type: 'addMarker', timeMs: 0 })
     expect(project.markers[0]!.id).toMatch(/^m-/)
-    expect(() =>
-      applyCommand(project, { type: 'addMarker', id: project.markers[0]!.id, timeMs: 10 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'addMarker', id: project.markers[0]!.id, timeMs: 10 })).toThrow(CommandError)
   })
 
   test('updateMarker retimes (re-sorting) and clears label with null', () => {
@@ -34,9 +32,7 @@ describe('marker commands', () => {
     project = applyCommand(project, { type: 'addMarker', id: 'm-a', timeMs: 0 })
     project = applyCommand(project, { type: 'removeMarker', markerId: 'm-a' })
     expect(project.markers).toHaveLength(0)
-    expect(() => applyCommand(project, { type: 'removeMarker', markerId: 'm-a' })).toThrow(
-      /no marker/,
-    )
+    expect(() => applyCommand(project, { type: 'removeMarker', markerId: 'm-a' })).toThrow(/no marker/)
   })
 
   test('markers round-trip through serialization; old documents load', () => {
@@ -45,7 +41,6 @@ describe('marker commands', () => {
     const reloaded = parseProject(JSON.parse(JSON.stringify(project)))
     expect(reloaded.markers).toEqual(project.markers)
 
-    // A pre-markers document (no `markers` key) parses with an empty list.
     const { markers: _markers, ...legacy } = JSON.parse(JSON.stringify(project))
     expect(parseProject(legacy).markers).toEqual([])
   })

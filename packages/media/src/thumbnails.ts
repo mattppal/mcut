@@ -3,16 +3,11 @@ import { getNativeVideoFrame } from './native-video'
 import { inputFor, type MediaSourceLike } from './probe'
 
 export interface ThumbnailOptions {
-  /** Thumbnail width in px (height follows aspect ratio). Default 160. */
   width?: number
-  /** Source time to sample. Default 0. */
   timeMs?: number
 }
 
-async function getCanvasSinkThumbnail(
-  src: MediaSourceLike,
-  options: ThumbnailOptions = {},
-): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
+async function getCanvasSinkThumbnail(src: MediaSourceLike, options: ThumbnailOptions = {}): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
   const input = inputFor(src)
   try {
     const track = await input.getPrimaryVideoTrack()
@@ -25,10 +20,7 @@ async function getCanvasSinkThumbnail(
   }
 }
 
-async function getNativeThumbnail(
-  src: MediaSourceLike,
-  options: ThumbnailOptions = {},
-): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
+async function getNativeThumbnail(src: MediaSourceLike, options: ThumbnailOptions = {}): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
   const frame = await getNativeVideoFrame(src, {
     width: options.width ?? 160,
     timeMs: options.timeMs ?? 0,
@@ -44,10 +36,7 @@ function decodeUnavailable(_error: unknown): null {
   return null
 }
 
-export async function getVideoThumbnail(
-  src: MediaSourceLike,
-  options: ThumbnailOptions = {},
-): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
+export async function getVideoThumbnail(src: MediaSourceLike, options: ThumbnailOptions = {}): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
   try {
     const native = await getNativeThumbnail(src, options)
     if (native) return native
@@ -62,11 +51,7 @@ export async function getVideoThumbnail(
   }
 }
 
-/** A poster frame as a data URL (handy for `<img>` in media bins). */
-export async function getVideoThumbnailUrl(
-  src: MediaSourceLike,
-  options: ThumbnailOptions = {},
-): Promise<string | null> {
+export async function getVideoThumbnailUrl(src: MediaSourceLike, options: ThumbnailOptions = {}): Promise<string | null> {
   const canvas = await getVideoThumbnail(src, options)
   if (!canvas) return null
   if (canvas instanceof OffscreenCanvas) {

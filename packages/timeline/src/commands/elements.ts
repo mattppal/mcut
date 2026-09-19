@@ -14,35 +14,11 @@ import {
   type TimelineElement,
 } from '../model'
 import { compactTimelineIfMagnetic, placementFor, rangesOverlap } from '../placement'
-import { getElementLocation } from '../selectors'
-import {
-  defineCommand,
-  insertSorted,
-  mustGetTrack,
-  mustLocate,
-  replaceTrack,
-  sortByStart,
-} from './shared'
+import { defineCommand, insertSorted, mintElementId, mustGetTrack, mustLocate, replaceTrack, sortByStart } from './shared'
 
-/**
- * Kdenlive's explicit edit-mode taxonomy: collisions are rejected by default
- * (`normal`); destructive (`overwrite`) and rippling (`insert`) placement are
- * modes the caller opts into per command. Magnetic tracks ignore the mode —
- * slot placement is their whole contract.
- */
 const editModeSchema = z.enum(['normal', 'overwrite', 'insert']).default('normal')
 
-/**
- * Overwrite-mode carve: clear `[startMs, startMs+durationMs)` on the track by
- * trimming, splitting, or removing whatever occupies it. Sub-minimum
- * leftovers are dropped.
- */
-function carveOverwriteRange(
-  project: Project,
-  trackId: TrackId,
-  startMs: number,
-  durationMs: number,
-): Project {
+function carveOverwriteRange(project: Project, trackId: TrackId, startMs: number, durationMs: number): Project {
   const endMs = startMs + durationMs
   return replaceTrack(project, trackId, (track) => {
     const elements: TimelineElement[] = []
@@ -56,33 +32,19 @@ function carveOverwriteRange(
       const tailMs = elementEndMs - endMs
       if (headMs >= MIN_ELEMENT_DURATION_MS) {
         const left = applyEdgeTrim(element, 'end', startMs - elementEndMs)
-        // Its next-door neighbor is now the overwriting clip.
         if ('transition' in left) delete left.transition
         elements.push(left)
       }
       if (tailMs >= MIN_ELEMENT_DURATION_MS) {
         const right = applyEdgeTrim(element, 'start', endMs - element.startMs)
-        elements.push(
-          headMs >= MIN_ELEMENT_DURATION_MS ? { ...right, id: createElementId() } : right,
-        )
+        elements.push(headMs >= MIN_ELEMENT_DURATION_MS ? { ...right, id: createElementId() } : right)
       }
     }
     return { ...track, elements: sortByStart(elements) }
   })
 }
 
-/**
- * Insert-mode ripple: open a `durationMs` gap at `atMs`. A clip straddling
- * the point on the target track splits there; everything at or after the
- * point shifts right on every unlocked track (straddlers on other tracks
- * stay — cross-track splitting is not attempted).
- */
-function rippleOpenGap(
-  project: Project,
-  targetTrackId: TrackId,
-  atMs: number,
-  durationMs: number,
-): Project {
+function rippleOpenGap(project: Project, targetTrackId: TrackId, atMs: number, durationMs: number): Project {
   const tracks = project.tracks.map((track) => {
     const isTarget = track.id === targetTrackId
     if (track.locked && !isTarget) return track
@@ -97,10 +59,8 @@ function rippleOpenGap(
         const headMs = atMs - element.startMs
         const tailMs = elementEndMs - atMs
         if (headMs < MIN_ELEMENT_DURATION_MS) {
-          // Effectively at the point: shift it whole.
           elements.push({ ...element, startMs: element.startMs + durationMs })
         } else if (tailMs < MIN_ELEMENT_DURATION_MS) {
-          // A sub-minimum tail sliver would survive: trim it away instead.
           elements.push(applyEdgeTrim(element, 'end', atMs - elementEndMs))
         } else {
           const left = applyEdgeTrim(element, 'end', atMs - elementEndMs)
@@ -117,13 +77,7 @@ function rippleOpenGap(
   return { ...project, tracks }
 }
 
-/** Shared placement tail for addElement/moveElement: mode, overlap, insert. */
-function placeElement(
-  project: Project,
-  trackId: TrackId,
-  element: TimelineElement,
-  editMode: z.output<typeof editModeSchema>,
-): Project {
+function placeElement(project: Project, trackId: TrackId, element: TimelineElement, editMode: z.output<typeof editModeSchema>): Project {
   const policy = placementFor(mustGetTrack(project, trackId))
   const mode = policy.editMode(editMode)
   let next = project
@@ -153,10 +107,7 @@ export const addElement = defineCommand({
   }),
   reduce: (project, payload) => {
     mustGetTrack(project, payload.trackId)
-    const element = { ...payload.element, id: payload.element.id ?? createElementId() }
-    if (getElementLocation(project, element.id)) {
-      throw new CommandError('duplicate-element', `element "${element.id}" already exists`)
-    }
+    const element = { ...payload.element, id: mintElementId(project, payload.element.id) }
     validateElement(project, element)
     return placeElement(project, payload.trackId, element, payload.editMode)
   },
@@ -202,9 +153,7 @@ export const moveElement = defineCommand({
 
 export const trimElement = defineCommand({
   type: 'trimElement',
-  description:
-    'Set element timing. `startMs`/`durationMs` position it on the timeline; ' +
-    '`trimStartMs` (video/audio) offsets into the source media.',
+  description: 'Set element timing. `startMs`/`durationMs` position it on the timeline; ' + '`trimStartMs` (video/audio) offsets into the source media.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     startMs: z.number().int().nonnegative().optional(),
@@ -240,7 +189,6 @@ export const splitElement = defineCommand({
   payloadSchema: z.object({
     elementId: elementIdSchema,
     atMs: z.number().int().positive(),
-    /** Id for the right-hand element; generated when omitted. */
     rightElementId: elementIdSchema.optional(),
   }),
   reduce: (project, payload) => {
@@ -249,12 +197,11 @@ export const splitElement = defineCommand({
     if (offset < MIN_ELEMENT_DURATION_MS || element.durationMs - offset < MIN_ELEMENT_DURATION_MS) {
       throw new CommandError(
         'out-of-bounds',
-        `cannot split "${element.id}" at ${payload.atMs}ms: both halves must be at least ` +
-          `${MIN_ELEMENT_DURATION_MS}ms long`,
+        `cannot split "${element.id}" at ${payload.atMs}ms: both halves must be at least ` + `${MIN_ELEMENT_DURATION_MS}ms long`,
       )
     }
     const { left, right } = splitElementAt(element, offset)
-    right.id = payload.rightElementId ?? createElementId()
+    right.id = mintElementId(project, payload.rightElementId)
     if ('transition' in left) delete left.transition
     return replaceTrack(project, track.id, (t) => ({
       ...t,
@@ -272,8 +219,7 @@ export const splitElement = defineCommand({
 export const updateElement = defineCommand({
   type: 'updateElement',
   description:
-    'Patch element properties (text, style, transform, opacity, volume, ...). ' +
-    'The merged element is re-validated; `id` and `type` cannot change.',
+    'Patch element properties (text, style, transform, opacity, volume, ...). ' + 'The merged element is re-validated; `id` and `type` cannot change.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     patch: z.record(z.string(), z.unknown()),
@@ -285,11 +231,7 @@ export const updateElement = defineCommand({
     }
     const merged = elementSchema.safeParse({ ...element, ...payload.patch })
     if (!merged.success) {
-      throw new CommandError(
-        'invalid-payload',
-        `patch produces an invalid element: ${merged.error.message}`,
-        { cause: merged.error },
-      )
+      throw new CommandError('invalid-payload', `patch produces an invalid element: ${merged.error.message}`, { cause: merged.error })
     }
     validateElement(project, merged.data)
     const policy = placementFor(track)
@@ -317,11 +259,7 @@ export const rippleDelete = defineCommand({
       const elements = track.elements
         .filter((e) => !ids.has(e.id))
         .map((element) => {
-          // Uniform left-shift by everything removed before this clip keeps
-          // ordering and can never create overlaps.
-          const shiftMs = removed
-            .filter((r) => r.startMs < element.startMs)
-            .reduce((sum, r) => sum + r.durationMs, 0)
+          const shiftMs = removed.filter((r) => r.startMs < element.startMs).reduce((sum, r) => sum + r.durationMs, 0)
           return shiftMs > 0 ? { ...element, startMs: element.startMs - shiftMs } : element
         })
       return { ...track, elements }

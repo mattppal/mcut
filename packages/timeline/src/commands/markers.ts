@@ -10,8 +10,7 @@ function mustGetMarker(project: Project, markerId: MarkerId) {
   return marker
 }
 
-const sortMarkers = (markers: Project['markers']) =>
-  [...markers].sort((a, b) => a.timeMs - b.timeMs)
+const sortMarkers = (markers: Project['markers']) => [...markers].sort((a, b) => a.timeMs - b.timeMs)
 
 export const addMarker = defineCommand({
   type: 'addMarker',

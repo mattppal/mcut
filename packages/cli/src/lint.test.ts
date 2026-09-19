@@ -69,11 +69,7 @@ describe('lintProject', () => {
     multicam.audioSource = 'ghost'
     const broken = {
       ...project,
-      tracks: project.tracks.map((t) =>
-        t.id === track.id
-          ? { ...t, elements: t.elements.map((e) => (e.id === 'e-mc' ? multicam : e)) }
-          : t,
-      ),
+      tracks: project.tracks.map((t) => (t.id === track.id ? { ...t, elements: t.elements.map((e) => (e.id === 'e-mc' ? multicam : e)) } : t)),
     }
     const found = codes(broken)
     expect(found).toContain('missing-layout')

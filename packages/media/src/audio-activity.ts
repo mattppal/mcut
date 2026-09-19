@@ -8,20 +8,13 @@ export const DEFAULT_MIN_SOUND_MS = 120
 export const DEFAULT_MIN_SILENCE_MS = 120
 
 export interface AudioActivityOptions {
-  /** Source range. Defaults to the whole file for decoded media, or all samples for PCM input. */
   startMs?: number
   endMs?: number
-  /** Fixed analysis frame size. Default 30ms. */
   frameMs?: number
-  /** A frame is sound when RMS is greater than this threshold. Default 0.004. */
   threshold?: number
-  /** Active runs shorter than this are treated as silence. Default 120ms. */
   minSoundMs?: number
-  /** Silent runs shorter than this are treated as sound. Default 120ms. */
   minSilenceMs?: number
-  /** Trim this much from each returned silence window edge. Default 0ms. */
   paddingMs?: number
-  /** Optional compact max-amplitude waveform bucket count. */
   waveformBuckets?: number
 }
 
@@ -48,7 +41,6 @@ export interface AudioActivity {
   soundWindows: AudioActivityWindow[]
   silenceWindows: AudioActivityWindow[]
   summary: AudioActivitySummary
-  /** Max |sample| buckets, 0-1, only present when requested. */
   waveform?: number[]
 }
 
@@ -91,16 +83,12 @@ function finitePositive(value: unknown, fallback: number): number {
 
 function normalizeOptions(options: AudioActivityOptions = {}): NormalizedOptions {
   const waveformBuckets =
-    typeof options.waveformBuckets === 'number' &&
-    Number.isFinite(options.waveformBuckets) &&
-    options.waveformBuckets > 0
+    typeof options.waveformBuckets === 'number' && Number.isFinite(options.waveformBuckets) && options.waveformBuckets > 0
       ? Math.floor(options.waveformBuckets)
       : undefined
   return {
     startMs: finiteNonNegative(options.startMs, 0),
-    ...(typeof options.endMs === 'number' && Number.isFinite(options.endMs) && options.endMs >= 0
-      ? { endMs: options.endMs }
-      : {}),
+    ...(typeof options.endMs === 'number' && Number.isFinite(options.endMs) && options.endMs >= 0 ? { endMs: options.endMs } : {}),
     frameMs: finitePositive(options.frameMs, DEFAULT_ACTIVITY_FRAME_MS),
     threshold: finiteNonNegative(options.threshold, DEFAULT_ACTIVITY_THRESHOLD),
     minSoundMs: finiteNonNegative(options.minSoundMs, DEFAULT_MIN_SOUND_MS),
@@ -121,9 +109,7 @@ function roundMetric(value: number): number {
 function sliceSamples(samples: Float32Array, sampleRate: number, options: NormalizedOptions) {
   const sampleStart = Math.min(samples.length, Math.floor((options.startMs / 1000) * sampleRate))
   const sampleEnd =
-    options.endMs === undefined
-      ? samples.length
-      : Math.min(samples.length, Math.max(sampleStart, Math.ceil((options.endMs / 1000) * sampleRate)))
+    options.endMs === undefined ? samples.length : Math.min(samples.length, Math.max(sampleStart, Math.ceil((options.endMs / 1000) * sampleRate)))
   return samples.subarray(sampleStart, sampleEnd)
 }
 
@@ -191,13 +177,7 @@ function smoothRuns(frames: FrameStats[], options: NormalizedOptions): void {
   }
 }
 
-function windowFromRun(
-  run: Run,
-  frames: readonly FrameStats[],
-  samples: Float32Array,
-  sampleRate: number,
-  paddingMs: number,
-): AudioActivityWindow | null {
+function windowFromRun(run: Run, frames: readonly FrameStats[], samples: Float32Array, sampleRate: number, paddingMs: number): AudioActivityWindow | null {
   const first = frames[run.startFrame]
   const last = frames[run.endFrame - 1]
   if (!first || !last) return null
@@ -257,12 +237,7 @@ function summarizeWindows(
   }
 }
 
-/** Analyze mono PCM samples into compact sound/silence windows. */
-export function analyzeAudioSamples(
-  samples: Float32Array,
-  sampleRate: number,
-  options: AudioActivityOptions = {},
-): AudioActivity {
+export function analyzeAudioSamples(samples: Float32Array, sampleRate: number, options: AudioActivityOptions = {}): AudioActivity {
   const normalized = normalizeOptions(options)
   const sourceSamples = sliceSamples(samples, sampleRate, normalized)
   const durationMs = roundMs((sourceSamples.length / sampleRate) * 1000)
@@ -292,15 +267,7 @@ export function analyzeAudioSamples(
   return activity
 }
 
-/**
- * Decode a media source's primary audio track and reduce it to semantic
- * sound/silence windows. Returns `null` when the file has no audio track.
- * Browser-only (WebCodecs decode via Mediabunny).
- */
-export async function analyzeAudioActivity(
-  src: MediaSourceLike,
-  options: AudioActivityOptions = {},
-): Promise<AudioActivity | null> {
+export async function analyzeAudioActivity(src: MediaSourceLike, options: AudioActivityOptions = {}): Promise<AudioActivity | null> {
   const normalized = normalizeOptions(options)
   const input = inputFor(src)
   try {

@@ -1,25 +1,7 @@
 import { z } from 'zod'
-import { createElementId } from './id'
+import { createElementId, createTrackId } from './id'
 import { frameToMs } from './time'
-import {
-  MIN_ELEMENT_DURATION_MS,
-  textStyleSchema,
-  type Project,
-  type TextElement,
-  type TextStyle,
-  type TimelineElement,
-} from './model'
-
-/**
- * Thumbnails: a composition recipe for the video's FIRST FIVE FRAMES — real
- * elements on a dedicated topmost "Thumbnail" track, so unlike CapCut's
- * cover (project metadata that vanishes on export) the cover is baked into
- * the exported video by construction, remains hand-editable on the canvas,
- * and can be re-captured as a reusable template.
- *
- * Template geometry is normalized (0..1 rects, font sizes relative to 1080p)
- * so one template fits any project size — louisville's draft pattern.
- */
+import { MIN_ELEMENT_DURATION_MS, textStyleSchema, type Project, type TextElement, type TextStyle, type TimelineElement, type Track } from './model'
 
 export const THUMBNAIL_FRAME_COUNT = 5
 
@@ -35,12 +17,10 @@ export const thumbnailItemSchema = z.discriminatedUnion('kind', [
     kind: z.literal('text'),
     rect: rectSchema,
     text: z.string(),
-    /** Editable hint shown in the panel ("Headline", "Episode label"). */
     role: z.string().default('Text'),
     style: textStyleSchema,
   }),
   z.object({
-    /** A media drop target the panel fills (frame grab / image). */
     kind: z.literal('slot'),
     rect: rectSchema,
     fit: z.enum(['cover', 'contain']).default('cover'),
@@ -56,24 +36,16 @@ export const thumbnailTemplateSchema = z.object({
 export type ThumbnailItem = z.infer<typeof thumbnailItemSchema>
 export type ThumbnailTemplate = z.infer<typeof thumbnailTemplateSchema>
 
-/** Duration of the cover span: the first five frames, frame-quantized. */
 export function thumbnailDurationMs(fps: number): number {
   return Math.max(MIN_ELEMENT_DURATION_MS, frameToMs(THUMBNAIL_FRAME_COUNT, fps))
 }
 
-/**
- * Scale every px-based style property between template space (1080p) and
- * project space — font size plus the tracking/stroke/shadow geometry that
- * must stay proportional to it.
- */
 function scaleTextStyle(style: TextStyle, scale: number): TextStyle {
   return {
     ...style,
     fontSize: Math.max(8, Math.round(style.fontSize * scale)),
     letterSpacing: Math.round(style.letterSpacing * scale * 100) / 100,
-    ...(style.stroke
-      ? { stroke: { ...style.stroke, width: Math.max(0.5, style.stroke.width * scale) } }
-      : {}),
+    ...(style.stroke ? { stroke: { ...style.stroke, width: Math.max(0.5, style.stroke.width * scale) } } : {}),
     ...(style.shadow
       ? {
           shadow: {
@@ -87,15 +59,7 @@ function scaleTextStyle(style: TextStyle, scale: number): TextStyle {
   }
 }
 
-/**
- * Expand a template's TEXT items into elements for the Thumbnail track.
- * Slots are panel affordances (filled with image elements by the UI), so
- * they expand to nothing here.
- */
-export function expandThumbnailTemplate(
-  project: Pick<Project, 'width' | 'height' | 'fps'>,
-  template: ThumbnailTemplate,
-): TimelineElement[] {
+export function expandThumbnailTemplate(project: Pick<Project, 'width' | 'height' | 'fps'>, template: ThumbnailTemplate): TimelineElement[] {
   const durationMs = thumbnailDurationMs(project.fps)
   const fontScale = project.height / 1080
   return template.items
@@ -122,23 +86,13 @@ export function expandThumbnailTemplate(
     }))
 }
 
-/**
- * Capture the current Thumbnail-track composition back into a template
- * ("save my cover for the next video"). Text elements round-trip fully;
- * image elements become slots (geometry only — assets stay in the project).
- */
-export function captureThumbnailTemplate(
-  project: Project,
-  name: string,
-): ThumbnailTemplate | null {
-  const track = findThumbnailTrack(project)
-  if (!track || track.elements.length === 0) return null
+export function captureThumbnailTemplate(project: Project, name: string): ThumbnailTemplate | null {
   const fontScale = 1080 / project.height
   const items: ThumbnailItem[] = []
-  for (const element of track.elements) {
+  for (const element of findThumbnailTracks(project).flatMap((track) => track.elements)) {
     if (element.type === 'text') {
       const w = (element.box?.width ?? project.width * 0.4) / project.width
-      const h = ((element.box?.height ?? element.style.fontSize * 1.4) / project.height) || 0.12
+      const h = (element.box?.height ?? element.style.fontSize * 1.4) / project.height || 0.12
       items.push({
         kind: 'text',
         rect: {
@@ -174,8 +128,26 @@ export function captureThumbnailTemplate(
 
 export const THUMBNAIL_TRACK_NAME = 'Thumbnail'
 
-export function findThumbnailTrack(project: Project) {
-  return [...project.tracks].reverse().find((t) => t.name === THUMBNAIL_TRACK_NAME) ?? null
+export function findThumbnailTracks(project: Project): Track[] {
+  return project.tracks.filter((track) => track.name === THUMBNAIL_TRACK_NAME)
+}
+
+export function applyThumbnailTemplate(project: Project, template: ThumbnailTemplate): Project {
+  const kept = project.tracks.flatMap((track) => {
+    if (track.name !== THUMBNAIL_TRACK_NAME) return [track]
+    const elements = track.elements.filter((element) => element.type !== 'text')
+    return elements.length === 0 ? [] : [{ ...track, elements }]
+  })
+  const layers = expandThumbnailTemplate(project, template).map((element): Track => ({
+    id: createTrackId(),
+    name: THUMBNAIL_TRACK_NAME,
+    muted: false,
+    hidden: false,
+    locked: true,
+    magnetic: false,
+    elements: [element],
+  }))
+  return { ...project, tracks: [...kept, ...layers] }
 }
 
 const title = (overrides: Partial<z.input<typeof textStyleSchema>> = {}) =>
@@ -188,11 +160,6 @@ const title = (overrides: Partial<z.input<typeof textStyleSchema>> = {}) =>
     ...overrides,
   })
 
-/**
- * Starter covers (talking-head/devlog flavored); the user library layers on
- * top. Font families here are a contract with the app's font library
- * (Google-catalog names) — unknown families degrade to sans-serif.
- */
 export const THUMBNAIL_TEMPLATES: ThumbnailTemplate[] = [
   {
     name: 'Big title',

@@ -1,7 +1,7 @@
 "use client";
 
 import Color from "color";
-import { PipetteIcon } from "@/lib/hugeicons";
+import { PipetteIcon } from "@/lib/icons";
 import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 import {
   type ComponentProps,
@@ -300,7 +300,7 @@ export const ColorPickerEyeDropper = ({
       variant="outline"
       {...props}
     >
-      <PipetteIcon size={16} />
+      <PipetteIcon className="size-4" />
     </Button>
   );
 };

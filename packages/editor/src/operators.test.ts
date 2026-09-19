@@ -43,13 +43,28 @@ describe('editor operators', () => {
       value: 0.2,
     })
 
-    await runOperator('keyframes.moveAtTime', { engine }, {
-      elementId: result.elementId,
-      fromTimeMs: 500,
-      toTimeMs: 900,
-    })
+    await runOperator(
+      'keyframes.moveAtTime',
+      { engine },
+      {
+        elementId: result.elementId,
+        fromTimeMs: 500,
+        toTimeMs: 900,
+      },
+    )
 
     const element = getElement(engine.project, result.elementId)
     expect(element?.keyframes?.opacity?.map((keyframe) => keyframe.timeMs)).toEqual([900])
+  })
+
+  test('rejects a missing media-bin asset with a typed operator error', async () => {
+    const engine = new EditorEngine()
+
+    const thrown = await runOperator('media.insertAssetAtPlayhead', { engine }, { assetId: 'a-missing' }).then(
+      () => undefined,
+      (error: unknown) => error,
+    )
+    expect(thrown).toBeInstanceOf(OperatorError)
+    expect(thrown).toMatchObject({ code: 'unknown-asset', message: 'no asset "a-missing"' })
   })
 })

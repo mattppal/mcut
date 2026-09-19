@@ -26,8 +26,7 @@ const SYSTEM_PROMPT = [
   'Do not ask questions and do not wait for confirmation.',
 ].join(' ')
 
-const truncate = (text: string, limit: number): string =>
-  text.length <= limit ? text : `${text.slice(0, limit)}\n[truncated ${text.length - limit} chars]`
+const truncate = (text: string, limit: number): string => (text.length <= limit ? text : `${text.slice(0, limit)}\n[truncated ${text.length - limit} chars]`)
 
 const addTokens = (total: TokenUsage, turn: TokenUsage): void => {
   total.input += turn.input
@@ -77,14 +76,7 @@ interface Stop {
   detail: string
 }
 
-async function drive(
-  session: McpSession,
-  model: ModelClient,
-  prompt: Prompt,
-  caps: Caps,
-  startedAt: number,
-  state: LoopState,
-): Promise<Stop> {
+async function drive(session: McpSession, model: ModelClient, prompt: Prompt, caps: Caps, startedAt: number, state: LoopState): Promise<Stop> {
   let turn = await model.start(prompt, await session.listTools())
   addTokens(state.tokens, turn.tokens)
   while (turn.calls.length > 0) {
@@ -119,12 +111,10 @@ export async function runTask(task: E2ETask, session: McpSession, model: ModelCl
   const prompt = buildPrompt(task, summary.text)
 
   const state: LoopState = { toolCalls: [], steps: 0, tokens: { input: 0, output: 0 } }
-  const stop = await drive(session, model, prompt, caps, startedAt, state).catch(
-    (error: unknown): Stop => ({
-      stoppedBy: 'error',
-      detail: error instanceof Error ? error.message : String(error),
-    }),
-  )
+  const stop = await drive(session, model, prompt, caps, startedAt, state).catch((error: unknown): Stop => ({
+    stoppedBy: 'error',
+    detail: error instanceof Error ? error.message : String(error),
+  }))
 
   const project = await session.getProject()
   return {

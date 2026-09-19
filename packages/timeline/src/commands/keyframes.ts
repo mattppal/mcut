@@ -1,10 +1,5 @@
 import { z } from 'zod'
-import {
-  animationPresetOptionsSchema,
-  animationPresetSchema,
-  expandAnimationPreset,
-  MOTION_BLUR_PRESETS,
-} from '../animation-presets'
+import { animationPresetOptionsSchema, animationPresetSchema, expandAnimationPreset, MOTION_BLUR_PRESETS } from '../animation-presets'
 import { CommandError } from '../errors'
 import type { ElementId } from '../id'
 import {
@@ -24,18 +19,12 @@ function mustSupportProperty(element: TimelineElement, property: AnimatablePrope
   if (!elementSupportsProperty(element, property)) {
     throw new CommandError(
       'invalid-payload',
-      `"${element.type}" elements have no animatable "${property}" ` +
-        `(supported: ${animatableProperties(element).join(', ') || 'none'})`,
+      `"${element.type}" elements have no animatable "${property}" ` + `(supported: ${animatableProperties(element).join(', ') || 'none'})`,
     )
   }
 }
 
-function withKeyframes(
-  project: Project,
-  elementId: ElementId,
-  property: AnimatableProperty,
-  update: (track: Keyframe[]) => Keyframe[],
-): Project {
+function withKeyframes(project: Project, elementId: ElementId, property: AnimatableProperty, update: (track: Keyframe[]) => Keyframe[]): Project {
   const { track, element } = mustLocate(project, elementId)
   mustSupportProperty(element, property)
   const keyframes = { ...(('keyframes' in element ? element.keyframes : undefined) ?? {}) }
@@ -86,10 +75,7 @@ export const removeKeyframe = defineCommand({
   reduce: (project, payload) =>
     withKeyframes(project, payload.elementId, payload.property, (track) => {
       if (!track.some((k) => k.timeMs === payload.timeMs)) {
-        throw new CommandError(
-          'unknown-keyframe',
-          `no "${payload.property}" keyframe at ${payload.timeMs}ms`,
-        )
+        throw new CommandError('unknown-keyframe', `no "${payload.property}" keyframe at ${payload.timeMs}ms`)
       }
       return track.filter((k) => k.timeMs !== payload.timeMs)
     }),
@@ -108,16 +94,10 @@ export const moveKeyframe = defineCommand({
     withKeyframes(project, payload.elementId, payload.property, (track) => {
       const keyframe = track.find((k) => k.timeMs === payload.fromTimeMs)
       if (!keyframe) {
-        throw new CommandError(
-          'unknown-keyframe',
-          `no "${payload.property}" keyframe at ${payload.fromTimeMs}ms`,
-        )
+        throw new CommandError('unknown-keyframe', `no "${payload.property}" keyframe at ${payload.fromTimeMs}ms`)
       }
       if (payload.toTimeMs !== payload.fromTimeMs && track.some((k) => k.timeMs === payload.toTimeMs)) {
-        throw new CommandError(
-          'duplicate-keyframe',
-          `a "${payload.property}" keyframe already exists at ${payload.toTimeMs}ms`,
-        )
+        throw new CommandError('duplicate-keyframe', `a "${payload.property}" keyframe already exists at ${payload.toTimeMs}ms`)
       }
       return upsertKeyframe(
         track.filter((k) => k.timeMs !== payload.fromTimeMs),
@@ -128,9 +108,7 @@ export const moveKeyframe = defineCommand({
 
 export const setKeyframeEasing = defineCommand({
   type: 'setKeyframeEasing',
-  description:
-    'Set temporal interpolation toward the next keyframe: linear, hold, easeIn, easeOut, ' +
-    'easeInOut, or { cubicBezier: [x1, y1, x2, y2] }.',
+  description: 'Set temporal interpolation toward the next keyframe: linear, hold, easeIn, easeOut, ' + 'easeInOut, or { cubicBezier: [x1, y1, x2, y2] }.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     property: animatablePropertySchema,
@@ -141,10 +119,7 @@ export const setKeyframeEasing = defineCommand({
     withKeyframes(project, payload.elementId, payload.property, (track) => {
       const keyframe = track.find((k) => k.timeMs === payload.timeMs)
       if (!keyframe) {
-        throw new CommandError(
-          'unknown-keyframe',
-          `no "${payload.property}" keyframe at ${payload.timeMs}ms`,
-        )
+        throw new CommandError('unknown-keyframe', `no "${payload.property}" keyframe at ${payload.timeMs}ms`)
       }
       return track.map((k) => (k === keyframe ? { ...k, easing: payload.easing } : k))
     }),
@@ -152,9 +127,7 @@ export const setKeyframeEasing = defineCommand({
 
 export const clearKeyframes = defineCommand({
   type: 'clearKeyframes',
-  description:
-    'Remove all keyframes for one property (stopwatch off) or for the whole element. ' +
-    'The static value takes over again.',
+  description: 'Remove all keyframes for one property (stopwatch off) or for the whole element. ' + 'The static value takes over again.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     property: animatablePropertySchema.optional(),
@@ -199,8 +172,6 @@ export const applyAnimationPreset = defineCommand({
       mustSupportProperty(element, property)
     }
     const nextElement: TimelineElement = { ...element, keyframes: expanded }
-    // Whips and punches read as motion blur; switch it on unless the user
-    // already made a motion-blur choice for this element.
     if (
       MOTION_BLUR_PRESETS.has(payload.preset) &&
       (nextElement.type === 'video' || nextElement.type === 'image' || nextElement.type === 'text') &&

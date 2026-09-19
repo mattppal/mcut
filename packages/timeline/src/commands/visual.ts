@@ -3,30 +3,18 @@ import { blendModeSchema, effectSchema, motionBlurSchema, type Effect } from '..
 import { CommandError } from '../errors'
 import type { ElementId } from '../id'
 import { elementIdSchema, type Project, type TimelineElement } from '../model'
-import { getTransitionPair, transitionSchema } from '../transitions'
+import { getTransitionPair, MIN_TRANSITION_DURATION_MS, transitionSchema } from '../transitions'
 import { defineCommand, mustLocate, replaceTrack } from './shared'
 
 type VisualElement = TimelineElement & { type: 'video' | 'image' | 'text' | 'multicam' }
 
 function mustBeVisual(element: TimelineElement): asserts element is VisualElement {
-  if (
-    element.type !== 'video' &&
-    element.type !== 'image' &&
-    element.type !== 'text' &&
-    element.type !== 'multicam'
-  ) {
-    throw new CommandError(
-      'invalid-payload',
-      `"${element.type}" elements have no effects/blending/transitions`,
-    )
+  if (element.type !== 'video' && element.type !== 'image' && element.type !== 'text' && element.type !== 'multicam') {
+    throw new CommandError('invalid-payload', `"${element.type}" elements have no effects/blending/transitions`)
   }
 }
 
-function withVisualElement(
-  project: Project,
-  elementId: ElementId,
-  update: (element: VisualElement) => TimelineElement,
-): Project {
+function withVisualElement(project: Project, elementId: ElementId, update: (element: VisualElement) => TimelineElement): Project {
   const { track, element } = mustLocate(project, elementId)
   mustBeVisual(element)
   const next = update(element)
@@ -47,7 +35,7 @@ function mustGetEffects(element: VisualElement, index: number): Effect[] {
 export const addEffect = defineCommand({
   type: 'addEffect',
   description:
-    'Append a visual effect to an element\'s effect stack (or insert at `index`). ' +
+    "Append a visual effect to an element's effect stack (or insert at `index`). " +
     'Effects compile to a canvas filter and apply in stack order. Types: blur, ' +
     'brightness, contrast, saturate, grayscale, sepia, hue-rotate, invert, ' +
     'drop-shadow, css (raw CSS filter escape hatch).',
@@ -68,8 +56,7 @@ export const addEffect = defineCommand({
 export const updateEffect = defineCommand({
   type: 'updateEffect',
   description:
-    'Patch the parameters of the effect at `index` in an element\'s stack ' +
-    '(e.g. { radius: 12 } or { enabled: false }). The effect\'s `type` cannot change.',
+    "Patch the parameters of the effect at `index` in an element's stack " + "(e.g. { radius: 12 } or { enabled: false }). The effect's `type` cannot change.",
   payloadSchema: z.object({
     elementId: elementIdSchema,
     index: z.number().int().nonnegative(),
@@ -83,11 +70,7 @@ export const updateEffect = defineCommand({
       }
       const merged = effectSchema.safeParse({ ...effects[payload.index], ...payload.patch })
       if (!merged.success) {
-        throw new CommandError(
-          'invalid-payload',
-          `patch produces an invalid effect: ${merged.error.message}`,
-          { cause: merged.error },
-        )
+        throw new CommandError('invalid-payload', `patch produces an invalid effect: ${merged.error.message}`, { cause: merged.error })
       }
       effects[payload.index] = merged.data
       return { ...element, effects }
@@ -96,7 +79,7 @@ export const updateEffect = defineCommand({
 
 export const removeEffect = defineCommand({
   type: 'removeEffect',
-  description: 'Remove the effect at `index` from an element\'s effect stack.',
+  description: "Remove the effect at `index` from an element's effect stack.",
   payloadSchema: z.object({
     elementId: elementIdSchema,
     index: z.number().int().nonnegative(),
@@ -114,7 +97,7 @@ export const removeEffect = defineCommand({
 
 export const reorderEffect = defineCommand({
   type: 'reorderEffect',
-  description: 'Move an effect within an element\'s stack (stack order = apply order).',
+  description: "Move an effect within an element's stack (stack order = apply order).",
   payloadSchema: z.object({
     elementId: elementIdSchema,
     fromIndex: z.number().int().nonnegative(),
@@ -132,9 +115,7 @@ export const reorderEffect = defineCommand({
 
 export const setBlendMode = defineCommand({
   type: 'setBlendMode',
-  description:
-    'Set how a visual element composites against the layers below ' +
-    '(multiply, screen, overlay, ...). Pass null for normal.',
+  description: 'Set how a visual element composites against the layers below ' + '(multiply, screen, overlay, ...). Pass null for normal.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     blendMode: blendModeSchema.nullable(),
@@ -193,17 +174,11 @@ export const setTransition = defineCommand({
       if (!pair) {
         throw new CommandError(
           'invalid-payload',
-          `element "${element.id}" has no exactly-adjacent next clip on its track ` +
-            '(transitions require a butt cut)',
+          `element "${element.id}" has no exactly-adjacent next clip on its track ` + '(transitions require a butt cut)',
         )
       }
-      // OTIO offset constraint, stored: the window may not exceed either
-      // adjacent clip. getTransitionPair already computes the clamped window.
-      if (pair.durationMs < 100) {
-        throw new CommandError(
-          'out-of-bounds',
-          `clips at this cut are too short for a transition (max window ${pair.durationMs}ms)`,
-        )
+      if (pair.durationMs < MIN_TRANSITION_DURATION_MS) {
+        throw new CommandError('out-of-bounds', `clips at this cut are too short for a transition (max window ${pair.durationMs}ms)`)
       }
       next.transition = { ...payload.transition, durationMs: pair.durationMs }
       return next

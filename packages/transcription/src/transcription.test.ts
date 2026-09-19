@@ -10,7 +10,6 @@ const words: TranscriptWord[] = [
   { text: 'this', startMs: 900, endMs: 1100 },
   { text: 'is', startMs: 1150, endMs: 1250 },
   { text: 'mcut.', startMs: 1300, endMs: 1700 },
-  // 2s silence gap → new caption
   { text: 'Second', startMs: 3700, endMs: 4100 },
   { text: 'caption.', startMs: 4150, endMs: 4600 },
 ]
@@ -26,23 +25,14 @@ const result: TranscriptResult = {
 describe('groupWords', () => {
   test('splits on silence gaps', () => {
     const groups = groupWords(words)
-    expect(groups.map((g) => g.text)).toEqual([
-      'Hello world, this is mcut.',
-      'Second caption.',
-    ])
+    expect(groups.map((g) => g.text)).toEqual(['Hello world, this is mcut.', 'Second caption.'])
     expect(groups[0]).toMatchObject({ startMs: 0, endMs: 1700 })
     expect(groups[1]).toMatchObject({ startMs: 3700, endMs: 4600 })
   })
 
   test('splits on character budget', () => {
     const groups = groupWords(words, { maxChars: 12 })
-    expect(groups.map((g) => g.text)).toEqual([
-      'Hello world,',
-      'this is',
-      'mcut.',
-      'Second',
-      'caption.',
-    ])
+    expect(groups.map((g) => g.text)).toEqual(['Hello world,', 'this is', 'mcut.', 'Second', 'caption.'])
   })
 
   test('splits on speaker change', () => {
@@ -76,7 +66,7 @@ describe('toCaptionElements', () => {
       words: [],
       segments: [
         { text: 'a', startMs: 0, endMs: 1000 },
-        { text: 'b', startMs: 500, endMs: 1500 }, // overlaps previous
+        { text: 'b', startMs: 500, endMs: 1500 },
       ],
     }
     const elements = toCaptionElements(overlapping)
@@ -88,9 +78,7 @@ describe('toCaptionElements', () => {
 
   test('falls back to a single caption when only text is available', () => {
     const bare: TranscriptResult = { text: 'Just text.', words: [], segments: [], durationMs: 3000 }
-    expect(toCaptionElements(bare)).toEqual([
-      { type: 'caption', startMs: 0, durationMs: 3000, text: 'Just text.' },
-    ])
+    expect(toCaptionElements(bare)).toEqual([{ type: 'caption', startMs: 0, durationMs: 3000, text: 'Just text.' }])
   })
 
   test('offsets captions to the timeline clip start', () => {

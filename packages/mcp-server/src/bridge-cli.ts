@@ -1,20 +1,6 @@
 #!/usr/bin/env node
-/**
- * Local bridge entry point:
- *
- *   mcut-bridge start
- *   mcut-bridge get-summary
- *   mcut-bridge get-transcript
- *   mcut-bridge dispatch addTrack --json '{"name":"B-roll"}'
- *   mcut-bridge mcp
- */
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import {
-  DEFAULT_BRIDGE_PORT,
-  LiveMcutBridge,
-  createHttpBridgeTarget,
-  parseLiveBridgePort,
-} from './live-bridge'
+import { DEFAULT_BRIDGE_PORT, LiveMcutBridge, createHttpBridgeTarget, parseLiveBridgePort } from './live-bridge'
 import { createMcutMcpServerForTarget } from './server'
 
 interface ParsedArgs {
@@ -40,9 +26,9 @@ function usage(): string {
     '  mcut-bridge search-transcript <query> [--port 44737]',
     '  mcut-bridge ensure-transcript [--json \'{"elementId":"e-...","replace":false}\'] [--port 44737]',
     '  mcut-bridge list-actions [--port 44737]',
-    '  mcut-bridge action <actionId> [--json \'{...}\'] [--port 44737]',
-    '  mcut-bridge dispatch <commandName> [--json \'{...}\'] [--port 44737]',
-    '  mcut-bridge operator <operatorId> [--json \'{...}\'] [--port 44737]',
+    "  mcut-bridge action <actionId> [--json '{...}'] [--port 44737]",
+    "  mcut-bridge dispatch <commandName> [--json '{...}'] [--port 44737]",
+    "  mcut-bridge operator <operatorId> [--json '{...}'] [--port 44737]",
     '  mcut-bridge undo [--port 44737]',
     '  mcut-bridge redo [--port 44737]',
     '  mcut-bridge mcp [--port 44737]',
@@ -153,9 +139,7 @@ async function main(): Promise<void> {
       const port = await bridge.listen(args.port)
       process.stderr.write(`mcut bridge ready — ws://127.0.0.1:${port}/mcut-mcp\n`)
       process.stderr.write(`MCP URL: ${bridge.getMcpUrl() ?? mcpUrl(port, bridge.token)}\n`)
-      process.stderr.write(
-        `Editor URL: ${bridge.getOpenEditorUrl() ?? editorUrl(args.editorUrl, port, bridge.token)}\n`,
-      )
+      process.stderr.write(`Editor URL: ${bridge.getOpenEditorUrl() ?? editorUrl(args.editorUrl, port, bridge.token)}\n`)
       process.stderr.write('Leave this process running while agents edit the browser project.\n')
       await new Promise<void>(() => {})
       return

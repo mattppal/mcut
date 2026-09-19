@@ -1,11 +1,10 @@
-import { ALL_FORMATS, BlobSource, Input, UrlSource } from 'mediabunny'
+import { ALL_FORMATS, BlobSource, EncodedPacketSink, Input, UrlSource } from 'mediabunny'
 import { createAssetId, type AssetRef } from '@mcut/timeline'
 import { hashBlob } from './media-store'
 import { isMatroskaLike } from './video-capabilities'
 
 export type MediaSourceLike = Blob | string
 
-/** Open a Mediabunny input over a Blob/File or a (blob:/http:) URL. */
 export function inputFor(src: MediaSourceLike): Input {
   return new Input({
     formats: ALL_FORMATS,
@@ -20,6 +19,22 @@ export interface MediaProbe {
   width?: number
   height?: number
   mimeType?: string
+}
+
+export type MediaProbeErrorCode = 'unreadable' | 'no-tracks' | 'no-duration'
+
+export class MediaProbeError extends Error {
+  readonly code: MediaProbeErrorCode
+
+  constructor(code: MediaProbeErrorCode, message: string, options?: { cause?: unknown }) {
+    super(message, options)
+    this.name = 'MediaProbeError'
+    this.code = code
+  }
+}
+
+function describeCause(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 interface NativeMediaMetadata {
@@ -38,10 +53,7 @@ function trackListLength(trackList: unknown): number | undefined {
   return typeof trackList.length === 'number' ? trackList.length : undefined
 }
 
-function loadNativeMetadata(
-  tag: 'video' | 'audio',
-  src: string,
-): Promise<NativeMediaMetadata | null> {
+function loadNativeMetadata(tag: 'video' | 'audio', src: string): Promise<NativeMediaMetadata | null> {
   return new Promise((resolve) => {
     const media = document.createElement(tag)
     let settled = false
@@ -74,10 +86,6 @@ function loadNativeMetadata(
   })
 }
 
-/**
- * Browser-native metadata fallback for files the browser can play but
- * Mediabunny cannot parse, e.g. MP4s with an extra unsupported first stream.
- */
 async function probeNativeMedia(src: MediaSourceLike): Promise<MediaProbe | null> {
   if (typeof document === 'undefined') return null
   const mimeType = typeof src === 'string' ? undefined : src.type || undefined
@@ -88,9 +96,7 @@ async function probeNativeMedia(src: MediaSourceLike): Promise<MediaProbe | null
       return {
         durationMs: video.durationMs,
         hasVideo: true,
-        // Native media metadata APIs don't reliably expose audio track
-        // presence in every browser; for video assets this only affects
-        // metadata, because preview audio comes from the same <video>.
+        // audioTracks is absent in most engines per https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/audioTracks#browser_compatibility
         hasAudio: video.audioTracks === undefined ? true : video.audioTracks > 0,
         width: video.width,
         height: video.height,
@@ -112,7 +118,6 @@ async function probeNativeMedia(src: MediaSourceLike): Promise<MediaProbe | null
   }
 }
 
-/** Resolve true once a throwaway `<video>` decodes the file's first frame. */
 function canDecodeNatively(file: File): Promise<boolean> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file)
@@ -126,8 +131,7 @@ function canDecodeNatively(file: File): Promise<boolean> {
     const timer = setTimeout(() => settle(false), 5000)
     video.preload = 'auto'
     video.muted = true
-    // loadeddata (not loadedmetadata): proves the demuxer AND the video
-    // decoder both handle the file, not just that the container parses.
+    // loadeddata fires once the first frame has decoded, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/loadeddata_event
     video.onloadeddata = () => {
       clearTimeout(timer)
       settle(video.videoWidth > 0)
@@ -140,26 +144,28 @@ function canDecodeNatively(file: File): Promise<boolean> {
   })
 }
 
-/** Whether a video can use native `<video>` preview instead of decoded frames. */
 async function hasNativeVideoPreview(file: File, mimeType?: string): Promise<boolean> {
   if (isMatroskaLike({ name: file.name, mimeType: mimeType || file.type })) return false
   if (typeof document === 'undefined') return true
   const type = mimeType || file.type
   if (!type) return true
   if (document.createElement('video').canPlayType(type) !== '') return true
-  // canPlayType under-reports: Chrome answers "" for QuickTime containers it
-  // demuxes and decodes fine (.mov screen recordings, iPhone footage). Probe
-  // by actually decoding a frame before banishing the asset to the decoded
-  // path, which costs smooth preview and (without a pooled element) audio.
   return canDecodeNatively(file)
 }
 
-/** Read duration, dimensions, and track layout of an audio/video file. */
+async function probeDurationSeconds(input: Input): Promise<number> {
+  const tracks = await input.getTracks()
+  const firstPackets = await Promise.all(tracks.map((track) => new EncodedPacketSink(track).getFirstPacket({ metadataOnly: true })))
+  const computed = await input.computeDuration(tracks.filter((_, index) => firstPackets[index] !== null))
+  if (computed > 0) return computed
+  return (await input.getDurationFromMetadata(tracks)) ?? 0
+}
+
 export async function probeMedia(src: MediaSourceLike): Promise<MediaProbe> {
   const input = inputFor(src)
   try {
     const [durationSeconds, video, audio, mimeType] = await Promise.all([
-      input.computeDuration(),
+      probeDurationSeconds(input),
       input.getPrimaryVideoTrack(),
       input.getPrimaryAudioTrack(),
       input.getMimeType().catch(() => undefined),
@@ -174,13 +180,14 @@ export async function probeMedia(src: MediaSourceLike): Promise<MediaProbe> {
   } catch (error) {
     const nativeProbe = await probeNativeMedia(src)
     if (nativeProbe) return nativeProbe
-    throw error
+    throw new MediaProbeError('unreadable', `Cannot read this file as audio or video (${describeCause(error)})`, {
+      cause: error,
+    })
   } finally {
     input.dispose()
   }
 }
 
-/** Read intrinsic dimensions of an image URL (browser only). */
 export function probeImage(src: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const image = new Image()
@@ -190,12 +197,6 @@ export function probeImage(src: string): Promise<{ width: number; height: number
   })
 }
 
-/**
- * Turn a dropped/picked file into a probed {@link AssetRef} ready for the
- * `addAsset` command. Creates an object URL for `src` — callers own its
- * lifetime (revoke when the asset is removed). `hash` (SHA-256) is the
- * asset's stable identity for persistence/relink; very large files skip it.
- */
 export async function createAssetFromFile(file: File): Promise<AssetRef> {
   const src = URL.createObjectURL(file)
   const hash = await hashBlob(file).catch(() => null)
@@ -212,6 +213,12 @@ export async function createAssetFromFile(file: File): Promise<AssetRef> {
       return { ...base, kind: 'image', width, height }
     }
     const probe = await probeMedia(file)
+    if (!probe.hasVideo && !probe.hasAudio) {
+      throw new MediaProbeError('no-tracks', `"${file.name}" has no playable audio or video tracks`)
+    }
+    if (probe.durationMs <= 0) {
+      throw new MediaProbeError('no-duration', `"${file.name}" declares tracks but no playable media (duration 0 ms)`)
+    }
     if (probe.hasVideo) {
       return {
         ...base,
@@ -222,10 +229,7 @@ export async function createAssetFromFile(file: File): Promise<AssetRef> {
         nativePreview: await hasNativeVideoPreview(file, probe.mimeType),
       }
     }
-    if (probe.hasAudio) {
-      return { ...base, kind: 'audio', durationMs: probe.durationMs }
-    }
-    throw new Error(`"${file.name}" has no playable audio or video tracks`)
+    return { ...base, kind: 'audio', durationMs: probe.durationMs }
   } catch (error) {
     URL.revokeObjectURL(src)
     throw error

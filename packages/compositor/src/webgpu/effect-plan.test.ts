@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import type { Effect } from '@mcut/timeline'
 import { parseCssColor } from './color'
-import { COLOR_OP, curveToLut, hasUnsupportedEffects, planEffects } from './effect-plan'
+import { COLOR_OP, curveToLut, hasUnsupportedEffects, MAX_COLOR_OPS, planEffects } from './effect-plan'
+import { BLEND_MODE_IDS, COLOR_SHADER, COMPOSITE_SHADER } from './shaders'
 import { gaussianKernel, invertChrome } from './transform'
 
-const effect = (record: Record<string, unknown>): Effect =>
-  ({ enabled: true, ...record }) as unknown as Effect
+const effect = (record: Record<string, unknown>): Effect => ({ enabled: true, ...record }) as unknown as Effect
 
 describe('parseCssColor', () => {
   test('hex forms', () => {
@@ -27,19 +27,11 @@ describe('parseCssColor', () => {
 
 describe('planEffects', () => {
   test('fuses consecutive color effects into one pass, in order', () => {
-    const plan = planEffects([
-      effect({ type: 'brightness', amount: 1.2 }),
-      effect({ type: 'saturate', amount: 0.5 }),
-      effect({ type: 'invert', amount: 1 }),
-    ])
+    const plan = planEffects([effect({ type: 'brightness', amount: 1.2 }), effect({ type: 'saturate', amount: 0.5 }), effect({ type: 'invert', amount: 1 })])
     expect(plan.passes).toHaveLength(1)
     const pass = plan.passes[0]!
     if (pass.kind !== 'color') throw new Error('expected color pass')
-    expect(pass.ops.map((o) => o.kind)).toEqual([
-      COLOR_OP.brightness,
-      COLOR_OP.saturate,
-      COLOR_OP.invert,
-    ])
+    expect(pass.ops.map((o) => o.kind)).toEqual([COLOR_OP.brightness, COLOR_OP.saturate, COLOR_OP.invert])
   })
 
   test('preserves stack order across pass kinds', () => {
@@ -67,9 +59,7 @@ describe('planEffects', () => {
   })
 
   test('chroma key packs key color + tolerances', () => {
-    const plan = planEffects([
-      effect({ type: 'chroma-key', keyColor: '#00ff00', tolerance: 0.3, softness: 0.2, spillSuppression: 0.7 }),
-    ])
+    const plan = planEffects([effect({ type: 'chroma-key', keyColor: '#00ff00', tolerance: 0.3, softness: 0.2, spillSuppression: 0.7 })])
     const pass = plan.passes[0]!
     if (pass.kind !== 'color') throw new Error('expected color pass')
     expect(pass.ops[0]!.kind).toBe(COLOR_OP.chromaKey)
@@ -78,12 +68,18 @@ describe('planEffects', () => {
 
   test('curves produce per-channel LUTs with master composed after', () => {
     const plan = planEffects([
-      effect({ type: 'curves', rgb: [{ x: 0, y: 1 }, { x: 1, y: 0 }], red: [] }),
+      effect({
+        type: 'curves',
+        rgb: [
+          { x: 0, y: 1 },
+          { x: 1, y: 0 },
+        ],
+        red: [],
+      }),
     ])
     const pass = plan.passes[0]!
     if (pass.kind !== 'color') throw new Error('expected color pass')
     expect(pass.curves).not.toBeNull()
-    // Master inversion applies to the identity red channel.
     expect(pass.curves!.r[0]).toBeCloseTo(1, 5)
     expect(pass.curves!.r[255]).toBeCloseTo(0, 5)
   })
@@ -125,14 +121,12 @@ describe('invertChrome', () => {
 
   test('inverts scale about the center', () => {
     const inv = invertChrome(chrome)
-    // Frame point (110, 54) → local (5, 1) under scale (2, 4).
     expect(inv.m00 * 10 + inv.m01 * 4).toBeCloseTo(5, 5)
     expect(inv.m10 * 10 + inv.m11 * 4).toBeCloseTo(1, 5)
   })
 
   test('inverts rotation', () => {
     const inv = invertChrome({ ...chrome, scaleX: 1, scaleY: 1, rotationDeg: 90 })
-    // Forward: local (1, 0) rotates to frame offset (0, 1). Inverse maps back.
     expect(inv.m00 * 0 + inv.m01 * 1).toBeCloseTo(1, 5)
     expect(inv.m10 * 0 + inv.m11 * 1).toBeCloseTo(0, 5)
   })
@@ -154,5 +148,24 @@ describe('gaussianKernel', () => {
 
   test('kernel width tracks the radius', () => {
     expect(gaussianKernel(2).length).toBeLessThan(gaussianKernel(20).length)
+  })
+})
+
+describe('WGSL mirrors the TypeScript ids', () => {
+  test('every COLOR_OP kind has a switch case in COLOR_SHADER', () => {
+    for (const kind of Object.values(COLOR_OP)) {
+      expect(COLOR_SHADER).toContain(`case ${kind}u:`)
+    }
+  })
+
+  test('the fused color pass cap is the WGSL ops array length', () => {
+    expect(COLOR_SHADER).toContain(`ops: array<ColorOp, ${MAX_COLOR_OPS}>`)
+  })
+
+  test('every non-normal blend mode id has a switch case in blend_colors', () => {
+    for (const [mode, id] of Object.entries(BLEND_MODE_IDS)) {
+      if (mode === 'normal') continue
+      expect(COMPOSITE_SHADER).toContain(`case ${id}u:`)
+    }
   })
 })

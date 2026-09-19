@@ -12,12 +12,13 @@ import {
 } from '@mcut/timeline'
 import type { TranscriptResult, TranscriptWord } from './types'
 
+const DEFAULT_CAPTION_MAX_CHARS = 36
+const DEFAULT_CAPTION_MAX_DURATION_MS = 5000
+const DEFAULT_CAPTION_MAX_GAP_MS = 800
+
 export interface GroupWordsOptions {
-  /** Soft maximum characters per caption line group. Default 36. */
   maxChars?: number
-  /** Maximum duration of one caption. Default 5000ms. */
   maxDurationMs?: number
-  /** A silence gap longer than this starts a new caption. Default 800ms. */
   maxGapMs?: number
 }
 
@@ -28,11 +29,10 @@ export interface WordGroup {
   words: TranscriptWord[]
 }
 
-/** Chunk word timings into caption-sized groups. */
 export function groupWords(words: TranscriptWord[], options: GroupWordsOptions = {}): WordGroup[] {
-  const maxChars = options.maxChars ?? 36
-  const maxDurationMs = options.maxDurationMs ?? 5000
-  const maxGapMs = options.maxGapMs ?? 800
+  const maxChars = options.maxChars ?? DEFAULT_CAPTION_MAX_CHARS
+  const maxDurationMs = options.maxDurationMs ?? DEFAULT_CAPTION_MAX_DURATION_MS
+  const maxGapMs = options.maxGapMs ?? DEFAULT_CAPTION_MAX_GAP_MS
 
   const groups: WordGroup[] = []
   let current: TranscriptWord[] = []
@@ -77,89 +77,44 @@ export interface CaptionElementInput {
 
 export interface ToCaptionElementsOptions extends GroupWordsOptions {
   style?: Partial<CaptionStyle>
-  /**
-   * Shift generated captions onto a timeline position. For example, a
-   * transcript from a clip starting at 10s should use `timeOffsetMs: 10000`.
-   */
   timeOffsetMs?: number
-  /** Ignore transcript content before this source-media timestamp. */
   sourceStartMs?: number
-  /** Ignore transcript content at or after this source-media timestamp. */
   sourceEndMs?: number
 }
 
 function normalizeRange(options: ToCaptionElementsOptions) {
   const sourceStartMs = Math.max(0, Math.round(options.sourceStartMs ?? 0))
-  const sourceEndMs =
-    options.sourceEndMs === undefined
-      ? undefined
-      : Math.max(sourceStartMs, Math.round(options.sourceEndMs))
+  const sourceEndMs = options.sourceEndMs === undefined ? undefined : Math.max(sourceStartMs, Math.round(options.sourceEndMs))
   const timeOffsetMs = Math.max(0, Math.round(options.timeOffsetMs ?? 0))
   return { sourceStartMs, sourceEndMs, timeOffsetMs }
 }
 
-function mapSourceTimeToCaptionTime(
-  valueMs: number,
-  sourceStartMs: number,
-  sourceEndMs: number | undefined,
-  timeOffsetMs: number,
-): number {
+function mapSourceTimeToCaptionTime(valueMs: number, sourceStartMs: number, sourceEndMs: number | undefined, timeOffsetMs: number): number {
   const clampedToStart = Math.max(valueMs, sourceStartMs)
   const clamped = sourceEndMs === undefined ? clampedToStart : Math.min(clampedToStart, sourceEndMs)
   return clamped - sourceStartMs + timeOffsetMs
 }
 
-/**
- * Convert a transcript into caption elements ready for the `applyCaptions`
- * command: grouped to caption length, word timings made relative to each
- * element, overlaps clamped to satisfy the track invariant.
- */
-export function toCaptionElements(
-  result: TranscriptResult,
-  options: ToCaptionElementsOptions = {},
-): CaptionElementInput[] {
+export function toCaptionElements(result: TranscriptResult, options: ToCaptionElementsOptions = {}): CaptionElementInput[] {
   const { sourceStartMs, sourceEndMs, timeOffsetMs } = normalizeRange(options)
   let groups: WordGroup[]
   if (result.words.length > 0) {
     const words = result.words
-      .filter(
-        (word) =>
-          word.endMs > sourceStartMs &&
-          (sourceEndMs === undefined || word.startMs < sourceEndMs),
-      )
+      .filter((word) => word.endMs > sourceStartMs && (sourceEndMs === undefined || word.startMs < sourceEndMs))
       .map((word) => ({
         ...word,
-        startMs: mapSourceTimeToCaptionTime(
-          word.startMs,
-          sourceStartMs,
-          sourceEndMs,
-          timeOffsetMs,
-        ),
+        startMs: mapSourceTimeToCaptionTime(word.startMs, sourceStartMs, sourceEndMs, timeOffsetMs),
         endMs: mapSourceTimeToCaptionTime(word.endMs, sourceStartMs, sourceEndMs, timeOffsetMs),
       }))
       .filter((word) => word.endMs > word.startMs)
     groups = groupWords(words, options)
   } else if (result.segments.length > 0) {
     groups = result.segments
-      .filter(
-        (segment) =>
-          segment.endMs > sourceStartMs &&
-          (sourceEndMs === undefined || segment.startMs < sourceEndMs),
-      )
+      .filter((segment) => segment.endMs > sourceStartMs && (sourceEndMs === undefined || segment.startMs < sourceEndMs))
       .map((segment) => ({
         text: segment.text,
-        startMs: mapSourceTimeToCaptionTime(
-          segment.startMs,
-          sourceStartMs,
-          sourceEndMs,
-          timeOffsetMs,
-        ),
-        endMs: mapSourceTimeToCaptionTime(
-          segment.endMs,
-          sourceStartMs,
-          sourceEndMs,
-          timeOffsetMs,
-        ),
+        startMs: mapSourceTimeToCaptionTime(segment.startMs, sourceStartMs, sourceEndMs, timeOffsetMs),
+        endMs: mapSourceTimeToCaptionTime(segment.endMs, sourceStartMs, sourceEndMs, timeOffsetMs),
         words: [],
       }))
       .filter((segment) => segment.endMs > segment.startMs)
@@ -206,15 +161,10 @@ export function toCaptionElements(
 
 export interface BuildApplyCaptionsOptions extends ToCaptionElementsOptions {
   trackId?: TrackId
-  /** Replace existing captions on the target track. Default true. */
   replace?: boolean
 }
 
-/** Build the `applyCaptions` command for {@link toCaptionElements} output. */
-export function buildApplyCaptionsCommand(
-  result: TranscriptResult,
-  options: BuildApplyCaptionsOptions = {},
-): CommandOfType<'applyCaptions'> {
+export function buildApplyCaptionsCommand(result: TranscriptResult, options: BuildApplyCaptionsOptions = {}): CommandOfType<'applyCaptions'> {
   const { trackId, replace, ...rest } = options
   return {
     type: 'applyCaptions',
@@ -231,31 +181,27 @@ export const captionsCommandOptionsSchema = z.object({
       'Scope the transcript to one video/audio element: caption only the source span the clip ' +
         'plays, positioned at its timeline location. Without it the transcript starts at timeline 0.',
     ),
-  styleId: z
-    .string()
-    .optional()
-    .describe('A preset id from CAPTION_STYLE_PRESETS (classic, karaoke, spotlight, ...).'),
-  maxChars: z
-    .number()
-    .int()
-    .positive()
-    .optional()
-    .describe('Soft maximum characters per caption. Default 36.'),
-  maxGapMs: z
-    .number()
-    .nonnegative()
-    .optional()
-    .describe('A silence gap longer than this starts a new caption. Default 800.'),
+  styleId: z.string().optional().describe('A preset id from CAPTION_STYLE_PRESETS (classic, karaoke, spotlight, ...).'),
+  maxChars: z.number().int().positive().optional().describe('Soft maximum characters per caption. Default 36.'),
+  maxGapMs: z.number().nonnegative().optional().describe('A silence gap longer than this starts a new caption. Default 800.'),
   replace: z.boolean().optional().describe('Clear existing captions on the target track first.'),
 })
 
 export type CaptionsCommandOptions = z.infer<typeof captionsCommandOptionsSchema>
 
-export function buildCaptionsCommand(
-  project: Project,
-  transcript: TranscriptResult,
-  options: CaptionsCommandOptions = {},
-): CommandOfType<'applyCaptions'> {
+function sourceWindowForClip(element: { startMs: number; trimStartMs: number; durationMs: number }): {
+  timeOffsetMs: number
+  sourceStartMs: number
+  sourceEndMs: number
+} {
+  return {
+    timeOffsetMs: element.startMs,
+    sourceStartMs: element.trimStartMs,
+    sourceEndMs: element.trimStartMs + element.durationMs,
+  }
+}
+
+export function buildCaptionsCommand(project: Project, transcript: TranscriptResult, options: CaptionsCommandOptions = {}): CommandOfType<'applyCaptions'> {
   let style
   if (options.styleId) {
     const preset = CAPTION_STYLE_PRESETS.find((p) => p.id === options.styleId)
@@ -275,15 +221,9 @@ export function buildCaptionsCommand(
       throw new Error(`captions scope to video/audio elements, not "${element.type}"`)
     }
     if (element.timeMap) {
-      throw new Error(
-        `element "${options.elementId}" has a time remap; transcript times will not line up`,
-      )
+      throw new Error(`element "${options.elementId}" has a time remap; transcript times will not line up`)
     }
-    scope = {
-      timeOffsetMs: element.startMs,
-      sourceStartMs: element.trimStartMs,
-      sourceEndMs: element.trimStartMs + element.durationMs,
-    }
+    scope = sourceWindowForClip(element)
   }
 
   return buildApplyCaptionsCommand(transcript, {

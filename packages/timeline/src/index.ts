@@ -15,31 +15,15 @@ export {
   type TrackId,
 } from './id'
 
-export {
-  getEffectiveVolume,
-  getFadeGain,
-  hasFades,
-  type FadeableElement,
-} from './audio'
+export { getEffectiveVolume, getFadeGain, hasFades, type FadeableElement } from './audio'
 
-export {
-  resolveElementAudioSource,
-  type ElementAudioSource,
-  type ElementAudioSourceType,
-} from './audio-source'
+export { resolveElementAudioSource, type ElementAudioSource, type ElementAudioSourceType } from './audio-source'
 
 export { migrateProject, ProjectFormatError, PROJECT_VERSION } from './migrations'
 
 export { assertNever } from './errors'
 
-export {
-  createDefaultLayouts,
-  getLayout,
-  layoutSchema,
-  layoutSlotSchema,
-  type Layout,
-  type LayoutSlot,
-} from './layouts'
+export { createDefaultLayouts, getLayout, layoutSchema, layoutSlotSchema, type Layout, type LayoutSlot } from './layouts'
 
 export { listPresets, propertyPresetSchema, type PropertyPreset } from './presets'
 
@@ -55,15 +39,7 @@ export {
   type TextRunStylePatch,
 } from './rich-text'
 
-export {
-  cropSchema,
-  DEFAULT_SHADOW,
-  shadowSchema,
-  strokeSchema,
-  type Crop,
-  type Shadow,
-  type Stroke,
-} from './style'
+export { cropSchema, DEFAULT_SHADOW, shadowSchema, strokeSchema, type Crop, type Shadow, type Stroke } from './style'
 
 export {
   getActiveAngleIndex,
@@ -81,7 +57,7 @@ export { getFrameRequests, type FrameRequest } from './frame-requests'
 export {
   captureThumbnailTemplate,
   expandThumbnailTemplate,
-  findThumbnailTrack,
+  findThumbnailTracks,
   THUMBNAIL_FRAME_COUNT,
   THUMBNAIL_TEMPLATES,
   THUMBNAIL_TRACK_NAME,
@@ -92,14 +68,7 @@ export {
   type ThumbnailTemplate,
 } from './thumbnails'
 
-export {
-  captureZoomPreset,
-  expandZoomPreset,
-  ZOOM_PRESETS,
-  ZOOMABLE_PROPERTIES,
-  zoomPresetSchema,
-  type ZoomPreset,
-} from './zoom-presets'
+export { captureZoomPreset, expandZoomPreset, ZOOM_PRESETS, ZOOMABLE_PROPERTIES, zoomPresetSchema, type ZoomPreset } from './zoom-presets'
 
 export {
   EFFECT_PARAMS,
@@ -147,12 +116,7 @@ export {
 
 export { frameToMs, msPerFrame, msToFrame, quantizeMsToFrame } from './time'
 
-export {
-  applyEdgeTrim,
-  getEdgeTrimRange,
-  type EdgeTrimRange,
-  type TrimEdge,
-} from './edge-trim'
+export { applyEdgeTrim, getEdgeTrimRange, type EdgeTrimRange, type TrimEdge } from './edge-trim'
 
 export {
   collectSnapTargets,

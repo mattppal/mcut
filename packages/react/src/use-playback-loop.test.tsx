@@ -40,9 +40,7 @@ function fakeFrames() {
 
 function mountLoop(engine: EditorEngine) {
   const frames = fakeFrames()
-  const rendered = renderHook(() =>
-    usePlaybackLoop(engine, { onFrame: () => {}, requestFrame: frames.requestFrame }),
-  )
+  const rendered = renderHook(() => usePlaybackLoop(engine, { onFrame: () => {}, requestFrame: frames.requestFrame }))
   return { frames, ...rendered }
 }
 

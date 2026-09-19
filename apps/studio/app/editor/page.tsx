@@ -1,5 +1,5 @@
-import { EditorPage, editorMetadata } from "./editor-page";
+import { EditorPage, editorMetadata } from './editor-page'
 
-export const metadata = editorMetadata;
+export const metadata = editorMetadata
 
-export default EditorPage;
+export default EditorPage

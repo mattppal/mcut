@@ -44,9 +44,7 @@ const talkProject = () =>
       {
         id: 't-video',
         name: 'Video',
-        elements: [
-          { id: 'e-video', type: 'video', assetId: 'a-video', startMs: 0, durationMs: 10000 },
-        ],
+        elements: [{ id: 'e-video', type: 'video', assetId: 'a-video', startMs: 0, durationMs: 10000 }],
       },
     ],
   })
@@ -196,9 +194,7 @@ describe('createMcutMcpServer', () => {
       arguments: { includeWords: true, words: true },
     })
     expect(unknownKey.isError).toBe(true)
-    expect(unknownKey.content).toEqual([
-      { type: 'text', text: 'get_transcript: ✖ Unrecognized key: "words"\n  → at arguments' },
-    ])
+    expect(unknownKey.content).toEqual([{ type: 'text', text: 'get_transcript: ✖ Unrecognized key: "words"\n  → at arguments' }])
 
     const badId = await client.callTool({
       name: 'ensure_transcript',
@@ -535,9 +531,7 @@ describe('createMcutMcpServer', () => {
     const port = await bridge.listen(0)
 
     try {
-      await expect(bridge.createTarget().getSummary()).rejects.toThrow(
-        `http://localhost:3000/editor?mcpBridge=${port}&mcpToken=missing-tab-token`,
-      )
+      await expect(bridge.createTarget().getSummary()).rejects.toThrow(`http://localhost:3000/editor?mcpBridge=${port}&mcpToken=missing-tab-token`)
       await expect(bridge.rpc('status')).resolves.toMatchObject({
         connected: false,
         openEditorUrl: `http://localhost:3000/editor?mcpBridge=${port}&mcpToken=missing-tab-token`,
@@ -643,9 +637,8 @@ describe('createMcutMcpServer', () => {
     const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp`, {
       headers: { Origin: 'http://localhost:3000' },
     })
-    socket.on('error', () => {
-      // Expected: the bridge rejects the unauthenticated WebSocket upgrade.
-    })
+    const ignoreRejectedUpgrade = () => {}
+    socket.on('error', ignoreRejectedUpgrade)
 
     const result = await new Promise<'open' | 'closed'>((resolve) => {
       socket.once('open', () => resolve('open'))

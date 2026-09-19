@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError } from './commands'
 import { applyEdgeTrim, getEdgeTrimRange } from './edge-trim'
-import { createProject, type Project, type TimelineElement, type VideoElement } from './model'
+import { EditorEngine } from './engine'
+import { createProject, parseProject, type Project, type TimelineElement, type VideoElement } from './model'
 import { getElement, getTrack } from './selectors'
 import { getSourceTimeMs, makeConstantSpeedMap } from './speed'
+import { thrownBy } from './test-helpers'
 
 const TRACK = 't-default'
 
@@ -68,7 +70,12 @@ describe('applyEdgeTrim on plain video', () => {
   test('start grow shifts keyframes so motion stays anchored', () => {
     const keyframed: TimelineElement = {
       ...element(),
-      keyframes: { opacity: [{ timeMs: 0, value: 0 }, { timeMs: 1000, value: 1 }] },
+      keyframes: {
+        opacity: [
+          { timeMs: 0, value: 0 },
+          { timeMs: 1000, value: 1 },
+        ],
+      },
     }
     const next = applyEdgeTrim(keyframed, 'start', -500)
     expect(next.keyframes?.opacity).toEqual([
@@ -80,7 +87,12 @@ describe('applyEdgeTrim on plain video', () => {
   test('start shrink rebases keyframes through the split machinery', () => {
     const keyframed: TimelineElement = {
       ...element(),
-      keyframes: { opacity: [{ timeMs: 0, value: 0 }, { timeMs: 1000, value: 1 }] },
+      keyframes: {
+        opacity: [
+          { timeMs: 0, value: 0 },
+          { timeMs: 1000, value: 1 },
+        ],
+      },
     }
     const next = applyEdgeTrim(keyframed, 'start', 500)
     expect(next.keyframes?.opacity).toEqual([
@@ -96,14 +108,12 @@ describe('applyEdgeTrim on reversed clips', () => {
   test('end grow reveals EARLIER source (window slides down)', () => {
     const next = applyEdgeTrim(reversed(), 'end', 500) as VideoElement
     expect(next).toMatchObject({ durationMs: 3500, trimStartMs: 500 })
-    // Content anchor: source at output 0 is unchanged.
     expect(getSourceTimeMs(next, 0)).toBe(getSourceTimeMs(reversed(), 0))
   })
 
   test('start grow reveals LATER source, trim unchanged', () => {
     const next = applyEdgeTrim(reversed(), 'start', -500) as VideoElement
     expect(next).toMatchObject({ startMs: 1500, durationMs: 3500, trimStartMs: 1000 })
-    // Content anchor: what played at output local L plays at L+500 now.
     expect(getSourceTimeMs(next, 1000)).toBe(getSourceTimeMs(reversed(), 500))
   })
 
@@ -115,7 +125,7 @@ describe('applyEdgeTrim on reversed clips', () => {
 describe('applyEdgeTrim on speed-ramped clips', () => {
   const ramped = (): VideoElement => ({
     ...video(withVideo(baseProject())),
-    timeMap: makeConstantSpeedMap(3000, 2), // consumes 6000ms source
+    timeMap: makeConstantSpeedMap(3000, 2),
   })
 
   test('end grow freezes (map clamps); no trim bookkeeping', () => {
@@ -134,7 +144,6 @@ describe('applyEdgeTrim on speed-ramped clips', () => {
   test('start shrink keeps trim; the map carries the offset', () => {
     const next = applyEdgeTrim(ramped(), 'start', 1000) as VideoElement
     expect(next).toMatchObject({ startMs: 3000, durationMs: 2000, trimStartMs: 1000 })
-    // Source mapping is unchanged for surviving content.
     expect(getSourceTimeMs(next, 0)).toBe(getSourceTimeMs(ramped(), 1000))
     expect(getSourceTimeMs(next, 2000)).toBe(getSourceTimeMs(ramped(), 3000))
   })
@@ -142,10 +151,8 @@ describe('applyEdgeTrim on speed-ramped clips', () => {
   test('start grow rebases trim and covers the head at 1x', () => {
     const next = applyEdgeTrim(ramped(), 'start', -500) as VideoElement
     expect(next).toMatchObject({ startMs: 1500, durationMs: 3500, trimStartMs: 500 })
-    // New head plays the revealed media at 1x...
     expect(getSourceTimeMs(next, 0)).toBe(500)
     expect(getSourceTimeMs(next, 250)).toBe(750)
-    // ...and surviving content keeps its absolute source times.
     expect(getSourceTimeMs(next, 500)).toBe(getSourceTimeMs(ramped(), 0))
     expect(getSourceTimeMs(next, 2500)).toBe(getSourceTimeMs(ramped(), 2000))
   })
@@ -160,7 +167,6 @@ describe('getEdgeTrimRange', () => {
   test('plain video: bounded by media handles and minimum duration', () => {
     const project = withVideo(baseProject())
     const element = video(project)
-    // Head: 1000ms of trim available; tail: 10000 - 1000 - 3000 = 6000.
     expect(getEdgeTrimRange(project, element, 'start')).toEqual({
       minDeltaMs: -1000,
       maxDeltaMs: 2990,
@@ -201,10 +207,6 @@ describe('getEdgeTrimRange', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Commands built on the edge-trim core
-// ---------------------------------------------------------------------------
-
 function threeAdjacentClips(): Project {
   let project = baseProject()
   for (const [id, startMs, trimStartMs] of [
@@ -233,13 +235,8 @@ describe('slipElement', () => {
 
   test('clamps to media bounds', () => {
     const project = withVideo(baseProject())
-    expect(() =>
-      applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: -1500 }),
-    ).toThrow(CommandError)
-    // 10000 - 3000 = 7000 max trim; current 1000 → +6000 ok, +6001 overruns.
-    expect(() =>
-      applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: 6001 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: -1500 })).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: 6001 })).toThrow(CommandError)
     applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: 6000 })
   })
 
@@ -262,9 +259,7 @@ describe('slipElement', () => {
     })
     project = applyCommand(project, { type: 'slipElement', elementId: 'e-m', deltaMs: 300 })
     const element = getElement(project, 'e-m')!
-    expect(element.type === 'multicam' && element.sources.map((s) => s.trimStartMs)).toEqual([
-      400, 900,
-    ])
+    expect(element.type === 'multicam' && element.sources.map((s) => s.trimStartMs)).toEqual([400, 900])
   })
 
   test('rejects non-source elements', () => {
@@ -274,9 +269,7 @@ describe('slipElement', () => {
       trackId: TRACK,
       element: { id: 'e-t', type: 'text', text: 'x', startMs: 0, durationMs: 1000 },
     })
-    expect(() =>
-      applyCommand(project, { type: 'slipElement', elementId: 'e-t', deltaMs: 100 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'slipElement', elementId: 'e-t', deltaMs: 100 })).toThrow(CommandError)
   })
 })
 
@@ -312,9 +305,7 @@ describe('rollEdit', () => {
 
   test('requires a butt cut', () => {
     const project = withVideo(baseProject())
-    expect(() =>
-      applyCommand(project, { type: 'rollEdit', elementId: 'e-v', deltaMs: 100 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'rollEdit', elementId: 'e-v', deltaMs: 100 })).toThrow(CommandError)
   })
 
   test('keeps the transition on the rolled cut valid', () => {
@@ -343,7 +334,7 @@ describe('slideElement', () => {
     expect(getElement(project, 'e-2')).toMatchObject({
       startMs: 2500,
       durationMs: 2000,
-      trimStartMs: 4000, // content untouched
+      trimStartMs: 4000,
     })
     expect(getElement(project, 'e-3')).toMatchObject({
       startMs: 4500,
@@ -354,15 +345,11 @@ describe('slideElement', () => {
 
   test('requires neighbors on both sides', () => {
     const project = withVideo(baseProject())
-    expect(() =>
-      applyCommand(project, { type: 'slideElement', elementId: 'e-v', deltaMs: 100 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'slideElement', elementId: 'e-v', deltaMs: 100 })).toThrow(CommandError)
   })
 
   test('clamps to neighbor minimum durations', () => {
-    expect(() =>
-      applyCommand(threeAdjacentClips(), { type: 'slideElement', elementId: 'e-2', deltaMs: 1995 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(threeAdjacentClips(), { type: 'slideElement', elementId: 'e-2', deltaMs: 1995 })).toThrow(CommandError)
   })
 })
 
@@ -456,7 +443,6 @@ describe('rippleTrim', () => {
   test('a ripple that would collide with a straddling clip throws', () => {
     let project = threeAdjacentClips()
     project = applyCommand(project, { type: 'addTrack', id: 't-b' })
-    // Straddles the cut at 2000 on another track and a clip right after it.
     project = applyCommand(project, {
       type: 'addElement',
       trackId: 't-b',
@@ -467,9 +453,7 @@ describe('rippleTrim', () => {
       trackId: 't-b',
       element: { id: 'e-after', type: 'text', text: 'y', startMs: 3600, durationMs: 500 },
     })
-    expect(() =>
-      applyCommand(project, { type: 'rippleTrim', elementId: 'e-1', edge: 'end', deltaMs: -500 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'rippleTrim', elementId: 'e-1', edge: 'end', deltaMs: -500 })).toThrow(CommandError)
   })
 
   test('downstream transitions stay valid because pairs shift together', () => {
@@ -488,6 +472,31 @@ describe('rippleTrim', () => {
     const left = getElement(project, 'e-2')!
     const right = getElement(project, 'e-3')!
     expect(left.startMs + left.durationMs).toBe(right.startMs)
+  })
+
+  test('rejects a start-edge rippleTrim whose duration leaves the safe integer range', () => {
+    const engine = new EditorEngine()
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { id: 'e-text', type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
+    })
+    const thrown = thrownBy(() => engine.dispatch({ type: 'rippleTrim', elementId: 'e-text', edge: 'start', deltaMs: -9007199254740991 }))
+    expect(thrown).toBeInstanceOf(CommandError)
+    expect(thrown).toMatchObject({ code: 'out-of-bounds' })
+    expect(getElement(engine.project, 'e-text')).toMatchObject({ startMs: 1000, durationMs: 1000 })
+    expect(parseProject(JSON.parse(JSON.stringify(engine.project)))).toEqual(engine.project)
+  })
+
+  test('start-edge rippleTrim still grows a text element in range', () => {
+    const engine = new EditorEngine()
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { id: 'e-text', type: 'text', text: 'x', startMs: 1000, durationMs: 1000 },
+    })
+    engine.dispatch({ type: 'rippleTrim', elementId: 'e-text', edge: 'start', deltaMs: -500 })
+    expect(getElement(engine.project, 'e-text')).toMatchObject({ startMs: 1000, durationMs: 1500 })
   })
 })
 

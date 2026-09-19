@@ -1,9 +1,3 @@
-/**
- * Regenerates everything derived from code: references/commands.md and
- * references/recipes.md, the starter templates, and the preset data assets.
- * Output is deterministic. CI rebuilds and diffs it, so the published skill
- * can never drift from the registries it documents.
- */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { PLATFORM_PRESETS, type PlatformPreset } from '@mcut/cli'
@@ -40,15 +34,7 @@ function rewriteColonConnectors(text: string): string {
     const prev = text.at(i - 1)
     const next = text.at(i + 1)
     const letter = text.at(i + 2)
-    if (
-      depth === 0 &&
-      ch === ':' &&
-      prev !== undefined &&
-      /\w/.test(prev) &&
-      next === ' ' &&
-      letter !== undefined &&
-      /[a-z]/.test(letter)
-    ) {
+    if (depth === 0 && ch === ':' && prev !== undefined && /\w/.test(prev) && next === ' ' && letter !== undefined && /[a-z]/.test(letter)) {
       result += `. ${letter.toUpperCase()}`
       i += 2
       continue
@@ -71,9 +57,7 @@ function sanitizePreset(preset: PlatformPreset): PlatformPreset {
   return { ...preset, notes: plainProse(preset.notes) }
 }
 
-const EXCLUDED_COMMANDS = new Set([
-  'applyThumbnail',
-])
+const COMMANDS_HIDDEN_FROM_STUDIO = new Set(['applyThumbnail'])
 
 function typeLabel(schema: unknown): string {
   if (typeof schema !== 'object' || schema === null) return 'any'
@@ -93,7 +77,7 @@ function typeLabel(schema: unknown): string {
 }
 
 function commandsMarkdown(): string {
-  const tools = listToolDefinitions().filter((tool) => !EXCLUDED_COMMANDS.has(tool.name))
+  const tools = listToolDefinitions().filter((tool) => !COMMANDS_HIDDEN_FROM_STUDIO.has(tool.name))
   const lines: string[] = [
     '# Command reference',
     '',

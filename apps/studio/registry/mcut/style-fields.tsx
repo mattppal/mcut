@@ -4,19 +4,10 @@ import { DEFAULT_SHADOW, type Shadow, type Stroke } from "@mcut/timeline";
 import { Switch } from "@/components/ui/switch";
 import { ColorField, FieldRow, NumberField } from "./inspector-fields";
 
-/**
- * Appearance rows for the shared style primitives (timeline style.ts) —
- * written ONCE and rendered by every surface that carries the primitive:
- * text glyphs, media frames (video/image), and multicam layout slots. Same
- * rows everywhere is what makes a "style" preset portable across them.
- */
-
-/** Corner radius as a fraction of the short edge, shown as 0–50%. */
 export function RadiusRow({
   value,
   onCommit,
 }: {
-  /** 0..0.5 */
   value: number;
   onCommit: (value: number) => void;
 }) {
@@ -33,7 +24,6 @@ export function RadiusRow({
   );
 }
 
-/** Border/outline: width (0 removes) + color. */
 export function StrokeFields({
   value,
   onCommit,
@@ -71,7 +61,6 @@ export function StrokeFields({
   );
 }
 
-/** Drop shadow: switch + color/blur/offsets when on. */
 export function ShadowFields({
   value,
   onCommit,
@@ -127,15 +116,9 @@ export function ShadowFields({
   );
 }
 
-/**
- * The "style" preset payload every surface saves/applies (tolerantly: each
- * surface keeps the keys it understands and ignores the rest, so a PiP look
- * saved on a slot lands on a clip and vice versa).
- */
 export interface StylePresetValues {
   cornerRadius?: number;
   stroke?: Stroke | null;
-  /** Elements store the full shadow; slots store a boolean. */
   shadow?: Shadow | boolean | null;
   fit?: "cover" | "contain";
 }

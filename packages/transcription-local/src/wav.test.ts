@@ -15,7 +15,7 @@ function pcm16Wav(samples: Float32Array, sampleRate: number, channels = 1): Arra
   writeAscii(8, 'WAVE')
   writeAscii(12, 'fmt ')
   view.setUint32(16, 16, true)
-  view.setUint16(20, 1, true) // PCM
+  view.setUint16(20, 1, true)
   view.setUint16(22, channels, true)
   view.setUint32(24, sampleRate, true)
   view.setUint32(28, sampleRate * channels * 2, true)

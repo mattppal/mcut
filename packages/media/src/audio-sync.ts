@@ -2,42 +2,19 @@ import { AudioBufferSink } from 'mediabunny'
 import { inputFor, type MediaSourceLike } from './probe'
 import { valueAt } from './value-at'
 
-/**
- * Audio-waveform autosync for multicam: two recordings of the same room
- * align where their loudness envelopes correlate best. RMS envelopes at
- * 100Hz (10ms buckets) give talking-head-grade sync; normalized
- * cross-correlation over a bounded lag search finds the offset, and the
- * peak-vs-noise ratio doubles as a confidence score.
- */
-
 export interface SyncResult {
-  /** How much B starts AFTER A in real time (negative = B started first). */
   offsetMs: number
-  /** Peak correlation ÷ runner-up — <1.3 means "don't trust this". */
   confidence: number
 }
 
 export interface AudioSyncOptions {
-  /** Seconds of audio analyzed from each source. Default 60. */
   windowS?: number
-  /** Largest |offset| considered, in seconds. Default 30. */
   maxLagS?: number
-  /** Envelope rate (buckets per second). Default 100 (10ms resolution). */
   rateHz?: number
   signal?: AbortSignal
 }
 
-/**
- * Normalized cross-correlation of two zero-meaned envelopes. Returns the lag
- * (in buckets) that best aligns `b` to `a`: positive lag means b's content
- * happens LATER in its own file, i.e. b started recording earlier.
- * Pure — unit-testable without decoding.
- */
-export function crossCorrelateEnvelopes(
-  a: Float32Array,
-  b: Float32Array,
-  maxLagBuckets: number,
-): { lag: number; confidence: number } {
+export function crossCorrelateEnvelopes(a: Float32Array, b: Float32Array, maxLagBuckets: number): { lag: number; confidence: number } {
   const center = (env: Float32Array) => {
     let mean = 0
     for (const v of env) mean += v
@@ -65,7 +42,6 @@ export function crossCorrelateEnvelopes(
     }
     const score = na > 0 && nb > 0 ? dot / Math.sqrt(na * nb) : 0
     if (score > best) {
-      // Runner-up must be a genuinely different alignment, not the peak's shoulder.
       if (Math.abs(lag - bestLag) > 4) secondBest = best
       best = score
       bestLag = lag
@@ -77,11 +53,7 @@ export function crossCorrelateEnvelopes(
   return { lag: bestLag, confidence }
 }
 
-/** RMS envelope of the first `windowS` seconds at `rateHz` buckets/second. */
-export async function extractEnvelope(
-  src: MediaSourceLike,
-  { windowS = 60, rateHz = 100, signal }: AudioSyncOptions = {},
-): Promise<Float32Array | null> {
+export async function extractEnvelope(src: MediaSourceLike, { windowS = 60, rateHz = 100, signal }: AudioSyncOptions = {}): Promise<Float32Array | null> {
   const input = inputFor(src)
   try {
     const track = await input.getPrimaryAudioTrack()
@@ -95,7 +67,6 @@ export async function extractEnvelope(
       const data = buffer.getChannelData(0)
       const sampleRate = buffer.sampleRate
       for (let i = 0; i < data.length; i += 4) {
-        // Every 4th sample is plenty for a 10ms RMS envelope.
         const t = timestamp + i / sampleRate
         const bucket = Math.floor(t * rateHz)
         if (bucket < 0 || bucket >= buckets) continue
@@ -113,24 +84,11 @@ export async function extractEnvelope(
   }
 }
 
-/**
- * The sync offset between two recordings: how many ms after A's recording
- * started did B's start. Null when either source has no audio.
- */
-export async function findSyncOffsetMs(
-  a: MediaSourceLike,
-  b: MediaSourceLike,
-  options: AudioSyncOptions = {},
-): Promise<SyncResult | null> {
+export async function findSyncOffsetMs(a: MediaSourceLike, b: MediaSourceLike, options: AudioSyncOptions = {}): Promise<SyncResult | null> {
   const rateHz = options.rateHz ?? 100
   const maxLagS = options.maxLagS ?? 30
-  const [envA, envB] = await Promise.all([
-    extractEnvelope(a, options),
-    extractEnvelope(b, options),
-  ])
+  const [envA, envB] = await Promise.all([extractEnvelope(a, options), extractEnvelope(b, options)])
   if (!envA || !envB) return null
   const { lag, confidence } = crossCorrelateEnvelopes(envA, envB, Math.round(maxLagS * rateHz))
-  // lag > 0 ⇒ b's matching content sits later in b's file ⇒ b STARTED EARLIER
-  // by lag buckets ⇒ offset (B after A) is negative.
   return { offsetMs: Math.round((-lag * 1000) / rateHz), confidence }
 }

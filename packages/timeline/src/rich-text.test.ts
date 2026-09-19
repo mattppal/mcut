@@ -1,11 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import {
-  applyRunStyle,
-  getRunStyleAt,
-  normalizeRuns,
-  shiftRunsForEdit,
-  type TextRun,
-} from './rich-text'
+import { applyRunStyle, getRunStyleAt, normalizeRuns, shiftRunsForEdit, type TextRun } from './rich-text'
 
 const bold = { fontWeight: 700 }
 const red = { color: '#ff0000' }
@@ -27,9 +21,7 @@ describe('normalizeRuns', () => {
 
 describe('applyRunStyle', () => {
   test('styles a plain range', () => {
-    expect(applyRunStyle([], 2, 5, { fontWeight: 700 }, 10)).toEqual([
-      { start: 2, end: 5, style: bold },
-    ])
+    expect(applyRunStyle([], 2, 5, { fontWeight: 700 }, 10)).toEqual([{ start: 2, end: 5, style: bold }])
   })
 
   test('splits a covering run and merges the patch', () => {
@@ -56,32 +48,22 @@ describe('applyRunStyle', () => {
 })
 
 describe('shiftRunsForEdit', () => {
-  const runs: TextRun[] = [{ start: 6, end: 11, style: bold }] // "world" in "hello world!"
+  const runs: TextRun[] = [{ start: 6, end: 11, style: bold }]
 
   test('insertion before the run shifts it', () => {
-    expect(shiftRunsForEdit(runs, 'hello world!', 'hey hello world!')).toEqual([
-      { start: 10, end: 15, style: bold },
-    ])
+    expect(shiftRunsForEdit(runs, 'hello world!', 'hey hello world!')).toEqual([{ start: 10, end: 15, style: bold }])
   })
 
   test('typing inside the run grows it', () => {
-    // "wor|ld" → "worXYld"
-    expect(shiftRunsForEdit(runs, 'hello world!', 'hello worXYld!')).toEqual([
-      { start: 6, end: 13, style: bold },
-    ])
+    expect(shiftRunsForEdit(runs, 'hello world!', 'hello worXYld!')).toEqual([{ start: 6, end: 13, style: bold }])
   })
 
   test('typing right after the run keeps typing styled', () => {
-    expect(shiftRunsForEdit(runs, 'hello world!', 'hello worldZZ!')).toEqual([
-      { start: 6, end: 13, style: bold },
-    ])
+    expect(shiftRunsForEdit(runs, 'hello world!', 'hello worldZZ!')).toEqual([{ start: 6, end: 13, style: bold }])
   })
 
   test('deleting across the run boundary clamps it', () => {
-    // delete "o wo" (4 chars at 4..8)
-    expect(shiftRunsForEdit(runs, 'hello world!', 'hellrld!')).toEqual([
-      { start: 4, end: 7, style: bold },
-    ])
+    expect(shiftRunsForEdit(runs, 'hello world!', 'hellrld!')).toEqual([{ start: 4, end: 7, style: bold }])
   })
 
   test('deleting the whole styled span drops the run', () => {
@@ -93,7 +75,6 @@ describe('shiftRunsForEdit', () => {
       { start: 0, end: 5, style: bold },
       { start: 5, end: 10, style: red },
     ]
-    // insert "++" exactly at offset 5 — left run absorbs, right run shifts
     const next = shiftRunsForEdit(two, '0123456789', '01234++56789')
     expect(next).toEqual([
       { start: 0, end: 7, style: bold },

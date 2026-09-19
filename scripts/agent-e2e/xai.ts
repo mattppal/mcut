@@ -45,9 +45,7 @@ const RETRY_DELAYS_MS = [2_000, 4_000, 8_000]
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 function toFunctionTool(tool: ToolDefinition) {
-  const parameters = Object.fromEntries(
-    Object.entries(tool.inputSchema).filter(([key]) => key !== '$schema'),
-  )
+  const parameters = Object.fromEntries(Object.entries(tool.inputSchema).filter(([key]) => key !== '$schema'))
   return {
     type: 'function',
     name: tool.name,

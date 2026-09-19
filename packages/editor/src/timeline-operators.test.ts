@@ -1,20 +1,7 @@
 import { describe, expect, test } from 'bun:test'
-import {
-  EditorEngine,
-  getElement,
-  getGroupedElementIds,
-  getLinkedElementIds,
-  type AudioElement,
-  type VideoElement,
-} from '@mcut/timeline'
-import {
-  createSequentialVideoCollage,
-  retimeSequentialCollage,
-  splitSelectionAtPlayhead,
-  unlinkElements,
-} from './timeline-operators'
+import { EditorEngine, getElement, getGroupedElementIds, getLinkedElementIds, type AudioElement, type VideoElement } from '@mcut/timeline'
+import { createSequentialVideoCollage, retimeSequentialCollage, splitSelectionAtPlayhead, unlinkElements } from './timeline-operators'
 
-/** Engine with a video clip and its detached (linked) audio. */
 function engineWithLinkedPair(): { engine: EditorEngine; videoId: `e-${string}`; audioId: `e-${string}` } {
   const engine = new EditorEngine()
   const trackId = engine.project.tracks[0]!.id
@@ -47,7 +34,7 @@ describe('link-aware operators', () => {
 
   test('splitSelectionAtPlayhead splits linked partners and re-pairs the halves', () => {
     const { engine, videoId, audioId } = engineWithLinkedPair()
-    engine.select([videoId]) // partner is pulled in by the link, not the selection
+    engine.select([videoId])
     engine.seek(3000)
     splitSelectionAtPlayhead(engine)
 
@@ -65,6 +52,22 @@ describe('link-aware operators', () => {
     expect(rightVideo.linkId).not.toBe(leftVideo.linkId)
     expect(rightVideo.startMs).toBe(3000)
     expect(rightAudio.startMs).toBe(3000)
+  })
+
+  test('a right half whose linked partner did not split is unlinked', () => {
+    const { engine, videoId, audioId } = engineWithLinkedPair()
+    engine.dispatch({ type: 'trimEdge', elementId: audioId, edge: 'end', deltaMs: -3000 })
+    engine.select([videoId])
+    engine.seek(3000)
+    splitSelectionAtPlayhead(engine)
+
+    const elements = engine.project.tracks.flatMap((t) => t.elements)
+    expect(elements).toHaveLength(3)
+    const rightVideo = elements.find((e) => e.type === 'video' && e.id !== videoId)
+    if (!rightVideo) throw new Error('missing right half')
+    expect(rightVideo).toMatchObject({ startMs: 3000, durationMs: 2000 })
+    expect(getLinkedElementIds(engine.project, rightVideo.id)).toEqual([rightVideo.id])
+    expect(getLinkedElementIds(engine.project, videoId)).toEqual([videoId, audioId])
   })
 
   test('unlinkElements clears linkId on the whole group and changes nothing else', () => {
@@ -124,22 +127,16 @@ describe('sequential video collage', () => {
     expect(result.activeVideoElementIds).toHaveLength(2)
     expect(result.audioElementIds).toHaveLength(2)
 
-    const videos = engine.project.tracks
-      .flatMap((track) => track.elements)
-      .filter((element): element is VideoElement => element.type === 'video')
-    const audios = engine.project.tracks
-      .flatMap((track) => track.elements)
-      .filter((element): element is AudioElement => element.type === 'audio')
+    const videos = engine.project.tracks.flatMap((track) => track.elements).filter((element): element is VideoElement => element.type === 'video')
+    const audios = engine.project.tracks.flatMap((track) => track.elements).filter((element): element is AudioElement => element.type === 'audio')
 
     expect(videos).toHaveLength(4)
     expect(audios.map((element) => [element.startMs, element.durationMs])).toEqual([
       [0, 1000],
       [1000, 2000],
     ])
-    const firstGroup = getGroupedElementIds(engine.project, result.activeVideoElementIds[0]!)
-      .map((id) => getElement(engine.project, id)!)
-    const secondGroup = getGroupedElementIds(engine.project, result.activeVideoElementIds[1]!)
-      .map((id) => getElement(engine.project, id)!)
+    const firstGroup = getGroupedElementIds(engine.project, result.activeVideoElementIds[0]!).map((id) => getElement(engine.project, id)!)
+    const secondGroup = getGroupedElementIds(engine.project, result.activeVideoElementIds[1]!).map((id) => getElement(engine.project, id)!)
     expect(firstGroup).toHaveLength(3)
     expect(secondGroup).toHaveLength(3)
     expect(firstGroup.every((element) => element.groupId === result.groupIds[0])).toBe(true)

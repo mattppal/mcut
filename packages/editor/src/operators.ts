@@ -7,34 +7,18 @@ export interface EditorOperatorContext {
 
 export type EnabledResult = boolean | { enabled: boolean; reason?: string }
 
-export type OperatorCategory =
-  | 'playback'
-  | 'selection'
-  | 'clipboard'
-  | 'edit'
-  | 'track'
-  | 'keyframes'
-  | 'markers'
-  | 'multicam'
-  | 'media'
-  | 'view'
+export type OperatorCategory = 'playback' | 'selection' | 'clipboard' | 'edit' | 'track' | 'keyframes' | 'markers' | 'multicam' | 'media' | 'view'
 
 export interface OperatorDefinition<Input = unknown, Output = unknown> {
   label: string
   description: string
   category: OperatorCategory
   inputSchema: z.ZodType<Input, unknown>
-  /**
-   * Whether this operator applies in the current editor state. Returning a
-   * reason lets agent transports explain why a user-level action is unavailable.
-   */
   enabled?(context: EditorOperatorContext, input: Input): EnabledResult
   run(context: EditorOperatorContext, input: Input): Output | Promise<Output>
 }
 
-export function defineOperator<Input, Output>(
-  operator: OperatorDefinition<Input, Output>,
-): OperatorDefinition<Input, Output> {
+export function defineOperator<Input, Output>(operator: OperatorDefinition<Input, Output>): OperatorDefinition<Input, Output> {
   return operator
 }
 
@@ -48,11 +32,7 @@ export class OperatorError extends Error {
   }
 }
 
-export function enabledStatus(
-  operator: OperatorDefinition,
-  context: EditorOperatorContext,
-  input: unknown,
-): { enabled: boolean; reason?: string } {
+export function enabledStatus(operator: OperatorDefinition, context: EditorOperatorContext, input: unknown): { enabled: boolean; reason?: string } {
   try {
     const status = operator.enabled?.(context, input) ?? true
     if (typeof status === 'boolean') return { enabled: status }

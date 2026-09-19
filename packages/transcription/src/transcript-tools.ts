@@ -1,13 +1,5 @@
 import { MIN_ELEMENT_DURATION_MS, type CaptionWord } from '@mcut/timeline'
 
-/**
- * Pure transcript tooling over word-timed captions: search, replace, and
- * repair. Works identically for AssemblyAI- and Whisper-produced transcripts
- * — the only contract is the caption element shape below (word timings are
- * relative to the caption's `startMs`, and optional: captions whose words
- * were invalidated by manual edits degrade to caption-level granularity).
- */
-
 export interface TranscriptCaption {
   id: string
   startMs: number
@@ -16,31 +8,21 @@ export interface TranscriptCaption {
   words?: CaptionWord[]
 }
 
-/** A search hit inside one caption. */
 export interface TranscriptMatch {
   captionId: string
-  /** Character range in the caption's `text`. */
   startChar: number
   endChar: number
-  /** Inclusive word-index range, when the caption's words map onto its text. */
   firstWord?: number
   lastWord?: number
-  /** Absolute timeline time of the hit (word-accurate when words exist). */
   timeMs: number
   endTimeMs: number
 }
 
-/** A computed caption content change, ready for an `updateElement` patch. */
 export interface CaptionContentPatch {
   captionId: string
   text: string
-  /** Omitted = word timings could not be preserved; clear them. */
   words?: CaptionWord[]
 }
-
-// ---------------------------------------------------------------------------
-// Word ↔ text mapping
-// ---------------------------------------------------------------------------
 
 export interface MappedWord {
   word: CaptionWord
@@ -48,11 +30,6 @@ export interface MappedWord {
   endChar: number
 }
 
-/**
- * Locate each timed word inside the caption text (in order). Returns null
- * when the words no longer correspond to the text — e.g. after a free-form
- * manual edit — in which case callers degrade to caption-level behavior.
- */
 export function mapCaptionWords(caption: TranscriptCaption): MappedWord[] | null {
   const words = caption.words
   if (!words || words.length === 0) return null
@@ -68,19 +45,7 @@ export function mapCaptionWords(caption: TranscriptCaption): MappedWord[] | null
   return mapped
 }
 
-// ---------------------------------------------------------------------------
-// Search
-// ---------------------------------------------------------------------------
-
-/**
- * Case-insensitive substring search across captions. Substrings spanning
- * word boundaries match (the index is the caption text, not single words),
- * and each hit carries the word span + absolute time when word timings map.
- */
-export function searchCaptions(
-  captions: readonly TranscriptCaption[],
-  query: string,
-): TranscriptMatch[] {
+export function searchCaptions(captions: readonly TranscriptCaption[], query: string): TranscriptMatch[] {
   const needle = query.toLowerCase()
   if (needle.length === 0) return []
   const matches: TranscriptMatch[] = []
@@ -99,12 +64,7 @@ export function searchCaptions(
   return matches.sort((a, b) => a.timeMs - b.timeMs || a.startChar - b.startChar)
 }
 
-function buildMatch(
-  caption: TranscriptCaption,
-  mapped: MappedWord[] | null,
-  startChar: number,
-  endChar: number,
-): TranscriptMatch {
+function buildMatch(caption: TranscriptCaption, mapped: MappedWord[] | null, startChar: number, endChar: number): TranscriptMatch {
   let firstWord: number | undefined
   let lastWord: number | undefined
   if (mapped) {
@@ -116,14 +76,8 @@ function buildMatch(
       lastWord = i
     }
   }
-  const start =
-    mapped && firstWord !== undefined
-      ? caption.startMs + mapped[firstWord]!.word.startMs
-      : caption.startMs
-  const end =
-    mapped && lastWord !== undefined
-      ? caption.startMs + mapped[lastWord]!.word.endMs
-      : caption.startMs + caption.durationMs
+  const start = mapped && firstWord !== undefined ? caption.startMs + mapped[firstWord]!.word.startMs : caption.startMs
+  const end = mapped && lastWord !== undefined ? caption.startMs + mapped[lastWord]!.word.endMs : caption.startMs + caption.durationMs
   return {
     captionId: caption.id,
     startChar,
@@ -135,59 +89,26 @@ function buildMatch(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Replace
-// ---------------------------------------------------------------------------
-
-/**
- * Splice one match without normalizing whitespace — char offsets of earlier
- * matches stay valid, so replace-all can apply right-to-left.
- */
-function spliceMatch(
-  caption: TranscriptCaption,
-  match: TranscriptMatch,
-  replacement: string,
-): { text: string; words: CaptionWord[] | null } {
-  const text =
-    caption.text.slice(0, match.startChar) + replacement + caption.text.slice(match.endChar)
+function spliceMatch(caption: TranscriptCaption, match: TranscriptMatch, replacement: string): { text: string; words: CaptionWord[] | null } {
+  const text = caption.text.slice(0, match.startChar) + replacement + caption.text.slice(match.endChar)
   const mapped = mapCaptionWords(caption)
   if (!mapped || match.firstWord === undefined || match.lastWord === undefined) {
-    // No word timings to preserve — plain text edit, clear stale words.
     return { text, words: null }
   }
 
   const first = mapped[match.firstWord]!
   const last = mapped[match.lastWord]!
-  // The affected span's new text keeps whatever the match left of the
-  // boundary words ("cat" replaced inside "category" keeps "egory").
-  const spanText =
-    caption.text.slice(first.startChar, match.startChar) +
-    replacement +
-    caption.text.slice(match.endChar, last.endChar)
+  const spanText = caption.text.slice(first.startChar, match.startChar) + replacement + caption.text.slice(match.endChar, last.endChar)
   const tokens = spanText.split(/\s+/).filter((t) => t.length > 0)
   const spanStartMs = first.word.startMs
   const spanEndMs = Math.max(spanStartMs, last.word.endMs)
   const replacementWords = distributeTokens(tokens, spanStartMs, spanEndMs)
 
-  const words = [
-    ...mapped.slice(0, match.firstWord).map((m) => m.word),
-    ...replacementWords,
-    ...mapped.slice(match.lastWord + 1).map((m) => m.word),
-  ]
+  const words = [...mapped.slice(0, match.firstWord).map((m) => m.word), ...replacementWords, ...mapped.slice(match.lastWord + 1).map((m) => m.word)]
   return { text, words }
 }
 
-/**
- * Replace one match, preserving word timings: the replacement's tokens map
- * onto the matched word span, with multi-word replacements distributing the
- * span's time proportionally to token length. Partial-word matches keep the
- * untouched prefix/suffix of the boundary words.
- */
-export function replaceMatch(
-  caption: TranscriptCaption,
-  match: TranscriptMatch,
-  replacement: string,
-): CaptionContentPatch {
+export function replaceMatch(caption: TranscriptCaption, match: TranscriptMatch, replacement: string): CaptionContentPatch {
   const spliced = spliceMatch(caption, match, replacement)
   return {
     captionId: caption.id,
@@ -196,20 +117,14 @@ export function replaceMatch(
   }
 }
 
-/** Replace every occurrence of `query` across the captions. */
-export function replaceAllMatches(
-  captions: readonly TranscriptCaption[],
-  query: string,
-  replacement: string,
-): CaptionContentPatch[] {
+export function replaceAllMatches(captions: readonly TranscriptCaption[], query: string, replacement: string): CaptionContentPatch[] {
   const patches: CaptionContentPatch[] = []
   for (const caption of captions) {
     const matches = searchCaptions([caption], query)
     if (matches.length === 0) continue
     let current: TranscriptCaption = caption
     let wordsValid = mapCaptionWords(caption) !== null
-    // Right-to-left: earlier char offsets and word indices stay valid.
-    for (const match of [...matches].sort((a, b) => b.startChar - a.startChar)) {
+    for (const match of matchesFromRight(matches)) {
       const spliced = spliceMatch(current, match, replacement)
       wordsValid &&= spliced.words !== null
       current = { ...current, text: spliced.text, words: spliced.words ?? [] }
@@ -223,12 +138,7 @@ export function replaceAllMatches(
   return patches
 }
 
-/** Repair: retype one word in place (fixes caption text + timing together). */
-export function retypeWord(
-  caption: TranscriptCaption,
-  wordIndex: number,
-  newText: string,
-): CaptionContentPatch | null {
+export function retypeWord(caption: TranscriptCaption, wordIndex: number, newText: string): CaptionContentPatch | null {
   const mapped = mapCaptionWords(caption)
   const target = mapped?.[wordIndex]
   if (!mapped || !target) return null
@@ -245,10 +155,7 @@ function distributeTokens(tokens: string[], startMs: number, endMs: number): Cap
   let usedChars = 0
   for (const [i, token] of tokens.entries()) {
     usedChars += token.length
-    const end =
-      i === tokens.length - 1
-        ? endMs
-        : startMs + Math.round((span * usedChars) / Math.max(1, totalChars))
+    const end = i === tokens.length - 1 ? endMs : startMs + Math.round((span * usedChars) / Math.max(1, totalChars))
     words.push({ text: token, startMs: Math.round(cursorMs), endMs: Math.max(Math.round(cursorMs), end) })
     cursorMs = end
   }
@@ -259,14 +166,12 @@ function collapseSpaces(text: string): string {
   return text.replace(/[ \t]{2,}/g, ' ').trim()
 }
 
-// ---------------------------------------------------------------------------
-// Split / merge
-// ---------------------------------------------------------------------------
+function matchesFromRight(matches: readonly TranscriptMatch[]): TranscriptMatch[] {
+  return [...matches].sort((a, b) => b.startChar - a.startChar)
+}
 
 export interface CaptionSplitResult {
-  /** Patch for the existing caption (keeps its id). */
   left: { text: string; words: CaptionWord[]; durationMs: number }
-  /** New caption element input for the right half. */
   right: {
     startMs: number
     durationMs: number
@@ -275,15 +180,7 @@ export interface CaptionSplitResult {
   }
 }
 
-/**
- * Split a caption immediately BEFORE `wordIndex`. Returns null when the
- * boundary doesn't yield two valid captions (no word mapping, index at the
- * edges, or either half shorter than the minimum element duration).
- */
-export function splitCaptionAtWord(
-  caption: TranscriptCaption,
-  wordIndex: number,
-): CaptionSplitResult | null {
+export function splitCaptionAtWord(caption: TranscriptCaption, wordIndex: number): CaptionSplitResult | null {
   const mapped = mapCaptionWords(caption)
   if (!mapped || wordIndex <= 0 || wordIndex >= mapped.length) return null
   const boundary = mapped[wordIndex]!
@@ -317,15 +214,7 @@ export interface CaptionMergeResult {
   words?: CaptionWord[]
 }
 
-/**
- * Merge two captions (order-independent) into one spanning both. Word
- * timings survive when both sides carry them; otherwise the merged caption
- * degrades to caption-level granularity.
- */
-export function mergeCaptions(
-  a: TranscriptCaption,
-  b: TranscriptCaption,
-): CaptionMergeResult {
+export function mergeCaptions(a: TranscriptCaption, b: TranscriptCaption): CaptionMergeResult {
   const [first, second] = a.startMs <= b.startMs ? [a, b] : [b, a]
   const startMs = first.startMs
   const endMs = Math.max(first.startMs + first.durationMs, second.startMs + second.durationMs)

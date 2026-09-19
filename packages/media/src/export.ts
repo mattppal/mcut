@@ -1,66 +1,36 @@
 import { getProjectDurationMs, type Project } from '@mcut/timeline'
 import { mixProjectAudio } from './export-audio'
 import { getExportSupport, resolveContainerFormat, runExportPipeline } from './export-core'
-import type {
-  ExportFontFaceInit,
-  ExportProjectOptions,
-  ExportResult,
-  ExportWorkerResponse,
-  ExportWorkerStartMessage,
-  MixedAudioData,
-} from './export-types'
+import type { ExportFontFaceInit, ExportProjectOptions, ExportResult, ExportWorkerResponse, ExportWorkerStartMessage, MixedAudioData } from './export-types'
 
 export { getExportSupport }
-export type {
-  ContainerFormatId,
-  ExportFontFaceInit,
-  ExportProgress,
-  ExportProjectOptions,
-  ExportResult,
-} from './export-types'
+export type { ContainerFormatId, ExportFontFaceInit, ExportProgress, ExportProjectOptions, ExportResult } from './export-types'
 
-/** How the last `exportProject` call ran — observability for tests/debugging. */
 function noteExportMode(mode: 'worker' | 'local'): void {
   Reflect.set(globalThis, '__mcutLastExportMode', mode)
 }
 
-/** Worker spawn → first message budget (dev bundlers compile on demand). */
 const WORKER_READY_TIMEOUT_MS = 15_000
 
-/** The worker failed before its 'ready' handshake — safe to run locally. */
 class WorkerStartError extends Error {}
 
-/**
- * Render a project to a video file, fully client-side and deterministically.
- *
- * The audio mix renders first on the main thread (`OfflineAudioContext` and
- * the time-stretch worklet don't exist in workers), then the frame
- * decode→composite→encode→mux pipeline runs in a dedicated worker so the
- * editor stays responsive; environments without workers (Node/Bun, spawn
- * failure) fall back to running the same pipeline in-context.
- */
-export async function exportProject(
-  project: Project,
-  options: ExportProjectOptions = {},
-): Promise<ExportResult> {
+export async function exportProject(project: Project, options: ExportProjectOptions = {}): Promise<ExportResult> {
   const { onProgress, signal } = options
   signal?.throwIfAborted()
   const durationMs = getProjectDurationMs(project)
   if (durationMs <= 0) throw new Error('Cannot export an empty project')
   const container = resolveContainerFormat(options.format)
 
-  // ---- audio mix (main thread) ---------------------------------------------
   let mixedAudio: MixedAudioData | null = null
   const support = await getExportSupport(options.format)
+  // OfflineAudioContext is exposed on Window only per https://webaudio.github.io/web-audio-api/#OfflineAudioContext so the mix renders before the worker starts
   if (support.audio) {
     onProgress?.({ phase: 'audio', progress: 0 })
     mixedAudio = await mixProjectAudio(project, durationMs, signal)
     onProgress?.({ phase: 'audio', progress: 0.1 })
   }
 
-  // Quality objects don't survive structured clone — those exports run local.
-  const serializableBitrate =
-    options.videoBitrate === undefined || typeof options.videoBitrate === 'number'
+  const serializableBitrate = options.videoBitrate === undefined || typeof options.videoBitrate === 'number'
   let worker: Worker | null = null
   if (serializableBitrate) {
     try {
@@ -118,23 +88,12 @@ function runInWorker(
     const onAbort = () => settle(() => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError')))
     signal?.addEventListener('abort', onAbort)
 
-    // A worker that never says 'ready' (bundler misconfiguration, blocked
-    // script) must not hang the export forever.
-    const readyTimer = setTimeout(
-      () => settle(() => reject(new WorkerStartError('export worker did not start in time'))),
-      WORKER_READY_TIMEOUT_MS,
-    )
+    const readyTimer = setTimeout(() => settle(() => reject(new WorkerStartError('export worker did not start in time'))), WORKER_READY_TIMEOUT_MS)
 
     worker.onerror = (event) =>
       settle(() => {
         const detail = event.message || 'unknown error'
-        // Pre-handshake failures (script 404, CSP) leave the transferable
-        // inputs intact — the caller can rerun the pipeline locally.
-        reject(
-          started
-            ? new Error(`Export worker crashed: ${detail}`)
-            : new WorkerStartError(`export worker failed to load (${detail})`),
-        )
+        reject(started ? new Error(`Export worker crashed: ${detail}`) : new WorkerStartError(`export worker failed to load (${detail})`))
       })
     worker.onmessage = (event: MessageEvent<ExportWorkerResponse>) => {
       const message = event.data
@@ -147,9 +106,7 @@ function runInWorker(
             project,
             options: {
               ...(options.format ? { format: options.format } : {}),
-              ...(typeof options.videoBitrate === 'number'
-                ? { videoBitrate: options.videoBitrate }
-                : {}),
+              ...(typeof options.videoBitrate === 'number' ? { videoBitrate: options.videoBitrate } : {}),
             },
             mixedAudio,
             fonts: options.fonts ?? [],
@@ -177,10 +134,7 @@ function runInWorker(
   })
 }
 
-function collectTransfers(
-  mixedAudio: MixedAudioData | null,
-  fonts: ExportFontFaceInit[] | undefined,
-): Transferable[] {
+function collectTransfers(mixedAudio: MixedAudioData | null, fonts: ExportFontFaceInit[] | undefined): Transferable[] {
   const transfers = new Set<Transferable>()
   if (mixedAudio) {
     transfers.add(mixedAudio.left.buffer)

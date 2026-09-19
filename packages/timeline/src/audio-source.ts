@@ -6,11 +6,6 @@ import { getSourceSpanMs, type TimeMap } from './speed'
 
 export type ElementAudioSourceType = 'video' | 'audio' | 'multicam'
 
-/**
- * Normalized answer to "what source audio does this timeline element play?"
- * UI and agent surfaces can use this before passing bytes to a transcription
- * provider, waveform analyzer, or any other media-only primitive.
- */
 export interface ElementAudioSource {
   elementId: ElementId
   elementType: ElementAudioSourceType
@@ -26,10 +21,7 @@ export interface ElementAudioSource {
   multicamSourceKey?: string
 }
 
-export function resolveElementAudioSource(
-  project: Project,
-  elementId: ElementId,
-): ElementAudioSource | null {
+export function resolveElementAudioSource(project: Project, elementId: ElementId): ElementAudioSource | null {
   const element = getElementLocation(project, elementId)?.element
   if (!element) return null
 

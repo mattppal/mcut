@@ -1,20 +1,12 @@
 import type { LayerChrome } from '../backend'
 
-/**
- * Inverse chrome transform for full-frame composite passes: the fragment
- * shader maps each frame pixel back into the layer's local space (canvas2d
- * order is translate → rotate → scale, so the inverse is unscale → unrotate
- * → untranslate) and samples the layer texture there.
- */
 export interface InverseChrome {
-  /** Row-major 2×2: local = M · (framePoint − center). */
   m00: number
   m01: number
   m10: number
   m11: number
   centerX: number
   centerY: number
-  /** Degenerate scale (0) — the layer is invisible. */
   degenerate: boolean
 }
 
@@ -26,7 +18,6 @@ export function invertChrome(chrome: LayerChrome): InverseChrome {
   const angle = (-rotationDeg * Math.PI) / 180
   const cos = Math.cos(angle)
   const sin = Math.sin(angle)
-  // S⁻¹ · R(−θ)
   return {
     m00: cos / scaleX,
     m01: -sin / scaleX,
@@ -38,10 +29,6 @@ export function invertChrome(chrome: LayerChrome): InverseChrome {
   }
 }
 
-/**
- * 1D Gaussian kernel for a CSS-style blur radius (σ = radius / 2, kernel
- * support 3σ each side), normalized to sum 1.
- */
 export function gaussianKernel(radius: number): Float32Array {
   const sigma = Math.max(0.1, radius / 2)
   const half = Math.max(1, Math.ceil(sigma * 3))

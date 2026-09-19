@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import {
-  getProjectMediaContext,
-  getProjectTranscript,
-} from './project-context'
+import { getProjectMediaContext, getProjectTranscript } from './project-context'
 import { parseProject, type Project } from './model'
 
 function projectWithTranscript(): Project {

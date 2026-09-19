@@ -66,8 +66,7 @@ const speechGaps: SilenceGap[] = [
 ]
 
 type RecipeKey = 'id' | 'container' | 'videoCodec' | 'audioCodec'
-type RecipeInput = Pick<FixtureRecipe, RecipeKey> &
-  Partial<Omit<FixtureRecipe, RecipeKey | 'expected'> & { expected: Partial<FixtureExpected> }>
+type RecipeInput = Pick<FixtureRecipe, RecipeKey> & Partial<Omit<FixtureRecipe, RecipeKey | 'expected'> & { expected: Partial<FixtureExpected> }>
 
 function recipe(input: RecipeInput): FixtureRecipe {
   const width = input.width ?? 640
@@ -126,15 +125,78 @@ export const recipes: readonly FixtureRecipe[] = [
   gaps('gaps-flac', 'flac', 'flac', 48_000, 2),
   gaps('gaps-8k-mono-wav', 'wav', 'pcm_s16le', 8000, 1),
 
-  recipe({ id: 'vfr-h264-mp4', container: 'mp4', videoCodec: 'h264', audioCodec: null, width: 320, height: 180, fps: 'vfr', durationMs: 3933, frameCounter: true, expected: { tolerance: 100 } }),
+  recipe({
+    id: 'vfr-h264-mp4',
+    container: 'mp4',
+    videoCodec: 'h264',
+    audioCodec: null,
+    width: 320,
+    height: 180,
+    fps: 'vfr',
+    durationMs: 3933,
+    frameCounter: true,
+    expected: { tolerance: 100 },
+  }),
   recipe({ id: 'odd-361x203-vp9-webm', container: 'webm', videoCodec: 'vp9', audioCodec: null, width: 361, height: 203, durationMs: 2000 }),
   recipe({ id: 'tiny-1x1-vp9-webm', container: 'webm', videoCodec: 'vp9', audioCodec: null, width: 1, height: 1, fps: 25, durationMs: 1000 }),
-  recipe({ id: 'portrait-360x640-h264-mp4', container: 'mp4', videoCodec: 'h264', audioCodec: 'aac', width: 360, height: 640, durationMs: 2000, frameCounter: true, tone: beepTone }),
-  recipe({ id: 'one-frame-h264-mp4', container: 'mp4', videoCodec: 'h264', audioCodec: null, width: 320, height: 180, fps: 25, durationMs: 40, frameCounter: true, expected: { tolerance: 10 } }),
-  recipe({ id: 'long-10min-h264-mp4', container: 'mp4', videoCodec: 'h264', audioCodec: 'aac', width: 160, height: 90, fps: 5, durationMs: 600_000, frameCounter: true, tone: beepTone, sampleRate: 16_000, expected: { tolerance: 100 } }),
+  recipe({
+    id: 'portrait-360x640-h264-mp4',
+    container: 'mp4',
+    videoCodec: 'h264',
+    audioCodec: 'aac',
+    width: 360,
+    height: 640,
+    durationMs: 2000,
+    frameCounter: true,
+    tone: beepTone,
+  }),
+  recipe({
+    id: 'one-frame-h264-mp4',
+    container: 'mp4',
+    videoCodec: 'h264',
+    audioCodec: null,
+    width: 320,
+    height: 180,
+    fps: 25,
+    durationMs: 40,
+    frameCounter: true,
+    expected: { tolerance: 10 },
+  }),
+  recipe({
+    id: 'long-10min-h264-mp4',
+    container: 'mp4',
+    videoCodec: 'h264',
+    audioCodec: 'aac',
+    width: 160,
+    height: 90,
+    fps: 5,
+    durationMs: 600_000,
+    frameCounter: true,
+    tone: beepTone,
+    sampleRate: 16_000,
+    expected: { tolerance: 100 },
+  }),
   recipe({ id: 'no-audio-h264-mp4', container: 'mp4', videoCodec: 'h264', audioCodec: null, durationMs: 2000, frameCounter: true }),
-  recipe({ id: 'audio-only-aac-mp4', container: 'mp4', videoCodec: null, audioCodec: 'aac', durationMs: 2000, tone: beepTone, sampleRate: 44_100, channels: 2 }),
-  recipe({ id: 'rotate90-h264-mp4', container: 'mp4', videoCodec: 'h264', audioCodec: 'aac', durationMs: 2000, frameCounter: true, tone: beepTone, rotation: 90 }),
+  recipe({
+    id: 'audio-only-aac-mp4',
+    container: 'mp4',
+    videoCodec: null,
+    audioCodec: 'aac',
+    durationMs: 2000,
+    tone: beepTone,
+    sampleRate: 44_100,
+    channels: 2,
+  }),
+  recipe({
+    id: 'rotate90-h264-mp4',
+    container: 'mp4',
+    videoCodec: 'h264',
+    audioCodec: 'aac',
+    durationMs: 2000,
+    frameCounter: true,
+    tone: beepTone,
+    rotation: 90,
+  }),
   recipe({ id: 'surround-5-1-aac-m4a', container: 'm4a', videoCodec: null, audioCodec: 'aac', durationMs: 2000, tone: beepTone, channels: 6 }),
   recipe({ id: 'still-image-h264-mp4', container: 'mp4', videoCodec: 'h264', audioCodec: null, fps: 25, durationMs: 2000, stillImage: true }),
 ]

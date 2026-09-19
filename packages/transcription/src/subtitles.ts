@@ -7,10 +7,6 @@ export interface SubtitleCue {
   text: string
 }
 
-/**
- * Turn a transcript into display cues: prefers provider segments, falls back
- * to grouped words, then to one cue spanning the full duration.
- */
 export function transcriptToCues(result: TranscriptResult): SubtitleCue[] {
   if (result.segments.length > 0) {
     return result.segments.map((s) => ({ startMs: s.startMs, endMs: s.endMs, text: s.text }))
@@ -44,21 +40,13 @@ function formatTimestamp(ms: number, separator: ',' | '.'): string {
 export function toSrt(input: TranscriptResult | SubtitleCue[]): string {
   const cues = Array.isArray(input) ? input : transcriptToCues(input)
   return cues
-    .map(
-      (cue, index) =>
-        `${index + 1}\n${formatTimestamp(cue.startMs, ',')} --> ${formatTimestamp(cue.endMs, ',')}\n${cue.text}`,
-    )
+    .map((cue, index) => `${index + 1}\n${formatTimestamp(cue.startMs, ',')} --> ${formatTimestamp(cue.endMs, ',')}\n${cue.text}`)
     .join('\n\n')
     .concat(cues.length > 0 ? '\n' : '')
 }
 
 export function toVtt(input: TranscriptResult | SubtitleCue[]): string {
   const cues = Array.isArray(input) ? input : transcriptToCues(input)
-  const body = cues
-    .map(
-      (cue) =>
-        `${formatTimestamp(cue.startMs, '.')} --> ${formatTimestamp(cue.endMs, '.')}\n${cue.text}`,
-    )
-    .join('\n\n')
+  const body = cues.map((cue) => `${formatTimestamp(cue.startMs, '.')} --> ${formatTimestamp(cue.endMs, '.')}\n${cue.text}`).join('\n\n')
   return `WEBVTT\n\n${body}${cues.length > 0 ? '\n' : ''}`
 }

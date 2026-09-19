@@ -13,20 +13,20 @@ const TEXT_PRESETS: TextPreset[]
 
 Built-in text presets, a title, a subtitle, a lower third, and a pop label.
 
-## Functions
-
-### createEditorOperatorRegistry
+### PLATFORM_PRESETS
 
 ```ts
-function createEditorOperatorRegistry(): EditorOperatorRegistry
+const PLATFORM_PRESETS: PlatformPreset[]
 ```
 
-Returns a new empty `EditorOperatorRegistry`.
+Delivery presets for YouTube, YouTube 4K, Shorts, TikTok, Reels, and square feeds, read by `mcut new --preset` and the agent skill.
+
+## Functions
 
 ### addTextAtPlayhead
 
 ```ts
-function addTextAtPlayhead(engine: EditorEngine, text = 'Your text'): string
+function addTextAtPlayhead(engine: EditorEngine, text = 'Your text'): ElementId
 ```
 
 Inserts a default text element at the playhead through `insertElementAtPlayhead` and returns its id.
@@ -61,7 +61,7 @@ Builds a collage where each video plays in turn in its own slot, with frozen fra
 ### duplicateElement
 
 ```ts
-function duplicateElement(engine: EditorEngine, elementId: string): string | null
+function duplicateElement(engine: EditorEngine, elementId: ElementId): ElementId | null
 ```
 
 Adds a copy of the element in the nearest free slot after it on the same track, selects the copy, and returns its id or `null`.
@@ -105,7 +105,7 @@ Resizes the project canvas to hold the given equal-aspect videos side by side or
 ### insertElementAtPlayhead
 
 ```ts
-function insertElementAtPlayhead(engine: EditorEngine, element: TimelineElementInput): string
+function insertElementAtPlayhead(engine: EditorEngine, element: TimelineElementInput): ElementId
 ```
 
 Inserts an element at the playhead on the topmost unlocked track with room, adds a track when none fits, and returns the new element id.
@@ -117,7 +117,7 @@ function insertElementOnNewTrack(
   engine: EditorEngine,
   element: TimelineElementInput,
   startMs: number,
-): string
+): ElementId
 ```
 
 Adds a new topmost track, places the element on it at `startMs`, and returns the new element id.
@@ -131,7 +131,7 @@ function insertElementOnTrack(
   element: TimelineElementInput,
   startMs: number,
   editMode: 'normal' | 'overwrite' | 'insert' = 'normal',
-): string
+): ElementId
 ```
 
 Places an element on a track near `startMs`, clamping to free space in normal mode and keeping the requested position in overwrite and insert modes.
@@ -311,7 +311,7 @@ Returns how far the slippable elements can slip earlier and later without runnin
 function planAutoCrossfade(
   project: Project,
   input: AutoCrossfadePlanInput,
-): AnyCommand | null
+): BuiltinCommand | null
 ```
 
 Returns a `setTransition` command when dragging a clip into its neighbor by an overlap within the attempted range, or `null` when no crossfade applies.
@@ -353,10 +353,34 @@ function planSilenceCuts(
 
 Cuts the silences between transcript words out of one clip playing at 1x, applying splits and ripple deletes last to first, and returns the commands and resulting project.
 
-### registerCoreOperators
+### applyCommands
 
 ```ts
-function registerCoreOperators(registry: EditorOperatorRegistry): EditorOperatorRegistry
+function applyCommands(engine: EditorEngine, commands: readonly BuiltinCommand[]): void
 ```
 
-Registers the built-in playback, selection, edit, track, keyframe, marker, media, and multicam operators on the registry and returns it.
+Dispatches the commands in order inside one transaction, so the batch becomes a single undo entry.
+
+### summarizeEngine
+
+```ts
+function summarizeEngine(engine: EditorEngine): string
+```
+
+Returns the `summarizeProject` text for the engine's project followed by the playhead position, playing state, and selection.
+
+### lintProject
+
+```ts
+function lintProject(project: Project): LintIssue[]
+```
+
+Reports cross-entity problems that `parseProject` accepts, such as elements that reference missing assets, links with one member, empty tracks, and empty captions.
+
+### getPlatformPreset
+
+```ts
+function getPlatformPreset(id: string): PlatformPreset | undefined
+```
+
+Returns the preset from `PLATFORM_PRESETS` with the given id, or `undefined`.

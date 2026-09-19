@@ -1,15 +1,5 @@
-import {
-  getProjectDurationMs,
-  type Project,
-  type TimelineElement,
-  type Track,
-} from '@mcut/timeline'
+import { getProjectDurationMs, type Project, type TimelineElement, type Track } from '@mcut/timeline'
 
-/**
- * Things `parseProject` cannot reject (it validates shape, not cross-entity
- * invariants) but that make a project render wrong or export badly. Commands
- * maintain these invariants; hand-edited or generated JSON may not.
- */
 export interface LintIssue {
   severity: 'error' | 'warning'
   code: string
@@ -63,14 +53,7 @@ interface Reporters {
   warn: (code: string, message: string) => void
 }
 
-function lintElement(
-  project: Project,
-  track: Track,
-  element: TimelineElement,
-  sorted: TimelineElement[],
-  index: number,
-  { error, warn }: Reporters,
-): void {
+function lintElement(project: Project, track: Track, element: TimelineElement, sorted: TimelineElement[], index: number, { error, warn }: Reporters): void {
   if ('assetId' in element && !project.assets[element.assetId]) {
     error('missing-asset', `element "${element.id}" references missing asset "${element.assetId}"`)
   }
@@ -94,8 +77,7 @@ function lintElement(
     if (!next || next.startMs !== element.startMs + element.durationMs) {
       warn(
         'transition-without-neighbor',
-        `element "${element.id}" has a transition but no exactly-adjacent next clip on ` +
-          `track "${track.name}" (transitions need a butt cut)`,
+        `element "${element.id}" has a transition but no exactly-adjacent next clip on ` + `track "${track.name}" (transitions need a butt cut)`,
       )
     }
   }
@@ -110,35 +92,19 @@ function lintElement(
     }
     for (const angle of element.angles) {
       if (!project.layouts.some((layout) => layout.id === angle.layoutId)) {
-        error(
-          'missing-layout',
-          `multicam "${element.id}" cuts to unknown layout "${angle.layoutId}" at ${angle.atMs}ms`,
-        )
+        error('missing-layout', `multicam "${element.id}" cuts to unknown layout "${angle.layoutId}" at ${angle.atMs}ms`)
       }
       if (angle.atMs >= element.durationMs) {
-        warn(
-          'angle-beyond-end',
-          `multicam "${element.id}" has an angle cut at ${angle.atMs}ms, at or beyond its ` +
-            `${element.durationMs}ms duration`,
-        )
+        warn('angle-beyond-end', `multicam "${element.id}" has an angle cut at ${angle.atMs}ms, at or beyond its ` + `${element.durationMs}ms duration`)
       }
     }
     for (const source of element.sources) {
       if (!project.assets[source.assetId]) {
-        error(
-          'missing-asset',
-          `multicam "${element.id}" source "${source.key}" references missing asset "${source.assetId}"`,
-        )
+        error('missing-asset', `multicam "${element.id}" source "${source.key}" references missing asset "${source.assetId}"`)
       }
     }
-    if (
-      element.audioSource !== undefined &&
-      !element.sources.some((source) => source.key === element.audioSource)
-    ) {
-      error(
-        'missing-audio-source',
-        `multicam "${element.id}" plays audio from unknown source "${element.audioSource}"`,
-      )
+    if (element.audioSource !== undefined && !element.sources.some((source) => source.key === element.audioSource)) {
+      error('missing-audio-source', `multicam "${element.id}" plays audio from unknown source "${element.audioSource}"`)
     }
   }
 }

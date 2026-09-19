@@ -1,13 +1,3 @@
-/**
- * Content-addressed media persistence on OPFS (the OpenCut pattern: media
- * blobs live in the Origin Private File System keyed by content hash;
- * project JSON stores `asset.hash` and re-binds `src` on load). Hash-keyed
- * storage dedupes repeated imports and gives relink a stable identity.
- *
- * Callers fall back to their own storage (e.g. IndexedDB keyed by asset id)
- * when OPFS is unavailable or a file was imported without a hash.
- */
-
 const MEDIA_DIR = 'mcut-media'
 
 export const MAX_HASHABLE_BYTES = 512 * 1024 * 1024
@@ -17,15 +7,9 @@ function isNotFound(error: unknown): boolean {
 }
 
 export function isMediaStoreSupported(): boolean {
-  return (
-    typeof navigator !== 'undefined' &&
-    typeof navigator.storage?.getDirectory === 'function' &&
-    typeof crypto !== 'undefined' &&
-    !!crypto.subtle
-  )
+  return typeof navigator !== 'undefined' && typeof navigator.storage?.getDirectory === 'function' && typeof crypto !== 'undefined' && !!crypto.subtle
 }
 
-/** SHA-256 hex of a blob's content, or null when too large to hash. */
 export async function hashBlob(blob: Blob): Promise<string | null> {
   if (!isMediaStoreSupported() || blob.size > MAX_HASHABLE_BYTES) return null
   const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())
