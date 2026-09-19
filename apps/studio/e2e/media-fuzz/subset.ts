@@ -1,15 +1,5 @@
-/**
- * The browser tier is capped to a representative subset so it finishes in a
- * few minutes; the Bun tier in packages/media covers every fixture and
- * mutation. `browserFixtures` decode in the codec-stripped Playwright
- * Chromium build (VP9, AV1, Opus, PCM, FLAC). `proprietaryCodecFixtures`
- * need H.264 and AAC decoders and only run when MCUT_CHROME_PATH points at
- * a full Chrome.
- */
-
 export interface BrowserFixture {
   id: string;
-  /** Media card badge for the recipe's expected duration (m:ss, whole seconds). */
   badge: string;
 }
 
@@ -33,11 +23,6 @@ export const proprietaryCodecFixtures: readonly BrowserFixture[] = [
   { id: "no-audio-h264-mp4", badge: "0:02" },
 ];
 
-/**
- * A `whole` file (moov moved after mdat) must import with its source badge.
- * Anything else may be rejected with a typed toast or import as a partial
- * file no longer than its source.
- */
 export type BrowserMutation =
   | { id: string; outcome: "reject-or-partial" }
   | { id: string; outcome: "whole"; badge: string };

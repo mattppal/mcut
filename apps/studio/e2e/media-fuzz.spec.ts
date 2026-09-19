@@ -13,24 +13,6 @@ import type { InPageProbe } from "./media-fuzz/inpage";
 import { knownFailures, matchKnownFailure, type Violation } from "./media-fuzz/known-failures";
 import { browserFixtures, browserMutations, proprietaryCodecFixtures } from "./media-fuzz/subset";
 
-/**
- * Browser tier of the media fuzzer; the Bun tier in packages/media covers
- * container parsing for every fixture and mutation. Each fixture here goes
- * through the real Studio surfaces: file-chooser import, the media card
- * badge, add at playhead, WebM export, and an in-page re-probe of the
- * downloaded file with the `@mcut/media` build the app ships.
- *
- * Export rules. The pipeline renders at the project canvas, so the canvas
- * is set to the fixture's size first (audio-only fixtures use 320x180) and
- * the exported file must match it, with one pixel of slack on odd sizes
- * because the inspector clamps at 2 px and VP9 encoders may pad to even.
- * Duration may drift by the recipe tolerance plus one project frame.
- *
- * Run one entry with MCUT_FUZZ_FIXTURE=<id>; the quarantine table is
- * ignored in that mode so the raw violation shows. The H.264 rows only run
- * with MCUT_CHROME_PATH set, the same switch mkv.spec.ts uses.
- */
-
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 const fixturesDir = process.env.MCUT_FIXTURES_DIR ?? path.join(repoRoot, "fixtures", "media");
 const manifestFile = path.join(fixturesDir, "manifest.json");
@@ -43,6 +25,7 @@ const selected = (id: string) => !onlyFixture || onlyFixture === id;
 
 const AUDIO_CANVAS = { width: 320, height: 180 };
 const CANVAS_MIN_PX = 2;
+const ODD_SIZE_SLACK_PX = 1;
 const EXPORT_TIMEOUT_MS = 120_000;
 
 interface Canvas {
@@ -73,7 +56,6 @@ function mutationById(id: string): ManifestMutation {
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** m:ss badge text back to whole seconds. */
 function badgeSeconds(badge: string): number {
   const [minutes = "0", seconds = "0"] = badge.split(":");
   return Number(minutes) * 60 + Number(seconds);
@@ -88,7 +70,6 @@ function canvasFor(fixture: ManifestFixture): Canvas {
   };
 }
 
-/** Import through the hidden file input; resolves once a card or the failure toast shows. */
 async function importFile(page: Page, file: string): Promise<{ card: Locator; toast: Locator }> {
   await page.setInputFiles('input[type="file"]', path.join(fixturesDir, file));
   const card = page.getByTitle(new RegExp(`^${escapeRegExp(file)} `));
@@ -157,29 +138,30 @@ function exportViolations(
   }
   const { expected } = fixture.recipe;
   const violations: Violation[] = [];
-  const slack = expected.tolerance + Math.ceil(1000 / fps);
+  const oneFrameMs = Math.ceil(1000 / fps);
+  const slack = expected.tolerance + oneFrameMs;
   const drift = Math.abs(probe.durationMs - expected.durationMs);
   if (drift > slack) {
     violations.push({
       invariant: "export-duration-within-tolerance",
-      detail: `exported durationMs ${probe.durationMs} is ${drift} ms from ${expected.durationMs} (tolerance ${slack})`,
+      detail: `exported durationMs ${probe.durationMs} is ${drift} ms from ${expected.durationMs} (tolerance ${expected.tolerance} plus one ${oneFrameMs} ms frame)`,
     });
   }
   if (!probe.hasVideo) violations.push({ invariant: "export-has-video", detail: "exported webm has no video track" });
   if (expected.hasAudio && !probe.hasAudio) {
     violations.push({ invariant: "export-keeps-audio", detail: "source has audio but the exported webm has none" });
   }
-  const offBy = (actual: number | null, wanted: number) => actual === null || Math.abs(actual - wanted) > wanted % 2;
+  const allowed = (wanted: number) => (wanted % 2 === 1 ? ODD_SIZE_SLACK_PX : 0);
+  const offBy = (actual: number | null, wanted: number) => actual === null || Math.abs(actual - wanted) > allowed(wanted);
   if (offBy(probe.width, canvas.width) || offBy(probe.height, canvas.height)) {
     violations.push({
       invariant: "export-dimensions-match",
-      detail: `exported ${probe.width ?? "-"}x${probe.height ?? "-"}, expected the ${canvas.width}x${canvas.height} canvas`,
+      detail: `exported ${probe.width ?? "-"}x${probe.height ?? "-"}, expected the ${canvas.width}x${canvas.height} canvas (odd sizes may round by ${ODD_SIZE_SLACK_PX} px)`,
     });
   }
   return violations;
 }
 
-/** Fail on new violations, count quarantined ones, and fail when a quarantine row stops reproducing. */
 function settle(id: string, violations: readonly Violation[]): void {
   const match = matchKnownFailure(id, violations, known);
   if (violations.length > 0 && !match) {
@@ -263,7 +245,6 @@ test.describe("media fuzz", () => {
       const { card, toast } = await importFile(page, mutation.file);
       if (await toast.isVisible()) {
         console.log(`${row.id} rejected, console ${errors.join(" | ") || "empty"}`);
-        // importMediaFiles logs the rejection before toasting; anything else on the console is an untyped failure.
         const untyped = errors.filter((error) => !error.startsWith("MediaProbeError"));
         if (untyped.length > 0) {
           violations.push({ invariant: "typed-rejection", detail: `import failed without a MediaProbeError, console shows ${untyped.join(" | ")}` });

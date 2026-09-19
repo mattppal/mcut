@@ -1,10 +1,5 @@
 import { probeMedia } from "@mcut/media";
 
-/**
- * Bundled by the spec with `bun build` and injected into the Studio page, so
- * exported files are re-probed by the same `@mcut/media` build the app ships.
- */
-
 export type InPageProbe =
   | {
       ok: true;
