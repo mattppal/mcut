@@ -190,18 +190,18 @@ async function readStatus(bridgePort: number): Promise<string | { connected: boo
   }
 }
 
+const describeStatus = (status: { connected: boolean; tab: unknown }): string =>
+  `connected ${status.connected}, hello frame ${status.tab === null ? 'not yet received' : 'received'}`
+
 async function waitForTab(bridgePort: number, deadline: Deadline, log: (line: string) => void): Promise<void> {
   let last = 'no status response yet'
   while (remainingMs(deadline) > 0) {
     const status = await readStatus(bridgePort)
-    if (typeof status === 'string') {
-      last = status
-    } else if (status.connected && status.tab !== null) {
+    if (typeof status !== 'string' && status.connected && status.tab !== null) {
       log(`studio tab connected, hello frame ${JSON.stringify(status.tab)}`)
       return
-    } else {
-      last = `connected ${status.connected}, hello frame ${status.tab === null ? 'not yet received' : 'received'}`
     }
+    last = typeof status === 'string' ? status : describeStatus(status)
     await sleep(STATUS_POLL_MS)
   }
   throw new BridgeSessionError(`the Studio tab did not connect to the bridge in time. Last /status: ${last}`)
