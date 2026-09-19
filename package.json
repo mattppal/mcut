@@ -18,6 +18,7 @@
     "lint": "turbo run lint",
     "smoke:packages": "bun run scripts/smoke-packages.ts",
     "fixtures": "bun scripts/fixtures/generate-media.ts --mutate",
+    "fuzz:media": "bun run fixtures && bun run --filter @mcut/media fuzz:media",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "bun run release:check && bun run release:publish",
