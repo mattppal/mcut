@@ -22,7 +22,7 @@ export interface MediaProbe {
   mimeType?: string
 }
 
-export type MediaProbeErrorCode = 'unreadable' | 'no-tracks'
+export type MediaProbeErrorCode = 'unreadable' | 'no-tracks' | 'zero-duration'
 
 export class MediaProbeError extends Error {
   readonly code: MediaProbeErrorCode
@@ -240,6 +240,15 @@ export async function createAssetFromFile(file: File): Promise<AssetRef> {
       return { ...base, kind: 'image', width, height }
     }
     const probe = await probeMedia(file)
+    if (!probe.hasVideo && !probe.hasAudio) {
+      throw new MediaProbeError('no-tracks', `"${file.name}" has no playable audio or video tracks`)
+    }
+    if (probe.durationMs <= 0) {
+      throw new MediaProbeError(
+        'zero-duration',
+        `"${file.name}" has tracks but nothing to play, its duration is ${probe.durationMs} ms`,
+      )
+    }
     if (probe.hasVideo) {
       return {
         ...base,
@@ -250,10 +259,7 @@ export async function createAssetFromFile(file: File): Promise<AssetRef> {
         nativePreview: await hasNativeVideoPreview(file, probe.mimeType),
       }
     }
-    if (probe.hasAudio) {
-      return { ...base, kind: 'audio', durationMs: probe.durationMs }
-    }
-    throw new MediaProbeError('no-tracks', `"${file.name}" has no playable audio or video tracks`)
+    return { ...base, kind: 'audio', durationMs: probe.durationMs }
   } catch (error) {
     URL.revokeObjectURL(src)
     throw error
