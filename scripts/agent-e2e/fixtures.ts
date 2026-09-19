@@ -1,24 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
-import { z } from 'zod'
+import { parseManifest, type ManifestFixture } from '../fixtures/manifest'
 
 export const repoRoot = resolve(import.meta.dirname, '..', '..')
 
-const MANIFEST_PATH = 'fixtures/media/manifest.json'
+const MANIFEST_DIR = 'fixtures/media'
 
 const FALLBACK_PATH = 'apps/studio/e2e/fixtures/fixture-vp9.mkv'
-
-const fixtureSchema = z.object({
-  id: z.string().min(1),
-  path: z.string().min(1),
-  kind: z.enum(['video', 'audio', 'image']).default('video'),
-  durationMs: z.number().int().positive(),
-  width: z.number().int().positive().default(1920),
-  height: z.number().int().positive().default(1080),
-  fps: z.number().positive().default(30),
-})
-
-const manifestSchema = z.object({ fixtures: z.array(fixtureSchema) })
 
 export type FixtureSource = 'manifest' | 'fallback'
 
@@ -31,7 +19,7 @@ export interface Fixture {
   durationMs: number
   width: number
   height: number
-  fps: number
+  fps: number | 'vfr'
   source: FixtureSource
 }
 
@@ -48,21 +36,27 @@ const fallbackFixture = (id: string): Fixture => ({
   source: 'fallback',
 })
 
+function fromManifest(entry: ManifestFixture): Fixture {
+  const path = `${MANIFEST_DIR}/${entry.file}`
+  return {
+    id: entry.id,
+    path,
+    absolutePath: join(repoRoot, path),
+    name: entry.file,
+    kind: entry.recipe.videoCodec === null ? 'audio' : 'video',
+    durationMs: entry.recipe.durationMs,
+    width: entry.recipe.width,
+    height: entry.recipe.height,
+    fps: entry.recipe.fps,
+    source: 'manifest',
+  }
+}
+
 function readManifest(): Map<string, Fixture> {
-  const file = join(repoRoot, MANIFEST_PATH)
+  const file = join(repoRoot, MANIFEST_DIR, 'manifest.json')
   if (!existsSync(file)) return new Map()
-  const parsed = manifestSchema.parse(JSON.parse(readFileSync(file, 'utf8')))
-  return new Map(
-    parsed.fixtures.map((entry): [string, Fixture] => [
-      entry.id,
-      {
-        ...entry,
-        absolutePath: join(repoRoot, entry.path),
-        name: basename(entry.path),
-        source: 'manifest',
-      },
-    ]),
-  )
+  const parsed = parseManifest(JSON.parse(readFileSync(file, 'utf8')))
+  return new Map(parsed.fixtures.filter((entry) => entry.skipped === null).map((entry): [string, Fixture] => [entry.id, fromManifest(entry)]))
 }
 
 const manifest = readManifest()
