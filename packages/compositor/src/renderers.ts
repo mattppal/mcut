@@ -28,11 +28,7 @@ import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
 
 type ElementByType = { [K in ElementType]: Extract<TimelineElement, { type: K }> }
 
-/**
- * `letterSpacing` shipped in Chromium 99+/Safari 17 but is still missing from
- * some engines (and OffscreenCanvas typings); feature-detect and degrade to
- * no tracking — measurement and drawing stay consistent either way.
- */
+// Canvas letterSpacing is not implemented in every engine: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/letterSpacing#browser_compatibility
 function setLetterSpacing(ctx: Canvas2D, px: number): void {
   if ('letterSpacing' in ctx) {
     ctx.letterSpacing = `${px}px`
@@ -71,7 +67,6 @@ interface VisualChrome {
   blendMode?: BlendMode | undefined
 }
 
-/** Resolve an element's visual chrome to frame coordinates (backend input). */
 function chromeOf(context: ElementRenderContext, element: VisualChrome): LayerChrome {
   const center = toCanvasPoint(context.project, element.transform.x, element.transform.y)
   return {
@@ -86,10 +81,6 @@ function chromeOf(context: ElementRenderContext, element: VisualChrome): LayerCh
   }
 }
 
-/**
- * Transform + opacity + effect-stack filter + blend mode around a canvas2d
- * draw (see backend.ts `applyChrome` for the actual state handling).
- */
 function withTransform(
   ctx: Canvas2D,
   context: ElementRenderContext,
@@ -105,13 +96,6 @@ interface FrameStyle {
   shadow?: Shadow | undefined
 }
 
-/**
- * Frame chrome around a centered `dw`×`dh` media draw: drop shadow behind
- * the rounded rect, rounded clip on the content, inside border on top — the
- * layout-slot look, available as element-level fields (style.ts primitives).
- * Strokes paint INSIDE the bounds (clip + doubled width) so the frame's
- * geometry — and every snap/handle derived from it — stays exact.
- */
 function withFrameChrome(
   ctx: Canvas2D,
   style: FrameStyle,
@@ -154,26 +138,16 @@ function withFrameChrome(
   }
 }
 
-/** Source rect for a crop mask, in the actual frame's pixel space. */
 function cropSourceRect(
   crop: Crop | undefined,
   frame: CanvasImageSource,
 ): { sx: number; sy: number; sw: number; sh: number } | null {
   if (!crop) return null
-  // Frame sources may serve downscaled stand-ins; crop is normalized, so
-  // map it to the served frame's pixels rather than the asset's.
   const { width: fw, height: fh } = getImageSize(frame)
   if (fw <= 0 || fh <= 0) return null
   return { sx: crop.x * fw, sy: crop.y * fh, sw: crop.w * fw, sh: crop.h * fh }
 }
 
-/**
- * Composite a media frame: the plain case (no stroke/shadow chrome) goes
- * through the backend's structured quad path — on GPU backends that is the
- * zero-copy fast path with WGSL effects — while framed draws keep the
- * canvas2d chrome (shadow + rounded clip + inside border) on the raster
- * surface.
- */
 function drawMediaFrame(
   context: ElementRenderContext,
   element: VisualChrome & FrameStyle & { crop?: Crop | undefined },
@@ -209,19 +183,13 @@ function drawMediaFrame(
 
 const renderVideo: ElementRenderer<VideoElement> = (element, context) => {
   if (!context.source) return
-  // Shared output→source mapping (handles timeMap speed/ramps/freezes).
-  // Clamped ≥ 0: transition pre-roll can map before the source's start.
   const sourceTimeMs = Math.max(0, getSourceTimeMs(element, context.timeMs - element.startMs))
   const frame = context.source.getFrame(element.assetId, sourceTimeMs)
   if (!frame) return
-  // Draw at the asset's probed size, not the frame's: frame sources may serve
-  // downscaled stand-ins (e.g. the preview scrub cache mid-seek), and geometry
-  // (selection OBB, fit-to-frame) already sizes the element from the asset.
   const asset = context.project.assets[element.assetId]
   const { width, height } =
     asset?.width && asset?.height ? { width: asset.width, height: asset.height } : getImageSize(frame)
   if (width <= 0 || height <= 0) return
-  // A crop mask shrinks the frame to the kept region (geometry.ts agrees).
   const dw = width * (element.crop?.w ?? 1)
   const dh = height * (element.crop?.h ?? 1)
   drawMediaFrame(context, element, frame, dw, dh)
@@ -268,8 +236,6 @@ const renderText: ElementRenderer<TextElement> = (element, context) => {
     ctx.textBaseline = 'middle'
     const stroke = style.stroke && style.stroke.width > 0 ? style.stroke : null
     if (stroke) {
-      // Outline look: stroke painted UNDER the fill, so only half the (2x)
-      // line width shows outside the glyph. Round joins avoid miter spikes.
       ctx.strokeStyle = stroke.color
       ctx.lineWidth = stroke.width * 2
       ctx.lineJoin = 'round'
@@ -291,8 +257,6 @@ const renderText: ElementRenderer<TextElement> = (element, context) => {
     for (const [i, line] of layout.lines.entries()) {
       const y = -layout.height / 2 + layout.padding + layout.lineHeight * (i + 0.5)
       if (line.segments) {
-        // Rich-text runs: paint left-to-right with each segment's own font
-        // and fill. Stroke/shadow stay base-style (uniform across the line).
         ctx.textAlign = 'left'
         let x =
           style.align === 'left'
@@ -302,8 +266,6 @@ const renderText: ElementRenderer<TextElement> = (element, context) => {
               : -line.width / 2
         for (const segment of line.segments) {
           ctx.font = segment.font
-          // The shadow rides on the bottom paint pass only (the stroke when
-          // one exists, else the fill), so passes don't double the shadow.
           setShadow()
           if (stroke) {
             ctx.strokeText(segment.text, x, y)
@@ -328,8 +290,6 @@ const renderText: ElementRenderer<TextElement> = (element, context) => {
         ctx.textAlign = 'center'
         x = 0
       }
-      // The shadow rides on the bottom paint pass only (the stroke when one
-      // exists, else the fill), so stroke + fill don't double the shadow.
       setShadow()
       if (stroke) {
         ctx.strokeText(line.text, x, y)
@@ -398,12 +358,6 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
   ctx.restore()
 }
 
-/**
- * Multicam: composes the sources of the ACTIVE layout (the cut under the
- * playhead) into normalized slot rects — cover/contain crop via 9-arg
- * drawImage, rounded clip, optional drop shadow. Same renderer for preview
- * and export; decode parity comes from getFrameRequests.
- */
 const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
   const frames = context.source
   if (!frames) return
@@ -423,7 +377,6 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
         const { width: fw, height: fh } = getImageSize(frame)
         if (fw <= 0 || fh <= 0) continue
 
-        // Slot rect in element-local (center-origin) pixels.
         const rx = (slot.rect.x - 0.5) * W
         const ry = (slot.rect.y - 0.5) * H
         const rw = slot.rect.w * W
@@ -442,8 +395,6 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
           ctx.restore()
         }
 
-        // cover: crop the source to fill; contain: letterbox inside the rect.
-        // The slot's focus picks which part of the source the cover crop keeps.
         const scale =
           slot.fit === 'cover' ? Math.max(rw / fw, rh / fh) : Math.min(rw / fw, rh / fh)
         const sw = Math.min(fw, rw / scale)
@@ -465,7 +416,6 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
         ctx.restore()
 
         if (slot.stroke) {
-          // Inside border (clip + doubled width), same as element frames.
           ctx.save()
           ctx.beginPath()
           ctx.roundRect(rx, ry, rw, rh, radius)
@@ -481,9 +431,6 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
     })
   }
 
-  // Inside an angle-cut blend window the outgoing and incoming layouts mix
-  // through the SAME transition renderers clips use — the multicam plays
-  // both sides of the pair, with the cut mapped to absolute time.
   const window = getAngleTransitionAt(element, context.timeMs - element.startMs)
   if (window) {
     const pair = {

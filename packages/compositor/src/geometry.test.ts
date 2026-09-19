@@ -7,6 +7,7 @@ import {
   getElementOBB,
   getFitScale,
   getHandles,
+  getTransformForDisplaySize,
   hitTestHandles,
   hitTestOBB,
   toCanvasPoint,
@@ -15,7 +16,7 @@ import {
 
 describe('coordinate conversion', () => {
   test('round-trips center-origin coordinates', () => {
-    const project = createProject() // 1920x1080
+    const project = createProject()
     expect(toCanvasPoint(project, 0, 0)).toEqual({ x: 960, y: 540 })
     expect(toCanvasPoint(project, -100, 50)).toEqual({ x: 860, y: 590 })
     expect(fromCanvasPoint(project, 860, 590)).toEqual({ x: -100, y: 50 })
@@ -103,6 +104,37 @@ describe('getElementOBB', () => {
   })
 })
 
+describe('flipped elements (negative scale)', () => {
+  const natural = { width: 400, height: 300 }
+  const helpers: SizeHelpers = { getAssetSize: () => natural }
+  const flipped = {
+    id: 'e-flip',
+    type: 'image',
+    startMs: 0,
+    durationMs: 1000,
+    assetId: 'a-1',
+    transform: { x: 0, y: 0, scaleX: -2, scaleY: -0.5, rotation: 0 },
+    opacity: 1,
+  } as const
+
+  test('display size stays unsigned', () => {
+    expect(getElementDisplaySize(flipped, helpers)).toEqual({ width: 800, height: 150 })
+  })
+
+  test('resizing by display size keeps each axis flip', () => {
+    const resized = getTransformForDisplaySize(flipped.transform, natural, {
+      width: 400,
+      height: 600,
+    })
+    expect(resized).toMatchObject({ scaleX: -1, scaleY: -2 })
+    const aspect = getTransformForDisplaySize(flipped.transform, natural, {
+      width: 1200,
+      preserveAspect: true,
+    })
+    expect(aspect).toMatchObject({ scaleX: -3, scaleY: -3 })
+  })
+})
+
 describe('hit testing', () => {
   test('axis-aligned box', () => {
     const obb = { cx: 100, cy: 100, width: 80, height: 40, rotation: 0 }
@@ -113,7 +145,6 @@ describe('hit testing', () => {
 
   test('rotated box', () => {
     const obb = { cx: 0, cy: 0, width: 100, height: 20, rotation: 90 }
-    // Rotated 90°: now tall and narrow.
     expect(hitTestOBB(obb, 0, 45)).toBe(true)
     expect(hitTestOBB(obb, 45, 0)).toBe(false)
   })
@@ -132,7 +163,7 @@ describe('hit testing', () => {
 
 describe('getFitScale', () => {
   test('contains media within the project frame', () => {
-    const project = createProject() // 1920x1080
+    const project = createProject()
     expect(getFitScale(project, 3840, 2160)).toBe(0.5)
     expect(getFitScale(project, 960, 1080)).toBe(1)
     expect(getFitScale(project, 100, 1080)).toBe(1)
