@@ -19,7 +19,7 @@
     "@types/mdx": "2.0.14",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
-    "fumadocs-core": "16.10.3",
+    "fumadocs-core": "16.10.5",
     "fumadocs-mdx": "15.0.12",
     "fumadocs-ui": "16.10.3",
     "next": "^16.2.0",
