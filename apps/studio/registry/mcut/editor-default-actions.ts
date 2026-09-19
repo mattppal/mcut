@@ -17,15 +17,15 @@ import { createProject, getProjectDurationMs, toOtioJson } from "@mcut/timeline"
 import { findTargetMulticam, switchToLayout } from "./multicam-ui";
 import { defineAction, type ActionContext } from "./action-registry";
 import { ASPECT_PRESETS } from "./aspect-presets";
-import { COMMAND_PALETTE_OPEN_EVENT } from "./command-palette-events";
-import { requestEditorLayoutReset } from "./editor-layout";
+import { openCommandPalette } from "./command-palette-events";
+import { clearEditorLayoutStorage } from "./editor-layout";
 import { TIMELINE_HEADER_WIDTH } from "./editor-ui";
 import { trackOfSelection } from "./editor-actions";
 import { copySelection, cutSelection, pasteAtPlayheadFromAnywhere } from "./editor-clipboard";
 import { importMediaFiles, pickFiles } from "./media-import";
 import { clearSavedSession, saveAssetBlob } from "./persistence";
 import { openProjectFromFile, saveProjectToFile } from "./project-file";
-import { requestTranscriptFind } from "./transcript-keywords";
+import { focusTranscriptSearch } from "./transcript-keywords";
 import { applyOpeningClosingFades, removeTranscriptSilence } from "./agent-edit-actions";
 
 /**
@@ -284,7 +284,10 @@ defineAction({
   category: "transcript",
   shortcut: { key: "f", meta: true },
   icon: SearchIcon,
-  run: () => requestTranscriptFind(),
+  run: ({ ui }) => {
+    ui.revealLeftTab("transcript");
+    focusTranscriptSearch();
+  },
 });
 
 defineAction({
@@ -752,7 +755,10 @@ defineAction({
   id: "view.reset-layout",
   label: "Reset panel layout",
   category: "view",
-  run: () => requestEditorLayoutReset(),
+  run: ({ ui }) => {
+    clearEditorLayoutStorage();
+    ui.resetLayout();
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -775,5 +781,5 @@ defineAction({
   label: "Command palette…",
   category: "help",
   palette: false, // it IS the palette
-  run: () => window.dispatchEvent(new Event(COMMAND_PALETTE_OPEN_EVENT)),
+  run: () => openCommandPalette(),
 });

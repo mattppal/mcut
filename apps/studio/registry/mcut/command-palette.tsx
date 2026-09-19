@@ -1,7 +1,7 @@
 "use client";
 
-import { createElement, useEffect, useState } from "react";
-import { useEditor, useEditorState } from "@mcut/react";
+import { createElement } from "react";
+import { useEditor, useEditorState, useWindowEvent } from "@mcut/react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -21,7 +21,7 @@ import {
   runEditorAction,
   type ActionContext,
 } from "./action-registry";
-import { COMMAND_PALETTE_OPEN_EVENT } from "./command-palette-events";
+import { setCommandPaletteOpen, useCommandPaletteOpen } from "./command-palette-events";
 import { editorClipboard } from "./editor-clipboard";
 import { useEditorUI } from "./editor-ui";
 
@@ -33,32 +33,23 @@ import { useEditorUI } from "./editor-ui";
 export function CommandPalette() {
   const engine = useEditor();
   const ui = useEditorUI();
-  const [open, setOpen] = useState(false);
+  const open = useCommandPaletteOpen();
   // Re-render with edits so enabled() states stay live while open.
   useEditorState((s) => s.project);
   useEditorState((s) => s.selection);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        setOpen((value) => !value);
-      }
-    };
-    const onOpenEvent = () => setOpen(true); // main menu → Help → Command palette
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener(COMMAND_PALETTE_OPEN_EVENT, onOpenEvent);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener(COMMAND_PALETTE_OPEN_EVENT, onOpenEvent);
-    };
-  }, []);
+  useWindowEvent("keydown", (event) => {
+    if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      setCommandPaletteOpen(!open);
+    }
+  });
 
   const context: ActionContext = { engine, ui, clipboard: editorClipboard };
   const actions = listEditorActions().filter((action) => action.palette !== false);
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
+    <CommandDialog open={open} onOpenChange={setCommandPaletteOpen}>
       <CommandInput placeholder="Type a command…" />
       <CommandList className="scroll-mask-y">
         <CommandEmpty>No matching command.</CommandEmpty>
@@ -72,7 +63,7 @@ export function CommandPalette() {
                   key={action.id}
                   disabled={!isActionEnabled(action, context)}
                   onSelect={() => {
-                    setOpen(false);
+                    setCommandPaletteOpen(false);
                     runEditorAction(action, context);
                   }}
                 >

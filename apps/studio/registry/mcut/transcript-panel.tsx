@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   ChevronDownIcon,
@@ -42,9 +42,8 @@ import { EmptyState, PanelHeader, PanelSectionLabel, Spinner } from "./editor-pr
 import { formatTimecode } from "./format";
 import {
   addTranscriptKeyword,
-  consumePendingTranscriptFind,
+  attachTranscriptSearch,
   removeTranscriptKeyword,
-  TRANSCRIPT_FIND_EVENT,
   useTranscriptKeywords,
 } from "./transcript-keywords";
 
@@ -94,7 +93,6 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedWord, setSelectedWord] = useState<WordSelection | null>(null);
   const [keywordDraft, setKeywordDraft] = useState("");
-  const searchRef = useRef<HTMLInputElement | null>(null);
 
   const keywords = useTranscriptKeywords(project.id);
   const trimmedQuery = query.trim();
@@ -105,29 +103,17 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
   );
   const active = matches.length > 0 ? matches[Math.min(activeIndex, matches.length - 1)]! : null;
 
-  // ⌘F lands here: focus (and select) the search box, also right after the
-  // shell switched tabs and this panel just mounted.
-  useEffect(() => {
-    const focus = () => {
-      searchRef.current?.focus();
-      searchRef.current?.select();
-    };
-    if (consumePendingTranscriptFind()) focus();
-    window.addEventListener(TRANSCRIPT_FIND_EVENT, focus);
-    return () => window.removeEventListener(TRANSCRIPT_FIND_EVENT, focus);
-  }, []);
-
   // First Enter after typing lands on the current hit; subsequent ones advance.
-  const navigatedRef = useRef(false);
+  const [navigated, setNavigated] = useState(false);
   const goTo = (index: number) => {
     if (matches.length === 0) return;
     const wrapped = ((index % matches.length) + matches.length) % matches.length;
-    navigatedRef.current = true;
+    setNavigated(true);
     setActiveIndex(wrapped);
     engine.seek(matches[wrapped]!.timeMs);
   };
   const step = (direction: 1 | -1) => {
-    goTo(navigatedRef.current ? activeIndex + direction : activeIndex);
+    goTo(navigated ? activeIndex + direction : activeIndex);
   };
 
   const replaceCurrent = () => {
@@ -183,14 +169,14 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              ref={searchRef}
+              ref={attachTranscriptSearch}
               value={query}
               placeholder="Find in transcript…"
               className="h-7 pl-7 text-xs"
               onChange={(event) => {
                 setQuery(event.target.value);
                 setActiveIndex(0);
-                navigatedRef.current = false;
+                setNavigated(false);
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
@@ -410,11 +396,12 @@ function TranscriptRow({
     [caption.id, activeMatch],
   );
   const [editing, setEditing] = useState<number | null>(null);
-  const rowRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (activeMatch) rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [activeMatch]);
+  const revealActive = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node && activeMatch) node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    },
+    [activeMatch],
+  );
 
   const dispatchContent = (patch: { text: string; words?: { text: string; startMs: number; endMs: number }[] }) => {
     try {
@@ -469,7 +456,7 @@ function TranscriptRow({
 
   return (
     <div
-      ref={rowRef}
+      ref={revealActive}
       className={cn(
         "group rounded-lg p-2 transition-colors hover:bg-muted/60",
         playbackActive && "bg-primary/10",

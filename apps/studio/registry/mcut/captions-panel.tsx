@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { CaptionsIcon, DownloadIcon, SparklesIcon, Trash2Icon } from "@/lib/hugeicons";
 import { toast } from "sonner";
@@ -80,18 +80,20 @@ function CaptionRow({ caption }: { caption: CaptionElement }) {
   const engine = useEditor();
   const active = usePlayback((s) => isElementActiveAt(caption, s.currentTimeMs));
   const isPlaying = usePlayback((s) => s.isPlaying);
-  const ref = useRef<HTMLDivElement | null>(null);
 
   // Follow the playhead while playing; never fight a manual scroll or edit.
-  useEffect(() => {
-    if (active && isPlaying) {
-      ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    }
-  }, [active, isPlaying]);
+  const followPlayhead = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node && active && isPlaying) {
+        node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    },
+    [active, isPlaying],
+  );
 
   return (
     <div
-      ref={ref}
+      ref={followPlayhead}
       className={cn(
         "group flex flex-col gap-1 rounded-lg p-2 transition-colors hover:bg-muted/60",
         active && "bg-primary/10",
