@@ -12,35 +12,19 @@ export interface PlacementPolicy {
   assertNoOverlaps(track: Track): void
 }
 
-export function rangesOverlap(
-  aStartMs: number,
-  aDurationMs: number,
-  bStartMs: number,
-  bDurationMs: number,
-): boolean {
+export function rangesOverlap(aStartMs: number, aDurationMs: number, bStartMs: number, bDurationMs: number): boolean {
   return aStartMs < bStartMs + bDurationMs && bStartMs < aStartMs + aDurationMs
 }
 
-const withoutId = (elements: TimelineElement[], elementId: ElementId): TimelineElement[] =>
-  elements.filter((e) => e.id !== elementId)
+const withoutId = (elements: TimelineElement[], elementId: ElementId): TimelineElement[] => elements.filter((e) => e.id !== elementId)
 
-function findConflict(
-  elements: TimelineElement[],
-  startMs: number,
-  durationMs: number,
-): TimelineElement | undefined {
+function findConflict(elements: TimelineElement[], startMs: number, durationMs: number): TimelineElement | undefined {
   return elements.find((e) => rangesOverlap(startMs, durationMs, e.startMs, e.durationMs))
 }
 
-export function canPlace(
-  track: Track,
-  startMs: number,
-  durationMs: number,
-  ignoreElementId?: ElementId,
-): boolean {
+export function canPlace(track: Track, startMs: number, durationMs: number, ignoreElementId?: ElementId): boolean {
   if (startMs < 0) return false
-  const others =
-    ignoreElementId === undefined ? track.elements : withoutId(track.elements, ignoreElementId)
+  const others = ignoreElementId === undefined ? track.elements : withoutId(track.elements, ignoreElementId)
   return findConflict(others, startMs, durationMs) === undefined
 }
 
@@ -77,8 +61,7 @@ export function compactAllTracks(project: Project): Project {
   }
 }
 
-export const isTimelineMagnetic = (project: Project): boolean =>
-  project.tracks.some((track) => track.magnetic)
+export const isTimelineMagnetic = (project: Project): boolean => project.tracks.some((track) => track.magnetic)
 
 export function compactTimelineIfMagnetic(project: Project): Project {
   return isTimelineMagnetic(project) ? compactAllTracks(project) : project
@@ -89,16 +72,11 @@ const gapped: PlacementPolicy = {
   remove: (track, elementId) => withoutId(track.elements, elementId),
   editMode: (requested) => requested,
   assertCanPlace: (track, element) => {
-    const conflict = findConflict(
-      withoutId(track.elements, element.id),
-      element.startMs,
-      element.durationMs,
-    )
+    const conflict = findConflict(withoutId(track.elements, element.id), element.startMs, element.durationMs)
     if (conflict) {
       throw new CommandError(
         'overlap',
-        `element would overlap "${conflict.id}" on track "${track.id}" ` +
-          `(use findNearestFreeSlot to clamp before dispatching)`,
+        `element would overlap "${conflict.id}" on track "${track.id}" ` + `(use findNearestFreeSlot to clamp before dispatching)`,
       )
     }
   },
@@ -106,18 +84,14 @@ const gapped: PlacementPolicy = {
     for (const [index, current] of track.elements.entries()) {
       const previous = track.elements[index - 1]
       if (previous && previous.startMs + previous.durationMs > current.startMs) {
-        throw new CommandError(
-          'overlap',
-          `edit would overlap "${previous.id}" and "${current.id}" on track "${track.id}"`,
-        )
+        throw new CommandError('overlap', `edit would overlap "${previous.id}" and "${current.id}" on track "${track.id}"`)
       }
     }
   },
 }
 
 const magnetic: PlacementPolicy = {
-  place: (track, element) =>
-    compactElements(insertAtSlot(withoutId(track.elements, element.id), slotFor(track, element))),
+  place: (track, element) => compactElements(insertAtSlot(withoutId(track.elements, element.id), slotFor(track, element))),
   remove: (track, elementId) => compactElements(withoutId(track.elements, elementId)),
   editMode: () => 'normal',
   assertCanPlace: () => {},

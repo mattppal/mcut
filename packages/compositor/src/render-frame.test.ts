@@ -229,8 +229,7 @@ describe('transitions', () => {
     return project
   }
 
-  const textsDrawn = (fake: FakeContext2D) =>
-    fake.callsTo('fillText').map((c) => c.args[0])
+  const textsDrawn = (fake: FakeContext2D) => fake.callsTo('fillText').map((c) => c.args[0])
 
   test('dissolve renders both clips inside the window, right at partial alpha', () => {
     const project = adjacentTexts({ type: 'dissolve', durationMs: 1000 })
@@ -268,9 +267,7 @@ describe('transitions', () => {
     const fake = new FakeContext2D()
     renderFrame(asCtx(fake), project, 1750)
     expect(textsDrawn(fake)).toEqual(['LEFT'])
-    const veil = fake
-      .callsTo('fillRect')
-      .find((c) => c.fillStyle === '#000000' && c.globalAlpha > 0 && c.globalAlpha < 1)
+    const veil = fake.callsTo('fillRect').find((c) => c.fillStyle === '#000000' && c.globalAlpha > 0 && c.globalAlpha < 1)
     expect(veil).toBeDefined()
     expect(veil!.globalAlpha).toBeCloseTo(0.5, 5)
   })

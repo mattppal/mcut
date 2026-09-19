@@ -16,8 +16,5 @@ declare module 'signalsmith-stretch' {
     latency(): number
   }
 
-  export default function SignalsmithStretch(
-    context: BaseAudioContext,
-    channelOptions?: AudioWorkletNodeOptions,
-  ): Promise<SignalsmithStretchNode>
+  export default function SignalsmithStretch(context: BaseAudioContext, channelOptions?: AudioWorkletNodeOptions): Promise<SignalsmithStretchNode>
 }

@@ -23,25 +23,10 @@ export interface SilenceCutTranscript {
 }
 
 export const silenceCutOptionsSchema = z.object({
-  minGapMs: z
-    .number()
-    .nonnegative()
-    .optional()
-    .describe('Word gaps shorter than this are speech rhythm, not silence. Default 600.'),
-  paddingMs: z
-    .number()
-    .nonnegative()
-    .optional()
-    .describe('Breathing room kept on each side of a cut. Default 120.'),
-  minKeepMs: z
-    .number()
-    .nonnegative()
-    .optional()
-    .describe('Speech chunks shorter than this merge into the surrounding cut. Default 250.'),
-  trimEnds: z
-    .boolean()
-    .optional()
-    .describe('Also cut silence before the first and after the last word. Default true.'),
+  minGapMs: z.number().nonnegative().optional().describe('Word gaps shorter than this are speech rhythm, not silence. Default 600.'),
+  paddingMs: z.number().nonnegative().optional().describe('Breathing room kept on each side of a cut. Default 120.'),
+  minKeepMs: z.number().nonnegative().optional().describe('Speech chunks shorter than this merge into the surrounding cut. Default 250.'),
+  trimEnds: z.boolean().optional().describe('Also cut silence before the first and after the last word. Default true.'),
 })
 
 export type SilenceCutOptions = z.infer<typeof silenceCutOptionsSchema>
@@ -58,12 +43,7 @@ export interface SilenceCutPlan {
   project: Project
 }
 
-export function planSilenceCuts(
-  project: Project,
-  elementId: string,
-  transcript: SilenceCutTranscript,
-  options: SilenceCutOptions = {},
-): SilenceCutPlan {
+export function planSilenceCuts(project: Project, elementId: string, transcript: SilenceCutTranscript, options: SilenceCutOptions = {}): SilenceCutPlan {
   const minGapMs = options.minGapMs ?? 600
   const paddingMs = options.paddingMs ?? 120
   const minKeepMs = Math.max(options.minKeepMs ?? 250, MIN_ELEMENT_DURATION_MS)
@@ -80,8 +60,7 @@ export function planSilenceCuts(
   if (element.timeMap) {
     throw new OperatorError(
       'unsupported',
-      `element "${elementId}" has a time remap; silence cuts require 1x playback ` +
-        '(clear it with setTimeMap null first)',
+      `element "${elementId}" has a time remap; silence cuts require 1x playback ` + '(clear it with setTimeMap null first)',
     )
   }
 
@@ -94,8 +73,7 @@ export function planSilenceCuts(
   if (!firstWord) {
     throw new OperatorError(
       'invalid-payload',
-      `transcript has no words inside the element's source window ` +
-        `(${windowStart}-${windowEnd}ms); refusing to remove silence without word timings`,
+      `transcript has no words inside the element's source window ` + `(${windowStart}-${windowEnd}ms); refusing to remove silence without word timings`,
     )
   }
 

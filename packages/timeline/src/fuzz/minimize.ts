@@ -36,7 +36,7 @@ function splitInto<T>(items: T[], parts: number): T[][] {
 
 async function removeSingles<T>(items: T[], stillFails: StillFails<T>): Promise<T[]> {
   let current = items
-  for (let i = 0; i < current.length; ) {
+  for (let i = 0; i < current.length;) {
     const without = current.filter((_, j) => j !== i)
     if (await stillFails(without)) current = without
     else i++

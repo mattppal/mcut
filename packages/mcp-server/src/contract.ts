@@ -1,11 +1,5 @@
 import { z } from 'zod'
-import {
-  operatorIds,
-  operators,
-  silenceCutOptionsSchema,
-  type OperatorDefinition,
-  type OperatorId,
-} from '@mcut/editor'
+import { operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions } from '@mcut/timeline'
 import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
 
@@ -39,9 +33,7 @@ export const toToolInputSchema = (schema: z.ZodType): Record<string, unknown> =>
 
 const EMPTY_INPUT = z.strictObject({})
 
-const ELEMENT_ID_INPUT = elementIdSchema
-  .describe('Optional video/audio element id. Defaults to selected media, then first video, then first audio.')
-  .optional()
+const ELEMENT_ID_INPUT = elementIdSchema.describe('Optional video/audio element id. Defaults to selected media, then first video, then first audio.').optional()
 
 const TOOL_INPUT = z.record(z.string(), z.unknown()).default({})
 
@@ -69,9 +61,7 @@ export const MCP_AGENT_TOOL_NAMES = [
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
 
-const transcriptInput = transcriptInputSchema.describe(
-  'Transcript JSON with word timings in source-media milliseconds, the same shape `mcut captions` reads.',
-)
+const transcriptInput = transcriptInputSchema.describe('Transcript JSON with word timings in source-media milliseconds, the same shape `mcut captions` reads.')
 
 export const applyCaptionsInputSchema = captionsCommandOptionsSchema.extend({
   transcript: transcriptInput,
@@ -88,58 +78,25 @@ export const MCP_TOOL_INPUTS = {
   get_media_context: EMPTY_INPUT,
   get_audio_activity: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
-    includeWaveform: z
-      .boolean()
-      .describe('Include compact max-amplitude waveform buckets for coarse inspection.')
-      .optional(),
-    waveformBuckets: z
-      .int()
-      .min(1)
-      .describe('Waveform bucket count when includeWaveform is true. Defaults to 128.')
-      .optional(),
-    startMs: z
-      .number()
-      .min(0)
-      .describe('Optional source start time in milliseconds. Defaults to the selected element source start.')
-      .optional(),
-    endMs: z
-      .number()
-      .min(0)
-      .describe('Optional source end time in milliseconds. Defaults to the selected element source end.')
-      .optional(),
+    includeWaveform: z.boolean().describe('Include compact max-amplitude waveform buckets for coarse inspection.').optional(),
+    waveformBuckets: z.int().min(1).describe('Waveform bucket count when includeWaveform is true. Defaults to 128.').optional(),
+    startMs: z.number().min(0).describe('Optional source start time in milliseconds. Defaults to the selected element source start.').optional(),
+    endMs: z.number().min(0).describe('Optional source end time in milliseconds. Defaults to the selected element source end.').optional(),
     frameMs: z.number().min(1).describe('Analysis frame size in milliseconds. Defaults to 30.').optional(),
     threshold: z.number().min(0).describe('RMS activity threshold. Defaults to 0.004.').optional(),
-    minSoundMs: z
-      .number()
-      .min(0)
-      .describe('Sound runs shorter than this are treated as silence. Defaults to 120.')
-      .optional(),
-    minSilenceMs: z
-      .number()
-      .min(0)
-      .describe('Silence runs shorter than this are treated as sound. Defaults to 120.')
-      .optional(),
-    paddingMs: z
-      .number()
-      .min(0)
-      .describe('Trim this much from each returned silence window edge. Defaults to 0.')
-      .optional(),
+    minSoundMs: z.number().min(0).describe('Sound runs shorter than this are treated as silence. Defaults to 120.').optional(),
+    minSilenceMs: z.number().min(0).describe('Silence runs shorter than this are treated as sound. Defaults to 120.').optional(),
+    paddingMs: z.number().min(0).describe('Trim this much from each returned silence window edge. Defaults to 0.').optional(),
   }),
   get_transcript: z.strictObject({
-    includeWords: z
-      .boolean()
-      .describe('Include absolute word timings for precise speech-boundary edits.')
-      .optional(),
+    includeWords: z.boolean().describe('Include absolute word timings for precise speech-boundary edits.').optional(),
   }),
   search_transcript: z.strictObject({
     query: z.string().trim().min(1, 'search_transcript requires a non-empty query string.'),
   }),
   ensure_transcript: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
-    replace: z
-      .boolean()
-      .describe('When true, replace captions overlapping the target clip. Defaults to false.')
-      .optional(),
+    replace: z.boolean().describe('When true, replace captions overlapping the target clip. Defaults to false.').optional(),
     language: z.string().trim().describe('Optional language hint for Whisper.').optional(),
   }),
   list_commands: EMPTY_INPUT,
@@ -182,16 +139,13 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'If no transcript exists and speech context is needed, call ensure_transcript in live bridge mode. ' +
     'Do not use ffmpeg or shell media analysis as a substitute for transcript-aware edits.',
   search_transcript:
-    'Search the caption-derived transcript and return timeline times for matches. ' +
-    'Use this to locate spoken words/phrases before cutting or annotating.',
+    'Search the caption-derived transcript and return timeline times for matches. ' + 'Use this to locate spoken words/phrases before cutting or annotating.',
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
     'Required before transcript-based silence removal when captions are missing.',
-  list_commands:
-    'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
-  apply_commands:
-    'Apply one or more serializable timeline commands in one undoable transaction, then return an updated project summary.',
+  list_commands: 'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
+  apply_commands: 'Apply one or more serializable timeline commands in one undoable transaction, then return an updated project summary.',
   apply_captions:
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
     'Pass elementId to caption only the source span one video/audio clip plays, at its timeline position. ' +
@@ -202,13 +156,10 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   lint_project:
     'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
     'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',
-  list_presets:
-    'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',
+  list_presets: 'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',
   list_operators:
-    'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' +
-    'use raw command tools for low-level document edits.',
-  run_operator:
-    'Run a user-level editor operator by id. Use list_operators first when you need the available ids and input schemas.',
+    'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' + 'use raw command tools for low-level document edits.',
+  run_operator: 'Run a user-level editor operator by id. Use list_operators first when you need the available ids and input schemas.',
   list_actions:
     'List browser editor actions available in the live editor, including menu/palette/hotkey actions. ' +
     'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close.',
@@ -225,20 +176,13 @@ const toolDefinition = (name: McpAgentToolName): McpToolDefinition => ({
   inputSchema: toToolInputSchema(MCP_TOOL_INPUTS[name]),
 })
 
-export const MCP_AGENT_TOOL_DEFINITIONS: McpToolDefinition[] =
-  MCP_AGENT_TOOL_NAMES.map(toolDefinition)
+export const MCP_AGENT_TOOL_DEFINITIONS: McpToolDefinition[] = MCP_AGENT_TOOL_NAMES.map(toolDefinition)
 
-export const MCP_BRIDGE_ONLY_TOOL_NAMES = [
-  'list_commands',
-  'apply_commands',
-  'run_operator',
-] as const satisfies readonly McpAgentToolName[]
+export const MCP_BRIDGE_ONLY_TOOL_NAMES = ['list_commands', 'apply_commands', 'run_operator'] as const satisfies readonly McpAgentToolName[]
 
-export const MCP_BRIDGE_ONLY_TOOLS: McpToolDefinition[] =
-  MCP_BRIDGE_ONLY_TOOL_NAMES.map(toolDefinition)
+export const MCP_BRIDGE_ONLY_TOOLS: McpToolDefinition[] = MCP_BRIDGE_ONLY_TOOL_NAMES.map(toolDefinition)
 
-const staticToolCall = <Name extends McpAgentToolName>(name: Name) =>
-  z.object({ name: z.literal(name), arguments: MCP_TOOL_INPUTS[name] })
+const staticToolCall = <Name extends McpAgentToolName>(name: Name) => z.object({ name: z.literal(name), arguments: MCP_TOOL_INPUTS[name] })
 
 export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('get_summary'),
@@ -263,16 +207,13 @@ export type McpServerStaticToolCall = z.infer<typeof MCP_SERVER_STATIC_TOOL_CALL
 
 export type McpServerStaticToolName = McpServerStaticToolCall['name']
 
-const MCP_SERVER_STATIC_TOOL_NAMES: McpServerStaticToolName[] =
-  MCP_SERVER_STATIC_TOOL_CALL_SCHEMA.options.map((option) => option.shape.name.value)
+const MCP_SERVER_STATIC_TOOL_NAMES: McpServerStaticToolName[] = MCP_SERVER_STATIC_TOOL_CALL_SCHEMA.options.map((option) => option.shape.name.value)
 
 const staticToolNames = new Set<string>(MCP_SERVER_STATIC_TOOL_NAMES)
 
-export const isMcpServerStaticToolName = (name: string): name is McpServerStaticToolName =>
-  staticToolNames.has(name)
+export const isMcpServerStaticToolName = (name: string): name is McpServerStaticToolName => staticToolNames.has(name)
 
-export const MCP_SERVER_STATIC_TOOLS: McpToolDefinition[] =
-  MCP_SERVER_STATIC_TOOL_NAMES.map(toolDefinition)
+export const MCP_SERVER_STATIC_TOOLS: McpToolDefinition[] = MCP_SERVER_STATIC_TOOL_NAMES.map(toolDefinition)
 
 function operatorToolDefinitions(): McpToolDefinition[] {
   return operatorIds.map((id) => {

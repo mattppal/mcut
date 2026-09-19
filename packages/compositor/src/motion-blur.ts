@@ -1,11 +1,4 @@
-import {
-  resolveAnimatedElement,
-  toCompositeOperation,
-  type MotionBlur,
-  type Project,
-  type TimelineElement,
-  type Track,
-} from '@mcut/timeline'
+import { resolveAnimatedElement, toCompositeOperation, type MotionBlur, type Project, type TimelineElement, type Track } from '@mcut/timeline'
 import { Canvas2DBackend, createElementContext, type RenderBackend } from './backend'
 import type { Canvas2D, ElementRenderer, RenderFrameOptions } from './types'
 
@@ -35,19 +28,12 @@ function isMovingBetween(element: TimelineElement, t0: number, t1: number): bool
   const to = b.transform
   if (Math.hypot(to.x - from.x, to.y - from.y) >= MIN_TRAVEL_PX) return true
   if (Math.abs(to.rotation - from.rotation) >= MIN_ROTATION_DEG) return true
-  return (
-    Math.abs(to.scaleX - from.scaleX) >= MIN_SCALE_DELTA ||
-    Math.abs(to.scaleY - from.scaleY) >= MIN_SCALE_DELTA
-  )
+  return Math.abs(to.scaleX - from.scaleX) >= MIN_SCALE_DELTA || Math.abs(to.scaleY - from.scaleY) >= MIN_SCALE_DELTA
 }
 
 let cachedScratch: OffscreenCanvasRenderingContext2D | null = null
 
-function acquireScratch(
-  width: number,
-  height: number,
-  options: RenderFrameOptions,
-): Canvas2D | null {
+function acquireScratch(width: number, height: number, options: RenderFrameOptions): Canvas2D | null {
   if (options.createScratchContext) return options.createScratchContext(width, height)
   if (typeof OffscreenCanvas === 'undefined') return null
   const cachedCanvas = cachedScratch?.canvas
@@ -86,10 +72,7 @@ export function renderElementWithMotionBlur(
   const subBackend = new Canvas2DBackend(scratch, project.width, project.height)
   for (let i = 0; i < samples; i++) {
     const resolved = resolveAnimatedElement(element, start + windowMs * ((i + 0.5) / samples))
-    const sub =
-      'blendMode' in resolved && resolved.blendMode
-        ? { ...resolved, blendMode: undefined }
-        : resolved
+    const sub = 'blendMode' in resolved && resolved.blendMode ? { ...resolved, blendMode: undefined } : resolved
     renderer(sub, createElementContext(subBackend, project, track, timeMs, options.source))
   }
   scratch.restore()

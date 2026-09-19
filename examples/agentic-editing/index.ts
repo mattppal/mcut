@@ -107,9 +107,7 @@ const PROMPT =
 // 3. Live agent (any model via the AI Gateway) or recorded replay
 // ---------------------------------------------------------------------------
 
-const liveModel = process.env.AI_GATEWAY_API_KEY
-  ? (process.env.MCUT_AGENT_MODEL ?? 'openai/gpt-5-mini')
-  : null
+const liveModel = process.env.AI_GATEWAY_API_KEY ? (process.env.MCUT_AGENT_MODEL ?? 'openai/gpt-5-mini') : null
 
 if (liveModel) {
   console.log(`— live agent (${liveModel}) —`)

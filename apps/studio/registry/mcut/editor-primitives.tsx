@@ -1,93 +1,64 @@
-"use client";
+'use client'
 
-import * as React from "react";
-import { spinners } from "unicode-animations";
-import { cn } from "@/lib/utils";
+import * as React from 'react'
+import { spinners } from 'unicode-animations'
+import { cn } from '@/lib/utils'
 
-/**
- * Foundation primitives shared across the editor panels. Small, composable
- * pieces only — anything with behavior or a single call site stays local to
- * its panel.
- */
-
-export type SpinnerAnimation = keyof typeof spinners;
+export type SpinnerAnimation = keyof typeof spinners
 
 interface FrameClock {
-  subscribe: (listener: () => void) => () => void;
-  getFrame: () => number;
+  subscribe: (listener: () => void) => () => void
+  getFrame: () => number
 }
 
-const frameClocks = new Map<number, FrameClock>();
+const frameClocks = new Map<number, FrameClock>()
 
 function frameClock(intervalMs: number): FrameClock {
-  const existing = frameClocks.get(intervalMs);
-  if (existing) return existing;
-  let frame = 0;
-  let timer: number | null = null;
-  const listeners = new Set<() => void>();
+  const existing = frameClocks.get(intervalMs)
+  if (existing) return existing
+  let frame = 0
+  let timer: number | null = null
+  const listeners = new Set<() => void>()
   const clock: FrameClock = {
     subscribe: (listener) => {
-      listeners.add(listener);
-      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      listeners.add(listener)
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       if (timer === null && !reduceMotion) {
         timer = window.setInterval(() => {
-          frame += 1;
-          for (const notify of listeners) notify();
-        }, intervalMs);
+          frame += 1
+          for (const notify of listeners) notify()
+        }, intervalMs)
       }
       return () => {
-        listeners.delete(listener);
+        listeners.delete(listener)
         if (listeners.size === 0 && timer !== null) {
-          window.clearInterval(timer);
-          timer = null;
+          window.clearInterval(timer)
+          timer = null
         }
-      };
+      }
     },
     getFrame: () => frame,
-  };
-  frameClocks.set(intervalMs, clock);
-  return clock;
+  }
+  frameClocks.set(intervalMs, clock)
+  return clock
 }
 
 function serverFrame(): number {
-  return 0;
+  return 0
 }
 
-/**
- * The editor's signature loader: a unicode glyph animation instead of a
- * spinning icon. Inherits color and size from the surrounding text, so it
- * drops in anywhere an icon-sized loader would go. Honors
- * `prefers-reduced-motion` by holding the first frame.
- */
-export function Spinner({
-  animation = "braille",
-  label = "Loading",
-  className,
-}: {
-  animation?: SpinnerAnimation;
-  label?: string;
-  className?: string;
-}) {
-  const { frames, interval } = spinners[animation];
-  const clock = frameClock(interval);
-  const frame = React.useSyncExternalStore(clock.subscribe, clock.getFrame, serverFrame);
+export function Spinner({ animation = 'braille', label = 'Loading', className }: { animation?: SpinnerAnimation; label?: string; className?: string }) {
+  const { frames, interval } = spinners[animation]
+  const clock = frameClock(interval)
+  const frame = React.useSyncExternalStore(clock.subscribe, clock.getFrame, serverFrame)
 
   return (
-    <span
-      role="status"
-      aria-label={label}
-      data-slot="spinner"
-      className={cn("inline-block font-mono leading-none select-none", className)}
-    >
+    <span role="status" aria-label={label} data-slot="spinner" className={cn('inline-block font-mono leading-none select-none', className)}>
       {frames[frame % frames.length]}
     </span>
-  );
+  )
 }
 
-/**
- * Centered placeholder for panels with nothing to show. `bordered` adds the
- * dashed outline used when the empty area is also a call to action.
- */
 export function EmptyState({
   icon: Icon,
   title,
@@ -96,79 +67,44 @@ export function EmptyState({
   className,
   children,
 }: {
-  icon?: React.ComponentType<{ className?: string }>;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  bordered?: boolean;
-  className?: string;
-  children?: React.ReactNode;
+  icon?: React.ComponentType<{ className?: string }>
+  title?: React.ReactNode
+  description?: React.ReactNode
+  bordered?: boolean
+  className?: string
+  children?: React.ReactNode
 }) {
   return (
     <div
       data-slot="empty-state"
-      className={cn(
-        "flex flex-col items-center justify-center gap-2 p-6 text-center",
-        bordered && "rounded-lg border border-dashed",
-        className,
-      )}
+      className={cn('flex flex-col items-center justify-center gap-2 p-6 text-center', bordered && 'rounded-lg border border-dashed', className)}
     >
       {Icon ? <Icon className="size-5 text-muted-foreground" /> : null}
       {title ? <p className="text-xs font-medium">{title}</p> : null}
       {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
       {children}
     </div>
-  );
+  )
 }
 
-/** A floating editor window on the chrome backdrop. */
-export function PanelCard({
-  className,
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
+export function PanelCard({ className, children }: { className?: string; children: React.ReactNode }) {
+  return <div className={cn('h-full min-h-0 overflow-hidden rounded-xl bg-card shadow-xs', className)}>{children}</div>
+}
+
+export function PanelHeader({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn("h-full min-h-0 overflow-hidden rounded-xl bg-card shadow-xs", className)}>
+    <div data-slot="panel-header" className={cn('flex h-8 shrink-0 items-center gap-1 px-2', className)}>
       {children}
     </div>
-  );
+  )
 }
 
-/** The compact action row pinned to the top of a panel. */
-export function PanelHeader({
-  className,
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div data-slot="panel-header" className={cn("flex h-8 shrink-0 items-center gap-1 px-2", className)}>
-      {children}
-    </div>
-  );
-}
+export const panelSectionLabelClass = 'text-2xs font-semibold tracking-wide text-muted-foreground uppercase'
 
-/**
- * Class string for uppercase section labels inside panels. Exported separately
- * so interactive labels (e.g. collapsible triggers) can compose it onto a
- * button.
- */
-export const panelSectionLabelClass =
-  "text-2xs font-semibold tracking-wide text-muted-foreground uppercase";
-
-/** Uppercase label for a section of panel content. */
-export function PanelSectionLabel({
-  className,
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
+export function PanelSectionLabel({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
     <h4 data-slot="panel-section-label" className={cn(panelSectionLabelClass, className)}>
       {children}
     </h4>
-  );
+  )
 }

@@ -5,8 +5,7 @@ import { layoutTextBlock } from './text'
 import { FakeContext2D } from './test-utils'
 import type { Canvas2D } from './types'
 
-const measure = (text: string, font: string) =>
-  text.length * (font.includes('700') ? 20 : 10)
+const measure = (text: string, font: string) => text.length * (font.includes('700') ? 20 : 10)
 
 const style = {
   fontFamily: 'sans-serif',

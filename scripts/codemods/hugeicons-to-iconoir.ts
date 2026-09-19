@@ -21,7 +21,13 @@ function listSourceFiles(): string[] {
   return output
     .split('\0')
     .filter((rel) => /\.(ts|tsx)$/.test(rel))
-    .filter((rel) => !rel.split('/').slice(0, -1).some((dir) => skipDirs.has(dir)))
+    .filter(
+      (rel) =>
+        !rel
+          .split('/')
+          .slice(0, -1)
+          .some((dir) => skipDirs.has(dir)),
+    )
     .filter((rel) => existsSync(join(studioRoot, rel)))
     .sort()
 }
@@ -59,10 +65,7 @@ function rewriteRegistry(): number {
   const names = oldPackages.join('|')
   const pair = new RegExp(`"(?:${names})",\\s*"(?:${names})"`, 'g')
   const single = new RegExp(`"(?:${names})"`, 'g')
-  const after = before
-    .replace(pair, `"${newPackage}"`)
-    .replace(single, `"${newPackage}"`)
-    .replaceAll(`"${oldModuleFile}"`, `"${newModuleFile}"`)
+  const after = before.replace(pair, `"${newPackage}"`).replace(single, `"${newPackage}"`).replaceAll(`"${oldModuleFile}"`, `"${newModuleFile}"`)
   const parsed: unknown = JSON.parse(after)
   const registry = registrySchema.parse(parsed)
   let touched = 0
@@ -72,8 +75,7 @@ function rewriteRegistry(): number {
       throw new Error(`registry item ${item.name} lists a dependency twice after the rewrite`)
     }
     const files = item.files ?? []
-    const mentionsIcons =
-      dependencies.includes(newPackage) || files.some((file) => file.path === newModuleFile)
+    const mentionsIcons = dependencies.includes(newPackage) || files.some((file) => file.path === newModuleFile)
     if (mentionsIcons) touched += 1
   }
   if (after.includes('hugeicons')) throw new Error('registry.json still mentions hugeicons after the rewrite')

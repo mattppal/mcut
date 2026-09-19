@@ -57,4 +57,4 @@ export {
   Xmark as XIcon,
   ZoomIn as ZoomInIcon,
   ZoomOut as ZoomOutIcon,
-} from "iconoir-react";
+} from 'iconoir-react'

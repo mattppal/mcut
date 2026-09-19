@@ -5,74 +5,6 @@ description: "Types and Zod schemas exported by @mcut/editor."
 
 ## Types
 
-### EditorOperator
-
-```ts
-interface EditorOperator<Input = unknown, Output = unknown> {
-  id: string
-  label: string
-  description: string
-  category: OperatorCategory
-  inputSchema: z.ZodType<Input, unknown>
-  enabled?: (context: EditorOperatorContext, input: Input) => EnabledResult
-  run: (context: EditorOperatorContext, input: Input) => Output | Promise<Output>
-}
-```
-
-A named editor operation with a category, a Zod input schema, an optional enabled check, and a run function that receives the engine.
-
-### EditorOperatorContext
-
-```ts
-interface EditorOperatorContext {
-  engine: EditorEngine
-}
-```
-
-The context passed to operators, the `EditorEngine` to act on.
-
-### EnabledResult
-
-```ts
-type EnabledResult = boolean | { enabled: boolean; reason?: string }
-```
-
-The result of an operator's enabled check, a boolean or an object with an optional reason for being disabled.
-
-### ListedEditorOperator
-
-```ts
-interface ListedEditorOperator {
-  id: string
-  label: string
-  description: string
-  category: OperatorCategory
-  enabled: boolean
-  disabledReason?: string
-  inputSchema: z.ZodType<unknown, unknown>
-}
-```
-
-An operator as reported by `listAvailable`, with its enabled state and disabled reason resolved for a context.
-
-### OperatorCategory
-
-```ts
-type OperatorCategory =
-  | 'playback'
-  | 'selection'
-  | 'clipboard'
-  | 'edit'
-  | 'track'
-  | 'keyframes'
-  | 'markers'
-  | 'multicam'
-  | 'media'
-  | 'view'
-```
-
-The menu category an operator belongs to.
-
 ### SequentialCollageLayout
 
 ```ts
@@ -138,7 +70,7 @@ interface AutoCrossfadePlanInput {
   maxAttemptedOverlapMs?: number
   minDurationMs?: number
   maxDurationMs?: number
-  transitionType?: string
+  transitionType?: TransitionType
 }
 ```
 
@@ -191,7 +123,7 @@ Optional id factories for the tracks and elements created by `planDuplicateClips
 
 ```ts
 interface DuplicateClipsToNewTracksPlan {
-  commands: AnyCommand[]
+  commands: BuiltinCommand[]
   ids: ElementId[]
   createdTrackIds: Track['id'][]
 }
@@ -213,22 +145,17 @@ The drag mode after fallback, with the id of the clip whose edge rolls or `null`
 ### SilenceCutOptions
 
 ```ts
-interface SilenceCutOptions {
-  minGapMs?: number
-  paddingMs?: number
-  minKeepMs?: number
-  trimEnds?: boolean
-}
+type SilenceCutOptions = z.infer<typeof silenceCutOptionsSchema>
 ```
 
-Thresholds for `planSilenceCuts`, the minimum gap, padding around cuts, minimum kept speech, and whether to trim both ends.
+Thresholds for `planSilenceCuts` as inferred from `silenceCutOptionsSchema`, the minimum gap, padding around cuts, minimum kept speech, and whether to trim both ends.
 
 ### SilenceCutPlan
 
 ```ts
 interface SilenceCutPlan {
   silences: SilenceWindow[]
-  commands: AnyCommand[]
+  commands: BuiltinCommand[]
   removedMs: number
   project: Project
 }
@@ -257,12 +184,60 @@ interface SilenceWindow {
 
 A span of source media time.
 
-## Schemas
-
-### emptyInputSchema
+### LintIssue
 
 ```ts
-const emptyInputSchema = z.object({})
+interface LintIssue {
+  severity: 'error' | 'warning'
+  code: string
+  message: string
+}
 ```
 
-Zod schema for operators that take no input.
+One finding from `lintProject`, with a severity, a code such as `missing-asset` or `empty-track`, and a message naming the offending track or element.
+
+### PlatformPreset
+
+```ts
+interface PlatformPreset {
+  id: string
+  label: string
+  width: number
+  height: number
+  fps: number
+  safeArea: { top: number; bottom: number }
+  notes: string
+}
+```
+
+A delivery target's canvas size, frame rate, the fractions of frame height covered by platform chrome at the top and bottom, and notes on how to use it.
+
+## Schemas
+
+### silenceCutOptionsSchema
+
+```ts
+const silenceCutOptionsSchema = z.object({
+  minGapMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Word gaps shorter than this are speech rhythm, not silence. Default 600.'),
+  paddingMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Breathing room kept on each side of a cut. Default 120.'),
+  minKeepMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Speech chunks shorter than this merge into the surrounding cut. Default 250.'),
+  trimEnds: z
+    .boolean()
+    .optional()
+    .describe('Also cut silence before the first and after the last word. Default true.'),
+})
+```
+
+Zod schema for `SilenceCutOptions`, which the `apply_silence_cuts` MCP tool extends for its input.

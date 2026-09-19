@@ -4,14 +4,8 @@ import { interpolateTrack, keyframeSchema, upsertKeyframe, type Keyframe } from 
 export const timeMapSchema = z
   .array(keyframeSchema)
   .min(2)
-  .refine(
-    (frames) => frames.every((k, i) => i === 0 || k.timeMs > frames[i - 1]!.timeMs),
-    'timeMap keyframes must be strictly increasing in time',
-  )
-  .refine(
-    (frames) => frames.every((k) => k.value >= 0),
-    'timeMap values are source offsets and must be >= 0',
-  )
+  .refine((frames) => frames.every((k, i) => i === 0 || k.timeMs > frames[i - 1]!.timeMs), 'timeMap keyframes must be strictly increasing in time')
+  .refine((frames) => frames.every((k) => k.value >= 0), 'timeMap values are source offsets and must be >= 0')
   .refine(
     (frames) => frames.every((k, i) => i === 0 || k.value >= frames[i - 1]!.value),
     'timeMap values must be non-decreasing (reverse playback is not supported)',
@@ -93,9 +87,6 @@ function ensureMinKeyframes(track: Keyframe[], endMs: number): TimeMap {
   if (track.length >= 2) return track
   const only = track[0] ?? { timeMs: 0, value: 0 }
   const endTime = Math.min(endMs, only.timeMs + 1)
-  const second =
-    endTime > only.timeMs
-      ? { timeMs: endTime, value: only.value }
-      : { timeMs: only.timeMs + 1, value: only.value }
+  const second = endTime > only.timeMs ? { timeMs: endTime, value: only.value } : { timeMs: only.timeMs + 1, value: only.value }
   return [only, second]
 }

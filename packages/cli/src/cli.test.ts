@@ -12,11 +12,7 @@ async function run(args: string[], options: { cwd?: string; stdin?: string } = {
     stdout: 'pipe',
     stderr: 'pipe',
   })
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ])
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited])
   return { stdout, stderr, exitCode }
 }
 
@@ -126,12 +122,7 @@ describe('mcut CLI', () => {
         ],
       }),
     )
-    const result = await run([
-      'silence-cuts', file,
-      '--transcript', transcriptFile,
-      '--element', 'e-1',
-      '--padding', '0',
-    ])
+    const result = await run(['silence-cuts', file, '--transcript', transcriptFile, '--element', 'e-1', '--padding', '0'])
     expect(result.stderr).toBe('')
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('4.00s removed')

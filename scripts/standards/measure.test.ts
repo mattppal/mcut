@@ -1,17 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import { compare, measureFile, type MetricId } from './measure'
 
-const count = (metric: MetricId, ...lines: string[]): number =>
-  measureFile('packages/x/src/a.ts', lines.join('\n')).get(metric) ?? 0
+const count = (metric: MetricId, ...lines: string[]): number => measureFile('packages/x/src/a.ts', lines.join('\n')).get(metric) ?? 0
 
 function areaCode(area: string, entries: readonly (readonly [MetricId, number])[]) {
   const counts = new Map<MetricId, number>(entries)
   const empty = (): Map<MetricId, number> => new Map()
   const buckets = { code: counts, tests: empty(), prose: empty() }
   return {
-    perArea: new Map([
-      [area, { counts: buckets, fileCount: { code: 1, tests: 0, prose: 0 } }],
-    ]),
+    perArea: new Map([[area, { counts: buckets, fileCount: { code: 1, tests: 0, prose: 0 } }]]),
     totals: buckets,
     perFile: [],
   }
@@ -92,7 +89,7 @@ describe('compare census metrics', () => {
 
 describe('effect home', () => {
   test('an effect under packages/react/src/sync is not counted', () => {
-    const src = "useEffect(() => sync(), [])\n"
+    const src = 'useEffect(() => sync(), [])\n'
     expect(measureFile('packages/react/src/sync/use-window-event.ts', src).get('useEffect') ?? 0).toBe(0)
     expect(measureFile('apps/studio/registry/mcut/editor-shell.tsx', src).get('useEffect') ?? 0).toBe(1)
   })
