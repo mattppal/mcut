@@ -234,7 +234,7 @@
 }
 
 /* The command palette is a keyboard toggle. It opens and closes with no motion. */
-[data-slot="dialog-overlay"]:has(~ [data-slot="dialog-content"][data-command-palette]) {
+[data-slot='dialog-overlay']:has(~ [data-slot='dialog-content'][data-command-palette]) {
   animation-duration: 0s;
   transition-duration: 0s;
 }
