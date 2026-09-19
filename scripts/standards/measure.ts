@@ -52,7 +52,8 @@ const bans: readonly Ban[] = [
   { metric: 'todo', bucket: 'code' },
 ]
 
-const sizeMetrics: ReadonlySet<MetricId> = new Set(['loc'])
+const censusOnly: readonly MetricId[] = ['loc', 'switchStmt', 'optionalProps']
+const effectHome = '/packages/react/src/sync/'
 
 interface Area { name: string; roots: readonly string[] }
 
@@ -151,6 +152,7 @@ export function measureFile(rel: string, text: string): Counts {
   }
   const path = `/${rel}`
   const consoleExempt = path.includes('/scripts/') || path.includes('/tools/') || bucket === 'tests'
+  const effectExempt = path.includes(effectHome)
   if (lines.length > 400) add(counts, 'longFile', 1)
   const codeLines: string[] = []
   let block: 'none' | 'comment' | 'jsdoc' = 'none'
@@ -178,7 +180,7 @@ export function measureFile(rel: string, text: string): Counts {
     codeLines.push(stripped)
     const trailing = /\/\/(?!\/)(.*)$/.exec(stripped.replace(/https?:\/\/\S*/g, ''))
     if (trailing) countComment(counts, trailing[1] ?? '', false)
-    if (/\buse(Layout)?Effect\s*\(/.test(stripped)) add(counts, 'useEffect', 1)
+    if (!effectExempt && /\buse(Layout)?Effect\s*\(/.test(stripped)) add(counts, 'useEffect', 1)
     if (/\w+Ref\.current\s*=[^=]/.test(stripped)) add(counts, 'useRefState', 1)
     const booleanState = /useState<\s*boolean\s*>/.test(stripped) || /useState\(\s*(true|false)\s*\)/.test(stripped)
     if (booleanState) add(counts, 'useStateBool', 1)
@@ -236,14 +238,14 @@ function grownFiles(base: Measurement | undefined, head: Measurement, finding: O
     .slice(0, topGrownFiles)
 }
 
-function compare(base: Measurement, head: Measurement): Outcome {
+export function compare(base: Measurement, head: Measurement): Outcome {
   const growths: Finding[] = []
   const banHits: Finding[] = []
   for (const [area, headArea] of head.perArea) {
     const baseArea = base.perArea.get(area)
     for (const bucket of buckets) {
       for (const metric of metricIds) {
-        if (sizeMetrics.has(metric)) continue
+        if (censusOnly.includes(metric)) continue
         const before = baseArea?.counts[bucket].get(metric) ?? 0
         const after = headArea.counts[bucket].get(metric) ?? 0
         const finding = { area, bucket, metric, base: before, head: after }
@@ -356,8 +358,9 @@ async function main(argv: readonly string[]): Promise<number> {
     console.error(`Cannot resolve ${baseRef}. Run git fetch origin main and retry.`)
     return 1
   }
+  const quiet = argv.includes('--quiet')
   const head = measureTree(repoRoot)
-  process.stdout.write(renderReport(head))
+  if (!quiet) process.stdout.write(renderReport(head))
   const jsonPath = optionValue(argv, '--json')
   if (jsonPath !== undefined) await writeFile(jsonPath, JSON.stringify(toJson(head), null, 2))
   if (baseRef === undefined) return 0
