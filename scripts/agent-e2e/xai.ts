@@ -78,10 +78,10 @@ function collectText(items: ResponseItem[]): string {
   return parts.join('\n').trim()
 }
 
-async function postResponses(options: XaiOptions, body: unknown): Promise<unknown> {
+async function postResponses(options: XaiOptions, body: unknown, retryDelaysMs: readonly number[]): Promise<unknown> {
   const url = `${options.baseUrl.replace(/\/$/, '')}/responses`
   let lastError = new Error('xAI request was not attempted.')
-  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
+  for (let attempt = 0; attempt <= retryDelaysMs.length; attempt += 1) {
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -101,13 +101,13 @@ async function postResponses(options: XaiOptions, body: unknown): Promise<unknow
       lastError = error instanceof Error ? error : new Error(String(error))
       if (lastError.message.startsWith('xAI responded 4')) throw lastError
     }
-    const delay = RETRY_DELAYS_MS[attempt]
+    const delay = retryDelaysMs[attempt]
     if (delay !== undefined) await sleep(delay)
   }
   throw lastError
 }
 
-export function createXaiModel(options: XaiOptions): ModelClient {
+export function createXaiModel(options: XaiOptions, retryDelaysMs: readonly number[] = RETRY_DELAYS_MS): ModelClient {
   let previousResponseId: string | null = null
   let tools: ReturnType<typeof toFunctionTool>[] = []
 
@@ -119,7 +119,7 @@ export function createXaiModel(options: XaiOptions): ModelClient {
       parallel_tool_calls: true,
       ...(previousResponseId === null ? {} : { previous_response_id: previousResponseId }),
     }
-    const parsed = responseSchema.parse(await postResponses(options, body))
+    const parsed = responseSchema.parse(await postResponses(options, body, retryDelaysMs))
     previousResponseId = parsed.id
     return {
       calls: collectCalls(parsed.output),
