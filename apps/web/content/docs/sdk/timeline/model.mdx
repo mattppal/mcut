@@ -1,0 +1,310 @@
+---
+title: "Model schemas"
+description: "Zod schemas and constants for the project document and its elements."
+---
+
+## Schemas
+
+### assetIdSchema
+
+```ts
+const assetIdSchema = z
+  .custom<AssetId>(
+    (v) => typeof v === 'string' && /^a-[\w-]+$/.test(v),
+    'invalid asset id (expected "a-..." prefix)',
+  )
+  .meta({ type: 'string', pattern: '^a-[\\w-]+$' })
+```
+
+Zod schema for an `AssetId`, a string with the `a-` prefix.
+
+### assetRefSchema
+
+```ts
+const assetRefSchema = z.object({
+  id: assetIdSchema,
+  kind: z.enum(['video', 'audio', 'image']),
+  src: z.string(),
+  hash: z.string().optional(),
+  name: z.string().optional(),
+  mimeType: z.string().optional(),
+  nativePreview: z.boolean().optional(),
+  durationMs: z.number().int().positive().optional(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+})
+```
+
+Zod schema for a project asset, its id, kind, source URL, and optional hash, name, MIME type, native preview flag, duration, and size.
+
+### audioElementSchema
+
+```ts
+const audioElementSchema = composeFull('audio', audioShape)
+```
+
+Zod schema for an audio element, the shared id and timing fields plus asset, trim, time map, reversal, volume, mute, and fades.
+
+### captionElementSchema
+
+```ts
+const captionElementSchema = composeFull('caption', captionShape)
+```
+
+Zod schema for a caption element, the shared id and timing fields plus text, optional word timings, and caption style.
+
+### captionStyleSchema
+
+```ts
+const captionStyleSchema = z
+  .object({
+    fontFamily: z.string().default('sans-serif'),
+    fontSize: z.number().positive().default(48),
+    fontWeight: z.number().int().min(100).max(1000).default(700),
+    color: z.string().default('#ffffff'),
+    activeWordColor: z.string().optional(),
+    backgroundColor: z.string().default('rgba(0, 0, 0, 0.55)'),
+    position: z.enum(['top', 'middle', 'bottom']).default('bottom'),
+  })
+  .prefault({})
+```
+
+Zod schema for caption styling, font, size, weight, colors, background, and vertical position, with defaults for every field.
+
+### captionWordSchema
+
+```ts
+const captionWordSchema = z.object({
+  text: z.string(),
+  startMs: z.number().int().nonnegative(),
+  endMs: z.number().int().nonnegative(),
+})
+```
+
+Zod schema for one caption word with timing relative to the caption's `startMs`.
+
+### elementIdSchema
+
+```ts
+const elementIdSchema = z
+  .custom<ElementId>(
+    (v) => typeof v === 'string' && /^e-[\w-]+$/.test(v),
+    'invalid element id (expected "e-..." prefix)',
+  )
+  .meta({ type: 'string', pattern: '^e-[\\w-]+$' })
+```
+
+Zod schema for an `ElementId`, a string with the `e-` prefix.
+
+### elementInputSchema
+
+```ts
+const elementInputSchema: z.ZodType<TimelineElement, unknown>
+```
+
+Zod schema for any registered element type with `id` optional, used when inserting elements.
+
+### elementSchema
+
+```ts
+const elementSchema: z.ZodType<TimelineElement, unknown>
+```
+
+Zod schema for any registered element type, including custom types registered at runtime.
+
+### groupIdSchema
+
+```ts
+const groupIdSchema = z
+  .custom<GroupId>(
+    (v) => typeof v === 'string' && /^g-[\w-]+$/.test(v),
+    'invalid group id (expected "g-..." prefix)',
+  )
+  .meta({ type: 'string', pattern: '^g-[\\w-]+$' })
+```
+
+Zod schema for a `GroupId`, a string with the `g-` prefix.
+
+### imageElementSchema
+
+```ts
+const imageElementSchema = composeFull('image', imageShape)
+```
+
+Zod schema for an image element, the shared id and timing fields plus asset, transform, opacity, visual effects, and frame styling.
+
+### markerIdSchema
+
+```ts
+const markerIdSchema = z
+  .custom<MarkerId>(
+    (v) => typeof v === 'string' && /^m-[\w-]+$/.test(v),
+    'invalid marker id (expected "m-..." prefix)',
+  )
+  .meta({ type: 'string', pattern: '^m-[\\w-]+$' })
+```
+
+Zod schema for a `MarkerId`, a string with the `m-` prefix.
+
+### markerSchema
+
+```ts
+const markerSchema = z.object({
+  id: markerIdSchema,
+  timeMs: z.number().int().nonnegative(),
+  label: z.string().optional(),
+  color: z.string().optional(),
+})
+```
+
+Zod schema for a project marker, a named point on the time ruler with an optional label and color.
+
+### multicamElementSchema
+
+```ts
+const multicamElementSchema = composeFull('multicam', multicamShape)
+```
+
+Zod schema for a multicam element, the shared id and timing fields plus synced sources, angle cuts, angle transition, audio source, time map, transform, and audio fields.
+
+### projectSchema
+
+```ts
+const projectSchema = z.object({
+  version: z.literal(PROJECT_VERSION).default(PROJECT_VERSION),
+  id: z.string(),
+  name: z.string(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  fps: z.number().positive(),
+  tracks: z.array(trackSchema).default([]),
+  assets: z.record(z.string(), assetRefSchema).default({}),
+  layouts: z.array(layoutSchema).default([]),
+  presets: z.array(propertyPresetSchema).default([]),
+  markers: z.array(markerSchema).default([]),
+})
+```
+
+Zod schema for a project, its version, id, name, size, fps, tracks, assets, layouts, presets, and markers.
+
+### textElementSchema
+
+```ts
+const textElementSchema = composeFull('text', textShape)
+```
+
+Zod schema for a text element, the shared id and timing fields plus text, style, rich text runs, box, transform, opacity, and visual effects.
+
+### textBoxSchema
+
+```ts
+const textBoxSchema = z.object({
+  width: z.number().positive(),
+  height: z.number().positive().optional(),
+  overflow: z.enum(['visible', 'clip']).default('clip'),
+})
+```
+
+Zod schema for a text box with a width, optional height, and overflow mode.
+
+### textShadowSchema
+
+```ts
+const textShadowSchema = shadowSchema
+```
+
+Zod schema for a text shadow, the same shape as `shadowSchema`.
+
+### textStrokeSchema
+
+```ts
+const textStrokeSchema = strokeSchema
+```
+
+Zod schema for a text outline, the same shape as `strokeSchema`.
+
+### textStyleSchema
+
+```ts
+const textStyleSchema = z
+  .object({
+    fontFamily: z.string().default('sans-serif'),
+    fontSize: z.number().positive().default(64),
+    fontWeight: z.number().int().min(100).max(1000).default(600),
+    fontStyle: z.enum(['normal', 'italic']).default('normal'),
+    color: z.string().default('#ffffff'),
+    align: z.enum(['left', 'center', 'right']).default('center'),
+    backgroundColor: z.string().optional(),
+    letterSpacing: z.number().default(0),
+    lineHeight: z.number().positive().default(1.25),
+    textTransform: z.enum(['none', 'uppercase', 'lowercase']).default('none'),
+    stroke: textStrokeSchema.optional(),
+    shadow: textShadowSchema.optional(),
+  })
+  .prefault({})
+```
+
+Zod schema for text styling, font, weight, style, color, alignment, background, spacing, line height, case transform, stroke, and shadow.
+
+### trackIdSchema
+
+```ts
+const trackIdSchema = z
+  .custom<TrackId>(
+    (v) => typeof v === 'string' && /^t-[\w-]+$/.test(v),
+    'invalid track id (expected "t-..." prefix)',
+  )
+  .meta({ type: 'string', pattern: '^t-[\\w-]+$' })
+```
+
+Zod schema for a `TrackId`, a string with the `t-` prefix.
+
+### trackSchema
+
+```ts
+const trackSchema = z.object({
+  id: trackIdSchema,
+  name: z.string(),
+  muted: z.boolean().default(false),
+  hidden: z.boolean().default(false),
+  locked: z.boolean().default(false),
+  magnetic: z.boolean().default(false),
+  elements: z.array(elementSchema).default([]),
+})
+```
+
+Zod schema for a track, its id, name, muted, hidden, locked, and magnetic flags, and its elements.
+
+### transformSchema
+
+```ts
+const transformSchema = z
+  .object({
+    x: z.number().default(0),
+    y: z.number().default(0),
+    scaleX: scaleSchema.default(1),
+    scaleY: scaleSchema.default(1),
+    rotation: z.number().default(0),
+  })
+  .prefault({})
+```
+
+Zod schema for position, scale, and rotation, where coordinates are center-origin and scale may be negative but not zero.
+
+### videoElementSchema
+
+```ts
+const videoElementSchema = composeFull('video', videoShape)
+```
+
+Zod schema for a video element, the shared id and timing fields plus asset, trim, time map, reversal, transform, opacity, audio fields, visual effects, and frame styling.
+
+## Constants
+
+### MIN_ELEMENT_DURATION_MS
+
+```ts
+const MIN_ELEMENT_DURATION_MS = 10
+```
+
+The shortest element duration the schema accepts, 10 ms.

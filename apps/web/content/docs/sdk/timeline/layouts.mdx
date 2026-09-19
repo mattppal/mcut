@@ -1,0 +1,219 @@
+---
+title: "Layouts, presets, and thumbnails"
+description: "Layout and slot schemas, property presets, and thumbnail templates."
+---
+
+## Types
+
+### Layout
+
+```ts
+type Layout = z.infer<typeof layoutSchema>
+```
+
+A layout as inferred from `layoutSchema`.
+
+### LayoutSlot
+
+```ts
+type LayoutSlot = z.infer<typeof layoutSlotSchema>
+```
+
+A layout slot as inferred from `layoutSlotSchema`.
+
+### PropertyPreset
+
+```ts
+type PropertyPreset = z.infer<typeof propertyPresetSchema>
+```
+
+A property preset as inferred from `propertyPresetSchema`.
+
+### ThumbnailItem
+
+```ts
+type ThumbnailItem = z.infer<typeof thumbnailItemSchema>
+```
+
+A template item as inferred from `thumbnailItemSchema`.
+
+### ThumbnailTemplate
+
+```ts
+type ThumbnailTemplate = z.infer<typeof thumbnailTemplateSchema>
+```
+
+A thumbnail template as inferred from `thumbnailTemplateSchema`.
+
+## Schemas
+
+### layoutSchema
+
+```ts
+const layoutSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  slots: z.array(layoutSlotSchema).min(1),
+})
+```
+
+Zod schema for a layout, an id, a name, and at least one slot.
+
+### layoutSlotSchema
+
+```ts
+const layoutSlotSchema = z.object({
+  source: z.string().min(1),
+  rect: z.object({
+    x: z.number().min(-1).max(2),
+    y: z.number().min(-1).max(2),
+    w: z.number().positive().max(3),
+    h: z.number().positive().max(3),
+  }),
+  fit: z.enum(['cover', 'contain']).default('cover'),
+  focus: z
+    .object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) })
+    .default({ x: 0.5, y: 0.5 }),
+  cornerRadius: z.number().min(0).max(0.5).default(0),
+  shadow: z.boolean().default(false),
+  stroke: strokeSchema.optional(),
+})
+```
+
+Zod schema for one layout slot, the source key it shows, a rect in normalized canvas coordinates, fit mode, focus point, corner radius, shadow flag, and optional stroke.
+
+### propertyPresetSchema
+
+```ts
+const propertyPresetSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  kind: z.string().min(1),
+  values: z.record(z.string(), z.unknown()),
+})
+```
+
+Zod schema for a property preset, an id, a name, the `kind` of surface that captured it, and a record of captured values.
+
+### thumbnailItemSchema
+
+```ts
+const thumbnailItemSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('text'),
+    rect: rectSchema,
+    text: z.string(),
+    role: z.string().default('Text'),
+    style: textStyleSchema,
+  }),
+  z.object({
+    kind: z.literal('slot'),
+    rect: rectSchema,
+    fit: z.enum(['cover', 'contain']).default('cover'),
+    label: z.string().default('Media'),
+  }),
+])
+```
+
+Zod schema for one template item, either a text item with a normalized rect, text, role, and style or a slot with a rect, fit mode, and label.
+
+### thumbnailTemplateSchema
+
+```ts
+const thumbnailTemplateSchema = z.object({
+  name: z.string().min(1),
+  items: z.array(thumbnailItemSchema).min(1),
+})
+```
+
+Zod schema for a thumbnail template, a name and at least one item.
+
+## Constants
+
+### THUMBNAIL_FRAME_COUNT
+
+```ts
+const THUMBNAIL_FRAME_COUNT = 5
+```
+
+The number of frames the cover spans, 5.
+
+### THUMBNAIL_TEMPLATES
+
+```ts
+const THUMBNAIL_TEMPLATES: ThumbnailTemplate[]
+```
+
+The three starter covers, big title, lower third, and center punch.
+
+### THUMBNAIL_TRACK_NAME
+
+```ts
+const THUMBNAIL_TRACK_NAME = 'Thumbnail'
+```
+
+The name that marks a track as the thumbnail track, `Thumbnail`.
+
+## Functions
+
+### createDefaultLayouts
+
+```ts
+function createDefaultLayouts(): Layout[]
+```
+
+Returns five starter layouts for a screen and camera pair with fresh ids, full screen with camera picture in picture, camera only, screen only, two 3 by 4 panels, and side by side.
+
+### getLayout
+
+```ts
+function getLayout(layouts: readonly Layout[], layoutId: string): Layout | null
+```
+
+Returns the layout with the given id, or `null`.
+
+### listPresets
+
+```ts
+function listPresets(project: Project, kind: string): PropertyPreset[]
+```
+
+Returns the project's presets whose `kind` matches, in saved order.
+
+### captureThumbnailTemplate
+
+```ts
+function captureThumbnailTemplate(
+  project: Project,
+  name: string,
+): ThumbnailTemplate | null
+```
+
+Returns a template built from the thumbnail track, turning text elements into text items and image elements into slots, or `null` when the track is missing or empty.
+
+### expandThumbnailTemplate
+
+```ts
+function expandThumbnailTemplate(
+  project: Pick<Project, 'width' | 'height' | 'fps'>,
+  template: ThumbnailTemplate,
+): TimelineElement[]
+```
+
+Returns text elements for the template's text items, scaled from 1080p template space to the project size and positioned from their normalized rects, and skips slot items.
+
+### findThumbnailTrack
+
+```ts
+function findThumbnailTrack(project: Project)
+```
+
+Returns the topmost track named `Thumbnail`, or `null`.
+
+### thumbnailDurationMs
+
+```ts
+function thumbnailDurationMs(fps: number): number
+```
+
+Returns the length of the cover span, five frames at the given fps or the minimum element duration if that is longer.

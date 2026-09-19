@@ -1,0 +1,47 @@
+---
+title: "Classes"
+description: "Classes exported by @mcut/media."
+---
+
+## Classes
+
+### AudioNotDecodableError
+
+```ts
+class AudioNotDecodableError extends Error {
+  constructor(codec: string | undefined)
+}
+```
+
+Error thrown when a file has an audio track but the browser has no decoder for its codec.
+
+### PreviewMediaPool
+
+```ts
+class PreviewMediaPool implements FrameSource {
+  constructor(private resolveAsset: (assetId: AssetId) => AssetRef | undefined)
+  getFrame(assetId: AssetId, sourceTimeMs: number): CanvasImageSource | null
+  sync(items: ActiveMediaItem[], options: PreviewSyncOptions): void
+  pauseAll(): void
+  dispose(): void
+}
+```
+
+The approximate `FrameSource` for interactive preview, one pooled media element per asset kept in sync with the playback clock plus decoded bitmaps for images.
+
+### ScrubFrameCache
+
+```ts
+class ScrubFrameCache {
+  constructor(
+    private maxFrames = 150,
+    private minGapMs = 90,
+  )
+  capture(source: HTMLVideoElement, timeMs: number): void
+  nearest(timeMs: number): OffscreenCanvas | null
+  get size(): number
+  clear(): void
+}
+```
+
+A bounded cache of downscaled video frames sorted by time, capturing opportunistically and serving the nearest frame while a seek is pending.
