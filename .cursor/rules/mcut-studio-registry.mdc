@@ -1,0 +1,15 @@
+---
+globs: ["apps/studio/registry/mcut/**"]
+alwaysApply: false
+---
+
+# Studio registry
+
+Import siblings with relative paths.
+Import primitives from `@/components/ui/*`.
+Import engine and runtime code from public `@mcut/*`.
+Do not import `@/app/**`.
+Do not use Next.js-only APIs in registry components.
+Add a new registry file to `apps/studio/registry.json`.
+Register user-visible commands in `action-registry.ts` and `editor-default-actions.ts`.
+Run `bun run build` in `apps/studio` to regenerate `public/r`.

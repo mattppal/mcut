@@ -10,8 +10,11 @@
 
 const MEDIA_DIR = 'mcut-media'
 
-/** Largest file we hash/persist (WebCrypto digest needs the full buffer). */
 export const MAX_HASHABLE_BYTES = 512 * 1024 * 1024
+
+function isNotFound(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'NotFoundError'
+}
 
 export function isMediaStoreSupported(): boolean {
   return (
@@ -34,12 +37,12 @@ async function mediaDir(create: boolean): Promise<FileSystemDirectoryHandle | nu
   try {
     const root = await navigator.storage.getDirectory()
     return await root.getDirectoryHandle(MEDIA_DIR, { create })
-  } catch {
-    return null
+  } catch (error) {
+    if (isNotFound(error) && !create) return null
+    throw new Error('Media store directory is unavailable', { cause: error })
   }
 }
 
-/** Persist a blob under its hash. No-op when already stored (same content). */
 export async function saveMediaBlob(hash: string, blob: Blob): Promise<boolean> {
   const dir = await mediaDir(true)
   if (!dir) return false
@@ -47,17 +50,19 @@ export async function saveMediaBlob(hash: string, blob: Blob): Promise<boolean> 
     try {
       const existing = await dir.getFileHandle(hash)
       const file = await existing.getFile()
-      if (file.size === blob.size) return true // content-addressed: same hash = same bytes
-    } catch {
-      // Not stored yet.
+      if (file.size === blob.size) return true
+    } catch (error) {
+      if (!isNotFound(error)) {
+        throw new Error(`Failed to inspect stored media ${hash}`, { cause: error })
+      }
     }
     const handle = await dir.getFileHandle(hash, { create: true })
     const writable = await handle.createWritable()
     await writable.write(blob)
     await writable.close()
     return true
-  } catch {
-    return false
+  } catch (error) {
+    throw new Error(`Failed to save media ${hash}`, { cause: error })
   }
 }
 
@@ -67,32 +72,54 @@ export async function loadMediaBlob(hash: string): Promise<Blob | null> {
   try {
     const handle = await dir.getFileHandle(hash)
     return await handle.getFile()
-  } catch {
-    return null
+  } catch (error) {
+    if (isNotFound(error)) return null
+    throw new Error(`Failed to load stored media ${hash}`, { cause: error })
   }
 }
 
-/** Delete stored blobs whose hash is not in `keep`. Returns removed count. */
+function isAsyncIterator(value: unknown): value is AsyncIterator<unknown> {
+  return typeof value === 'object' && value !== null && 'next' in value && typeof value.next === 'function'
+}
+
+function directoryEntries(dir: FileSystemDirectoryHandle): AsyncIterable<unknown> | null {
+  const iterator = Reflect.get(dir, Symbol.asyncIterator)
+  if (typeof iterator !== 'function') return null
+  return {
+    [Symbol.asyncIterator]() {
+      const created = iterator.call(dir)
+      if (!isAsyncIterator(created)) {
+        throw new TypeError('Media store directory is not async-iterable')
+      }
+      return created
+    },
+  }
+}
+
 export async function pruneMediaBlobs(keep: ReadonlySet<string>): Promise<number> {
   const dir = await mediaDir(false)
   if (!dir) return 0
-  let removed = 0
+  const entries = directoryEntries(dir)
+  if (!entries) return 0
+  const names: string[] = []
   try {
-    const names: string[] = []
-    // OPFS directories are async-iterable of [name, handle].
-    for await (const [name] of dir as unknown as AsyncIterable<[string, unknown]>) {
-      if (!keep.has(name)) names.push(name)
+    for await (const entry of entries) {
+      if (!Array.isArray(entry) || typeof entry[0] !== 'string') continue
+      if (!keep.has(entry[0])) names.push(entry[0])
     }
-    for (const name of names) {
-      try {
-        await dir.removeEntry(name)
-        removed++
-      } catch {
-        // Locked or already gone.
-      }
+  } catch (error) {
+    throw new Error('Failed to iterate the media store', { cause: error })
+  }
+  let removed = 0
+  for (const name of names) {
+    try {
+      await dir.removeEntry(name)
+      removed++
+    } catch (error) {
+      if (isNotFound(error)) continue
+      if (error instanceof DOMException && error.name === 'NoModificationAllowedError') continue
+      throw new Error(`Failed to prune stored media ${name}`, { cause: error })
     }
-  } catch {
-    // Iteration unsupported: skip pruning.
   }
   return removed
 }

@@ -191,7 +191,11 @@ export async function runExportPipeline(
     onProgress?.({ phase: 'finalize', progress: 0.97 })
     await output.finalize()
   } catch (error) {
-    await output.cancel().catch(() => {})
+    try {
+      await output.cancel()
+    } catch (cancelError) {
+      throw new AggregateError([error, cancelError], 'Export failed')
+    }
     throw error
   } finally {
     frameSource.dispose()

@@ -124,17 +124,18 @@ function mcpUrl(port: number, token?: string | null): string {
 function originOf(value: string): string | null {
   try {
     return new URL(value).origin
-  } catch {
-    return null
+  } catch (error) {
+    if (error instanceof TypeError) return null
+    throw error
   }
 }
 
 function print(value: unknown): void {
   if (typeof value === 'string') {
-    console.log(value)
+    process.stdout.write(`${value}\n`)
     return
   }
-  console.log(JSON.stringify(value, null, 2))
+  process.stdout.write(`${JSON.stringify(value, null, 2)}\n`)
 }
 
 async function main(): Promise<void> {
@@ -143,17 +144,19 @@ async function main(): Promise<void> {
     case 'help':
     case '--help':
     case '-h':
-      console.log(usage())
+      process.stdout.write(`${usage()}\n`)
       return
     case 'start': {
       const editorOrigin = originOf(args.editorUrl)
       const allowedOrigins = [...args.allowedOrigins, ...(editorOrigin ? [editorOrigin] : [])]
       const bridge = new LiveMcutBridge({ token: args.token, editorUrl: args.editorUrl, allowedOrigins })
       const port = await bridge.listen(args.port)
-      console.error(`mcut bridge ready — ws://127.0.0.1:${port}/mcut-mcp`)
-      console.error(`MCP URL: ${bridge.getMcpUrl() ?? mcpUrl(port, bridge.token)}`)
-      console.error(`Editor URL: ${bridge.getOpenEditorUrl() ?? editorUrl(args.editorUrl, port, bridge.token)}`)
-      console.error('Leave this process running while agents edit the browser project.')
+      process.stderr.write(`mcut bridge ready — ws://127.0.0.1:${port}/mcut-mcp\n`)
+      process.stderr.write(`MCP URL: ${bridge.getMcpUrl() ?? mcpUrl(port, bridge.token)}\n`)
+      process.stderr.write(
+        `Editor URL: ${bridge.getOpenEditorUrl() ?? editorUrl(args.editorUrl, port, bridge.token)}\n`,
+      )
+      process.stderr.write('Leave this process running while agents edit the browser project.\n')
       await new Promise<void>(() => {})
       return
     }
@@ -161,7 +164,7 @@ async function main(): Promise<void> {
       print(await status(args.port))
       return
     case 'url':
-      console.log(editorUrl(args.editorUrl, args.port, args.token))
+      process.stdout.write(`${editorUrl(args.editorUrl, args.port, args.token)}\n`)
       return
     case 'get-summary':
       print(await rpc(args.port, 'get_summary'))
@@ -225,6 +228,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error))
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
   process.exit(1)
 })
