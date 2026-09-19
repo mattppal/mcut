@@ -14,8 +14,7 @@ import {
  */
 
 interface ClipboardEntry {
-  /** Deep-cloned element, id stripped (regenerated on paste). */
-  element: Omit<TimelineElement, "id">;
+  element: TimelineElement;
   /** Model track index at copy time (pasted to the same lane when possible). */
   trackIndex: number;
   /** Offset from the earliest copied element's startMs. */
@@ -62,11 +61,11 @@ export function copySelection(engine: EditorEngine): number {
     .filter((location) => location !== undefined);
   if (located.length === 0) return 0;
   const earliestMs = Math.min(...located.map((l) => l.element.startMs));
-  editorClipboard.entries = located.map(({ element, trackIndex }) => {
-    const { id, ...clone } = JSON.parse(JSON.stringify(element)) as TimelineElement;
-    void id;
-    return { element: clone, trackIndex, offsetMs: element.startMs - earliestMs };
-  });
+  editorClipboard.entries = located.map(({ element, trackIndex }) => ({
+    element: structuredClone(element),
+    trackIndex,
+    offsetMs: element.startMs - earliestMs,
+  }));
   writeOsClipboard();
   return editorClipboard.entries.length;
 }

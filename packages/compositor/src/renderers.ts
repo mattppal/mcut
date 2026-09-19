@@ -10,6 +10,7 @@ import {
   type CaptionElement,
   type Crop,
   type Effect,
+  type ElementType,
   type ImageElement,
   type Layout,
   type Shadow,
@@ -21,27 +22,11 @@ import {
 } from '@mcut/timeline'
 import { applyChrome, type LayerChrome } from './backend'
 import { toCanvasPoint } from './geometry'
-import { getTransitionRenderer } from './transition-renderers'
+import { transitionRenderers } from './transition-renderers'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
 import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
 
-const renderers = new Map<string, ElementRenderer>()
-
-/**
- * Register a renderer for an element type. Built-in types can be overridden;
- * custom element types (added via custom commands) plug in here — the
- * compositor side of the engine's command registry.
- */
-export function registerElementRenderer<E extends TimelineElement>(
-  type: E['type'] | (string & {}),
-  renderer: ElementRenderer<E>,
-): void {
-  renderers.set(type, renderer as ElementRenderer)
-}
-
-export function getElementRenderer(type: string): ElementRenderer | undefined {
-  return renderers.get(type)
-}
+type ElementByType = { [E in TimelineElement as E['type']]: E }
 
 /**
  * `letterSpacing` shipped in Chromium 99+/Safari 17 but is still missing from
@@ -502,37 +487,46 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
   // both sides of the pair, with the cut mapped to absolute time.
   const window = getAngleTransitionAt(element, context.timeMs - element.startMs)
   if (window) {
-    const renderer = getTransitionRenderer(window.type)
-    if (renderer) {
-      const pair = {
-        left: element,
-        right: element,
-        cutMs: element.startMs + window.cutMs,
-        durationMs: window.durationMs,
-        type: window.type,
-      }
-      renderer({
-        ctx,
-        project,
-        pair,
-        timeMs: context.timeMs,
-        completion: getTransitionCompletion(pair, context.timeMs),
-        drawLeft: () => drawLayout(getLayout(project.layouts, window.fromLayoutId)),
-        drawRight: () => drawLayout(getLayout(project.layouts, window.toLayoutId)),
-      })
-      return
+    const pair = {
+      left: element,
+      right: element,
+      cutMs: element.startMs + window.cutMs,
+      durationMs: window.durationMs,
+      type: window.type,
     }
+    transitionRenderers[window.type]({
+      ctx,
+      project,
+      pair,
+      timeMs: context.timeMs,
+      completion: getTransitionCompletion(pair, context.timeMs),
+      drawLeft: () => drawLayout(getLayout(project.layouts, window.fromLayoutId)),
+      drawRight: () => drawLayout(getLayout(project.layouts, window.toLayoutId)),
+    })
+    return
   }
 
   drawLayout(getActiveLayout(project, element, context.timeMs))
 }
 
-registerElementRenderer<VideoElement>('video', renderVideo)
-registerElementRenderer<MulticamElement>('multicam', renderMulticam)
-registerElementRenderer<ImageElement>('image', renderImage)
-registerElementRenderer<TextElement>('text', renderText)
-registerElementRenderer<CaptionElement>('caption', renderCaption)
-// Audio has no visual representation.
-registerElementRenderer('audio', () => {})
+export const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> } = {
+  video: renderVideo,
+  multicam: renderMulticam,
+  image: renderImage,
+  text: renderText,
+  caption: renderCaption,
+  audio: () => {},
+}
+
+function renderTyped<K extends ElementType>(
+  type: K,
+  element: ElementByType[K],
+  context: ElementRenderContext,
+): void {
+  elementRenderers[type](element, context)
+}
+
+export const renderElementLayer: ElementRenderer = (element, context) =>
+  renderTyped(element.type, element, context)
 
 export { measureWith }

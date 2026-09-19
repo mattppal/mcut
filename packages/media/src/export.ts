@@ -47,7 +47,7 @@ export async function exportProject(
   signal?.throwIfAborted()
   const durationMs = getProjectDurationMs(project)
   if (durationMs <= 0) throw new Error('Cannot export an empty project')
-  const container = resolveContainerFormat(options.format) // fail fast on unknown ids
+  const container = resolveContainerFormat(options.format)
 
   // ---- audio mix (main thread) ---------------------------------------------
   let mixedAudio: MixedAudioData | null = null
@@ -61,18 +61,21 @@ export async function exportProject(
   // Quality objects don't survive structured clone — those exports run local.
   const serializableBitrate =
     options.videoBitrate === undefined || typeof options.videoBitrate === 'number'
-  const worker = serializableBitrate ? spawnExportWorker() : null
+  let worker: Worker | null = null
+  if (serializableBitrate) {
+    try {
+      worker = spawnExportWorker()
+    } catch (error) {
+      if (!(error instanceof Error)) throw error
+    }
+  }
 
   if (worker) {
     try {
       noteExportMode('worker')
       return await runInWorker(worker, project, options, mixedAudio, container.extension)
     } catch (error) {
-      // The worker never came up (bundler missed the entry, script blocked):
-      // nothing was transferred yet, so the same pipeline can run in-context.
-      // Failures after startup are real export errors and propagate.
       if (!(error instanceof WorkerStartError)) throw error
-      console.warn(`mcut export: ${error.message}; falling back to main-thread export`)
     } finally {
       worker.terminate()
     }
@@ -89,19 +92,9 @@ export async function exportProject(
   return { blob: new Blob([result.buffer], { type: result.mimeType }), extension: result.extension }
 }
 
-/**
- * Spawn the export worker, or null where workers can't run the pipeline
- * (Node/Bun, no Worker global, spawn throws). The `new Worker(new URL(...))`
- * form is load-bearing: bundlers (Turbopack/webpack/Vite) statically detect
- * it and emit `export-worker.js` as a worker entry.
- */
 function spawnExportWorker(): Worker | null {
   if (typeof Worker === 'undefined' || typeof window === 'undefined') return null
-  try {
-    return new Worker(new URL('./export-worker.js', import.meta.url), { type: 'module' })
-  } catch {
-    return null
-  }
+  return new Worker(new URL('./export-worker.js', import.meta.url), { type: 'module' })
 }
 
 function runInWorker(

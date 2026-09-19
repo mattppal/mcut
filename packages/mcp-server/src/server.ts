@@ -1,7 +1,8 @@
 /**
- * mcut as an MCP server: every registered editor command becomes an MCP tool,
- * straight from the zod command registry — plus user-level operators from
- * @mcut/editor and a handful of static tools (summary, project, undo/redo).
+ * mcut as an MCP server: every editor command becomes an MCP tool, straight
+ * from the zod command table, plus the user-level operators from @mcut/editor
+ * and the static tools (summary, project, captions, silence cuts, lint,
+ * presets, undo/redo).
  *
  * The target can be a local EditorEngine or a live browser tab. Export stays
  * in the browser (WebCodecs); MCP edits the project document/state.
@@ -13,10 +14,16 @@ import {
   type Tool,
 } from '@modelcontextprotocol/sdk/types.js'
 import {
-  EditorOperatorRegistry,
   OperatorError,
-  createEditorOperatorRegistry,
-  registerCoreOperators,
+  PLATFORM_PRESETS,
+  applyCommands,
+  lintProject,
+  listOperators,
+  operatorIds,
+  planSilenceCuts,
+  runOperator,
+  summarizeEngine,
+  type OperatorId,
 } from '@mcut/editor'
 import {
   CommandError,
@@ -25,13 +32,21 @@ import {
   getProjectCaptions,
   getProjectMediaContext,
   getProjectTranscript,
-  listToolDefinitions,
-  summarizeProject,
+  parseCommand,
+  parseProject,
+  type BuiltinCommand,
   type Project,
   type ProjectTranscriptOptions,
 } from '@mcut/timeline'
-import { searchCaptions } from '@mcut/transcription'
-import { listServerToolDefinitions, operatorToolName } from './contract'
+import { buildCaptionsCommand, searchCaptions } from '@mcut/transcription'
+import { z } from 'zod'
+import {
+  MCP_SERVER_STATIC_TOOL_CALL_SCHEMA,
+  isMcpServerStaticToolName,
+  listServerToolDefinitions,
+  operatorToolName,
+  type McpServerStaticToolCall,
+} from './contract'
 
 export interface McutMcpTarget {
   getSummary(): string | Promise<string>
@@ -46,24 +61,21 @@ export interface McutMcpTarget {
   runAction(actionId: string, input: unknown): unknown | Promise<unknown>
   undo(): boolean | Promise<boolean>
   redo(): boolean | Promise<boolean>
-  runOperator(operatorId: string, input: unknown): unknown | Promise<unknown>
+  runOperator(operatorId: OperatorId, input: unknown): unknown | Promise<unknown>
   dispatchCommand(commandName: string, input: unknown): unknown | Promise<unknown>
+  applyCommands(commands: BuiltinCommand[]): unknown | Promise<unknown>
 }
 
 export interface McutMcpServerOptions {
   engine: EditorEngine
   /** Called after every successful edit — persist the project here. */
   onChange?: () => void | Promise<void>
-  /** Defaults to the core operator set. */
-  operators?: EditorOperatorRegistry
   name?: string
   version?: string
 }
 
 export interface McutMcpServerForTargetOptions {
   target: McutMcpTarget
-  /** Defaults to the core operator set. Used for tool schema generation. */
-  operators?: EditorOperatorRegistry
   name?: string
   version?: string
 }
@@ -71,30 +83,13 @@ export interface McutMcpServerForTargetOptions {
 const text = (value: string) => ({ content: [{ type: 'text' as const, text: value }] })
 const failure = (value: string) => ({ ...text(value), isError: true })
 
-function viewState(engine: EditorEngine): string {
-  const playback = engine.playback.state
-  const selection = engine.selection.elementIds
-  return (
-    `Playhead: ${(playback.currentTimeMs / 1000).toFixed(2)}s` +
-    ` (${playback.isPlaying ? 'playing' : 'paused'})` +
-    ` · Selection: ${selection.length > 0 ? selection.join(', ') : 'none'}`
-  )
-}
+const targetProject = async (target: McutMcpTarget): Promise<Project> =>
+  parseProject(await target.getProject())
 
-function summarizeEngine(engine: EditorEngine): string {
-  return `${summarizeProject(engine.project)}\n${viewState(engine)}`
-}
+type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure>
 
-function transcriptOptions(args: unknown): ProjectTranscriptOptions {
-  const input = (args ?? {}) as { includeWords?: unknown }
-  return { includeWords: input.includeWords === true }
-}
-
-function transcriptQuery(args: unknown): string | null {
-  const input = (args ?? {}) as { query?: unknown }
-  const query = typeof input.query === 'string' ? input.query.trim() : ''
-  return query.length > 0 ? query : null
-}
+const withResult = (lead: string, result: unknown) =>
+  result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`
 
 function searchProjectTranscript(project: Project, query: string): unknown {
   const captionRefs = getProjectCaptions(project)
@@ -120,7 +115,6 @@ function searchProjectTranscript(project: Project, query: string): unknown {
 
 function createEngineTarget(
   engine: EditorEngine,
-  operators: EditorOperatorRegistry,
   onChange: () => void | Promise<void>,
 ): McutMcpTarget {
   return {
@@ -141,7 +135,7 @@ function createEngineTarget(
     },
     listActions: () => [],
     listOperators: () =>
-      operators.listAvailable({ engine }).map((operator) => ({
+      listOperators({ engine }).map((operator) => ({
         id: operator.id,
         label: operator.label,
         category: operator.category,
@@ -164,14 +158,77 @@ function createEngineTarget(
       throw new Error(`Browser action "${actionId}" is only available through a live browser bridge.`)
     },
     runOperator: async (operatorId, input) => {
-      const result = await operators.run(operatorId, { engine }, input ?? {})
+      const result = await runOperator(operatorId, { engine }, input ?? {})
       await onChange()
       return result
     },
     dispatchCommand: async (commandName, input) => {
-      engine.dispatch({ type: commandName, ...((input ?? {}) as Record<string, unknown>) })
+      engine.dispatch(parseCommand(Object.assign({}, input, { type: commandName })))
       await onChange()
     },
+    applyCommands: async (commands) => {
+      applyCommands(engine, commands)
+      await onChange()
+    },
+  }
+}
+
+async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCall): Promise<ToolResult> {
+  switch (call.name) {
+    case 'get_summary':
+      return text(await target.getSummary())
+    case 'get_project':
+      return text(JSON.stringify(await target.getProject(), null, 2))
+    case 'get_media_context':
+      if (!target.getMediaContext) return failure('get_media_context is not available on this target.')
+      return text(JSON.stringify(await target.getMediaContext(), null, 2))
+    case 'get_transcript':
+      if (!target.getTranscript) return failure('get_transcript is not available on this target.')
+      return text(JSON.stringify(await target.getTranscript(call.arguments), null, 2))
+    case 'search_transcript':
+      if (!target.searchTranscript) return failure('search_transcript is not available on this target.')
+      return text(JSON.stringify(await target.searchTranscript(call.arguments.query), null, 2))
+    case 'ensure_transcript': {
+      if (!target.ensureTranscript) return failure('ensure_transcript is not available on this target.')
+      const result = await target.ensureTranscript(call.arguments)
+      return text(`${withResult('OK: transcript ensured.', result)}\n\n${await target.getSummary()}`)
+    }
+    case 'get_audio_activity':
+      if (!target.getAudioActivity) return failure('get_audio_activity is not available on this target.')
+      return text(JSON.stringify(await target.getAudioActivity(call.arguments), null, 2))
+    case 'lint_project':
+      return text(JSON.stringify(lintProject(await targetProject(target)), null, 2))
+    case 'list_presets':
+      return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
+    case 'apply_captions': {
+      const { transcript, ...options } = call.arguments
+      const command = buildCaptionsCommand(await targetProject(target), transcript, options)
+      await target.applyCommands([command])
+      return text(`OK: ${command.captions.length} caption(s) applied.\n\n${await target.getSummary()}`)
+    }
+    case 'apply_silence_cuts': {
+      const { elementId, transcript, ...options } = call.arguments
+      const plan = planSilenceCuts(await targetProject(target), elementId, transcript, options)
+      if (plan.silences.length === 0) return text('No silences found, nothing to cut.')
+      await target.applyCommands(plan.commands)
+      const result = { silences: plan.silences, removedMs: plan.removedMs }
+      return text(`${withResult(`OK: ${plan.silences.length} silence(s) cut.`, result)}\n\n${await target.getSummary()}`)
+    }
+    case 'list_operators':
+      return text(JSON.stringify(await target.listOperators(), null, 2))
+    case 'list_actions':
+      return text(JSON.stringify(await target.listActions(), null, 2))
+    case 'run_action': {
+      const { actionId, input } = call.arguments
+      const result = await target.runAction(actionId, input)
+      return text(`${withResult(`OK: action ${actionId} applied.`, result)}\n\n${await target.getSummary()}`)
+    }
+    case 'undo':
+      if (!(await target.undo())) return failure('Nothing to undo.')
+      return text(`Undone.\n\n${await target.getSummary()}`)
+    case 'redo':
+      if (!(await target.redo())) return failure('Nothing to redo.')
+      return text(`Redone.\n\n${await target.getSummary()}`)
   }
 }
 
@@ -180,10 +237,8 @@ function createEngineTarget(
  * `await createMcutMcpServer({ engine }).connect(new StdioServerTransport())`.
  */
 export function createMcutMcpServer(options: McutMcpServerOptions): Server {
-  const operators = options.operators ?? registerCoreOperators(createEditorOperatorRegistry())
   return createMcutMcpServerForTarget({
-    target: createEngineTarget(options.engine, operators, options.onChange ?? (() => {})),
-    operators,
+    target: createEngineTarget(options.engine, options.onChange ?? (() => {})),
     name: options.name,
     version: options.version,
   })
@@ -192,16 +247,8 @@ export function createMcutMcpServer(options: McutMcpServerOptions): Server {
 /** Build the same MCP tool surface around any target, including a live browser tab. */
 export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOptions): Server {
   const { target } = options
-  const operators = options.operators ?? registerCoreOperators(createEditorOperatorRegistry())
-
-  const tools = listServerToolDefinitions({
-    operators: operators.list(),
-    commands: listToolDefinitions(),
-  })
-
-  const operatorIdsByTool = new Map<string, string>(
-    operators.list().map((operator) => [operatorToolName(operator.id), operator.id]),
-  )
+  const tools = listServerToolDefinitions()
+  const operatorIdsByTool = new Map(operatorIds.map((id) => [operatorToolName(id), id]))
 
   const server = new Server(
     { name: options.name ?? 'mcut', version: options.version ?? '0.1.0' },
@@ -215,66 +262,18 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params
     try {
-      switch (name) {
-        case 'get_summary':
-          return text(await target.getSummary())
-        case 'get_project':
-          return text(JSON.stringify(await target.getProject(), null, 2))
-        case 'get_media_context':
-          if (!target.getMediaContext) return failure('get_media_context is not available on this target.')
-          return text(JSON.stringify(await target.getMediaContext(), null, 2))
-        case 'get_transcript':
-          if (!target.getTranscript) return failure('get_transcript is not available on this target.')
-          return text(JSON.stringify(await target.getTranscript(transcriptOptions(args)), null, 2))
-        case 'search_transcript': {
-          if (!target.searchTranscript) return failure('search_transcript is not available on this target.')
-          const query = transcriptQuery(args)
-          if (!query) return failure('search_transcript requires a non-empty query string.')
-          return text(JSON.stringify(await target.searchTranscript(query), null, 2))
-        }
-        case 'ensure_transcript': {
-          if (!target.ensureTranscript) return failure('ensure_transcript is not available on this target.')
-          const result = await target.ensureTranscript(args ?? {})
-          const suffix =
-            result === undefined ? '' : `\n\nResult:\n${JSON.stringify(result, null, 2)}`
-          return text(`OK: transcript ensured.${suffix}\n\n${await target.getSummary()}`)
-        }
-        case 'get_audio_activity': {
-          if (!target.getAudioActivity) return failure('get_audio_activity is not available on this target.')
-          return text(JSON.stringify(await target.getAudioActivity(args ?? {}), null, 2))
-        }
-        case 'list_operators':
-          return text(JSON.stringify(await target.listOperators(), null, 2))
-        case 'list_actions':
-          return text(JSON.stringify(await target.listActions(), null, 2))
-        case 'run_action': {
-          const input = (args ?? {}) as { actionId?: unknown; input?: unknown }
-          if (typeof input.actionId !== 'string') return failure('run_action requires an actionId string.')
-          const result = await target.runAction(input.actionId, input.input ?? {})
-          const suffix =
-            result === undefined ? '' : `\n\nResult:\n${JSON.stringify(result, null, 2)}`
-          return text(`OK: action ${input.actionId} applied.${suffix}\n\n${await target.getSummary()}`)
-        }
-        case 'undo': {
-          if (!(await target.undo())) return failure('Nothing to undo.')
-          return text(`Undone.\n\n${await target.getSummary()}`)
-        }
-        case 'redo': {
-          if (!(await target.redo())) return failure('Nothing to redo.')
-          return text(`Redone.\n\n${await target.getSummary()}`)
-        }
-        default: {
-          const operatorId = operatorIdsByTool.get(name)
-          if (operatorId) {
-            const result = await target.runOperator(operatorId, args ?? {})
-            const suffix =
-              result === undefined ? '' : `\n\nResult:\n${JSON.stringify(result, null, 2)}`
-            return text(`OK: operator ${operatorId} applied.${suffix}\n\n${await target.getSummary()}`)
-          }
-          await target.dispatchCommand(name, args ?? {})
-          return text(`OK: ${name} applied.\n\n${await target.getSummary()}`)
-        }
+      if (isMcpServerStaticToolName(name)) {
+        const call = MCP_SERVER_STATIC_TOOL_CALL_SCHEMA.safeParse({ name, arguments: args ?? {} })
+        if (!call.success) return failure(`${name}: ${z.prettifyError(call.error)}`)
+        return await callStaticTool(target, call.data)
       }
+      const operatorId = operatorIdsByTool.get(name)
+      if (operatorId) {
+        const result = await target.runOperator(operatorId, args ?? {})
+        return text(`${withResult(`OK: operator ${operatorId} applied.`, result)}\n\n${await target.getSummary()}`)
+      }
+      await target.dispatchCommand(name, args ?? {})
+      return text(`OK: ${name} applied.\n\n${await target.getSummary()}`)
     } catch (error) {
       if (
         error instanceof CommandError ||

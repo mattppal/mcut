@@ -38,22 +38,30 @@ bunx shadcn build
 From the repo root:
 
 ```sh
-bun run setup
 bun run dev
 ```
 
 Local defaults are Studio on `http://localhost:3000` and the bridge on port
-`44737`. The bridge exposes browser sync at `/mcut-mcp` and MCP over HTTP at
-`/mcp`. In Conductor, Studio uses `CONDUCTOR_PORT` and the bridge uses
-`CONDUCTOR_PORT + 1`. Open the connected editor URL printed by `bun run dev`, or
-print it again with:
+`44737`. The bridge exposes browser sync at `/mcut-mcp` and Streamable HTTP MCP
+at `/mcp`. The MCP URL includes a `token` query parameter. `bun run dev` prints
+that URL. Print it again with
+`bun run scripts/mcut-local-dev.ts mcp-url`.
 
-```sh
-bun run scripts/mcut-local-dev.ts url
+Point any MCP client that supports Streamable HTTP at that URL. In Cursor, add
+it to `mcp.json`.
+
+```json
+{
+  "mcpServers": {
+    "mcut": {
+      "url": "http://127.0.0.1:44737/mcp?token=mcut-local-dev"
+    }
+  }
+}
 ```
 
-Then enable the `mcut-live` MCP server in Codex. Codex connects to the HTTP MCP
-endpoint on the bridge that `bun run dev` already started.
+Open the connected editor URL printed by `bun run dev`, or print it again with
+`bun run scripts/mcut-local-dev.ts url`.
 
 Studio checks:
 

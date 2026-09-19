@@ -1,13 +1,13 @@
 import type { Quality } from 'mediabunny'
+import type { ContainerFormatId } from './container-formats'
+
+export type { ContainerFormatId } from './container-formats'
 
 export interface ExportProgress {
   /** 0–1 across the whole export. */
   progress: number
   phase: 'audio' | 'video' | 'finalize'
 }
-
-/** A registered container format id (built-ins: mp4, webm, mkv). */
-export type ContainerFormatId = 'mp4' | 'webm' | 'mkv' | (string & {})
 
 /**
  * A font face the export worker registers into its own `FontFaceSet` before

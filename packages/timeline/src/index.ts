@@ -30,11 +30,7 @@ export {
 
 export { migrateProject, ProjectFormatError, PROJECT_VERSION } from './migrations'
 
-export {
-  getElementType,
-  listElementTypes,
-  type ElementTypeEntry,
-} from './element-registry'
+export { assertNever } from './errors'
 
 export {
   createDefaultLayouts,
@@ -106,27 +102,25 @@ export {
 } from './zoom-presets'
 
 export {
+  EFFECT_PARAMS,
   EFFECT_TYPES,
   blendModeSchema,
   buildFilterString,
   effectSchema,
   effectsSchema,
-  getEffectType,
-  listEffectTypes,
-  registerEffectType,
-  type EffectTypeConfig,
   motionBlurSchema,
   toCompositeOperation,
   type BlendMode,
+  type CurvePoint,
   type Effect,
+  type EffectOfType,
+  type EffectParam,
   type EffectType,
   type MotionBlur,
 } from './effects'
 
 export {
-  BUILTIN_TRANSITION_TYPES,
-  listTransitionTypes,
-  registerTransitionType,
+  TRANSITION_TYPES,
   getActiveTransitionPairs,
   getRenderableElements,
   getTransitionCompletion,
@@ -192,7 +186,6 @@ export {
   multicamElementSchema,
   parseProject,
   projectSchema,
-  registerTimelineElementType,
   textElementSchema,
   textBoxSchema,
   textShadowSchema,
@@ -210,7 +203,7 @@ export {
   type CaptionStyle,
   type CaptionWord,
   type CreateProjectOptions,
-  type ElementTypeConfig,
+  type ElementType,
   type ImageElement,
   type Marker,
   type MulticamElement,
@@ -222,6 +215,7 @@ export {
   type TextStroke,
   type TextStyle,
   type TimelineElement,
+  type TimelineElementDraft,
   type TimelineElementInput,
   type Track,
   type Transform,
@@ -231,12 +225,13 @@ export {
 export {
   CommandError,
   applyCommand,
-  getCommandDefinition,
   listCommands,
   listToolDefinitions,
-  registerCommand,
-  type AnyCommand,
+  parseCommand,
+  type BuiltinCommand,
   type CommandDefinition,
+  type CommandOfType,
+  type CommandType,
   type ToolDefinition,
 } from './commands'
 
@@ -250,8 +245,9 @@ export {
   type TransactionOptions,
 } from './engine'
 
+export { canPlace, rangesOverlap } from './placement'
+
 export {
-  canPlace,
   findNearestFreeSlot,
   getActiveElements,
   getElement,
@@ -261,7 +257,6 @@ export {
   getProjectDurationMs,
   getTrack,
   isElementActiveAt,
-  rangesOverlap,
   type ActiveElement,
   type ElementLocation,
 } from './selectors'

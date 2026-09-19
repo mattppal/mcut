@@ -1,14 +1,15 @@
 import {
+  canPlace,
   createElementId as createTimelineElementId,
   createTrackId as createTimelineTrackId,
   getElementLocation,
   getSourceSpanMs,
-  rangesOverlap,
-  type AnyCommand,
+  type BuiltinCommand,
   type ElementId,
   type Project,
   type TimelineElement,
   type Track,
+  type TransitionType,
 } from '@mcut/timeline'
 
 export type ClipDragMode =
@@ -39,7 +40,7 @@ export interface ResolvedClipDragMode {
 }
 
 export interface DuplicateClipsToNewTracksPlan {
-  commands: AnyCommand[]
+  commands: BuiltinCommand[]
   ids: ElementId[]
   createdTrackIds: Track['id'][]
 }
@@ -56,7 +57,7 @@ export interface AutoCrossfadePlanInput {
   maxAttemptedOverlapMs?: number
   minDurationMs?: number
   maxDurationMs?: number
-  transitionType?: string
+  transitionType?: TransitionType
 }
 
 export function canPlaceIgnoring(
@@ -65,10 +66,8 @@ export function canPlaceIgnoring(
   durationMs: number,
   ignore: ReadonlySet<string>,
 ): boolean {
-  if (startMs < 0) return false
-  return !track.elements.some(
-    (e) => !ignore.has(e.id) && rangesOverlap(startMs, durationMs, e.startMs, e.durationMs),
-  )
+  const others = track.elements.filter((e) => !ignore.has(e.id))
+  return canPlace({ ...track, elements: others }, startMs, durationMs)
 }
 
 export function collectClipDragBases(
@@ -181,7 +180,7 @@ export function planDuplicateClipsToNewTracks(
   const makeElementId = options.createElementId ?? createTimelineElementId
   const idMap = new Map<ElementId, ElementId>()
   const createdTrackIds: Track['id'][] = []
-  const commands: AnyCommand[] = []
+  const commands: BuiltinCommand[] = []
   const sortedGroups = [...groups.entries()].sort(([a], [b]) => a - b)
 
   for (const [, elements] of sortedGroups) {
@@ -206,7 +205,7 @@ export function planDuplicateClipsToNewTracks(
 export function planAutoCrossfade(
   project: Project,
   input: AutoCrossfadePlanInput,
-): AnyCommand | null {
+): BuiltinCommand | null {
   const location = getElementLocation(project, input.elementId)
   if (!location || location.track.magnetic) return null
 
@@ -225,7 +224,7 @@ export function planAutoCrossfade(
   const next = track.elements.find(
     (e) => e.startMs === element.startMs + element.durationMs && e.id !== element.id,
   )
-  const commandFor = (left: TimelineElement, attemptedOverlapMs: number): AnyCommand | null => {
+  const commandFor = (left: TimelineElement, attemptedOverlapMs: number): BuiltinCommand | null => {
     if (attemptedOverlapMs < minAttemptedOverlapMs || attemptedOverlapMs > maxAttemptedOverlapMs) {
       return null
     }

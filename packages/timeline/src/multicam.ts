@@ -2,6 +2,7 @@ import type { Layout } from './layouts'
 import { getLayout } from './layouts'
 import type { MulticamElement, MulticamSource, Project } from './model'
 import { getSourceTimeMs } from './speed'
+import type { TransitionType } from './transitions'
 
 /**
  * Multicam helpers: a multicam element is N synced sources + an `angles`
@@ -85,7 +86,7 @@ export function getMulticamAudioSource(element: MulticamElement): MulticamSource
 
 /** An angle-cut blend window active at some element-local time. */
 export interface AngleTransitionWindow {
-  type: string
+  type: TransitionType
   /** Effective window length: the configured duration, clamped per cut. */
   durationMs: number
   /** Element-local time of the cut the window centers on. */

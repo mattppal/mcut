@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useEditor, useProject } from "@mcut/react";
 import {
   animatableProperties,
@@ -306,32 +306,22 @@ export function VolumeBand({
   interactive: boolean;
 }) {
   const engine = useEditor();
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const dragRef = useRef<{ targetTimeMs: number | null } | null>(null);
   const armed = hasKeyframes(element, "volume");
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const width = Math.max(1, Math.round(widthPx));
-    const height = Math.max(1, Math.round(heightPx));
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.strokeStyle = "rgba(103, 232, 249, 0.95)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
+  const width = Math.max(1, Math.round(widthPx));
+  const height = Math.max(1, Math.round(heightPx));
+  const points = useMemo(() => {
+    const coords: string[] = [];
     for (let x = 0; x <= width; x += 3) {
       const timelineMs = element.startMs + (x / width) * element.durationMs;
       // Effective volume (keyframes × fades): the band shows what plays.
       const volume = Math.max(0, Math.min(2, getEffectiveVolume(element, timelineMs)));
-      const y = height - (volume / 2) * height;
-      if (x === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      const y = Math.round((height - (volume / 2) * height) * 10) / 10;
+      coords.push(`${x},${y}`);
     }
-    ctx.stroke();
-  }, [element, widthPx, heightPx]);
+    return coords.join(" ");
+  }, [element, width, height]);
 
   const valueFromY = (event: ReactPointerEvent<HTMLDivElement>): number => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -345,10 +335,7 @@ export function VolumeBand({
     return Math.max(0, Math.min(element.durationMs, Math.round(ratio * element.durationMs)));
   };
 
-  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!interactive) return;
-    event.stopPropagation();
-    engine.beginTransaction();
+  const dragTarget = (event: ReactPointerEvent<HTMLDivElement>): number | null => {
     if (event.metaKey || event.ctrlKey) {
       // ⌘-click: add a keyframe on the band (arms the property).
       const timeMs = localTimeFromX(event);
@@ -363,18 +350,25 @@ export function VolumeBand({
       } catch {
         // Element vanished.
       }
-      dragRef.current = { targetTimeMs: timeMs };
-    } else if (armed) {
+      return timeMs;
+    }
+    if (armed) {
       // Drag the nearest keyframe's value (time stays put).
       const timeMs = localTimeFromX(event);
       const track = getKeyframes(element, "volume");
       const nearest = track.reduce((best, k) =>
         Math.abs(k.timeMs - timeMs) < Math.abs(best.timeMs - timeMs) ? k : best,
       );
-      dragRef.current = { targetTimeMs: nearest.timeMs };
-    } else {
-      dragRef.current = { targetTimeMs: null }; // static volume drag
+      return nearest.timeMs;
     }
+    return null;
+  };
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!interactive) return;
+    event.stopPropagation();
+    engine.beginTransaction();
+    dragRef.current = { targetTimeMs: dragTarget(event) };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
@@ -422,7 +416,20 @@ export function VolumeBand({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
-      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 size-full" />
+      <svg
+        className="pointer-events-none absolute inset-0 size-full"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <polyline
+          points={points}
+          fill="none"
+          stroke="rgba(103, 232, 249, 0.95)"
+          strokeWidth={1.5}
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
     </div>
   );
 }

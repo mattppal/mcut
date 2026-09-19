@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useMemo, useRef, useState, type DragEvent } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   DownloadIcon,
   FileVideoIcon,
@@ -60,10 +60,6 @@ function thumbnailTimeMs(asset: AssetRef): number {
   if (!asset.durationMs) return 0;
   const nearStart = Math.max(250, Math.round(asset.durationMs * 0.05));
   return Math.min(nearStart, 2000, Math.max(0, asset.durationMs - 1));
-}
-
-function revokeThumbnail(url: string | null | undefined): void {
-  if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
 }
 
 function isFlatFreezeVideo(element: TimelineElement): boolean {
@@ -179,41 +175,21 @@ function AssetCard({
   onSave: () => void;
   onToggleSelect: () => void;
 }) {
-  const assetKind = asset.kind;
-  const assetSrc = asset.src;
-  const assetDurationMs = asset.durationMs;
-  const assetThumbnailTimeMs = thumbnailTimeMs(asset);
-  const [thumbRecord, setThumbRecord] = useState<{ src: string; url: string | null } | null>(null);
-  const thumb = thumbRecord?.src === assetSrc ? (thumbRecord.url ?? undefined) : undefined;
+  const timeMs = thumbnailTimeMs(asset);
+  const thumbnail = useQuery({
+    queryKey: ["mcut", "thumbnail", asset.src, timeMs],
+    queryFn: () => getVideoThumbnailUrl(asset.src, { width: 320, timeMs }),
+    enabled: asset.kind === "video",
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+  });
+  const thumb = thumbnail.data ?? undefined;
   const dragData: EditorDragData = { kind: "asset", asset, ...(thumb ? { thumb } : {}) };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `asset-${asset.id}`,
     data: dragData,
   });
-
-  useEffect(() => {
-    if (assetKind !== "video") return;
-    let cancelled = false;
-    let url: string | null = null;
-
-    void getVideoThumbnailUrl(assetSrc, { width: 320, timeMs: assetThumbnailTimeMs })
-      .then((nextUrl) => {
-        if (cancelled) {
-          revokeThumbnail(nextUrl);
-          return;
-        }
-        url = nextUrl;
-        setThumbRecord({ src: assetSrc, url: nextUrl });
-      })
-      .catch(() => {
-        if (!cancelled) setThumbRecord({ src: assetSrc, url: null });
-      });
-
-    return () => {
-      cancelled = true;
-      revokeThumbnail(url);
-    };
-  }, [assetKind, assetSrc, assetDurationMs, assetThumbnailTimeMs]);
 
   return (
     <ContextMenu>
@@ -309,8 +285,6 @@ export function MediaBin({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [draggingCollageId, setDraggingCollageId] = useState<string | null>(null);
   const [draggingStackTrackId, setDraggingStackTrackId] = useState<TrackId | null>(null);
-  const draggingCollageIdRef = useRef<string | null>(null);
-  const draggingStackTrackIdRef = useRef<TrackId | null>(null);
   /** Pair signature ("idA+idB") whose screen/camera roles are flipped. */
   const [swappedPair, setSwappedPair] = useState("");
 
@@ -332,25 +306,8 @@ export function MediaBin({
     });
   };
 
-  const beginCollageAssetDrag = (assetId: string) => {
-    draggingCollageIdRef.current = assetId;
-    setDraggingCollageId(assetId);
-  };
-
-  const endCollageAssetDrag = () => {
-    draggingCollageIdRef.current = null;
-    setDraggingCollageId(null);
-  };
-
-  const beginStackTrackDrag = (trackId: TrackId) => {
-    draggingStackTrackIdRef.current = trackId;
-    setDraggingStackTrackId(trackId);
-  };
-
-  const endStackTrackDrag = () => {
-    draggingStackTrackIdRef.current = null;
-    setDraggingStackTrackId(null);
-  };
+  const endCollageAssetDrag = () => setDraggingCollageId(null);
+  const endStackTrackDrag = () => setDraggingStackTrackId(null);
 
   const moveStackTrack = (activeTrackId: TrackId, overTrackId: TrackId) => {
     if (activeTrackId === overTrackId) return;
@@ -588,21 +545,23 @@ export function MediaBin({
                     )}
                     onDragStart={(event) => {
                       event.stopPropagation();
-                      beginCollageAssetDrag(asset.id);
+                      setDraggingCollageId(asset.id);
                       event.dataTransfer.effectAllowed = "move";
                       event.dataTransfer.setData("text/plain", asset.id);
                     }}
                     onDragEnter={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
-                      const activeId = draggingCollageIdRef.current;
-                      if (activeId && activeId !== asset.id) moveSelectedId(activeId, asset.id);
+                      if (draggingCollageId && draggingCollageId !== asset.id) {
+                        moveSelectedId(draggingCollageId, asset.id);
+                      }
                     }}
                     onDragOver={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
-                      const activeId = draggingCollageIdRef.current;
-                      if (activeId && activeId !== asset.id) moveSelectedId(activeId, asset.id);
+                      if (draggingCollageId && draggingCollageId !== asset.id) {
+                        moveSelectedId(draggingCollageId, asset.id);
+                      }
                     }}
                     onDrop={(event) => {
                       event.preventDefault();
@@ -644,22 +603,20 @@ export function MediaBin({
                     )}
                     onDragStart={(event) => {
                       event.stopPropagation();
-                      beginStackTrackDrag(item.trackId);
+                      setDraggingStackTrackId(item.trackId);
                       event.dataTransfer.effectAllowed = "move";
                       event.dataTransfer.setData("text/plain", item.trackId);
                     }}
                     onDragEnter={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
-                      const activeTrackId = draggingStackTrackIdRef.current;
-                      if (activeTrackId) moveStackTrack(activeTrackId, item.trackId);
+                      if (draggingStackTrackId) moveStackTrack(draggingStackTrackId, item.trackId);
                     }}
                     onDragOver={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
                       event.dataTransfer.dropEffect = "move";
-                      const activeTrackId = draggingStackTrackIdRef.current;
-                      if (activeTrackId) moveStackTrack(activeTrackId, item.trackId);
+                      if (draggingStackTrackId) moveStackTrack(draggingStackTrackId, item.trackId);
                     }}
                     onDrop={(event) => {
                       event.preventDefault();

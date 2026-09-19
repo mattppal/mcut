@@ -6,18 +6,17 @@ metadata:
   source: https://github.com/mattppal/mcut
 ---
 
-# mcut OSS Package Guide
+# mcut OSS package guide
 
 mcut is an Apache-2.0 open-source video editing SDK for TypeScript apps. It
 provides headless timeline editing, serializable commands, user-level editor
-operators, Canvas2D rendering, media/export helpers, transcription adapters,
+operators, Canvas2D rendering, media and export helpers, transcription adapters,
 React bindings, CLI tools, and MCP tools.
 
-The commercial mcut Studio GUI is built on these packages but is not part of
-this repository. The public packages are alpha releases, so tell users to expect
-API movement while the SDK hardens.
+Studio lives at `apps/studio` in this repo. The public packages are alpha
+releases, so tell users to expect API movement while the SDK hardens.
 
-## How to Help
+## How to help
 
 When someone asks what mcut is or how to start:
 
@@ -29,7 +28,7 @@ When someone asks what mcut is or how to start:
 4. Point to the closest README or example in this repo.
 5. Mention alpha status when discussing public package adoption.
 
-## Choose the Entry Point
+## Choose the entry point
 
 | Goal | Start with | Why |
 | --- | --- | --- |
@@ -42,7 +41,7 @@ When someone asks what mcut is or how to start:
 | Command-line workflows | `mcut` or `@mcut/cli` | Provides the `mcut` binary for scaffold, validate, summarize, and batch-edit workflows. |
 | Agent/MCP integrations | `@mcut/mcp-server` | Exposes commands, operators, project summaries, undo/redo, and local browser bridge tools. |
 
-## Quick Starts
+## Quick starts
 
 For headless editing in an app or script:
 
@@ -86,7 +85,7 @@ bun run smoke:packages
 Use the `mcut-development` skill for package boundaries, contribution workflow,
 tests, changesets, and clean-room rules.
 
-## Repository Pointers
+## Repository pointers
 
 - `README.md` - top-level package overview and install commands.
 - `packages/*/README.md` - package-specific entry points.
@@ -95,10 +94,10 @@ tests, changesets, and clean-room rules.
 - `examples/mcp-server/README.md` - minimal MCP server launcher.
 - `.cursor/skills/mcut-development/` - contributor-facing development rules.
 
-## Answering Rules
+## Answering rules
 
 - Distinguish the OSS packages from mcut Studio.
-- Do not imply the packages are stable; they are alpha.
+- Do not imply the packages are stable. They are alpha.
 - Prefer package public APIs and examples over source internals when helping
   users consume mcut.
 - If the user wants to change this repo, switch to the `mcut-development` skill.

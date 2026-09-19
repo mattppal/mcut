@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import {
   closestCenter,
   DndContext,
@@ -9,6 +9,7 @@ import {
   pointerWithin,
   useSensor,
   useSensors,
+  type Active,
   type CollisionDetection,
   type DragEndEvent,
   type DragMoveEvent,
@@ -74,10 +75,18 @@ function isLaneDropData(data: unknown): data is LaneDropData {
   );
 }
 
+function isEditorDragData(data: unknown): data is EditorDragData {
+  return typeof data === "object" && data !== null && "kind" in data && typeof data.kind === "string";
+}
+
+function dragDataOf(active: Active): EditorDragData | null {
+  const data = active.data.current;
+  return isEditorDragData(data) ? data : null;
+}
+
 /** Lanes get pointer-precision; track sorting wants nearest-row. */
 const collisionDetection: CollisionDetection = (args) => {
-  const data = args.active.data.current as EditorDragData | undefined;
-  if (data?.kind === "track") return closestCenter(args);
+  if (dragDataOf(args.active)?.kind === "track") return closestCenter(args);
   const droppableContainers = args.droppableContainers.filter((container) => {
     const dropData = container.data.current;
     return isLaneDropData(dropData);
@@ -135,31 +144,23 @@ export function EditorDnd({
   const engine = useEditor();
   const project = useProject();
   const { pxPerMs, snapEnabled, editMode, setDropPreview, setSnapGuideMs } = useEditorUI();
-  const [activeDrag, setActiveDrag] = useState<EditorDragData | null>(null);
-  // Snap targets are stable for the whole drag (only the dragged payload
-  // moves), so collect them once at drag start instead of per pointermove.
-  const snapTargetsRef = useRef<SnapTarget[]>([]);
-  // Coalesce drag moves to the frame rate: pointermove can fire at 120Hz+.
-  const moveFrameRef = useRef<number | null>(null);
-  const lastMoveRef = useRef<DragMoveEvent | null>(null);
+  const [drag, setDrag] = useState<{ data: EditorDragData; snapTargets: SnapTarget[] } | null>(
+    null,
+  );
+  const activeDrag = drag?.data ?? null;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
   const clear = () => {
-    if (moveFrameRef.current !== null) {
-      cancelAnimationFrame(moveFrameRef.current);
-      moveFrameRef.current = null;
-    }
-    lastMoveRef.current = null;
-    setActiveDrag(null);
+    setDrag(null);
     setDropPreview(null);
     setSnapGuideMs(null);
   };
 
   const previewFor = (event: DragMoveEvent): DropPreview | null => {
-    const data = event.active.data.current as EditorDragData | undefined;
+    const data = dragDataOf(event.active);
     if (!data || data.kind === "track") return null;
     const over = event.over;
     const laneData = over?.data.current as LaneDropData | undefined;
@@ -169,7 +170,7 @@ export function EditorDnd({
     const pointerX = (activator.clientX ?? 0) + event.delta.x;
     const durationMs = dragDurationMs(data);
     const rawMs = pointerToTimelineMs(pointerX, over.rect, pxPerMs);
-    const snapped = snapClip(rawMs, durationMs, snapTargetsRef.current, SNAP_THRESHOLD_PX / pxPerMs, {
+    const snapped = snapClip(rawMs, durationMs, drag?.snapTargets ?? [], SNAP_THRESHOLD_PX / pxPerMs, {
       enabled: snapEnabled,
       fps: project.fps,
     });
@@ -182,28 +183,23 @@ export function EditorDnd({
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    snapTargetsRef.current = collectSnapTargets(project, engine.playback.state.currentTimeMs);
-    setActiveDrag((event.active.data.current as EditorDragData) ?? null);
-    setSnapGuideMs(null); // guide is implied by the ghost edges; keep UI quiet
+    const data = dragDataOf(event.active);
+    setDrag(
+      data
+        ? { data, snapTargets: collectSnapTargets(project, engine.playback.state.currentTimeMs) }
+        : null,
+    );
+    setSnapGuideMs(null);
   };
 
   const handleDragMove = (event: DragMoveEvent) => {
-    const data = event.active.data.current as EditorDragData | undefined;
+    const data = dragDataOf(event.active);
     if (!data || data.kind === "track") return;
-    // Leading + trailing: apply the first move immediately, fold any burst
-    // that follows into one update on the next frame.
-    lastMoveRef.current = event;
-    if (moveFrameRef.current !== null) return;
     setDropPreview(previewFor(event));
-    moveFrameRef.current = requestAnimationFrame(() => {
-      moveFrameRef.current = null;
-      const last = lastMoveRef.current;
-      if (last) setDropPreview(previewFor(last));
-    });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const data = event.active.data.current as EditorDragData | undefined;
+    const data = dragDataOf(event.active);
     try {
       if (data?.kind === "track") {
         const overId = event.over?.id;

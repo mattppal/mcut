@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useEditor } from "@mcut/react";
 import {
   getKeyframes,
   type AnimatableProperty,
+  type BuiltinCommand,
   type Easing,
   type Keyframe,
   type TimelineElement,
@@ -19,7 +20,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useEditorState } from "@mcut/react";
-import { getElementLocation, type ElementId } from "@mcut/timeline";
+import { getElementLocation } from "@mcut/timeline";
+import { useEditorUI } from "./editor-ui";
 
 /**
  * The graph editor: value-vs-time for one property of one clip, AE-style.
@@ -127,7 +129,7 @@ export function EasingGraph({
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
 
-  const dispatch = (command: Record<string, unknown> & { type: string }) => {
+  const dispatch = (command: BuiltinCommand) => {
     try {
       engine.dispatch(command);
     } catch {
@@ -365,32 +367,18 @@ export function EasingEditorButton({
   );
 }
 
-/**
- * Listens for "mcut:open-curve-editor" (fired from the keyframe easing menu)
- * and shows the graph in a dialog. Mount once in the shell.
- */
 export function CurveEditorHost() {
-  const [target, setTarget] = useState<{ elementId: ElementId; property: AnimatableProperty } | null>(
-    null,
-  );
-  useEffect(() => {
-    const onOpen = (event: Event) => {
-      const detail = (event as CustomEvent).detail as {
-        elementId: ElementId;
-        property: AnimatableProperty;
-      };
-      setTarget(detail);
-    };
-    window.addEventListener("mcut:open-curve-editor", onOpen);
-    return () => window.removeEventListener("mcut:open-curve-editor", onOpen);
-  }, []);
+  const { curveEditorTarget: target, setCurveEditorTarget } = useEditorUI();
 
   const element = useEditorState((s) =>
     target ? getElementLocation(s.project, target.elementId)?.element : undefined,
   );
 
   return (
-    <Dialog open={Boolean(target && element)} onOpenChange={(open) => !open && setTarget(null)}>
+    <Dialog
+      open={Boolean(target && element)}
+      onOpenChange={(open) => !open && setCurveEditorTarget(null)}
+    >
       <DialogContent className="w-auto max-w-none">
         <DialogHeader>
           <DialogTitle className="text-sm">

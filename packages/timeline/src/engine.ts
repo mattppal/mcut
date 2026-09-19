@@ -1,6 +1,6 @@
 import { batch, createStore, type Store } from '@tanstack/store'
 import type { ElementId } from './id'
-import { applyCommand, type AnyCommand } from './commands'
+import { applyCommand, type BuiltinCommand } from './commands'
 import { createProject, parseProject, type Project } from './model'
 
 export interface SelectionState {
@@ -104,7 +104,7 @@ export class EditorEngine {
   }
 
   /** Apply a command. Returns the resulting project. */
-  dispatch(command: AnyCommand, options: DispatchOptions = {}): Project {
+  dispatch(command: BuiltinCommand, options: DispatchOptions = {}): Project {
     const previous = this.project
     const previousSelection = this.selection
     const next = applyCommand(previous, command)

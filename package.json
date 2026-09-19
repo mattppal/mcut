@@ -17,6 +17,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "smoke:packages": "bun run scripts/smoke-packages.ts",
+    "fixtures": "bun scripts/fixtures/generate-media.ts --mutate",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "bun run release:check && bun run release:publish",
@@ -26,7 +27,7 @@
     "package:lint": "bun run package:metadata && bun run package:json-lint && bun run scripts/package-lint.ts",
     "release:check": "bun run build && bun run typecheck && bun run test && bun run lint && bun run smoke:packages && bun run package:lint && bun run standards",
     "release:publish": "changeset publish --tag alpha",
-    "standards": "bun scripts/standards/measure.ts --base origin/main",
+    "standards": "bun scripts/standards/measure.ts --base origin/main --quiet",
     "standards:strip": "bun scripts/standards/strip-comments.ts",
     "knip": "knip"
   },
@@ -41,7 +42,8 @@
     "publint": "0.3.21",
     "tsdown": "0.22.2",
     "turbo": "2.9.18",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "zod": "4.4.3"
   },
   "description": "Open source video editing SDK for TypeScript apps.",
   "author": "Matt Palmer",

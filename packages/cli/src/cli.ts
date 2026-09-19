@@ -8,10 +8,13 @@ import {
   ProjectFormatError,
   createProject,
   listToolDefinitions,
+  parseCommand,
   summarizeProject,
-  type AnyCommand,
+  type BuiltinCommand,
 } from '@mcut/timeline'
-import { buildCaptionsCommand } from './captions'
+import { applyCommands } from '@mcut/editor'
+import { z } from 'zod'
+import { buildCaptionsCommand, captionsCommandOptionsSchema } from './captions'
 import { readProjectFile, readTranscriptFile, writeProjectFile } from './io'
 import { lintProject } from './lint'
 import { PLATFORM_PRESETS, getPlatformPreset } from './presets'
@@ -54,20 +57,15 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString('utf8')
 }
 
-function parseCommandBatch(raw: string): AnyCommand[] {
+function parseCommandBatch(raw: string): BuiltinCommand[] {
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch {
     fail('commands input is not valid JSON')
   }
-  const list = Array.isArray(parsed) ? parsed : [parsed]
-  for (const item of list) {
-    if (typeof item !== 'object' || item === null || typeof (item as AnyCommand).type !== 'string') {
-      fail('each command must be an object with a string "type"')
-    }
-  }
-  return list as AnyCommand[]
+  const list: unknown[] = Array.isArray(parsed) ? parsed : [parsed]
+  return list.map(parseCommand)
 }
 
 async function cmdNew(argv: string[]): Promise<void> {
@@ -135,9 +133,7 @@ async function cmdApply(argv: string[]): Promise<void> {
   const raw = source && source !== '-' ? await readFile(source, 'utf8') : await readStdin()
   const commands = parseCommandBatch(raw)
   const engine = new EditorEngine({ project: await readProjectFile(file) })
-  engine.transact(() => {
-    for (const command of commands) engine.dispatch(command)
-  })
+  applyCommands(engine, commands)
   if (!values['dry-run']) await writeProjectFile(file, engine.project)
   console.log(
     `${values['dry-run'] ? '(dry run) ' : ''}Applied ${commands.length} command(s) to ${file}\n`,
@@ -162,12 +158,14 @@ async function cmdCaptions(argv: string[]): Promise<void> {
   if (!values.transcript) fail('captions needs --transcript <file>')
   const project = await readProjectFile(file)
   const transcript = await readTranscriptFile(values.transcript)
-  const command = buildCaptionsCommand(project, transcript, {
+  const options = captionsCommandOptionsSchema.safeParse({
     ...(values.element ? { elementId: values.element } : {}),
     ...(values.style ? { styleId: values.style } : {}),
     ...(values['max-chars'] ? { maxChars: Number(values['max-chars']) } : {}),
     replace: values.replace,
   })
+  if (!options.success) fail(z.prettifyError(options.error))
+  const command = buildCaptionsCommand(project, transcript, options.data)
   if (values['dry-run']) {
     console.log(JSON.stringify(command, null, 2))
     return
@@ -175,7 +173,7 @@ async function cmdCaptions(argv: string[]): Promise<void> {
   const engine = new EditorEngine({ project })
   engine.dispatch(command)
   await writeProjectFile(file, engine.project)
-  const count = (command.captions as unknown[]).length
+  const count = command.captions.length
   console.log(`Added ${count} caption(s) to ${file}\n`)
   console.log(summarizeProject(engine.project))
 }

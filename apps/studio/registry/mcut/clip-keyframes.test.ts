@@ -4,6 +4,7 @@ import {
   createProject,
   getElement,
   type AnimatableProperty,
+  type ElementId,
   type TimelineElement,
 } from "@mcut/timeline";
 import {
@@ -36,7 +37,7 @@ function setupElement(): { engine: EditorEngine; element: TimelineElement } {
 
 function setKeyframes(
   engine: EditorEngine,
-  elementId: string,
+  elementId: ElementId,
   property: AnimatableProperty,
   times: readonly number[],
 ) {

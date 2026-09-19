@@ -1,9 +1,10 @@
+import { z } from 'zod'
 import {
   EditorEngine,
   MIN_ELEMENT_DURATION_MS,
   createElementId,
   getElementLocation,
-  type AnyCommand,
+  type BuiltinCommand,
   type ElementId,
   type Project,
   type TimelineElement,
@@ -15,16 +16,29 @@ export interface SilenceCutTranscript {
   words: Array<{ startMs: number; endMs: number }>
 }
 
-export interface SilenceCutOptions {
-  /** Word gaps shorter than this are speech rhythm, not silence. Default 600. */
-  minGapMs?: number
-  /** Breathing room kept on each side of a cut. Default 120. */
-  paddingMs?: number
-  /** Speech chunks shorter than this merge into the surrounding cut. Default 250. */
-  minKeepMs?: number
-  /** Also cut silence before the first and after the last word. Default true. */
-  trimEnds?: boolean
-}
+export const silenceCutOptionsSchema = z.object({
+  minGapMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Word gaps shorter than this are speech rhythm, not silence. Default 600.'),
+  paddingMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Breathing room kept on each side of a cut. Default 120.'),
+  minKeepMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Speech chunks shorter than this merge into the surrounding cut. Default 250.'),
+  trimEnds: z
+    .boolean()
+    .optional()
+    .describe('Also cut silence before the first and after the last word. Default true.'),
+})
+
+export type SilenceCutOptions = z.infer<typeof silenceCutOptionsSchema>
 
 /** A window of source-media time (same clock as the transcript). */
 export interface SilenceWindow {
@@ -36,7 +50,7 @@ export interface SilenceCutPlan {
   /** The cuts, in source-media time, padding already applied. */
   silences: SilenceWindow[]
   /** Every command dispatched, in order; replayable on the input project. */
-  commands: AnyCommand[]
+  commands: BuiltinCommand[]
   removedMs: number
   /** The project with all cuts applied. */
   project: Project
@@ -64,6 +78,7 @@ export function planSilenceCuts(
   const location = getElementLocation(project, elementId as ElementId)
   if (!location) throw new Error(`no element "${elementId}" in project`)
   const element = location.element
+  const id = element.id
   if (element.type !== 'video' && element.type !== 'audio') {
     throw new Error(`silence cuts apply to video/audio elements, not "${element.type}"`)
   }
@@ -95,15 +110,15 @@ export function planSilenceCuts(
   })
 
   const engine = new EditorEngine({ project })
-  const commands: AnyCommand[] = []
-  const dispatch = (command: AnyCommand) => {
+  const commands: BuiltinCommand[] = []
+  const dispatch = (command: BuiltinCommand) => {
     engine.dispatch(command)
     commands.push(command)
   }
   const current = (): ClipElement => {
-    const found = getElementLocation(engine.project, elementId as ElementId)
+    const found = getElementLocation(engine.project, id)
     if (!found || (found.element.type !== 'video' && found.element.type !== 'audio')) {
-      throw new Error(`element "${elementId}" disappeared mid-plan`)
+      throw new Error(`element "${id}" disappeared mid-plan`)
     }
     return found.element
   }
@@ -114,29 +129,29 @@ export function planSilenceCuts(
     if (silence.endMs >= windowEnd) {
       dispatch({
         type: 'trimElement',
-        elementId,
+        elementId: id,
         durationMs: toTimeline(silence.startMs) - el.startMs,
       })
     } else if (silence.startMs <= windowStart) {
       const rightElementId = createElementId()
       dispatch({
         type: 'splitElement',
-        elementId,
+        elementId: id,
         atMs: toTimeline(silence.endMs),
         rightElementId,
       })
-      dispatch({ type: 'rippleDelete', elementIds: [elementId as ElementId] })
+      dispatch({ type: 'rippleDelete', elementIds: [id] })
     } else {
       dispatch({
         type: 'splitElement',
-        elementId,
+        elementId: id,
         atMs: toTimeline(silence.endMs),
         rightElementId: createElementId(),
       })
       const middleElementId = createElementId()
       dispatch({
         type: 'splitElement',
-        elementId,
+        elementId: id,
         atMs: toTimeline(silence.startMs),
         rightElementId: middleElementId,
       })

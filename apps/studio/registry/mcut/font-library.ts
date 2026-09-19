@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import type { ExportFontFaceInit } from "@mcut/media";
 import { useEditor, useEditorState } from "@mcut/react";
 import type { Project } from "@mcut/timeline";
+import { z } from "zod";
 import { parseGoogleFontCss, weightDescriptorMatches } from "./font-css";
 
 /**
@@ -158,13 +159,15 @@ interface SystemFace {
   data: LocalFontData;
 }
 
-interface UploadedRecord {
-  id: string;
-  family: string;
-  weight: number;
-  italic: boolean;
-  data: ArrayBuffer;
-}
+const uploadedRecordSchema = z.object({
+  id: z.string(),
+  family: z.string(),
+  weight: z.number(),
+  italic: z.boolean(),
+  data: z.instanceof(ArrayBuffer),
+});
+
+type UploadedRecord = z.infer<typeof uploadedRecordSchema>;
 
 let systemStatus: SystemFontStatus = "idle";
 const systemFamilies = new Map<string, SystemFace[]>();
@@ -516,11 +519,20 @@ async function dbPutFont(record: UploadedRecord): Promise<void> {
   db.close();
 }
 
+const uploadedRowsSchema = z.array(z.unknown()).catch([]);
+
+function parseUploadedRecords(rows: unknown): UploadedRecord[] {
+  return uploadedRowsSchema.parse(rows).flatMap((row) => {
+    const record = uploadedRecordSchema.safeParse(row);
+    return record.success ? [record.data] : [];
+  });
+}
+
 async function dbListFonts(): Promise<UploadedRecord[]> {
   const db = await openFontDb();
   const records = await new Promise<UploadedRecord[]>((resolve, reject) => {
     const request = db.transaction(DB_STORE, "readonly").objectStore(DB_STORE).getAll();
-    request.onsuccess = () => resolve(request.result as UploadedRecord[]);
+    request.onsuccess = () => resolve(parseUploadedRecords(request.result));
     request.onerror = () => reject(request.error ?? new Error("font load failed"));
   });
   db.close();

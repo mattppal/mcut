@@ -9,8 +9,9 @@ import {
   getAverageSpeed,
   getGroupedElementIds,
   getLinkedElementIds,
-  listTransitionTypes,
+  TRANSITION_TYPES,
   type AssetRef,
+  type BuiltinCommand,
   type TimelineElement,
   type Track,
 } from "@mcut/timeline";
@@ -282,7 +283,7 @@ export const Clip = memo(function Clip({
   const speed = element.type === "video" || element.type === "audio" ? getAverageSpeed(element) : 1;
   const isReversed =
     (element.type === "video" || element.type === "audio") && element.reversed === true;
-  const dispatchSafe = (command: Record<string, unknown> & { type: string }) => {
+  const dispatchSafe = (command: BuiltinCommand) => {
     try {
       engine.dispatch(command);
     } catch {
@@ -548,7 +549,7 @@ export const Clip = memo(function Clip({
             <ContextMenuSub>
               <ContextMenuSubTrigger>Transition into next</ContextMenuSubTrigger>
               <ContextMenuSubContent>
-                {listTransitionTypes().map((type) => (
+                {TRANSITION_TYPES.map((type) => (
                   <ContextMenuItem
                     key={type}
                     className="capitalize"

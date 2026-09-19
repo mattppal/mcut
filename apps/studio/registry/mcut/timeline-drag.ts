@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { useEditor } from "@mcut/react";
+import { createContext, useContext } from "react";
+import { useDisposable, useEditor } from "@mcut/react";
 import {
   canPlaceIgnoring,
   collectClipDragBases,
@@ -20,7 +20,7 @@ import {
   type ElementId,
   type Track,
 } from "@mcut/timeline";
-import { TIMELINE_HEADER_WIDTH, useEditorUI } from "./editor-ui";
+import { getEditorPrefs, TIMELINE_HEADER_WIDTH, useEditorUI } from "./editor-ui";
 import { collectSnapTargets, snapClip, snapTime, type SnapTarget } from "./timeline-snap";
 
 type Engine = ReturnType<typeof useEditor>;
@@ -52,12 +52,15 @@ export interface ClipDragBeginOptions {
   duplicateOnDrag: boolean;
 }
 
-export interface ClipDragDeps {
-  engine: Engine;
+export interface ClipDragPrefs {
   pxPerMs: number;
   snapEnabled: boolean;
-  /** Drop a dissolve when a move shoves a clip flush against a neighbor. */
   autoCrossfade: boolean;
+}
+
+export interface ClipDragDeps {
+  engine: Engine;
+  prefs: () => ClipDragPrefs;
   setSnapGuideMs: (ms: number | null) => void;
   scrollerRef: React.RefObject<HTMLElement | null>;
 }
@@ -153,14 +156,7 @@ function edgeScrollSpeed(pos: number, min: number, max: number): number {
  *   folded into the time/row math so the clip tracks the pointer
  */
 export class ClipDragController {
-  /** Deps live behind a ref refreshed each render; always read at event time. */
-  constructor(private readonly depsRef: { readonly current: ClipDragDeps | null }) {}
-
-  private get deps(): ClipDragDeps {
-    const deps = this.depsRef.current;
-    if (!deps) throw new Error("ClipDragController used before its deps were attached");
-    return deps;
-  }
+  constructor(private readonly deps: ClipDragDeps) {}
 
   private gesture: ClipDragGesture | null = null;
   private autoScrollFrame: number | null = null;
@@ -401,7 +397,8 @@ export class ClipDragController {
    * Opt-in (deps.autoCrossfade); part of the gesture's undo entry.
    */
   private maybeAutoCrossfade(gesture: ClipDragGesture): void {
-    const { engine, pxPerMs, autoCrossfade } = this.deps;
+    const { engine } = this.deps;
+    const { pxPerMs, autoCrossfade } = this.deps.prefs();
     if (!autoCrossfade || gesture.mode !== "move" || gesture.ids.length !== 1) return;
     const anchorId = gesture.ids[0]!;
     const base = gesture.bases.get(anchorId);
@@ -472,7 +469,8 @@ export class ClipDragController {
   private update(): void {
     const gesture = this.gesture;
     if (!gesture?.active) return;
-    const { engine, pxPerMs, snapEnabled, setSnapGuideMs } = this.deps;
+    const { engine, setSnapGuideMs } = this.deps;
+    const { pxPerMs, snapEnabled } = this.deps.prefs();
     const scroller = this.deps.scrollerRef.current;
     // Fold scroll deltas in so auto-scroll (and mid-drag wheel) keeps the
     // clip under the pointer.
@@ -765,29 +763,18 @@ const ClipDragContext = createContext<ClipDragController | null>(null);
 
 export const ClipDragProvider = ClipDragContext.Provider;
 
-/**
- * Create the timeline's drag controller. Call once in the timeline panel and
- * hand the result to {@link ClipDragProvider}; clips reach it via
- * {@link useClipDrag}. Deps are refreshed every render so zoom/snap changes
- * mid-drag are picked up live.
- */
 export function useClipDragController(): ClipDragController {
   const engine = useEditor();
-  const { pxPerMs, snapEnabled, autoCrossfade, setSnapGuideMs, timelineScrollRef } = useEditorUI();
-  const depsRef = useRef<ClipDragDeps | null>(null);
-  const [controller] = useState(() => new ClipDragController(depsRef));
-  useEffect(() => {
-    depsRef.current = {
-      engine,
-      pxPerMs,
-      snapEnabled,
-      autoCrossfade,
-      setSnapGuideMs,
-      scrollerRef: timelineScrollRef,
-    };
-  });
-  useEffect(() => () => controller.dispose(), [controller]);
-  return controller;
+  const { setSnapGuideMs, timelineScrollRef } = useEditorUI();
+  return useDisposable(
+    () =>
+      new ClipDragController({
+        engine,
+        prefs: getEditorPrefs,
+        setSnapGuideMs,
+        scrollerRef: timelineScrollRef,
+      }),
+  );
 }
 
 /** The timeline's shared drag controller (begin a gesture from pointerdown). */

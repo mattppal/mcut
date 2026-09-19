@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { useEditor, useEditorState } from "@mcut/react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEditor, useEditorState, useWindowEvent } from "@mcut/react";
 import type { EditorEngine, Layout, LayoutSlot } from "@mcut/timeline";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -361,32 +361,27 @@ function SlotBox({
 
 /** Mounted over the preview while a layout is being edited (multicam mode). */
 export function LayoutSlotEditor() {
-  const engine = useEditor();
-  const { editingLayoutId, setEditingLayoutId, editingSlotIndex, setEditingSlotIndex } =
-    useEditorUI();
-  const [cropIndex, setCropIndex] = useState<number | null>(null);
-  const [guides, setGuides] = useState<Guides>(NO_GUIDES);
+  const { editingLayoutId } = useEditorUI();
   const layout = useEditorState((s) =>
     editingLayoutId ? s.project.layouts.find((l) => l.id === editingLayoutId) : undefined,
   );
-  const selectedIds = useEditorState((s) => s.selection.elementIds);
-  const lastLayoutRef = useRef<string | null>(null);
+  if (!layout) return null;
+  return <LayoutEditor key={layout.id} layout={layout} />;
+}
 
-  // Entering a layout opens its topmost slot (usually the PiP) in the
-  // inspector, so the panel is immediately useful.
-  useEffect(() => {
-    if (editingLayoutId === lastLayoutRef.current) return;
-    lastLayoutRef.current = editingLayoutId;
-    setCropIndex(null);
-    if (editingLayoutId && layout) setEditingSlotIndex(layout.slots.length - 1);
-  }, [editingLayoutId, layout, setEditingSlotIndex]);
+function LayoutEditor({ layout }: { layout: Layout }) {
+  const engine = useEditor();
+  const { setEditingLayoutId, editingSlotIndex, setEditingSlotIndex } = useEditorUI();
+  const [cropIndex, setCropIndex] = useState<number | null>(null);
+  const [guides, setGuides] = useState<Guides>(NO_GUIDES);
+  const selectedIds = useEditorState((s) => s.selection.elementIds);
 
   // Esc walks out one level (crop → slot selection → editor); arrows nudge
   // the selected slot by a pixel (Shift = 10). Capture phase so the global
   // playhead/selection hotkeys don't also fire.
-  useEffect(() => {
-    if (!layout) return;
-    const onKeyDown = (event: KeyboardEvent) => {
+  useWindowEvent(
+    "keydown",
+    (event) => {
       const target = event.target;
       if (
         target instanceof HTMLInputElement ||
@@ -418,12 +413,9 @@ export function LayoutSlotEditor() {
           y: clamp(slot.rect.y + dy / engine.project.height, -0.45, 1.45 - slot.rect.h),
         }),
       });
-    };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [engine, layout, cropIndex, editingSlotIndex, setEditingLayoutId, setEditingSlotIndex]);
-
-  if (!layout) return null;
+    },
+    { capture: true },
+  );
 
   // Crop panning needs the source's natural size; resolve it through the
   // multicam the bank targets (selected, else under playhead, else first).

@@ -275,6 +275,7 @@ export class LiveMcutBridge {
         this.request('run_operator', { operatorId, input: input ?? {} }),
       dispatchCommand: (commandName, input) =>
         this.request('dispatch_command', { commandName, input: input ?? {} }),
+      applyCommands: (commands) => this.request('apply_commands', { commands }),
     }
   }
 
@@ -309,8 +310,8 @@ export class LiveMcutBridge {
     return new LiveBridgeError(
       'browser-not-connected',
       openEditorUrl
-        ? `No mcut editor tab is connected to the live bridge. Open ${openEditorUrl}, or run \`bun run setup\` to print the current workspace URL.`
-        : 'No mcut editor tab is connected to the live bridge. Open the connected editor URL, or run `bun run setup` to print the current workspace URL.',
+        ? `No mcut editor tab is connected to the live bridge. Open ${openEditorUrl}, or run \`bun run dev\` and use the printed MCP URL.`
+        : 'No mcut editor tab is connected to the live bridge. Open the connected editor URL, or run `bun run dev` and use the printed MCP URL.',
     )
   }
 
@@ -484,5 +485,6 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT): McutMcpTarge
     runAction: (actionId, input) => rpc('run_action', { actionId, input: input ?? {} }),
     runOperator: (operatorId, input) => rpc('run_operator', { operatorId, input: input ?? {} }),
     dispatchCommand: (commandName, input) => rpc('dispatch_command', { commandName, input: input ?? {} }),
+    applyCommands: (commands) => rpc('apply_commands', { commands }),
   }
 }

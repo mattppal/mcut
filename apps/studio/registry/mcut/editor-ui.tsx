@@ -4,14 +4,16 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
+  type RefObject,
 } from "react";
-import type { PreviewQuality } from "@mcut/react";
+import { useEditor, type PreviewQuality } from "@mcut/react";
+import type { AnimatableProperty, ElementId } from "@mcut/timeline";
+import { parseEditorPrefs, type EditorPrefs } from "./editor-prefs";
 import { clamp } from "./math";
 
 /** A live drop ghost while dragging media over the timeline. */
@@ -112,6 +114,13 @@ export type TimelineTool = "select" | "ripple" | "roll" | "slip" | "slide";
  */
 export type TimelineEditMode = "normal" | "overwrite" | "insert";
 
+export type LeftTab = "media" | "text" | "animate" | "captions" | "transcript";
+
+export interface CurveEditorTarget {
+  elementId: ElementId;
+  property: AnimatableProperty;
+}
+
 export interface EditorUIValue {
   /** Editor color theme (warm grey light/dark; tokens in globals.css). */
   theme: EditorTheme;
@@ -151,6 +160,13 @@ export interface EditorUIValue {
   /** Preview raster resolution ('auto' fits the pane; numbers cap the short side). */
   previewQuality: PreviewQuality;
   setPreviewQuality: (value: PreviewQuality) => void;
+  leftTab: LeftTab;
+  setLeftTab: (value: LeftTab) => void;
+  revealLeftTab: (value: LeftTab) => void;
+  layoutResetToken: number;
+  resetLayout: () => void;
+  curveEditorTarget: CurveEditorTarget | null;
+  setCurveEditorTarget: (value: CurveEditorTarget | null) => void;
   /** Publish the drop ghost (read it via useDropPreview — it's not in this context). */
   setDropPreview: (value: DropPreview | null) => void;
   /** The timeline's horizontal scroll container (for zoom anchoring/auto-scroll). */
@@ -168,48 +184,134 @@ const EditorUIContext = createContext<EditorUIValue | null>(null);
 
 const PREFS_KEY = "mcut:ui";
 
-function loadPrefs(): {
-  pxPerMs?: number;
-  snapEnabled?: boolean;
-  autoCrossfade?: boolean;
-  theme?: EditorTheme;
-  previewQuality?: PreviewQuality;
-} {
+type ResolvedEditorPrefs = Required<EditorPrefs>;
+
+const DEFAULT_PREFS: ResolvedEditorPrefs = {
+  pxPerMs: 0.05,
+  snapEnabled: true,
+  autoCrossfade: false,
+  theme: "dark",
+  previewQuality: "auto",
+};
+
+function loadPrefs(): EditorPrefs {
   if (typeof window === "undefined") return {};
   try {
-    return JSON.parse(window.localStorage.getItem(PREFS_KEY) ?? "{}");
+    return parseEditorPrefs(window.localStorage.getItem(PREFS_KEY));
   } catch {
     return {};
   }
 }
 
-function isPreviewQuality(value: unknown): value is PreviewQuality {
-  return value === "auto" || value === "full" || (typeof value === "number" && value > 0);
+let prefsSnapshot: ResolvedEditorPrefs | null = null;
+const prefsListeners = new Set<() => void>();
+
+export function getEditorPrefs(): ResolvedEditorPrefs {
+  if (prefsSnapshot) return prefsSnapshot;
+  const stored = loadPrefs();
+  prefsSnapshot = {
+    pxPerMs: stored.pxPerMs ? clampZoom(stored.pxPerMs) : DEFAULT_PREFS.pxPerMs,
+    snapEnabled: stored.snapEnabled ?? DEFAULT_PREFS.snapEnabled,
+    autoCrossfade: stored.autoCrossfade ?? DEFAULT_PREFS.autoCrossfade,
+    theme: stored.theme ?? DEFAULT_PREFS.theme,
+    previewQuality: stored.previewQuality ?? DEFAULT_PREFS.previewQuality,
+  };
+  return prefsSnapshot;
 }
 
-export function EditorUIProvider({ children }: { children: ReactNode }) {
-  const [pxPerMs, setPxPerMsState] = useState(0.05);
-  const [snapEnabled, setSnapEnabledState] = useState(true);
+function writePrefs(patch: Partial<ResolvedEditorPrefs>): void {
+  prefsSnapshot = { ...getEditorPrefs(), ...patch };
+  try {
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefsSnapshot));
+  } catch {}
+  for (const listener of prefsListeners) listener();
+}
+
+function subscribePrefs(listener: () => void): () => void {
+  prefsListeners.add(listener);
+  return () => prefsListeners.delete(listener);
+}
+
+function serverPrefs(): ResolvedEditorPrefs {
+  return DEFAULT_PREFS;
+}
+
+function useEditorPrefs(): ResolvedEditorPrefs {
+  return useSyncExternalStore(subscribePrefs, getEditorPrefs, serverPrefs);
+}
+
+function setPxPerMs(value: number): void {
+  writePrefs({ pxPerMs: clampZoom(value) });
+}
+
+function setTheme(value: EditorTheme): void {
+  writePrefs({ theme: value });
+}
+
+function setSnapEnabled(value: boolean): void {
+  writePrefs({ snapEnabled: value });
+}
+
+function setAutoCrossfade(value: boolean): void {
+  writePrefs({ autoCrossfade: value });
+}
+
+function setPreviewQuality(value: PreviewQuality): void {
+  writePrefs({ previewQuality: value });
+}
+
+export function EditorUIProvider({
+  children,
+  leftPanelRef,
+}: {
+  children: ReactNode;
+  leftPanelRef?: RefObject<{ expand: () => void } | null>;
+}) {
+  const engine = useEditor();
+  const prefs = useEditorPrefs();
   const [timelineTool, setTimelineTool] = useState<TimelineTool>("select");
   const [editMode, setEditMode] = useState<TimelineEditMode>("normal");
-  const [autoCrossfade, setAutoCrossfadeState] = useState(false);
-  const [previewQuality, setPreviewQualityState] = useState<PreviewQuality>("auto");
-  const [theme, setThemeState] = useState<EditorTheme>("dark");
   const [mode, setModeState] = useState<EditorMode>("edit");
   const [editingLayoutId, setEditingLayoutIdState] = useState<string | null>(null);
   const [editingSlotIndex, setEditingSlotIndex] = useState<number | null>(null);
-  const [editingTextId, setEditingTextId] = useState<string | null>(null);
-  const setEditingLayoutId = useCallback((value: string | null) => {
-    setEditingLayoutIdState(value);
-    setEditingSlotIndex(null); // slot selection is scoped to one layout
-  }, []);
-  const setMode = useCallback((value: EditorMode) => {
-    setModeState(value);
-    // Leaving a mode always exits slot editing.
-    setEditingLayoutIdState(null);
-    setEditingSlotIndex(null);
-    setEditingTextId(null);
-  }, []);
+  const [editingTextId, setEditingTextIdState] = useState<string | null>(null);
+  const [leftTab, setLeftTab] = useState<LeftTab>("media");
+  const [layoutResetToken, setLayoutResetToken] = useState(0);
+  const [curveEditorTarget, setCurveEditorTarget] = useState<CurveEditorTarget | null>(null);
+  const setEditingLayoutId = useCallback(
+    (value: string | null) => {
+      setEditingLayoutIdState(value);
+      const layout = value ? engine.project.layouts.find((l) => l.id === value) : undefined;
+      setEditingSlotIndex(layout ? layout.slots.length - 1 : null);
+    },
+    [engine],
+  );
+  const setEditingTextId = useCallback(
+    (value: string | null) => {
+      if (value === editingTextId) return;
+      if (editingTextId !== null) engine.endTransaction();
+      if (value !== null) engine.beginTransaction();
+      setEditingTextIdState(value);
+    },
+    [editingTextId, engine],
+  );
+  const setMode = useCallback(
+    (value: EditorMode) => {
+      setModeState(value);
+      setEditingLayoutIdState(null);
+      setEditingSlotIndex(null);
+      setEditingTextId(null);
+    },
+    [setEditingTextId],
+  );
+  const revealLeftTab = useCallback(
+    (value: LeftTab) => {
+      leftPanelRef?.current?.expand();
+      setLeftTab(value);
+    },
+    [leftPanelRef],
+  );
+  const resetLayout = useCallback(() => setLayoutResetToken((value) => value + 1), []);
   const [overlayStores] = useState<DragOverlayStores>(() => ({
     dropPreview: createOverlayStore<DropPreview | null>(null, dropPreviewEquals),
     snapGuide: createOverlayStore<number | null>(null, Object.is),
@@ -224,78 +326,24 @@ export function EditorUIProvider({ children }: { children: ReactNode }) {
   );
   const timelineScrollRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    // Apply persisted prefs after hydration (a lazy initializer would make
-    // the server and client first paints disagree).
-    const timer = setTimeout(() => {
-      const prefs = loadPrefs();
-      if (prefs.pxPerMs) setPxPerMsState(clampZoom(prefs.pxPerMs));
-      if (prefs.snapEnabled !== undefined) setSnapEnabledState(prefs.snapEnabled);
-      if (prefs.autoCrossfade !== undefined) setAutoCrossfadeState(prefs.autoCrossfade);
-      if (isPreviewQuality(prefs.previewQuality)) setPreviewQualityState(prefs.previewQuality);
-      if (prefs.theme === "light" || prefs.theme === "dark") setThemeState(prefs.theme);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const persist = (patch: Record<string, unknown>) => {
-    try {
-      window.localStorage.setItem(PREFS_KEY, JSON.stringify({ ...loadPrefs(), ...patch }));
-    } catch {
-      // Private mode: prefs just don't persist.
-    }
-  };
-
-  const setPxPerMs = useCallback((value: number) => {
-    const clamped = clampZoom(value);
-    setPxPerMsState(clamped);
-    persist({ pxPerMs: clamped });
-  }, []);
-
-  const setTheme = useCallback((value: EditorTheme) => {
-    setThemeState(value);
-    persist({ theme: value });
-  }, []);
-
-  const setSnapEnabled = useCallback((value: boolean) => {
-    setSnapEnabledState(value);
-    persist({ snapEnabled: value });
-  }, []);
-
-  const setAutoCrossfade = useCallback((value: boolean) => {
-    setAutoCrossfadeState(value);
-    persist({ autoCrossfade: value });
-  }, []);
-
-  const setPreviewQuality = useCallback((value: PreviewQuality) => {
-    setPreviewQualityState(value);
-    persist({ previewQuality: value });
-  }, []);
-
-  const zoomBy = useCallback(
-    (factor: number, anchorMs?: number) => {
-      setPxPerMsState((previous) => {
-        const next = clampZoom(previous * factor);
-        const scroller = timelineScrollRef.current;
-        if (scroller && anchorMs !== undefined) {
-          // Keep anchorMs under the same screen x after the zoom.
-          const anchorX = anchorMs * previous - scroller.scrollLeft;
-          requestAnimationFrame(() => {
-            scroller.scrollLeft = anchorMs * next - anchorX;
-          });
-        }
-        persist({ pxPerMs: next });
-        return next;
+  const zoomBy = useCallback((factor: number, anchorMs?: number) => {
+    const previous = getEditorPrefs().pxPerMs;
+    const next = clampZoom(previous * factor);
+    const scroller = timelineScrollRef.current;
+    if (scroller && anchorMs !== undefined) {
+      const anchorX = anchorMs * previous - scroller.scrollLeft;
+      requestAnimationFrame(() => {
+        scroller.scrollLeft = anchorMs * next - anchorX;
       });
-    },
-    [],
-  );
+    }
+    writePrefs({ pxPerMs: next });
+  }, []);
 
   // Memoized so a provider re-render doesn't re-render every consumer; only
   // actual value changes do.
   const value = useMemo<EditorUIValue>(
     () => ({
-      theme,
+      theme: prefs.theme,
       setTheme,
       mode,
       setMode,
@@ -305,43 +353,47 @@ export function EditorUIProvider({ children }: { children: ReactNode }) {
       setEditingSlotIndex,
       editingTextId,
       setEditingTextId,
-      pxPerMs,
+      pxPerMs: prefs.pxPerMs,
       setPxPerMs,
       zoomBy,
-      snapEnabled,
+      snapEnabled: prefs.snapEnabled,
       setSnapEnabled,
       timelineTool,
       setTimelineTool,
       editMode,
       setEditMode,
-      autoCrossfade,
+      autoCrossfade: prefs.autoCrossfade,
       setAutoCrossfade,
-      previewQuality,
+      previewQuality: prefs.previewQuality,
       setPreviewQuality,
+      leftTab,
+      setLeftTab,
+      revealLeftTab,
+      layoutResetToken,
+      resetLayout,
+      curveEditorTarget,
+      setCurveEditorTarget,
       setDropPreview,
       timelineScrollRef,
       setSnapGuideMs,
     }),
     [
-      theme,
-      setTheme,
+      prefs,
       mode,
       setMode,
       editingLayoutId,
       setEditingLayoutId,
       editingSlotIndex,
       editingTextId,
-      pxPerMs,
-      setPxPerMs,
+      setEditingTextId,
       zoomBy,
-      snapEnabled,
-      setSnapEnabled,
       timelineTool,
       editMode,
-      autoCrossfade,
-      setAutoCrossfade,
-      previewQuality,
-      setPreviewQuality,
+      leftTab,
+      revealLeftTab,
+      layoutResetToken,
+      resetLayout,
+      curveEditorTarget,
       setDropPreview,
       setSnapGuideMs,
     ],

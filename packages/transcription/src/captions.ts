@@ -1,8 +1,13 @@
+import { z } from 'zod'
 import {
+  CAPTION_STYLE_PRESETS,
   MIN_ELEMENT_DURATION_MS,
-  type AnyCommand,
+  elementIdSchema,
+  getElementLocation,
+  type CommandOfType,
   type CaptionStyle,
   type CaptionWord,
+  type Project,
   type TrackId,
 } from '@mcut/timeline'
 import type { TranscriptResult, TranscriptWord } from './types'
@@ -196,7 +201,7 @@ export interface BuildApplyCaptionsOptions extends ToCaptionElementsOptions {
 export function buildApplyCaptionsCommand(
   result: TranscriptResult,
   options: BuildApplyCaptionsOptions = {},
-): AnyCommand {
+): CommandOfType<'applyCaptions'> {
   const { trackId, replace, ...rest } = options
   return {
     type: 'applyCaptions',
@@ -204,4 +209,75 @@ export function buildApplyCaptionsCommand(
     ...(trackId ? { trackId } : {}),
     ...(replace !== undefined ? { replace } : {}),
   }
+}
+
+export const captionsCommandOptionsSchema = z.object({
+  elementId: elementIdSchema
+    .optional()
+    .describe(
+      'Scope the transcript to one video/audio element: caption only the source span the clip ' +
+        'plays, positioned at its timeline location. Without it the transcript starts at timeline 0.',
+    ),
+  styleId: z
+    .string()
+    .optional()
+    .describe('A preset id from CAPTION_STYLE_PRESETS (classic, karaoke, spotlight, ...).'),
+  maxChars: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('Soft maximum characters per caption. Default 36.'),
+  maxGapMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('A silence gap longer than this starts a new caption. Default 800.'),
+  replace: z.boolean().optional().describe('Clear existing captions on the target track first.'),
+})
+
+export type CaptionsCommandOptions = z.infer<typeof captionsCommandOptionsSchema>
+
+export function buildCaptionsCommand(
+  project: Project,
+  transcript: TranscriptResult,
+  options: CaptionsCommandOptions = {},
+): CommandOfType<'applyCaptions'> {
+  let style
+  if (options.styleId) {
+    const preset = CAPTION_STYLE_PRESETS.find((p) => p.id === options.styleId)
+    if (!preset) {
+      const known = CAPTION_STYLE_PRESETS.map((p) => p.id).join(', ')
+      throw new Error(`unknown caption style "${options.styleId}" (known: ${known})`)
+    }
+    style = preset.style
+  }
+
+  let scope = {}
+  if (options.elementId) {
+    const location = getElementLocation(project, options.elementId)
+    if (!location) throw new Error(`no element "${options.elementId}" in project`)
+    const element = location.element
+    if (element.type !== 'video' && element.type !== 'audio') {
+      throw new Error(`captions scope to video/audio elements, not "${element.type}"`)
+    }
+    if (element.timeMap) {
+      throw new Error(
+        `element "${options.elementId}" has a time remap; transcript times will not line up`,
+      )
+    }
+    scope = {
+      timeOffsetMs: element.startMs,
+      sourceStartMs: element.trimStartMs,
+      sourceEndMs: element.trimStartMs + element.durationMs,
+    }
+  }
+
+  return buildApplyCaptionsCommand(transcript, {
+    ...scope,
+    ...(style ? { style } : {}),
+    ...(options.maxChars !== undefined ? { maxChars: options.maxChars } : {}),
+    ...(options.maxGapMs !== undefined ? { maxGapMs: options.maxGapMs } : {}),
+    ...(options.replace !== undefined ? { replace: options.replace } : {}),
+  })
 }

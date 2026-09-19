@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { renderFrame } from "@mcut/compositor";
 import { useEditorContext, useEditorState, usePlayback, useSelection } from "@mcut/react";
 import { getActiveAngleIndex, type Layout, type MulticamElement, type Project } from "@mcut/timeline";
@@ -51,26 +51,22 @@ function LayoutTile({
 }) {
   const { engine, pool } = useEditorContext();
   const { editingLayoutId, setEditingLayoutId } = useEditorUI();
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const lastDrawRef = useRef(0);
 
-  // Live tile: redraw from the shared preview pool, throttled.
   const tick = usePlayback((s) => Math.floor(s.currentTimeMs / TILE_FPS_MS));
-  useEffect(() => {
-    void tick;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const now = performance.now();
-    if (now - lastDrawRef.current < TILE_FPS_MS / 2) return;
-    lastDrawRef.current = now;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const forced = projectWithForcedLayout(project, multicam, layout.id);
-    ctx.save();
-    ctx.scale(canvas.width / project.width, canvas.height / project.height);
-    renderFrame(ctx, forced, engine.playback.state.currentTimeMs, { source: pool });
-    ctx.restore();
-  });
+  const layoutId = layout.id;
+  const draw = useCallback(
+    (canvas: HTMLCanvasElement | null) => {
+      void tick;
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) return;
+      const forced = projectWithForcedLayout(project, multicam, layoutId);
+      ctx.save();
+      ctx.scale(canvas.width / project.width, canvas.height / project.height);
+      renderFrame(ctx, forced, engine.playback.state.currentTimeMs, { source: pool });
+      ctx.restore();
+    },
+    [tick, project, multicam, layoutId, engine, pool],
+  );
 
   return (
     <button
@@ -83,7 +79,7 @@ function LayoutTile({
       onClick={() => switchToLayout(engine, multicam, layout.id)}
     >
       <canvas
-        ref={canvasRef}
+        ref={draw}
         width={192}
         height={Math.round((192 * project.height) / project.width)}
         className="block w-full"
