@@ -39,3 +39,4 @@ const server = Bun.serve({
 })
 
 console.log(`serving ${root} at ${server.url}`)
+console.log(`STUDIO_READY http://127.0.0.1:${server.port}`)

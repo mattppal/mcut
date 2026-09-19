@@ -24,8 +24,8 @@ export interface BridgeSessionOptions {
 
 export class BridgeSessionError extends Error {}
 
-const STUDIO_DIR = join(repoRoot, 'apps/studio')
-const NEXT_BIN = join(STUDIO_DIR, 'node_modules/next/dist/bin/next')
+const STUDIO_EXPORT = join(repoRoot, 'apps/studio/out')
+const SERVE_OUT = join(repoRoot, 'scripts/serve-out.ts')
 const BRIDGE_CLI = join(repoRoot, 'packages/mcp-server/src/bridge-cli.ts')
 const DEFAULT_READY_TIMEOUT_MS = 90_000
 const STATUS_POLL_MS = 100
@@ -33,8 +33,7 @@ const KILL_GRACE_MS = 5_000
 const LOG_TAIL_LINES = 30
 
 const BRIDGE_READY = /ws:\/\/127\.0\.0\.1:(\d+)\/mcut-mcp/
-const STUDIO_LOCAL = /Local:\s+http:\/\/(?:127\.0\.0\.1|localhost):(\d+)/
-const STUDIO_READY = /Ready in/
+const STUDIO_READY = /^STUDIO_READY http:\/\/127\.0\.0\.1:(\d+)/
 
 const statusSchema = z.object({
   ok: z.literal(true),
@@ -233,11 +232,9 @@ export async function openBridgeSession(options: BridgeSessionOptions): Promise<
   const log = options.log ?? ((line: string) => console.error(`[bridge-session] ${line}`))
   const headless = options.headless ?? true
   const deadline: Deadline = { endsAt: Date.now() + (options.readyTimeoutMs ?? DEFAULT_READY_TIMEOUT_MS) }
-  if (!existsSync(join(STUDIO_DIR, '.next/BUILD_ID'))) {
-    throw new BridgeSessionError('apps/studio has no production build. Run `bun run build` first.')
+  if (!existsSync(join(STUDIO_EXPORT, 'editor.html'))) {
+    throw new BridgeSessionError('apps/studio/out has no editor.html. Run `bun run --cwd apps/studio build` first.')
   }
-  const node = Bun.which('node')
-  if (node === null) throw new BridgeSessionError('node is not on PATH and next start needs it.')
   mkdirSync(options.logDir, { recursive: true })
 
   const token = randomBytes(16).toString('hex')
@@ -274,13 +271,12 @@ export async function openBridgeSession(options: BridgeSessionOptions): Promise<
 
   try {
     fixtures = startFixtureServer()
-    const studio = group.spawn('studio', [node, NEXT_BIN, 'start', '--port', '0', '--hostname', '127.0.0.1'], STUDIO_DIR)
+    const studio = group.spawn('studio', [process.execPath, SERVE_OUT, '--port', '0'], repoRoot)
     const bridge = group.spawn('bridge', [process.execPath, BRIDGE_CLI, 'start', '--port', '0', '--token', token], repoRoot)
     const bridgeLine = await group.waitForLine(bridge, 'ready', (line) => BRIDGE_READY.test(line), deadline)
     const bridgePort = portFrom(bridgeLine, BRIDGE_READY, 'bridge')
-    const studioLine = await group.waitForLine(studio, 'Local URL', (line) => STUDIO_LOCAL.test(line), deadline)
-    const studioPort = portFrom(studioLine, STUDIO_LOCAL, 'studio')
-    await group.waitForLine(studio, 'Ready', (line) => STUDIO_READY.test(line), deadline)
+    const studioLine = await group.waitForLine(studio, 'STUDIO_READY', (line) => STUDIO_READY.test(line), deadline)
+    const studioPort = portFrom(studioLine, STUDIO_READY, 'studio')
     log(`bridge listening on ${bridgePort}, studio listening on ${studioPort}, fixtures served from ${fixtures.origin}`)
 
     const editorUrl = new URL(`http://127.0.0.1:${studioPort}/editor`)
