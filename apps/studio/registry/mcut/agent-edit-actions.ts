@@ -1,7 +1,9 @@
 import { planSilenceCuts } from "@mcut/editor";
+import { exportProject, getExportSupport } from "@mcut/media";
 import {
   elementIdSchema,
   getElementLocation,
+  getProjectDurationMs,
   getProjectTranscript,
   type EditorEngine,
   type ElementId,
@@ -9,6 +11,13 @@ import {
   type TimelineElement,
 } from "@mcut/timeline";
 import { z } from "zod";
+import { downloadBlob } from "./download-blob";
+import { collectProjectFontExports, ensureProjectFontsLoaded } from "./font-library";
+
+const exportActionInputSchema = z.strictObject({
+  format: z.enum(["webm", "mp4", "mkv"]).optional(),
+  download: z.boolean().optional(),
+});
 
 const silenceActionInputSchema = z.strictObject({
   elementId: elementIdSchema.optional(),
@@ -166,5 +175,30 @@ export function applyOpeningClosingFades(engine: EditorEngine, value: unknown): 
     elementId: element.id,
     durationMs,
     presets: ["fade-in", "fade-out"],
+  };
+}
+
+export async function exportProjectVideo(engine: EditorEngine, value: unknown): Promise<unknown> {
+  const input = parseActionInput(exportActionInputSchema, value);
+  const format = input.format ?? "webm";
+  const durationMs = getProjectDurationMs(engine.project);
+  if (durationMs <= 0) throw new Error("Place at least one clip on the timeline before exporting.");
+  const support = await getExportSupport(format);
+  if (!support.video) throw new Error(`This browser cannot encode ${format} video with WebCodecs.`);
+  engine.pause();
+  await ensureProjectFontsLoaded(engine.project);
+  const fonts = await collectProjectFontExports(engine.project);
+  const startedAt = performance.now();
+  const result = await exportProject(engine.project, { format, fonts });
+  const filename = `${engine.project.name || "export"}.${result.extension}`;
+  if (input.download ?? true) downloadBlob(result.blob, filename);
+  return {
+    format,
+    filename,
+    mimeType: result.blob.type,
+    bytes: result.blob.size,
+    durationMs,
+    audio: support.audio,
+    renderMs: Math.round(performance.now() - startedAt),
   };
 }

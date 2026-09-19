@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { downloadBlob } from "./download-blob";
 import { Spinner } from "./editor-primitives";
 import { collectProjectFontExports, ensureProjectFontsLoaded } from "./font-library";
 
@@ -31,15 +32,6 @@ const PHASE_LABEL: Record<ExportProgress["phase"], string> = {
   video: "Rendering frames",
   finalize: "Finalizing file",
 };
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-}
 
 /**
  * Deterministic client-side export: the shared compositor renders every

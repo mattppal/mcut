@@ -154,6 +154,11 @@
           "target": "components/mcut/export-dialog.tsx"
         },
         {
+          "path": "registry/mcut/download-blob.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/download-blob.ts"
+        },
+        {
           "path": "registry/mcut/command-palette.tsx",
           "type": "registry:component",
           "target": "components/mcut/command-palette.tsx"
@@ -764,6 +769,11 @@
           "path": "registry/mcut/export-dialog.tsx",
           "type": "registry:component",
           "target": "components/mcut/export-dialog.tsx"
+        },
+        {
+          "path": "registry/mcut/download-blob.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/download-blob.ts"
         },
         {
           "path": "registry/mcut/shortcuts-dialog.tsx",
@@ -1413,6 +1423,11 @@
           "path": "registry/mcut/export-dialog.tsx",
           "type": "registry:component",
           "target": "components/mcut/export-dialog.tsx"
+        },
+        {
+          "path": "registry/mcut/download-blob.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/download-blob.ts"
         },
         {
           "path": "lib/hugeicons.tsx",
