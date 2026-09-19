@@ -3,7 +3,7 @@
   "ignoreExportsUsedInFile": true,
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.ts"],
+      "entry": ["scripts/*.ts", "scripts/standards/*.ts"],
       "project": ["scripts/**/*.ts"],
       "ignoreDependencies": ["@arethetypeswrong/cli"]
     },
