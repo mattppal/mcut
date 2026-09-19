@@ -3,7 +3,12 @@
 // Transition: the transition into the next flush clip.
 
 import { useEditor } from "@mcut/react";
-import { listTransitionTypes, type TimelineElement, type Track } from "@mcut/timeline";
+import {
+  TRANSITION_TYPES,
+  transitionTypeSchema,
+  type TimelineElement,
+  type Track,
+} from "@mcut/timeline";
 import { Trash2Icon } from "@/lib/hugeicons";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +27,14 @@ export function TransitionSection({ element, track }: { element: TimelineElement
   const nextClip = track.elements.find((e) => e.startMs === cutMs && e.id !== element.id);
   const dispatch = (value: { type: string; durationMs: number } | null) => {
     try {
-      engine.dispatch({ type: "setTransition", elementId: element.id, transition: value });
+      engine.dispatch({
+        type: "setTransition",
+        elementId: element.id,
+        transition: value && {
+          type: transitionTypeSchema.parse(value.type),
+          durationMs: value.durationMs,
+        },
+      });
     } catch {
       // No adjacent clip (or element vanished): inputs resync from state.
     }
@@ -43,7 +55,7 @@ export function TransitionSection({ element, track }: { element: TimelineElement
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {listTransitionTypes().map((type) => (
+                {TRANSITION_TYPES.map((type) => (
                   <SelectItem key={type} value={type} className="text-xs capitalize">
                     {type.replace("-", " ")}
                   </SelectItem>
@@ -85,7 +97,7 @@ export function TransitionSection({ element, track }: { element: TimelineElement
               <SelectValue placeholder="Add a transition…" />
             </SelectTrigger>
             <SelectContent>
-              {listTransitionTypes().map((type) => (
+              {TRANSITION_TYPES.map((type) => (
                 <SelectItem key={type} value={type} className="text-xs capitalize">
                   {type.replace("-", " ")}
                 </SelectItem>

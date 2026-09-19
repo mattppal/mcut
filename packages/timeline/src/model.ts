@@ -1,29 +1,16 @@
 import { z } from 'zod'
 import type { AssetId, ElementId, GroupId, MarkerId, TrackId } from './id'
 import { createProjectId, createTrackId } from './id'
-import {
-  anyElementInputSchema,
-  anyElementSchema,
-  getElementType,
-  registerElementTypeEntry,
-  type ElementTypeEntry,
-} from './element-registry'
-import { CommandError } from './errors'
-import { keyframesSchema } from './keyframes'
+import { assertNever, CommandError } from './errors'
+import { keyframesSchema, splitKeyframes, type KeyframeMap } from './keyframes'
 import { migrateProject, PROJECT_VERSION } from './migrations'
-import {
-  getAverageSpeed,
-  getSourceSpanMs,
-  getSourceTimeMs,
-  splitTimeMap,
-  timeMapSchema,
-} from './speed'
+import { getSourceSpanMs, splitTimeMap, timeMapSchema } from './speed'
 import { blendModeSchema, effectsSchema, motionBlurSchema } from './effects'
-import { getLayout, layoutSchema } from './layouts'
+import { layoutSchema } from './layouts'
 import { propertyPresetSchema } from './presets'
 import { cropSchema, shadowSchema, strokeSchema } from './style'
 import { textRunSchema } from './rich-text'
-import { getActiveLayout, getAngleTransitionAt, getMulticamSourceTimeMs, splitAngles } from './multicam'
+import { splitAngles } from './multicam'
 import { transitionSchema } from './transitions'
 
 /** Minimum element duration the engine will accept. */
@@ -307,47 +294,11 @@ const captionShape = {
   style: captionStyleSchema,
 }
 
-// ---------------------------------------------------------------------------
-// The element-type registry's public face: registering a type composes its
-// own fields with the shared id/type/timing fields and makes it a full
-// citizen of the document — it parses in saved projects, splits, keyframes,
-// validates, and describes itself to agents. The built-ins below use this
-// exact API; custom types call it the same way (then register a renderer in
-// @mcut/compositor and, optionally, UI chrome in the webapp).
-// ---------------------------------------------------------------------------
-
-export interface ElementTypeConfig {
-  type: string
-  /** The type's OWN fields — id/type/start/duration/keyframes/linkId/groupId are composed in. */
-  shape: z.ZodRawShape
-  /** Fixed-effect properties this type animates (see keyframes.ts). */
-  keyframeable?: readonly string[]
-  onSplit?: ElementTypeEntry['onSplit']
-  validate?: ElementTypeEntry['validate']
-  describe?: ElementTypeEntry['describe']
-  frameRequests?: ElementTypeEntry['frameRequests']
-}
-
 const composeFull = <const K extends string, T extends z.ZodRawShape>(type: K, shape: T) =>
   z.object({ id: elementIdSchema, type: z.literal(type), ...timingShape, ...shape })
 const composeInput = <const K extends string, T extends z.ZodRawShape>(type: K, shape: T) =>
   z.object({ id: elementIdSchema.optional(), type: z.literal(type), ...timingShape, ...shape })
 
-export function registerTimelineElementType(config: ElementTypeConfig): void {
-  registerElementTypeEntry({
-    type: config.type,
-    fullSchema: composeFull(config.type, config.shape),
-    inputSchema: composeInput(config.type, config.shape),
-    keyframeable: config.keyframeable ?? [],
-    ...(config.onSplit ? { onSplit: config.onSplit } : {}),
-    ...(config.validate ? { validate: config.validate } : {}),
-    ...(config.describe ? { describe: config.describe } : {}),
-    ...(config.frameRequests ? { frameRequests: config.frameRequests } : {}),
-  })
-}
-
-// Static per-type schemas: the source of the exported TS types, and reused
-// for the registry so the dynamic union validates identically.
 export const videoElementSchema = composeFull('video', videoShape)
 export const audioElementSchema = composeFull('audio', audioShape)
 export const imageElementSchema = composeFull('image', imageShape)
@@ -355,14 +306,59 @@ export const textElementSchema = composeFull('text', textShape)
 export const captionElementSchema = composeFull('caption', captionShape)
 export const multicamElementSchema = composeFull('multicam', multicamShape)
 
-/**
- * Every registered element type (dynamic: includes custom registrations).
- * Parsing routes through the registry so saved projects containing custom
- * types round-trip once their plugin is loaded.
- */
-export const elementSchema = anyElementSchema as z.ZodType<TimelineElement, unknown>
-/** Like {@link elementSchema} but `id` is optional (generated on insert). */
-export const elementInputSchema = anyElementInputSchema as z.ZodType<TimelineElement, unknown>
+export type VideoElement = z.infer<typeof videoElementSchema>
+export type AudioElement = z.infer<typeof audioElementSchema>
+export type ImageElement = z.infer<typeof imageElementSchema>
+export type TextElement = z.infer<typeof textElementSchema>
+export type CaptionElement = z.infer<typeof captionElementSchema>
+export type MulticamElement = z.infer<typeof multicamElementSchema>
+
+export type TimelineElement =
+  | VideoElement
+  | AudioElement
+  | ImageElement
+  | TextElement
+  | CaptionElement
+  | MulticamElement
+
+export type ElementType = TimelineElement['type']
+
+export const elementSchema: z.ZodType<TimelineElement> = z.discriminatedUnion('type', [
+  videoElementSchema,
+  audioElementSchema,
+  imageElementSchema,
+  textElementSchema,
+  captionElementSchema,
+  multicamElementSchema,
+])
+
+type WithOptionalId<E> = Omit<E, 'id'> & { id?: ElementId }
+
+export type TimelineElementInput =
+  | WithOptionalId<z.input<typeof videoElementSchema>>
+  | WithOptionalId<z.input<typeof audioElementSchema>>
+  | WithOptionalId<z.input<typeof imageElementSchema>>
+  | WithOptionalId<z.input<typeof textElementSchema>>
+  | WithOptionalId<z.input<typeof captionElementSchema>>
+  | WithOptionalId<z.input<typeof multicamElementSchema>>
+
+export type TimelineElementDraft =
+  | WithOptionalId<VideoElement>
+  | WithOptionalId<AudioElement>
+  | WithOptionalId<ImageElement>
+  | WithOptionalId<TextElement>
+  | WithOptionalId<CaptionElement>
+  | WithOptionalId<MulticamElement>
+
+export const elementInputSchema: z.ZodType<TimelineElementDraft, TimelineElementInput> =
+  z.discriminatedUnion('type', [
+    composeInput('video', videoShape),
+    composeInput('audio', audioShape),
+    composeInput('image', imageShape),
+    composeInput('text', textShape),
+    composeInput('caption', captionShape),
+    composeInput('multicam', multicamShape),
+  ])
 
 export const assetRefSchema = z.object({
   id: assetIdSchema,
@@ -445,76 +441,18 @@ export type TextShadow = z.infer<typeof textShadowSchema>
 export type TextBox = z.infer<typeof textBoxSchema>
 export type CaptionStyle = z.infer<typeof captionStyleSchema>
 export type CaptionWord = z.infer<typeof captionWordSchema>
-export type VideoElement = z.infer<typeof videoElementSchema>
-export type AudioElement = z.infer<typeof audioElementSchema>
-export type ImageElement = z.infer<typeof imageElementSchema>
-export type TextElement = z.infer<typeof textElementSchema>
-export type CaptionElement = z.infer<typeof captionElementSchema>
-export type MulticamElement = z.infer<typeof multicamElementSchema>
 export type MulticamSource = z.infer<typeof multicamSourceSchema>
 export type AngleCutRef = MulticamElement['angles'][number]
-/**
- * Named to avoid colliding with the DOM `Element` type. Statically this is
- * the union of BUILT-IN types; custom registered types parse at runtime and
- * surface as this union (consumers narrowing on `type` fall through their
- * default branches; plugin code casts to its own type).
- */
-export type TimelineElement =
-  | VideoElement
-  | AudioElement
-  | ImageElement
-  | TextElement
-  | CaptionElement
-  | MulticamElement
-type InputOf<S extends z.ZodType> = Omit<z.input<S>, 'id'> & { id?: ElementId }
-export type TimelineElementInput =
-  | InputOf<typeof videoElementSchema>
-  | InputOf<typeof audioElementSchema>
-  | InputOf<typeof imageElementSchema>
-  | InputOf<typeof textElementSchema>
-  | InputOf<typeof captionElementSchema>
-  | InputOf<typeof multicamElementSchema>
 export type AssetRef = z.infer<typeof assetRefSchema>
 export type AssetKind = AssetRef['kind']
 export type Marker = z.infer<typeof markerSchema>
 export type Track = z.infer<typeof trackSchema>
 export type Project = z.infer<typeof projectSchema>
 
-// ---------------------------------------------------------------------------
-// Built-in element types, registered through the same API custom types use.
-// The hooks here are the single source of truth the engine consults for
-// splitting, validation, summaries, and frame decoding.
-// ---------------------------------------------------------------------------
-
-const MOTION_KEYFRAMES = ['position.x', 'position.y', 'scale.x', 'scale.y', 'rotation', 'opacity', 'blur'] as const
-
-const fmtSeconds = (ms: number) => `${(ms / 1000).toFixed(2)}s`
-
-/** describe() for asset-backed clips: name + trim + speed. */
-function describeAssetClip(raw: Record<string, unknown>, rawProject: unknown): string {
-  const element = raw as unknown as VideoElement | AudioElement | ImageElement
-  const project = rawProject as Project
-  const asset = project.assets[element.assetId]
-  let what = `${element.type} ${asset?.name ?? element.assetId}`
-  if ('trimStartMs' in element && element.trimStartMs > 0) {
-    what += ` (trim-in ${fmtSeconds(element.trimStartMs)})`
-  }
-  if ('timeMap' in element && element.timeMap) {
-    const speed = getAverageSpeed(element)
-    what += element.timeMap.length > 2 ? ` (speed ramp, avg ${speed.toFixed(2)}x)` : ` (speed ${speed.toFixed(2)}x)`
-  }
-  if ('reversed' in element && element.reversed) what += ' (reversed)'
-  return what
-}
-
-/** validate() for asset-backed clips: asset exists; trims stay inside it. */
-function validateAssetClip(rawProject: unknown, raw: Record<string, unknown>): void {
-  const element = raw as unknown as VideoElement | AudioElement | ImageElement
-  const project = rawProject as Project
+function validateAssetClip(project: Project, element: VideoElement | AudioElement | ImageElement): void {
   const asset = project.assets[element.assetId]
   if (!asset) throw new CommandError('unknown-asset', `no asset "${element.assetId}"`)
   if (element.type === 'image') return
-  // With a timeMap the consumed source span is the map's last value.
   const sourceSpanMs = getSourceSpanMs(element)
   if (asset.durationMs !== undefined && element.trimStartMs + sourceSpanMs > asset.durationMs) {
     throw new CommandError(
@@ -525,169 +463,120 @@ function validateAssetClip(rawProject: unknown, raw: Record<string, unknown>): v
   }
 }
 
-/** onSplit() for trimmed media: the timeMap carries the offset, else the trim does. */
-function splitTrimmedMedia({ element, left, right, offsetMs }: {
-  element: Record<string, unknown>
-  left: Record<string, unknown>
-  right: Record<string, unknown>
-  offsetMs: number
-}): void {
-  const source = element as unknown as VideoElement | AudioElement
-  const originalSpanMs = getSourceSpanMs(source)
-  if (source.timeMap) {
-    const halves = splitTimeMap(source.timeMap, offsetMs)
-    left.timeMap = halves.left
-    right.timeMap = halves.right
-  } else if (!source.reversed) {
-    right.trimStartMs = source.trimStartMs + offsetMs
+function validateMulticam(project: Project, element: MulticamElement): void {
+  for (const source of element.sources) {
+    if (!project.assets[source.assetId]) {
+      throw new CommandError('unknown-asset', `no asset "${source.assetId}" (source "${source.key}")`)
+    }
   }
-  if (source.reversed) {
-    // Reversed clips play the source backward, so the LEFT half holds the
-    // LATER source span: shift its trim by what the right half consumes.
-    // (The right half keeps the original trim — the mirror of the forward
-    // rule above.) Works with and without a timeMap.
-    const leftSpanMs = getSourceSpanMs(left as unknown as VideoElement | AudioElement)
-    left.trimStartMs = source.trimStartMs + (originalSpanMs - leftSpanMs)
-  }
-  // Fades stay with their edge: the fade-in belongs to the left half, the
-  // fade-out to the right. Remove the far edge's fade from each half.
-  if (source.fadeOutMs !== undefined) delete left.fadeOutMs
-  if (source.fadeInMs !== undefined) delete right.fadeInMs
 }
 
-registerTimelineElementType({
-  type: 'video',
-  shape: videoShape,
-  keyframeable: [...MOTION_KEYFRAMES, 'volume'],
-  describe: describeAssetClip,
-  validate: validateAssetClip,
-  onSplit: splitTrimmedMedia,
-  frameRequests: (rawProject, raw, timelineMs) => {
-    const element = raw as unknown as VideoElement
-    void rawProject
-    return [
-      {
-        assetId: element.assetId,
-        sourceTimeMs: Math.max(0, getSourceTimeMs(element, timelineMs - element.startMs)),
-      },
-    ]
-  },
-})
+export function validateElement(project: Project, element: TimelineElement): void {
+  switch (element.type) {
+    case 'video':
+    case 'audio':
+    case 'image':
+      return validateAssetClip(project, element)
+    case 'multicam':
+      return validateMulticam(project, element)
+    case 'text':
+    case 'caption':
+      return
+    default:
+      return assertNever(element)
+  }
+}
 
-registerTimelineElementType({
-  type: 'audio',
-  shape: audioShape,
-  keyframeable: ['volume'],
-  describe: describeAssetClip,
-  validate: validateAssetClip,
-  onSplit: splitTrimmedMedia,
-})
+export interface SplitHalves<E extends TimelineElement = TimelineElement> {
+  left: E
+  right: E
+}
 
-registerTimelineElementType({
-  type: 'image',
-  shape: imageShape,
-  keyframeable: [...MOTION_KEYFRAMES],
-  describe: describeAssetClip,
-  validate: validateAssetClip,
-  frameRequests: (rawProject, raw) => {
-    void rawProject
-    return [{ assetId: (raw as unknown as ImageElement).assetId, sourceTimeMs: 0 }]
-  },
-})
+function setKeyframes(element: TimelineElement, keyframes: KeyframeMap | undefined): void {
+  if (keyframes) element.keyframes = keyframes
+  else delete element.keyframes
+}
 
-registerTimelineElementType({
-  type: 'text',
-  shape: textShape,
-  // letterSpacing animates the classic title-tracking reveal.
-  keyframeable: [...MOTION_KEYFRAMES, 'letterSpacing'],
-  describe: (raw) => `text "${(raw as unknown as TextElement).text.slice(0, 40)}"`,
-})
+function timingHalves<E extends TimelineElement>(element: E, offsetMs: number): SplitHalves<E> {
+  const left: E = { ...element, durationMs: offsetMs }
+  const right: E = {
+    ...element,
+    startMs: element.startMs + offsetMs,
+    durationMs: element.durationMs - offsetMs,
+  }
+  if (element.keyframes) {
+    const split = splitKeyframes(element.keyframes, offsetMs)
+    setKeyframes(left, split.left)
+    setKeyframes(right, split.right)
+  }
+  return { left, right }
+}
 
-registerTimelineElementType({
-  type: 'caption',
-  shape: captionShape,
-  describe: (raw) => `caption "${(raw as unknown as CaptionElement).text.slice(0, 40)}"`,
-  onSplit: ({ left, right, offsetMs }) => {
-    const l = left as unknown as CaptionElement
-    const r = right as unknown as CaptionElement
-    const words = l.words ?? []
-    l.words = words.filter((w) => w.startMs < offsetMs)
-    r.words = words
-      .filter((w) => w.startMs >= offsetMs)
-      .map((w) => ({ ...w, startMs: w.startMs - offsetMs, endMs: w.endMs - offsetMs }))
-    l.text = l.words.map((w) => w.text).join(' ') || l.text
-    r.text = r.words.map((w) => w.text).join(' ') || r.text
-  },
-})
+function splitTrimmedMedia(
+  element: VideoElement | AudioElement,
+  offsetMs: number,
+): SplitHalves<VideoElement | AudioElement> {
+  const { left, right } = timingHalves(element, offsetMs)
+  const originalSpanMs = getSourceSpanMs(element)
+  if (element.timeMap) {
+    const halves = splitTimeMap(element.timeMap, offsetMs)
+    left.timeMap = halves.left
+    right.timeMap = halves.right
+  } else if (!element.reversed) {
+    right.trimStartMs = element.trimStartMs + offsetMs
+  }
+  if (element.reversed) {
+    const leftSpanMs = getSourceSpanMs(left)
+    left.trimStartMs = element.trimStartMs + (originalSpanMs - leftSpanMs)
+  }
+  if (element.fadeOutMs !== undefined) delete left.fadeOutMs
+  if (element.fadeInMs !== undefined) delete right.fadeInMs
+  return { left, right }
+}
 
-registerTimelineElementType({
-  type: 'multicam',
-  shape: multicamShape,
-  keyframeable: [...MOTION_KEYFRAMES, 'volume'],
-  describe: (raw, rawProject) => {
-    const element = raw as unknown as MulticamElement
-    const project = rawProject as Project
-    const cuts = element.angles
-      .map((a) => {
-        const layout = project.layouts.find((l) => l.id === a.layoutId)
-        return `${fmtSeconds(a.atMs)}→${layout?.name ?? a.layoutId}`
-      })
-      .join(', ')
-    return (
-      `multicam [${element.sources.map((src) => src.key).join(' + ')}]` +
-      ` cuts: ${cuts}` +
-      (element.audioSource ? ` (audio: ${element.audioSource})` : '')
-    )
-  },
-  validate: (rawProject, raw) => {
-    const element = raw as unknown as MulticamElement
-    const project = rawProject as Project
-    for (const source of element.sources) {
-      if (!project.assets[source.assetId]) {
-        throw new CommandError('unknown-asset', `no asset "${source.assetId}" (source "${source.key}")`)
-      }
-    }
-  },
-  onSplit: ({ element, left, right, offsetMs }) => {
-    const source = element as unknown as MulticamElement
-    const l = left as unknown as MulticamElement
-    const r = right as unknown as MulticamElement
-    const angleHalves = splitAngles(source.angles, offsetMs)
-    l.angles = angleHalves.left
-    r.angles = angleHalves.right
-    if (source.timeMap) {
-      const halves = splitTimeMap(source.timeMap, offsetMs)
-      l.timeMap = halves.left
-      r.timeMap = halves.right
-    } else {
-      r.sources = r.sources.map((s) => ({ ...s, trimStartMs: s.trimStartMs + offsetMs }))
-    }
-  },
-  frameRequests: (rawProject, raw, timelineMs) => {
-    const element = raw as unknown as MulticamElement
-    const project = rawProject as Project
-    // Inside an angle-cut blend window both layouts are on screen, so both
-    // sets of sources need frames (render/export parity with the renderer).
-    const window = getAngleTransitionAt(element, timelineMs - element.startMs)
-    const layouts = window
-      ? [getLayout(project.layouts, window.fromLayoutId), getLayout(project.layouts, window.toLayoutId)]
-      : [getActiveLayout(project, element, timelineMs)]
-    const requests: Array<{ assetId: string; sourceTimeMs: number }> = []
-    const seen = new Set<string>()
-    for (const layout of layouts) {
-      for (const slot of layout?.slots ?? []) {
-        const source = element.sources.find((s) => s.key === slot.source)
-        if (!source || seen.has(source.key)) continue
-        seen.add(source.key)
-        requests.push({
-          assetId: source.assetId,
-          sourceTimeMs: getMulticamSourceTimeMs(element, source, timelineMs),
-        })
-      }
-    }
-    return requests
-  },
-})
+function splitCaption(element: CaptionElement, offsetMs: number): SplitHalves<CaptionElement> {
+  const { left, right } = timingHalves(element, offsetMs)
+  const words = element.words ?? []
+  left.words = words.filter((w) => w.startMs < offsetMs)
+  right.words = words
+    .filter((w) => w.startMs >= offsetMs)
+    .map((w) => ({ ...w, startMs: w.startMs - offsetMs, endMs: w.endMs - offsetMs }))
+  left.text = left.words.map((w) => w.text).join(' ') || left.text
+  right.text = right.words.map((w) => w.text).join(' ') || right.text
+  return { left, right }
+}
+
+function splitMulticam(element: MulticamElement, offsetMs: number): SplitHalves<MulticamElement> {
+  const { left, right } = timingHalves(element, offsetMs)
+  const angleHalves = splitAngles(element.angles, offsetMs)
+  left.angles = angleHalves.left
+  right.angles = angleHalves.right
+  if (element.timeMap) {
+    const halves = splitTimeMap(element.timeMap, offsetMs)
+    left.timeMap = halves.left
+    right.timeMap = halves.right
+  } else {
+    right.sources = right.sources.map((s) => ({ ...s, trimStartMs: s.trimStartMs + offsetMs }))
+  }
+  return { left, right }
+}
+
+export function splitElementAt(element: TimelineElement, offsetMs: number): SplitHalves {
+  switch (element.type) {
+    case 'video':
+    case 'audio':
+      return splitTrimmedMedia(element, offsetMs)
+    case 'image':
+    case 'text':
+      return timingHalves(element, offsetMs)
+    case 'caption':
+      return splitCaption(element, offsetMs)
+    case 'multicam':
+      return splitMulticam(element, offsetMs)
+    default:
+      return assertNever(element)
+  }
+}
 
 export interface CreateProjectOptions {
   id?: string

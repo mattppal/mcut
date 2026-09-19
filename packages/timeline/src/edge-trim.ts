@@ -1,24 +1,14 @@
 import { CommandError } from './errors'
-import { getElementType } from './element-registry'
-import { splitKeyframes, type AnimatableProperty, type Keyframe, type KeyframeMap } from './keyframes'
+import type { AnimatableProperty, Keyframe, KeyframeMap } from './keyframes'
 import {
   MIN_ELEMENT_DURATION_MS,
+  splitElementAt,
   type MulticamElement,
   type Project,
   type TimelineElement,
 } from './model'
 import { getSourceSpanMs, type TimeMap } from './speed'
 
-/**
- * Edge trims: move one boundary of a clip while its content stays anchored —
- * the shared core under roll, slide, and ripple-trim edits.
- *
- * `deltaMs` always moves the edge RIGHT (later) when positive. Shrinking an
- * edge reuses the SPLIT machinery (each element type's onSplit hook plus
- * splitKeyframes), so trims, timeMaps, reversed spans, angle lists, and word
- * timings get exactly the bookkeeping a split-and-discard would produce.
- * Growing an edge reveals more source where the type supports it.
- */
 export type TrimEdge = 'start' | 'end'
 
 const hasTimeMap = (element: TimelineElement): boolean =>
@@ -57,36 +47,12 @@ export function applyEdgeTrim(
   return deltaMs > 0 ? shrinkViaSplit(element, 'right', deltaMs) : growStart(element, -deltaMs)
 }
 
-/**
- * Shrink by splitting at `offsetMs` and keeping one half (under the
- * element's own id). Runs splitKeyframes and the type's onSplit hook, so
- * every registered type's source bookkeeping applies — without the split
- * command's both-halves minimum-duration requirement.
- */
 function shrinkViaSplit(
   element: TimelineElement,
   keep: 'left' | 'right',
   offsetMs: number,
 ): TimelineElement {
-  const left: TimelineElement = { ...element, durationMs: offsetMs }
-  const right: TimelineElement = {
-    ...element,
-    startMs: element.startMs + offsetMs,
-    durationMs: element.durationMs - offsetMs,
-  }
-  if ('keyframes' in element && element.keyframes) {
-    const split = splitKeyframes(element.keyframes, offsetMs)
-    if (split.left) left.keyframes = split.left
-    else delete left.keyframes
-    if (split.right) right.keyframes = split.right
-    else delete right.keyframes
-  }
-  getElementType(element.type)?.onSplit?.({
-    element: element as Record<string, unknown>,
-    left: left as Record<string, unknown>,
-    right: right as Record<string, unknown>,
-    offsetMs,
-  })
+  const { left, right } = splitElementAt(element, offsetMs)
   // The element's end-cut transition stays on it either way: the kept half
   // owns the (possibly moved) end cut, and render-time adjacency checks make
   // it inert unless a neighbor still abuts.

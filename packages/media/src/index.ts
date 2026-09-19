@@ -35,9 +35,9 @@ export {
 } from './export'
 
 export {
-  getContainerFormat,
+  containerFormats,
   listContainerFormats,
-  registerContainerFormat,
+  type ContainerFormat,
   type ContainerFormatEntry,
 } from './container-formats'
 

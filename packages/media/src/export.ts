@@ -47,7 +47,7 @@ export async function exportProject(
   signal?.throwIfAborted()
   const durationMs = getProjectDurationMs(project)
   if (durationMs <= 0) throw new Error('Cannot export an empty project')
-  const container = resolveContainerFormat(options.format) // fail fast on unknown ids
+  const container = resolveContainerFormat(options.format)
 
   // ---- audio mix (main thread) ---------------------------------------------
   let mixedAudio: MixedAudioData | null = null

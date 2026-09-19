@@ -13,8 +13,9 @@ import {
   ProjectFormatError,
   createProject,
   listToolDefinitions,
+  parseCommand,
   summarizeProject,
-  type AnyCommand,
+  type BuiltinCommand,
 } from '@mcut/timeline'
 import { buildCaptionsCommand } from './captions'
 import { readProjectFile, readTranscriptFile, writeProjectFile } from './io'
@@ -59,20 +60,15 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString('utf8')
 }
 
-function parseCommandBatch(raw: string): AnyCommand[] {
+function parseCommandBatch(raw: string): BuiltinCommand[] {
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch {
     fail('commands input is not valid JSON')
   }
-  const list = Array.isArray(parsed) ? parsed : [parsed]
-  for (const item of list) {
-    if (typeof item !== 'object' || item === null || typeof (item as AnyCommand).type !== 'string') {
-      fail('each command must be an object with a string "type"')
-    }
-  }
-  return list as AnyCommand[]
+  const list: unknown[] = Array.isArray(parsed) ? parsed : [parsed]
+  return list.map(parseCommand)
 }
 
 async function cmdNew(argv: string[]): Promise<void> {
@@ -180,7 +176,7 @@ async function cmdCaptions(argv: string[]): Promise<void> {
   const engine = new EditorEngine({ project })
   engine.dispatch(command)
   await writeProjectFile(file, engine.project)
-  const count = (command.captions as unknown[]).length
+  const count = command.captions.length
   console.log(`Added ${count} caption(s) to ${file}\n`)
   console.log(summarizeProject(engine.project))
 }

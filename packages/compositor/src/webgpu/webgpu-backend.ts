@@ -20,7 +20,6 @@ import {
   SHADOW_SHADER,
 } from './shaders'
 import { gaussianKernel, invertChrome } from './transform'
-import '../gpu-effects'
 
 /**
  * The WebGPU compositor backend. Image quads (video/image elements)

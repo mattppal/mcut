@@ -1,7 +1,7 @@
 import {
   CAPTION_STYLE_PRESETS,
   getElementLocation,
-  type AnyCommand,
+  type CommandOfType,
   type ElementId,
   type Project,
 } from '@mcut/timeline'
@@ -31,7 +31,7 @@ export function buildCaptionsCommand(
   project: Project,
   transcript: TranscriptResult,
   options: CaptionsCommandOptions = {},
-): AnyCommand {
+): CommandOfType<'applyCaptions'> {
   let style
   if (options.styleId) {
     const preset = CAPTION_STYLE_PRESETS.find((p) => p.id === options.styleId)

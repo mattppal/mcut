@@ -12,3 +12,7 @@ export class CommandError extends Error {
     this.code = code
   }
 }
+
+export function assertNever(value: never): never {
+  throw new Error(`unreachable: ${String(value)}`)
+}

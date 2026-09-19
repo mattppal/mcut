@@ -1,4 +1,4 @@
-import type { Effect } from '@mcut/timeline'
+import { assertNever, type CurvePoint, type Effect } from '@mcut/timeline'
 import { parseCssColor } from './color'
 
 /**
@@ -50,11 +50,6 @@ export interface EffectPlan {
 const MAX_COLOR_OPS = 16
 
 const params = (...values: number[]): number[] => values
-
-interface CurvePoint {
-  x: number
-  y: number
-}
 
 /** Monotone-x piecewise-linear curve → 256-entry LUT (identity when empty). */
 export function curveToLut(points: readonly CurvePoint[] | undefined): Float32Array {
@@ -135,58 +130,44 @@ export function planEffects(effects: readonly Effect[] | undefined): EffectPlan 
       case 'css':
         plan.unsupported = true
         break
-      default: {
-        // GPU-only effects register dynamically (see gpu-effects.ts); they
-        // arrive as records the static union doesn't know.
-        const record = effect as Record<string, unknown>
-        if (record.type === 'chroma-key') {
-          const key = parseCssColor(String(record.keyColor ?? '#00ff00'))
-          colorRun().ops.push({
-            kind: COLOR_OP.chromaKey,
-            params: params(
-              key[0],
-              key[1],
-              key[2],
-              Number(record.tolerance ?? 0.25),
-              Number(record.softness ?? 0.1),
-              Number(record.spillSuppression ?? 0.5),
-            ),
-          })
-        } else if (record.type === 'curves') {
-          const channels = record as {
-            rgb?: CurvePoint[]
-            red?: CurvePoint[]
-            green?: CurvePoint[]
-            blue?: CurvePoint[]
-          }
-          const master = curveToLut(channels.rgb)
-          const compose = (channel: Float32Array): Float32Array => {
-            const out = new Float32Array(256)
-            for (let i = 0; i < 256; i++) {
-              // Master rgb curve applies after the per-channel curve.
-              out[i] = master[Math.round(channel[i]! * 255)]!
-            }
-            return out
-          }
-          // Curves need their own LUT texture binding: close the run after.
-          const run = colorRun()
-          run.curves = {
-            r: compose(curveToLut(channels.red)),
-            g: compose(curveToLut(channels.green)),
-            b: compose(curveToLut(channels.blue)),
-          }
-          run.ops.push({ kind: COLOR_OP.curves, params: params() })
-        } else if (record.type === 'lut3d') {
-          plan.passes.push({
-            kind: 'lut3d',
-            lutId: String(record.lutId ?? ''),
-            intensity: Number(record.intensity ?? 1),
-          })
-        } else {
-          // Unknown custom effect: only the raster path can honor it.
-          plan.unsupported = true
-        }
+      case 'chroma-key': {
+        const key = parseCssColor(effect.keyColor)
+        colorRun().ops.push({
+          kind: COLOR_OP.chromaKey,
+          params: params(
+            key[0],
+            key[1],
+            key[2],
+            effect.tolerance,
+            effect.softness,
+            effect.spillSuppression,
+          ),
+        })
+        break
       }
+      case 'curves': {
+        const master = curveToLut(effect.rgb)
+        const compose = (channel: Float32Array): Float32Array => {
+          const out = new Float32Array(256)
+          for (let i = 0; i < 256; i++) {
+            out[i] = master[Math.round((channel[i] ?? 0) * 255)] ?? 0
+          }
+          return out
+        }
+        const run = colorRun()
+        run.curves = {
+          r: compose(curveToLut(effect.red)),
+          g: compose(curveToLut(effect.green)),
+          b: compose(curveToLut(effect.blue)),
+        }
+        run.ops.push({ kind: COLOR_OP.curves, params: params() })
+        break
+      }
+      case 'lut3d':
+        plan.passes.push({ kind: 'lut3d', lutId: effect.lutId, intensity: effect.intensity })
+        break
+      default:
+        assertNever(effect)
     }
   }
   return plan

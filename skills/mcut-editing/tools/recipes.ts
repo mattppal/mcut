@@ -5,7 +5,7 @@
  * change, the recipe test breaks before the docs lie.
  */
 import { buildCaptionsCommand, planSilenceCuts } from '@mcut/cli'
-import type { AnyCommand, Project } from '@mcut/timeline'
+import type { BuiltinCommand, Project } from '@mcut/timeline'
 import { SAMPLE_TRANSCRIPT } from './sample-transcript'
 import { buildTemplate } from './templates'
 
@@ -22,7 +22,7 @@ export interface Recipe {
    * Literal commands, replayable as-is (ids reference the template).
    * Computed recipes (silence cuts) use `apply` + `cli` instead.
    */
-  commands?: AnyCommand[]
+  commands?: BuiltinCommand[]
   /** CLI equivalent, shown alongside the commands. */
   cli?: string
   /** For computed edits that cannot be expressed as static commands. */
