@@ -21,6 +21,22 @@ export interface MediaProbe {
   mimeType?: string
 }
 
+export type MediaProbeErrorCode = 'unreadable' | 'no-tracks'
+
+export class MediaProbeError extends Error {
+  readonly code: MediaProbeErrorCode
+
+  constructor(code: MediaProbeErrorCode, message: string, options?: { cause?: unknown }) {
+    super(message, options)
+    this.name = 'MediaProbeError'
+    this.code = code
+  }
+}
+
+function describeCause(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
 interface NativeMediaMetadata {
   durationMs: number
   width?: number
@@ -159,7 +175,9 @@ export async function probeMedia(src: MediaSourceLike): Promise<MediaProbe> {
   } catch (error) {
     const nativeProbe = await probeNativeMedia(src)
     if (nativeProbe) return nativeProbe
-    throw error
+    throw new MediaProbeError('unreadable', `Cannot read this file as audio or video (${describeCause(error)})`, {
+      cause: error,
+    })
   } finally {
     input.dispose()
   }
@@ -203,7 +221,7 @@ export async function createAssetFromFile(file: File): Promise<AssetRef> {
     if (probe.hasAudio) {
       return { ...base, kind: 'audio', durationMs: probe.durationMs }
     }
-    throw new Error(`"${file.name}" has no playable audio or video tracks`)
+    throw new MediaProbeError('no-tracks', `"${file.name}" has no playable audio or video tracks`)
   } catch (error) {
     URL.revokeObjectURL(src)
     throw error

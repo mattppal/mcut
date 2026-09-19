@@ -187,6 +187,9 @@
         "mediabunny": "1.46.0",
         "signalsmith-stretch": "1.3.2",
       },
+      "devDependencies": {
+        "@mcut/editor": "workspace:*",
+      },
     },
     "packages/react": {
       "name": "@mcut/react",
