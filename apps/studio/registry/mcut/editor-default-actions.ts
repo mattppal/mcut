@@ -24,7 +24,7 @@ import { trackOfSelection } from './editor-actions'
 import { copySelection, cutSelection, pasteAtPlayheadFromAnywhere } from './editor-clipboard'
 import { importMediaFiles, pickFiles } from './media-import'
 import { clearSavedSession, saveAssetBlob } from './persistence'
-import { openProjectFromFile, saveProjectToFile } from './project-file'
+import { host } from './studio-host'
 import { focusTranscriptSearch } from './transcript-keywords'
 import { applyOpeningClosingFades, exportProjectVideo, removeTranscriptSilence } from './agent-edit-actions'
 
@@ -593,7 +593,7 @@ defineAction({
   category: 'file',
   shortcut: { key: 'o', meta: true },
   icon: FolderOpenIcon,
-  run: ({ engine }) => void openProjectFromFile(engine),
+  run: ({ engine }) => void host.openProject(engine),
 })
 
 defineAction({
@@ -602,7 +602,15 @@ defineAction({
   category: 'file',
   shortcut: { key: 's', meta: true, shift: true },
   icon: DownloadIcon,
-  run: ({ engine }) => saveProjectToFile(engine.project),
+  run: ({ engine }) => void host.saveProject(engine.project),
+})
+
+defineAction({
+  id: 'file.save-as',
+  label: 'Save project as…',
+  category: 'file',
+  icon: DownloadIcon,
+  run: ({ engine }) => void host.saveProjectAs(engine.project),
 })
 
 defineAction({
