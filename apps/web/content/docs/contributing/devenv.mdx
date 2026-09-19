@@ -38,7 +38,6 @@ bun install --frozen-lockfile
 Run this from the repo root:
 
 ```sh
-bun run setup   # once per worktree
 bun run dev
 ```
 
@@ -48,17 +47,13 @@ bun run dev
 - the local bridge on port `44737` by default, with WebSocket browser sync at
   `/mcut-mcp` and Streamable HTTP MCP at `/mcp`
 
-In Conductor workspaces, Studio uses `CONDUCTOR_PORT` and the bridge uses
-`CONDUCTOR_PORT + 1`, so each workspace can run concurrently.
-
 Open the connected editor URL printed by `bun run dev`. To print it again:
 
 ```sh
 bun run scripts/mcut-local-dev.ts url
 ```
 
-Then enable the `mcut-live` MCP server in Codex. Codex connects MCP tools to the
-bridge's HTTP endpoint — it does not start a second bridge. To print the MCP URL:
+The MCP URL printed by `bun run dev` works with any MCP client. To print the MCP URL:
 
 ```sh
 bun run scripts/mcut-local-dev.ts mcp-url

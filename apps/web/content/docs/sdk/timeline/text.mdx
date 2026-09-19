@@ -1,0 +1,197 @@
+---
+title: "Text and style"
+description: "Rich text runs, shared style primitives, and caption style presets."
+---
+
+## Types
+
+### TextRun
+
+```ts
+type TextRun = z.infer<typeof textRunSchema>
+```
+
+A text run as inferred from `textRunSchema`.
+
+### TextRunStyle
+
+```ts
+type TextRunStyle = z.infer<typeof textRunStyleSchema>
+```
+
+Run style overrides as inferred from `textRunStyleSchema`.
+
+### TextRunStylePatch
+
+```ts
+type TextRunStylePatch = {
+  [K in keyof TextRunStyle]?: TextRunStyle[K] | null
+}
+```
+
+A partial `TextRunStyle` for `applyRunStyle`, where `null` clears an override.
+
+### Crop
+
+```ts
+type Crop = z.infer<typeof cropSchema>
+```
+
+A crop as inferred from `cropSchema`.
+
+### Shadow
+
+```ts
+type Shadow = z.infer<typeof shadowSchema>
+```
+
+A shadow as inferred from `shadowSchema`.
+
+### Stroke
+
+```ts
+type Stroke = z.infer<typeof strokeSchema>
+```
+
+An outline as inferred from `strokeSchema`.
+
+### CaptionStylePreset
+
+```ts
+interface CaptionStylePreset {
+  id: string
+  label: string
+  style: Partial<CaptionStyle>
+}
+```
+
+A named caption look, an id, a label, and a partial `CaptionStyle` merged over a caption's current style.
+
+## Schemas
+
+### textRunSchema
+
+```ts
+const textRunSchema = z
+  .object({
+    start: z.number().int().nonnegative(),
+    end: z.number().int().positive(),
+    style: textRunStyleSchema,
+  })
+  .refine((run) => run.end > run.start, 'run end must be after its start')
+```
+
+Zod schema for a text run, a half-open character range with `end` after `start` and its style overrides.
+
+### textRunStyleSchema
+
+```ts
+const textRunStyleSchema = z.object({
+  color: z.string().optional(),
+  fontWeight: z.number().int().min(100).max(1000).optional(),
+  fontStyle: z.enum(['normal', 'italic']).optional(),
+})
+```
+
+Zod schema for the per-run overrides a text element allows, color, font weight, and font style.
+
+### cropSchema
+
+```ts
+const cropSchema = z
+  .object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    w: z.number().positive().max(1),
+    h: z.number().positive().max(1),
+  })
+  .refine((c) => c.x + c.w <= 1.0001 && c.y + c.h <= 1.0001, 'crop must stay inside the source')
+```
+
+Zod schema for a source-space crop, a normalized origin and size from 0 to 1 that stay inside the source.
+
+### shadowSchema
+
+```ts
+const shadowSchema = z.object({
+  color: z.string().default('rgba(0, 0, 0, 0.6)'),
+  blur: z.number().nonnegative().default(12),
+  offsetX: z.number().default(0),
+  offsetY: z.number().default(6),
+})
+```
+
+Zod schema for a soft drop shadow, a color, a non-negative blur, and x and y offsets, all with defaults.
+
+### strokeSchema
+
+```ts
+const strokeSchema = z.object({
+  color: z.string().default('#000000'),
+  width: z.number().positive(),
+})
+```
+
+Zod schema for an outline drawn on the owner's silhouette, a color defaulting to black and a positive width.
+
+## Constants
+
+### DEFAULT_SHADOW
+
+```ts
+const DEFAULT_SHADOW: Shadow
+```
+
+The starting shadow for text, 60 percent black with a 12 px blur offset 6 px down.
+
+### CAPTION_STYLE_PRESETS
+
+```ts
+const CAPTION_STYLE_PRESETS: CaptionStylePreset[]
+```
+
+The six built-in caption looks, classic, karaoke, spotlight, minimal, bold, and banner.
+
+## Functions
+
+### applyRunStyle
+
+```ts
+function applyRunStyle(
+  runs: readonly TextRun[],
+  start: number,
+  end: number,
+  patch: TextRunStylePatch,
+  textLength: number,
+): TextRun[]
+```
+
+Returns the runs with the patch merged into every override inside the range, splitting runs at the range boundaries and leaving runs outside it unchanged.
+
+### getRunStyleAt
+
+```ts
+function getRunStyleAt(runs: readonly TextRun[], offset: number): TextRunStyle
+```
+
+Returns the style overrides of the run that contains a character offset, or an empty object.
+
+### normalizeRuns
+
+```ts
+function normalizeRuns(runs: readonly TextRun[], textLength: number): TextRun[]
+```
+
+Returns the runs clamped to the text, sorted, stripped of empty ranges and empty styles, and merged where neighbors share a style.
+
+### shiftRunsForEdit
+
+```ts
+function shiftRunsForEdit(
+  runs: readonly TextRun[],
+  oldText: string,
+  newText: string,
+): TextRun[]
+```
+
+Returns the runs remapped across a text edit, shifting offsets after the changed region and clamping offsets inside it, so typing inside a styled run extends it.
