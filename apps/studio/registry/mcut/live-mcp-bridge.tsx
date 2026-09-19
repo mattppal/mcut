@@ -22,6 +22,7 @@ import {
   getProjectTranscript,
   getSourceSpanMs,
   listToolDefinitions,
+  parseCommand,
   summarizeProject,
   type AssetRef,
   type AudioElement,
@@ -315,7 +316,7 @@ export async function handleLiveMcpRequest(
     case "list_commands":
       return listToolDefinitions();
     case "apply_commands": {
-      const { commands } = request.payload;
+      const commands = request.payload.commands.map(parseCommand);
       engine.transact(() => {
         for (const command of commands) engine.dispatch(command);
       });
@@ -353,7 +354,7 @@ export async function handleLiveMcpRequest(
     }
     case "dispatch_command": {
       const { commandName, input } = request.payload;
-      engine.dispatch({ type: commandName, ...input });
+      engine.dispatch(parseCommand({ ...input, type: commandName }));
       return null;
     }
     case "run_action": {

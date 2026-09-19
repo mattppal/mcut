@@ -3,7 +3,7 @@ import {
   MIN_ELEMENT_DURATION_MS,
   createElementId,
   getElementLocation,
-  type AnyCommand,
+  type BuiltinCommand,
   type ElementId,
   type Project,
   type TimelineElement,
@@ -36,7 +36,7 @@ export interface SilenceCutPlan {
   /** The cuts, in source-media time, padding already applied. */
   silences: SilenceWindow[]
   /** Every command dispatched, in order; replayable on the input project. */
-  commands: AnyCommand[]
+  commands: BuiltinCommand[]
   removedMs: number
   /** The project with all cuts applied. */
   project: Project
@@ -64,6 +64,7 @@ export function planSilenceCuts(
   const location = getElementLocation(project, elementId as ElementId)
   if (!location) throw new Error(`no element "${elementId}" in project`)
   const element = location.element
+  const id = element.id
   if (element.type !== 'video' && element.type !== 'audio') {
     throw new Error(`silence cuts apply to video/audio elements, not "${element.type}"`)
   }
@@ -95,15 +96,15 @@ export function planSilenceCuts(
   })
 
   const engine = new EditorEngine({ project })
-  const commands: AnyCommand[] = []
-  const dispatch = (command: AnyCommand) => {
+  const commands: BuiltinCommand[] = []
+  const dispatch = (command: BuiltinCommand) => {
     engine.dispatch(command)
     commands.push(command)
   }
   const current = (): ClipElement => {
-    const found = getElementLocation(engine.project, elementId as ElementId)
+    const found = getElementLocation(engine.project, id)
     if (!found || (found.element.type !== 'video' && found.element.type !== 'audio')) {
-      throw new Error(`element "${elementId}" disappeared mid-plan`)
+      throw new Error(`element "${id}" disappeared mid-plan`)
     }
     return found.element
   }
@@ -114,29 +115,29 @@ export function planSilenceCuts(
     if (silence.endMs >= windowEnd) {
       dispatch({
         type: 'trimElement',
-        elementId,
+        elementId: id,
         durationMs: toTimeline(silence.startMs) - el.startMs,
       })
     } else if (silence.startMs <= windowStart) {
       const rightElementId = createElementId()
       dispatch({
         type: 'splitElement',
-        elementId,
+        elementId: id,
         atMs: toTimeline(silence.endMs),
         rightElementId,
       })
-      dispatch({ type: 'rippleDelete', elementIds: [elementId as ElementId] })
+      dispatch({ type: 'rippleDelete', elementIds: [id] })
     } else {
       dispatch({
         type: 'splitElement',
-        elementId,
+        elementId: id,
         atMs: toTimeline(silence.endMs),
         rightElementId: createElementId(),
       })
       const middleElementId = createElementId()
       dispatch({
         type: 'splitElement',
-        elementId,
+        elementId: id,
         atMs: toTimeline(silence.startMs),
         rightElementId: middleElementId,
       })

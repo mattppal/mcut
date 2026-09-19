@@ -1,6 +1,6 @@
 import {
   MIN_ELEMENT_DURATION_MS,
-  type AnyCommand,
+  type CommandOfType,
   type CaptionStyle,
   type CaptionWord,
   type TrackId,
@@ -209,7 +209,7 @@ export interface BuildApplyCaptionsOptions extends ToCaptionElementsOptions {
 export function buildApplyCaptionsCommand(
   result: TranscriptResult,
   options: BuildApplyCaptionsOptions = {},
-): AnyCommand {
+): CommandOfType<'applyCaptions'> {
   const { trackId, replace, ...rest } = options
   return {
     type: 'applyCaptions',

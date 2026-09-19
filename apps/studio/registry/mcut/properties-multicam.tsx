@@ -4,7 +4,12 @@
 
 import { useState } from "react";
 import { useEditor } from "@mcut/react";
-import { listTransitionTypes, type TimelineElement } from "@mcut/timeline";
+import {
+  TRANSITION_TYPES,
+  transitionTypeSchema,
+  type BuiltinCommand,
+  type TimelineElement,
+} from "@mcut/timeline";
 import { findSyncOffsetMs } from "@mcut/media";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,7 +26,7 @@ import { NumberField, Section } from "./inspector-fields";
 export function MulticamSection({ element }: { element: TimelineElement & { type: "multicam" } }) {
   const engine = useEditor();
   const [syncing, setSyncing] = useState(false);
-  const dispatch = (command: Record<string, unknown> & { type: string }) => {
+  const dispatch = (command: BuiltinCommand) => {
     try {
       engine.dispatch(command);
     } catch (error) {
@@ -184,16 +189,16 @@ export function MulticamSection({ element }: { element: TimelineElement & { type
         <span className="w-16 shrink-0 text-xs text-muted-foreground">Cut style</span>
         <Select
           value={element.angleTransition?.type ?? "cut"}
-          onValueChange={(type) =>
+          onValueChange={(type) => {
+            const parsed = transitionTypeSchema.safeParse(type);
             dispatch({
               type: "setMulticamAngleTransition",
               elementId: element.id,
-              transition:
-                !type || type === "cut"
-                  ? null
-                  : { type, durationMs: element.angleTransition?.durationMs ?? 500 },
-            })
-          }
+              transition: parsed.success
+                ? { type: parsed.data, durationMs: element.angleTransition?.durationMs ?? 500 }
+                : null,
+            });
+          }}
         >
           <SelectTrigger size="sm" className="w-full flex-1 text-xs">
             <SelectValue className="capitalize">
@@ -204,7 +209,7 @@ export function MulticamSection({ element }: { element: TimelineElement & { type
             <SelectItem value="cut" className="text-xs">
               Jump cut
             </SelectItem>
-            {listTransitionTypes().map((type) => (
+            {TRANSITION_TYPES.map((type) => (
               <SelectItem key={type} value={type} className="text-xs capitalize">
                 {type.replace("-", " ")}
               </SelectItem>

@@ -58,19 +58,27 @@ describe('link-aware operators', () => {
     const rightVideo = elements.find((e) => e.type === 'video' && e.id !== videoId) as VideoElement
     const rightAudio = elements.find((e) => e.type === 'audio' && e.id !== audioId) as AudioElement
 
-    expect(leftVideo.linkId).toBe(leftAudio.linkId!)
-    expect(rightVideo.linkId).toBe(rightAudio.linkId!)
+    expect(typeof leftVideo.linkId).toBe('string')
+    expect(typeof rightVideo.linkId).toBe('string')
+    expect(leftAudio.linkId).toBe(leftVideo.linkId)
+    expect(rightAudio.linkId).toBe(rightVideo.linkId)
     expect(rightVideo.linkId).not.toBe(leftVideo.linkId)
     expect(rightVideo.startMs).toBe(3000)
     expect(rightAudio.startMs).toBe(3000)
   })
 
-  test('unlinkElements clears linkId on the whole group', () => {
+  test('unlinkElements clears linkId on the whole group and changes nothing else', () => {
     const { engine, videoId, audioId } = engineWithLinkedPair()
+    const linkedVideo = getElement(engine.project, videoId)
+    const linkedAudio = getElement(engine.project, audioId)
+    if (!linkedVideo || !linkedAudio) throw new Error('missing linked pair')
+    expect(typeof linkedVideo.linkId).toBe('string')
+    expect(linkedAudio.linkId).toBe(linkedVideo.linkId)
+
     unlinkElements(engine, videoId)
-    const elements = engine.project.tracks.flatMap((t) => t.elements)
-    expect(elements.find((e) => e.id === videoId)?.linkId).toBeUndefined()
-    expect(elements.find((e) => e.id === audioId)?.linkId).toBeUndefined()
+
+    expect(getElement(engine.project, videoId)).toEqual({ ...linkedVideo, linkId: undefined })
+    expect(getElement(engine.project, audioId)).toEqual({ ...linkedAudio, linkId: undefined })
     expect(getLinkedElementIds(engine.project, videoId)).toEqual([videoId])
   })
 })

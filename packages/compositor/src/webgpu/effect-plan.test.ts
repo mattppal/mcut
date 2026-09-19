@@ -3,7 +3,6 @@ import type { Effect } from '@mcut/timeline'
 import { parseCssColor } from './color'
 import { COLOR_OP, curveToLut, hasUnsupportedEffects, planEffects } from './effect-plan'
 import { gaussianKernel, invertChrome } from './transform'
-import '../gpu-effects'
 
 const effect = (record: Record<string, unknown>): Effect =>
   ({ enabled: true, ...record }) as unknown as Effect

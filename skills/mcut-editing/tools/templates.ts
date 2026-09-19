@@ -3,7 +3,13 @@
  * schema. Every id is fixed: templates must be byte-stable across generate
  * runs (CI diffs them) and recipes reference these ids literally.
  */
-import { EditorEngine, createProject, type AnyCommand, type Project } from '@mcut/timeline'
+import {
+  EditorEngine,
+  createProject,
+  type BuiltinCommand,
+  type CommandOfType,
+  type Project,
+} from '@mcut/timeline'
 
 export interface TemplateDefinition {
   id: string
@@ -12,14 +18,14 @@ export interface TemplateDefinition {
   build: () => Project
 }
 
-function dispatchAll(project: Project, commands: AnyCommand[]): Project {
+function dispatchAll(project: Project, commands: BuiltinCommand[]): Project {
   const engine = new EditorEngine({ project })
   for (const command of commands) engine.dispatch(command)
   return engine.project
 }
 
 /** The default layouts, with fixed ids (createDefaultLayouts() randomizes them). */
-const LAYOUTS = [
+const LAYOUTS: CommandOfType<'saveLayout'>['layout'][] = [
   {
     id: 'lay-screen-cam',
     name: 'Screen + Cam',
@@ -128,7 +134,7 @@ export const TEMPLATES: TemplateDefinition[] = [
             trackId: 't-camera',
             element: { id: 'e-camera', type: 'video', startMs: 0, durationMs: 90000, assetId: 'a-camera' },
           },
-          ...LAYOUTS.map((layout) => ({ type: 'saveLayout', layout }) as AnyCommand),
+          ...LAYOUTS.map((layout) => ({ type: 'saveLayout', layout }) satisfies BuiltinCommand),
           // Bottom layer (t-default) becomes the "screen" role, top the "camera".
           { type: 'createMulticam', elementIds: ['e-screen', 'e-camera'], multicamId: 'e-multicam' },
           { type: 'removeTrack', trackId: 't-camera' },
@@ -153,7 +159,7 @@ export const TEMPLATES: TemplateDefinition[] = [
                   id: `a-photo-${n}`, kind: 'image', src: `media/photo-${n}.jpg`, name: `photo-${n}.jpg`,
                   mimeType: 'image/jpeg', width: 2000, height: 1333,
                 },
-              }) as AnyCommand,
+              }) satisfies BuiltinCommand,
           ),
           { type: 'renameTrack', trackId: 't-default', name: 'Photos' },
           ...[1, 2, 3].map(
@@ -165,7 +171,7 @@ export const TEMPLATES: TemplateDefinition[] = [
                   id: `e-photo-${n}`, type: 'image', startMs: (n - 1) * 4000, durationMs: 4000,
                   assetId: `a-photo-${n}`,
                 },
-              }) as AnyCommand,
+              }) satisfies BuiltinCommand,
           ),
         ],
       ),
