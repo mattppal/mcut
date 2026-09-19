@@ -238,6 +238,18 @@ export const captionsCommandOptionsSchema = z.object({
 
 export type CaptionsCommandOptions = z.infer<typeof captionsCommandOptionsSchema>
 
+function sourceWindowForClip(element: {
+  startMs: number
+  trimStartMs: number
+  durationMs: number
+}): { timeOffsetMs: number; sourceStartMs: number; sourceEndMs: number } {
+  return {
+    timeOffsetMs: element.startMs,
+    sourceStartMs: element.trimStartMs,
+    sourceEndMs: element.trimStartMs + element.durationMs,
+  }
+}
+
 export function buildCaptionsCommand(
   project: Project,
   transcript: TranscriptResult,
@@ -266,11 +278,7 @@ export function buildCaptionsCommand(
         `element "${options.elementId}" has a time remap; transcript times will not line up`,
       )
     }
-    scope = {
-      timeOffsetMs: element.startMs,
-      sourceStartMs: element.trimStartMs,
-      sourceEndMs: element.trimStartMs + element.durationMs,
-    }
+    scope = sourceWindowForClip(element)
   }
 
   return buildApplyCaptionsCommand(transcript, {
