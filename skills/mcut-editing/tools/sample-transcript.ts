@@ -1,15 +1,19 @@
 import type { TranscriptResult } from '@mcut/transcription'
 
+interface SampleWord {
+  text: string
+  startMs: number
+  endMs: number
+}
+
 /**
  * A fake voiceover for the talking-head template's 90s camera clip. About 30s of
  * speech with deliberate dead air. Leading silence before the first word,
  * a long pause mid-way, and trailing room tone, so the captions and
  * silence-cut recipes have something real to chew on.
  */
-function words(
-  groups: Array<{ atMs: number; text: string }>,
-): TranscriptResult['words'] {
-  const result: TranscriptResult['words'] = []
+function words(groups: Array<{ atMs: number; text: string }>): SampleWord[] {
+  const result: SampleWord[] = []
   for (const group of groups) {
     let cursor = group.atMs
     for (const text of group.text.split(' ')) {
