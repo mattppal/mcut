@@ -1,0 +1,153 @@
+---
+title: "Functions"
+description: "Subtitle formatting, caption building, and transcript search and edit functions exported by @mcut/transcription."
+---
+
+## Subtitles
+
+### toSrt
+
+```ts
+function toSrt(input: TranscriptResult | SubtitleCue[]): string
+```
+
+Formats cues, or the cues derived from a transcript, as SubRip text with comma millisecond separators.
+
+### toVtt
+
+```ts
+function toVtt(input: TranscriptResult | SubtitleCue[]): string
+```
+
+Formats cues, or the cues derived from a transcript, as WebVTT text with a `WEBVTT` header.
+
+### transcriptToCues
+
+```ts
+function transcriptToCues(result: TranscriptResult): SubtitleCue[]
+```
+
+Returns display cues from provider segments, or from grouped words, or one cue over the full duration when only text exists.
+
+## Captions
+
+### buildApplyCaptionsCommand
+
+```ts
+function buildApplyCaptionsCommand(
+  result: TranscriptResult,
+  options: BuildApplyCaptionsOptions = {},
+): CommandOfType<'applyCaptions'>
+```
+
+Returns an `applyCaptions` command whose captions come from `toCaptionElements`, targeting an optional track and replacing existing captions by default.
+
+### buildCaptionsCommand
+
+```ts
+function buildCaptionsCommand(
+  project: Project,
+  transcript: TranscriptResult,
+  options: CaptionsCommandOptions = {},
+): CommandOfType<'applyCaptions'>
+```
+
+Returns an `applyCaptions` command from validated options, resolving a caption style preset by id and scoping the transcript to one video or audio element's trimmed span, and throws for an unknown style, a missing element, or an element with a time remap.
+
+### groupWords
+
+```ts
+function groupWords(words: TranscriptWord[], options: GroupWordsOptions = {}): WordGroup[]
+```
+
+Splits timed words into caption-sized groups, starting a new group at the character, duration, or gap limit and on speaker change.
+
+### toCaptionElements
+
+```ts
+function toCaptionElements(
+  result: TranscriptResult,
+  options: ToCaptionElementsOptions = {},
+): CaptionElementInput[]
+```
+
+Converts a transcript into caption element inputs, grouping words or segments within the source range, shifting times by the offset, and clamping overlaps.
+
+## Transcript tools
+
+### mapCaptionWords
+
+```ts
+function mapCaptionWords(caption: TranscriptCaption): MappedWord[] | null
+```
+
+Locates each timed word inside the caption text in order and returns their character ranges, or `null` when the words no longer match the text.
+
+### mergeCaptions
+
+```ts
+function mergeCaptions(
+  a: TranscriptCaption,
+  b: TranscriptCaption,
+): CaptionMergeResult
+```
+
+Merges two captions in either order into one spanning both, keeping word timings only when both sides carry them.
+
+### replaceAllMatches
+
+```ts
+function replaceAllMatches(
+  captions: readonly TranscriptCaption[],
+  query: string,
+  replacement: string,
+): CaptionContentPatch[]
+```
+
+Replaces every occurrence of the query across the captions and returns one content patch per changed caption.
+
+### replaceMatch
+
+```ts
+function replaceMatch(
+  caption: TranscriptCaption,
+  match: TranscriptMatch,
+  replacement: string,
+): CaptionContentPatch
+```
+
+Replaces one search match and returns a patch where replacement tokens take over the matched words' time span in proportion to their length.
+
+### retypeWord
+
+```ts
+function retypeWord(
+  caption: TranscriptCaption,
+  wordIndex: number,
+  newText: string,
+): CaptionContentPatch | null
+```
+
+Replaces the text of one word in place while keeping its timing, or returns `null` when the words no longer map to the text.
+
+### searchCaptions
+
+```ts
+function searchCaptions(
+  captions: readonly TranscriptCaption[],
+  query: string,
+): TranscriptMatch[]
+```
+
+Runs a case-insensitive substring search across captions and returns each hit with its character range, word span, and absolute time.
+
+### splitCaptionAtWord
+
+```ts
+function splitCaptionAtWord(
+  caption: TranscriptCaption,
+  wordIndex: number,
+): CaptionSplitResult | null
+```
+
+Splits a caption immediately before the given word into two captions, or returns `null` when either half would be invalid or too short.

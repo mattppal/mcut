@@ -1,0 +1,289 @@
+---
+title: "Types"
+description: "Types and Zod schemas exported by @mcut/transcription."
+---
+
+## Types
+
+### TranscribeInput
+
+```ts
+interface TranscribeInput {
+  audio: Blob | ArrayBuffer | Uint8Array | string
+  mimeType?: string
+}
+```
+
+Audio handed to a provider as a blob, buffer, byte array, or URL string, with an optional MIME type.
+
+### TranscribeOptions
+
+```ts
+interface TranscribeOptions {
+  language?: string
+  signal?: AbortSignal
+}
+```
+
+Per-call transcription options, a language hint and an abort signal.
+
+### TranscriptionProvider
+
+```ts
+interface TranscriptionProvider {
+  readonly id: string
+  transcribe(input: TranscribeInput, options?: TranscribeOptions): Promise<TranscriptResult>
+}
+```
+
+A transcription backend with an id and a `transcribe` method that returns a normalized `TranscriptResult`.
+
+### TranscriptResult
+
+```ts
+interface TranscriptResult extends z.infer<typeof transcriptResultSchema> {}
+```
+
+Normalized transcription output as inferred from `transcriptResultSchema`, with full text, optional language and duration, timed words, and timed segments.
+
+### TranscriptSegment
+
+```ts
+interface TranscriptSegment extends z.infer<typeof transcriptSegmentSchema> {}
+```
+
+A timed span of transcript text with `text`, `startMs`, `endMs`, and an optional `speaker` label.
+
+### TranscriptWord
+
+```ts
+interface TranscriptWord extends z.infer<typeof transcriptWordSchema> {}
+```
+
+One timed word with `text`, `startMs`, `endMs`, and optional `confidence` and `speaker` fields.
+
+### SubtitleCue
+
+```ts
+interface SubtitleCue {
+  startMs: number
+  endMs: number
+  text: string
+}
+```
+
+A subtitle cue with start and end in milliseconds and its text.
+
+### BuildApplyCaptionsOptions
+
+```ts
+interface BuildApplyCaptionsOptions extends ToCaptionElementsOptions {
+  trackId?: TrackId
+  replace?: boolean
+}
+```
+
+Options for `buildApplyCaptionsCommand`, adding a target track id and a replace flag to `ToCaptionElementsOptions`.
+
+### CaptionElementInput
+
+```ts
+interface CaptionElementInput {
+  type: 'caption'
+  startMs: number
+  durationMs: number
+  text: string
+  words?: CaptionWord[]
+  style?: Partial<CaptionStyle>
+}
+```
+
+A caption element without an id, ready for insertion through the `applyCaptions` command.
+
+### GroupWordsOptions
+
+```ts
+interface GroupWordsOptions {
+  maxChars?: number
+  maxDurationMs?: number
+  maxGapMs?: number
+}
+```
+
+Limits for `groupWords`, maximum characters, maximum duration, and maximum silent gap per group.
+
+### ToCaptionElementsOptions
+
+```ts
+interface ToCaptionElementsOptions extends GroupWordsOptions {
+  style?: Partial<CaptionStyle>
+  timeOffsetMs?: number
+  sourceStartMs?: number
+  sourceEndMs?: number
+}
+```
+
+Options for `toCaptionElements`, adding a caption style, a time offset, and a source range to `GroupWordsOptions`.
+
+### WordGroup
+
+```ts
+interface WordGroup {
+  text: string
+  startMs: number
+  endMs: number
+  words: TranscriptWord[]
+}
+```
+
+A run of consecutive words with joined text and the span they cover.
+
+### CaptionContentPatch
+
+```ts
+interface CaptionContentPatch {
+  captionId: string
+  text: string
+  words?: CaptionWord[]
+}
+```
+
+A computed caption text and words change for one caption, ready for an `updateElement` patch.
+
+### CaptionMergeResult
+
+```ts
+interface CaptionMergeResult {
+  startMs: number
+  durationMs: number
+  text: string
+  words?: CaptionWord[]
+}
+```
+
+The merged caption produced by `mergeCaptions`, with start, duration, text, and optional words.
+
+### CaptionSplitResult
+
+```ts
+interface CaptionSplitResult {
+  left: { text: string; words: CaptionWord[]; durationMs: number }
+  right: {
+    startMs: number
+    durationMs: number
+    text: string
+    words: CaptionWord[]
+  }
+}
+```
+
+The two halves produced by `splitCaptionAtWord`, each with text, words, and duration.
+
+### MappedWord
+
+```ts
+interface MappedWord {
+  word: CaptionWord
+  startChar: number
+  endChar: number
+}
+```
+
+A caption word together with the character range it occupies in the caption text.
+
+### TranscriptCaption
+
+```ts
+interface TranscriptCaption {
+  id: string
+  startMs: number
+  durationMs: number
+  text: string
+  words?: CaptionWord[]
+}
+```
+
+The caption element shape the transcript tools operate on, with word timings relative to `startMs`.
+
+### TranscriptMatch
+
+```ts
+interface TranscriptMatch {
+  captionId: string
+  startChar: number
+  endChar: number
+  firstWord?: number
+  lastWord?: number
+  timeMs: number
+  endTimeMs: number
+}
+```
+
+A search hit inside one caption with its character range, the mapped word span when available, and absolute start and end times.
+
+### CaptionsCommandOptions
+
+```ts
+type CaptionsCommandOptions = z.infer<typeof captionsCommandOptionsSchema>
+```
+
+Options for `buildCaptionsCommand` as inferred from `captionsCommandOptionsSchema`.
+
+## Schemas
+
+### transcriptResultSchema
+
+```ts
+const transcriptResultSchema = z.object({
+  text: z.string(),
+  language: z.string().optional(),
+  durationMs: z.number().optional(),
+  words: z.array(transcriptWordSchema),
+  segments: z.array(transcriptSegmentSchema),
+})
+```
+
+Zod schema for a `TranscriptResult`, where each word has `text`, `startMs`, `endMs`, and optional `confidence` and `speaker`, and each segment has `text`, `startMs`, `endMs`, and optional `speaker`.
+
+### transcriptInputSchema
+
+```ts
+const transcriptInputSchema = transcriptResultSchema.extend({
+  text: z.string().default(''),
+  words: z.array(transcriptWordSchema).default([]),
+  segments: z.array(transcriptSegmentSchema).default([]),
+})
+```
+
+Zod schema for a transcript arriving from a file or an MCP tool call, where `text`, `words`, and `segments` may be omitted and default to empty.
+
+### captionsCommandOptionsSchema
+
+```ts
+const captionsCommandOptionsSchema = z.object({
+  elementId: elementIdSchema
+    .optional()
+    .describe(
+      'Scope the transcript to one video/audio element: caption only the source span the clip ' +
+        'plays, positioned at its timeline location. Without it the transcript starts at timeline 0.',
+    ),
+  styleId: z
+    .string()
+    .optional()
+    .describe('A preset id from CAPTION_STYLE_PRESETS (classic, karaoke, spotlight, ...).'),
+  maxChars: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('Soft maximum characters per caption. Default 36.'),
+  maxGapMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('A silence gap longer than this starts a new caption. Default 800.'),
+  replace: z.boolean().optional().describe('Clear existing captions on the target track first.'),
+})
+```
+
+Zod schema for `CaptionsCommandOptions`, shared by the CLI `captions` command and the `apply_captions` MCP tool.

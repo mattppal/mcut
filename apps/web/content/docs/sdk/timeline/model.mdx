@@ -99,18 +99,18 @@ Zod schema for an `ElementId`, a string with the `e-` prefix.
 ### elementInputSchema
 
 ```ts
-const elementInputSchema: z.ZodType<TimelineElement, unknown>
+const elementInputSchema: z.ZodType<TimelineElementDraft, TimelineElementInput>
 ```
 
-Zod schema for any registered element type with `id` optional, used when inserting elements.
+Zod discriminated union over the six element kinds with `id` optional, used when inserting elements.
 
 ### elementSchema
 
 ```ts
-const elementSchema: z.ZodType<TimelineElement, unknown>
+const elementSchema: z.ZodType<TimelineElement>
 ```
 
-Zod schema for any registered element type, including custom types registered at runtime.
+Zod discriminated union on `type` over the six element schemas, from `videoElementSchema` to `multicamElementSchema`.
 
 ### groupIdSchema
 

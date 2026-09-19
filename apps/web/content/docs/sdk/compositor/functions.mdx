@@ -13,6 +13,37 @@ const ROTATE_HANDLE_OFFSET = 32
 
 Distance in canvas pixels from the top edge of a box to its rotate handle.
 
+### elementRenderers
+
+```ts
+const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> } = {
+  video: renderVideo,
+  multicam: renderMulticam,
+  image: renderImage,
+  text: renderText,
+  caption: renderCaption,
+  audio: () => {},
+}
+```
+
+The closed table of element renderers keyed by `ElementType`, where each renderer receives the element of its own kind and the audio renderer draws nothing.
+
+### transitionRenderers
+
+```ts
+const transitionRenderers: { readonly [K in TransitionType]: TransitionRenderer } = {
+  dissolve,
+  'fade-black': fade('#000000'),
+  'fade-white': fade('#ffffff'),
+  'slide-left': slide(1),
+  'slide-right': slide(-1),
+  'wipe-left': wipe(false),
+  'wipe-right': wipe(true),
+}
+```
+
+The closed table of transition renderers keyed by `TransitionType`.
+
 ## Functions
 
 ### degToRad
@@ -173,14 +204,6 @@ function drawImageQuad2D(ctx: Canvas2D, quad: ImageQuad): void
 
 Draws an image quad into a 2D context in local coordinates, applying its crop and corner radius.
 
-### registerGpuEffectTypes
-
-```ts
-function registerGpuEffectTypes(): void
-```
-
-Registers the GPU-only `chroma-key`, `curves`, and `lut3d` effect types once with the timeline effect registry.
-
 ### isWebGPUSupported
 
 ```ts
@@ -213,30 +236,6 @@ function planEffects(effects: readonly Effect[] | undefined): EffectPlan
 
 Converts an effect stack into GPU passes, fusing consecutive color operations into one pass and flagging unsupported effects.
 
-### getTransitionRenderer
-
-```ts
-function getTransitionRenderer(type: string): TransitionRenderer | undefined
-```
-
-Returns the renderer registered for a transition type, or `undefined` for a hard cut.
-
-### registerTransitionRenderer
-
-```ts
-function registerTransitionRenderer(type: string, renderer: TransitionRenderer): void
-```
-
-Registers or replaces the renderer for a transition type.
-
-### getElementRenderer
-
-```ts
-function getElementRenderer(type: string): ElementRenderer | undefined
-```
-
-Returns the renderer registered for an element type, or `undefined`.
-
 ### getImageSize
 
 ```ts
@@ -253,16 +252,13 @@ function measureWith(ctx: Canvas2D): MeasureFn
 
 Returns a `MeasureFn` that measures text width with the context's `measureText` after setting the font and letter spacing.
 
-### registerElementRenderer
+### renderElementLayer
 
 ```ts
-function registerElementRenderer<E extends TimelineElement>(
-  type: E['type'] | (string & {}),
-  renderer: ElementRenderer<E>,
-): void
+const renderElementLayer: ElementRenderer = (element, context) => renderTyped(element.type, element, context)
 ```
 
-Registers or replaces the renderer for an element type.
+Draws one element by dispatching on its `type` to the matching entry of `elementRenderers`.
 
 ### applyTextTransform
 
