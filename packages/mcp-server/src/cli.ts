@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * Stdio entry point:
- *
- *   bunx @mcut/mcp-server [path/to/project.json]
- *
- * The project file (default `project.mcut.json`, or $MCUT_PROJECT) is created
- * when missing and rewritten after every successful edit.
- */
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'

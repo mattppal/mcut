@@ -15,10 +15,13 @@ export interface BoxResizeResult {
 const MIN_SCALE = 0.05
 const MIN_BOX_SIZE = 8
 
-/** Keep magnitude ≥ MIN_SCALE, preserving sign (negative scale = flip). */
-const clampScale = (value: number): number => {
+const clampScaleMagnitudeKeepingSign = (value: number): number => {
   const sign = value < 0 ? -1 : 1
   return sign * Math.max(MIN_SCALE, Math.abs(value))
+}
+
+function wrapDegreesToSignedHalfTurn(degrees: number): number {
+  return ((((degrees + 180) % 360) + 360) % 360) - 180
 }
 
 function pointToLocal(obb: OBB, point: GesturePoint): GesturePoint {
@@ -39,7 +42,6 @@ function localDeltaToCanvas(obb: OBB, delta: GesturePoint): GesturePoint {
   }
 }
 
-/** Translate gesture: offset the base transform by the pointer delta. */
 export function applyMove(base: Transform, start: GesturePoint, current: GesturePoint): Transform {
   return {
     ...base,
@@ -48,7 +50,6 @@ export function applyMove(base: Transform, start: GesturePoint, current: Gesture
   }
 }
 
-/** Rotate gesture around the element center. */
 export function applyRotate(
   base: Transform,
   obb: OBB,
@@ -57,16 +58,12 @@ export function applyRotate(
 ): Transform {
   const startAngle = Math.atan2(start.y - obb.cy, start.x - obb.cx)
   const currentAngle = Math.atan2(current.y - obb.cy, current.x - obb.cx)
-  let rotation = base.rotation + ((currentAngle - startAngle) * 180) / Math.PI
-  rotation = ((((rotation + 180) % 360) + 360) % 360) - 180 // normalize to [-180, 180)
+  const rotation = wrapDegreesToSignedHalfTurn(
+    base.rotation + ((currentAngle - startAngle) * 180) / Math.PI,
+  )
   return { ...base, rotation: Math.round(rotation * 10) / 10 }
 }
 
-/**
- * Resize gesture. Corner handles scale uniformly; edge handles scale one
- * axis. Pointer positions are mapped into the element's local (un-rotated)
- * space so resizing behaves intuitively on rotated elements.
- */
 export function applyResize(
   base: Transform,
   obb: OBB,
@@ -80,11 +77,11 @@ export function applyResize(
 
   if (!preserveAspect && (handle === 'e' || handle === 'w')) {
     const factor = localStart.x === 0 ? 1 : localCurrent.x / localStart.x
-    return { ...base, scaleX: clampScale(base.scaleX * factor) }
+    return { ...base, scaleX: clampScaleMagnitudeKeepingSign(base.scaleX * factor) }
   }
   if (!preserveAspect && (handle === 'n' || handle === 's')) {
     const factor = localStart.y === 0 ? 1 : localCurrent.y / localStart.y
-    return { ...base, scaleY: clampScale(base.scaleY * factor) }
+    return { ...base, scaleY: clampScaleMagnitudeKeepingSign(base.scaleY * factor) }
   }
   const startDistance = preserveAspect && (handle === 'e' || handle === 'w')
     ? Math.abs(localStart.x)
@@ -112,8 +109,8 @@ export function applyResize(
   }
   return {
     ...base,
-    scaleX: clampScale(base.scaleX * factor),
-    scaleY: clampScale(base.scaleY * factor),
+    scaleX: clampScaleMagnitudeKeepingSign(base.scaleX * factor),
+    scaleY: clampScaleMagnitudeKeepingSign(base.scaleY * factor),
   }
 }
 

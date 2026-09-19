@@ -643,9 +643,8 @@ describe('createMcutMcpServer', () => {
     const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp`, {
       headers: { Origin: 'http://localhost:3000' },
     })
-    socket.on('error', () => {
-      // Expected: the bridge rejects the unauthenticated WebSocket upgrade.
-    })
+    const ignoreRejectedUpgrade = () => {}
+    socket.on('error', ignoreRejectedUpgrade)
 
     const result = await new Promise<'open' | 'closed'>((resolve) => {
       socket.once('open', () => resolve('open'))

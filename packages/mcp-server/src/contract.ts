@@ -27,12 +27,13 @@ export function parseMcpToolProfile(value: unknown): McpToolProfile {
 
 export const operatorToolName = (id: OperatorId) => `operator_${id.replace(/[^A-Za-z0-9_-]/g, '_')}`
 
-/** Zod schema → MCP tool `inputSchema`, with a plain-object fallback. */
+const plainObjectJsonSchema = { type: 'object' }
+
 export const toToolInputSchema = (schema: z.ZodType): Record<string, unknown> => {
   try {
     return z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any' })
   } catch {
-    return { type: 'object' }
+    return plainObjectJsonSchema
   }
 }
 
@@ -44,7 +45,6 @@ const ELEMENT_ID_INPUT = elementIdSchema
 
 const TOOL_INPUT = z.record(z.string(), z.unknown()).default({})
 
-/** Every static tool an agent can see, in the public (tools.json) order. */
 export const MCP_AGENT_TOOL_NAMES = [
   'get_summary',
   'get_project',
@@ -228,7 +228,6 @@ const toolDefinition = (name: McpAgentToolName): McpToolDefinition => ({
 export const MCP_AGENT_TOOL_DEFINITIONS: McpToolDefinition[] =
   MCP_AGENT_TOOL_NAMES.map(toolDefinition)
 
-/** Tools the live bridge handles in the browser; not on the published server. */
 export const MCP_BRIDGE_ONLY_TOOL_NAMES = [
   'list_commands',
   'apply_commands',
@@ -272,11 +271,9 @@ const staticToolNames = new Set<string>(MCP_SERVER_STATIC_TOOL_NAMES)
 export const isMcpServerStaticToolName = (name: string): name is McpServerStaticToolName =>
   staticToolNames.has(name)
 
-/** Static tools registered by the published MCP server, in registration order. */
 export const MCP_SERVER_STATIC_TOOLS: McpToolDefinition[] =
   MCP_SERVER_STATIC_TOOL_NAMES.map(toolDefinition)
 
-/** Editor operators as MCP tool definitions (`operator_<id>`). */
 function operatorToolDefinitions(): McpToolDefinition[] {
   return operatorIds.map((id) => {
     const operator: OperatorDefinition = operators[id]
@@ -288,12 +285,10 @@ function operatorToolDefinitions(): McpToolDefinition[] {
   })
 }
 
-/** The exact tool list the published MCP server registers. */
 export function listServerToolDefinitions(): McpToolDefinition[] {
   return [...MCP_SERVER_STATIC_TOOLS, ...operatorToolDefinitions(), ...listToolDefinitions()]
 }
 
-/** The tool surface for a given profile, as served by Studio's /tools.json. */
 export function listMcpToolDefinitions(profile: McpToolProfile): McpToolDefinition[] {
   if (profile === 'commands') return listToolDefinitions()
   if (profile === 'agent') return MCP_AGENT_TOOL_DEFINITIONS

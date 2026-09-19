@@ -81,7 +81,7 @@ export { getFrameRequests, type FrameRequest } from './frame-requests'
 export {
   captureThumbnailTemplate,
   expandThumbnailTemplate,
-  findThumbnailTrack,
+  findThumbnailTracks,
   THUMBNAIL_FRAME_COUNT,
   THUMBNAIL_TEMPLATES,
   THUMBNAIL_TRACK_NAME,

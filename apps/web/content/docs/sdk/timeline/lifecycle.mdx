@@ -1,35 +1,7 @@
 ---
-title: "Project lifecycle and element types"
-description: "Project creation, parsing, and migration, plus the element type registry."
+title: "Project lifecycle"
+description: "Project creation, parsing, and migration."
 ---
-
-## Types
-
-### ElementTypeEntry
-
-```ts
-interface ElementTypeEntry {
-  type: string
-  fullSchema: z.ZodType
-  inputSchema: z.ZodType
-  keyframeable: readonly string[]
-  onSplit?: (context: {
-    element: Record<string, unknown>
-    left: Record<string, unknown>
-    right: Record<string, unknown>
-    offsetMs: number
-  }) => void
-  validate?: (project: unknown, element: Record<string, unknown>) => void
-  describe?: (element: Record<string, unknown>, project: unknown) => string
-  frameRequests?: (
-    project: unknown,
-    element: Record<string, unknown>,
-    timelineMs: number,
-  ) => Array<{ assetId: string; sourceTimeMs: number }>
-}
-```
-
-A registered element type, its composed schemas, keyframeable properties, and optional split, validate, describe, and frame request hooks.
 
 ## Constants
 
@@ -51,22 +23,6 @@ function migrateProject(data: unknown): unknown
 
 Upgrades a persisted project document to `PROJECT_VERSION`, treating documents without a version as version 1, and throws `ProjectFormatError` for invalid or newer documents.
 
-### getElementType
-
-```ts
-function getElementType(type: string): ElementTypeEntry | undefined
-```
-
-Returns the registry entry for an element type, or `undefined`.
-
-### listElementTypes
-
-```ts
-function listElementTypes(): ElementTypeEntry[]
-```
-
-Returns every registered element type entry.
-
 ### createProject
 
 ```ts
@@ -82,14 +38,6 @@ function parseProject(data: unknown): Project
 ```
 
 Migrates an untrusted project document to the current format and validates it, throwing `ProjectFormatError` for documents from a newer version.
-
-### registerTimelineElementType
-
-```ts
-function registerTimelineElementType(config: ElementTypeConfig): void
-```
-
-Registers a custom element type by composing its own fields with the shared id, type, and timing fields, and throws when the type already exists.
 
 ## Classes
 

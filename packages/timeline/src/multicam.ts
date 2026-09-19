@@ -4,20 +4,11 @@ import type { MulticamElement, MulticamSource, Project } from './model'
 import { getSourceTimeMs } from './speed'
 import type { TransitionType } from './transitions'
 
-/**
- * Multicam helpers: a multicam element is N synced sources + an `angles`
- * switch list ({ atMs, layoutId } from each cut until the next). What
- * switches is the LAYOUT — "screen + me" vs "just me" are compositions of
- * the same sources — which keeps cuts as plain data an agent can read and
- * write.
- */
-
 export interface AngleCut {
   atMs: number
   layoutId: string
 }
 
-/** Index into `angles` of the cut active at element-local `localMs`. */
 export function getActiveAngleIndex(angles: readonly AngleCut[], localMs: number): number {
   let active = 0
   for (let i = 0; i < angles.length; i++) {
@@ -27,7 +18,6 @@ export function getActiveAngleIndex(angles: readonly AngleCut[], localMs: number
   return active
 }
 
-/** The layout active at element-local `localMs` (null if id is dangling). */
 export function getActiveLayout(
   project: Project,
   element: MulticamElement,
@@ -39,18 +29,12 @@ export function getActiveLayout(
   return getLayout(project.layouts, cut.layoutId)
 }
 
-/**
- * Source media time for one multicam source at an absolute timeline time.
- * The element-level timeMap (speed) applies first, then the source's trim.
- * Clamped ≥ 0 — render and frame-request enumeration must agree exactly.
- */
 export function getMulticamSourceTimeMs(
   element: MulticamElement,
   source: MulticamSource,
   timelineMs: number,
 ): number {
   const localMs = timelineMs - element.startMs
-  // getSourceTimeMs handles the timeMap; feed it the source's own trim.
   const mapped = getSourceTimeMs(
     { startMs: element.startMs, durationMs: element.durationMs, trimStartMs: source.trimStartMs, timeMap: element.timeMap },
     localMs,
@@ -58,11 +42,6 @@ export function getMulticamSourceTimeMs(
   return Math.max(0, mapped)
 }
 
-/**
- * Split an angle list at element-local `offsetMs` for a clip split: the left
- * half keeps cuts before the offset; the right half starts with the active
- * layout at the cut and rebases later cuts.
- */
 export function splitAngles(
   angles: readonly AngleCut[],
   offsetMs: number,
@@ -78,30 +57,19 @@ export function splitAngles(
   return { left: left.length > 0 ? left : [{ atMs: 0, layoutId: angles[0]!.layoutId }], right }
 }
 
-/** The source whose audio plays (explicit key, else nothing). */
 export function getMulticamAudioSource(element: MulticamElement): MulticamSource | null {
   if (!element.audioSource) return null
   return element.sources.find((s) => s.key === element.audioSource) ?? null
 }
 
-/** An angle-cut blend window active at some element-local time. */
 export interface AngleTransitionWindow {
   type: TransitionType
-  /** Effective window length: the configured duration, clamped per cut. */
   durationMs: number
-  /** Element-local time of the cut the window centers on. */
   cutMs: number
   fromLayoutId: string
   toLayoutId: string
 }
 
-/**
- * The angle-cut transition window containing element-local `localMs`, or
- * null (no `angleTransition`, or between windows). Each window is centered
- * on its cut and clamped to half the span to the neighboring cuts (and the
- * element bounds), so consecutive windows never overlap — render, frame
- * requests, and export must all enumerate through this to agree.
- */
 export function getAngleTransitionAt(
   element: MulticamElement,
   localMs: number,

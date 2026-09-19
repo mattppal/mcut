@@ -1,0 +1,154 @@
+---
+title: "Operators"
+description: "The closed operator table, its ids, and the functions that list and run operators."
+---
+
+## Types
+
+### EditorOperatorContext
+
+```ts
+interface EditorOperatorContext {
+  engine: EditorEngine
+}
+```
+
+The context passed to operators, the `EditorEngine` to act on.
+
+### EnabledResult
+
+```ts
+type EnabledResult = boolean | { enabled: boolean; reason?: string }
+```
+
+The result of an operator's enabled check, a boolean or an object with an optional reason for being disabled.
+
+### ListedEditorOperator
+
+```ts
+interface ListedEditorOperator {
+  id: OperatorId
+  label: string
+  description: string
+  category: OperatorCategory
+  enabled: boolean
+  disabledReason?: string
+  inputSchema: z.ZodType<unknown, unknown>
+}
+```
+
+An operator as reported by `listOperators`, with its enabled state and disabled reason resolved for a context.
+
+### OperatorCategory
+
+```ts
+type OperatorCategory =
+  | 'playback'
+  | 'selection'
+  | 'clipboard'
+  | 'edit'
+  | 'track'
+  | 'keyframes'
+  | 'markers'
+  | 'multicam'
+  | 'media'
+  | 'view'
+```
+
+The menu category an operator belongs to.
+
+### OperatorDefinition
+
+```ts
+interface OperatorDefinition<Input = unknown, Output = unknown> {
+  label: string
+  description: string
+  category: OperatorCategory
+  inputSchema: z.ZodType<Input, unknown>
+  enabled?(context: EditorOperatorContext, input: Input): EnabledResult
+  run(context: EditorOperatorContext, input: Input): Output | Promise<Output>
+}
+```
+
+One entry of the `operators` table, a label, description, category, Zod input schema, optional enabled check, and run function that receives the engine.
+
+### OperatorId
+
+```ts
+type OperatorId = keyof typeof operators
+```
+
+The union of the keys of the `operators` table, such as `playback.toggle` or `edit.undo`.
+
+## Constants
+
+### operatorIds
+
+```ts
+const operatorIds: readonly OperatorId[]
+```
+
+Every key of the `operators` table in table order.
+
+### operators
+
+```ts
+const operators: { [K in OperatorId]: OperatorDefinition }
+```
+
+The closed table of built-in operators keyed by id, listed on the [Operators reference](/docs/reference/operators).
+
+## Functions
+
+### enabledStatus
+
+```ts
+function enabledStatus(
+  operator: OperatorDefinition,
+  context: EditorOperatorContext,
+  input: unknown,
+): { enabled: boolean; reason?: string }
+```
+
+Runs an operator's enabled check and normalizes the result to an object, reporting a thrown error as disabled with its message as the reason.
+
+### listOperators
+
+```ts
+function listOperators(context: EditorOperatorContext): ListedEditorOperator[]
+```
+
+Returns every operator in the table with its enabled state resolved for the given context.
+
+### parseOperatorId
+
+```ts
+function parseOperatorId(value: string): OperatorId
+```
+
+Narrows a string to an `OperatorId` and throws `OperatorError` with code `unknown-operator` when the table has no such key.
+
+### runOperator
+
+```ts
+async function runOperator(
+  id: OperatorId,
+  context: EditorOperatorContext,
+  input: unknown = {},
+): Promise<unknown>
+```
+
+Validates the input against the operator's schema, checks that it is enabled, and runs it, throwing `OperatorError` with code `invalid-input` or `operator-disabled` otherwise.
+
+## Classes
+
+### OperatorError
+
+```ts
+class OperatorError extends Error {
+  readonly code: string
+  constructor(code: string, message: string, options?: { cause?: unknown })
+}
+```
+
+Error thrown by `parseOperatorId` and `runOperator` with a `code` of `unknown-operator`, `invalid-input`, or `operator-disabled`, and by operator bodies and `planSilenceCuts` with `invalid-payload`, `unknown-asset`, `unknown-element`, or `out-of-bounds`.

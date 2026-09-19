@@ -1,42 +1,59 @@
 ---
 title: "Engine, commands, and selectors"
-description: "The editor engine, the command registry, and read-only project selectors."
+description: "The editor engine, the command table, and read-only project selectors."
 ---
 
 ## Types
 
-### AnyCommand
+### BuiltinCommand
 
 ```ts
-type AnyCommand = { type: string } & Record<string, unknown>
+type BuiltinCommand = {
+  [K in CommandType]: { type: K } & z.input<CommandDefinitions[K]['payloadSchema']>
+}[CommandType]
 ```
 
-A serializable command object, a `type` plus its payload fields.
+The closed union of every command the engine accepts, one arm per entry of the command table, each a `type` plus the input shape of that command's payload schema.
+
+### CommandOfType
+
+```ts
+type CommandOfType<K extends CommandType> = Extract<BuiltinCommand, { type: K }>
+```
+
+The one arm of `BuiltinCommand` whose `type` is `K`.
+
+### CommandType
+
+```ts
+type CommandType = keyof CommandDefinitions
+```
+
+The union of command type names, the keys of the command table.
 
 ### CommandDefinition
 
 ```ts
-interface CommandDefinition<TPayload = unknown> {
-  type: string
+interface CommandDefinition {
+  type: CommandType
   description: string
-  payloadSchema: z.ZodType<TPayload, unknown>
-  reduce: (project: Project, payload: TPayload) => Project
+  payloadSchema: z.ZodObject
 }
 ```
 
-A command's type, description, Zod payload schema, and pure reducer from project and payload to a new project.
+A command's type, description, and Zod payload schema, as listed by `listCommands`.
 
 ### ToolDefinition
 
 ```ts
 interface ToolDefinition {
-  name: string
+  name: CommandType
   description: string
-  inputSchema: Record<string, unknown>
+  inputSchema: z.core.JSONSchema.BaseSchema
 }
 ```
 
-An MCP tool entry with a name, description, and JSON Schema input, as produced by `listToolDefinitions`.
+An MCP tool entry with a command name, description, and JSON Schema input, as produced by `listToolDefinitions`.
 
 ### DispatchOptions
 
@@ -137,26 +154,18 @@ An element with its track, track index, and index within the track.
 ### applyCommand
 
 ```ts
-function applyCommand(project: Project, command: AnyCommand): Project
+function applyCommand(project: Project, command: unknown): Project
 ```
 
-Validates a command against its registered definition and returns the new project it produces, throwing `CommandError` on rejection.
-
-### getCommandDefinition
-
-```ts
-function getCommandDefinition(type: string): CommandDefinition<unknown> | undefined
-```
-
-Returns the registered definition for a command type, or `undefined`.
+Looks the command up in the table by its `type`, validates its payload, and returns the new project it produces, throwing `CommandError` on rejection.
 
 ### listCommands
 
 ```ts
-function listCommands(): CommandDefinition<unknown>[]
+function listCommands(): CommandDefinition[]
 ```
 
-Returns every registered command definition, built-in and custom.
+Returns every command definition in table order.
 
 ### listToolDefinitions
 
@@ -164,15 +173,23 @@ Returns every registered command definition, built-in and custom.
 function listToolDefinitions(): ToolDefinition[]
 ```
 
-Returns every registered command as an MCP-shaped tool definition with its payload schema converted to JSON Schema.
+Returns every command as an MCP-shaped tool definition with its payload schema converted to JSON Schema.
 
-### registerCommand
+### parseCommand
 
 ```ts
-function registerCommand<TPayload>(definition: CommandDefinition<TPayload>): void
+function parseCommand(value: unknown): BuiltinCommand
 ```
 
-Registers a custom command definition and throws when its type is already registered.
+Narrows an unknown value to a `BuiltinCommand` by checking its `type` against the table and parsing the payload, throwing `CommandError` with code `invalid-payload` or `unknown-command` otherwise.
+
+### assertNever
+
+```ts
+function assertNever(value: never): never
+```
+
+Throws for a value the type checker has already excluded, closing the `default` arm of a switch over a closed union.
 
 ### canPlace
 
@@ -302,7 +319,7 @@ class EditorEngine {
   constructor(options: EditorEngineOptions = {})
   get project(): Project
   get selection(): SelectionState
-  dispatch(command: AnyCommand, options: DispatchOptions = {}): Project
+  dispatch(command: BuiltinCommand, options: DispatchOptions = {}): Project
   transact(fn: () => void, options: TransactionOptions = {}): void
   beginTransaction(): void
   endTransaction(): void

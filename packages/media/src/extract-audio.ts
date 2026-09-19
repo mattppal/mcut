@@ -8,14 +8,11 @@ import {
 import { inputFor, type MediaSourceLike } from './probe'
 
 export interface ExtractAudioOptions {
-  /** Default 16000 — small uploads, ideal for speech-to-text APIs. */
   sampleRate?: number
-  /** Default 1 (mono). */
   numberOfChannels?: number
   onProgress?: (progress: number) => void
 }
 
-/** The file's audio exists but this browser has no decoder for its codec. */
 export class AudioNotDecodableError extends Error {
   constructor(codec: string | undefined) {
     super(
@@ -43,8 +40,6 @@ async function runWavConversion(
       showWarnings: false,
     })
     if (!conversion.isValid) {
-      // The only discard we didn't ask for is the audio track itself —
-      // surface WHY instead of Mediabunny's generic invalid-conversion error.
       const audioDiscard = conversion.discardedTracks.find((d) => d.track.type === 'audio')
       if (audioDiscard?.reason === 'undecodable_source_codec') {
         throw new AudioNotDecodableError(audioDiscard.track.codec ?? undefined)
@@ -63,16 +58,6 @@ async function runWavConversion(
   }
 }
 
-/**
- * Extract a file's audio track to a PCM WAV blob, fully client-side.
- * Returns `null` when the file has no audio track. The default
- * 16 kHz/mono output keeps uploads to transcription APIs small.
- *
- * Resilience: when the resampled conversion fails (Mediabunny's resampler /
- * channel mixer can throw "Assertion failed." on unusual source layouts),
- * retry once WITHOUT resampling — the WAV is bigger but transcription APIs
- * accept any PCM rate. Undecodable codecs fail fast with a clear error.
- */
 export async function extractAudioToWav(
   src: MediaSourceLike,
   options: ExtractAudioOptions = {},
@@ -85,18 +70,16 @@ export async function extractAudioToWav(
     probe.dispose()
   }
 
+  const resampled: ConversionAudioOptions = {
+    codec: 'pcm-s16',
+    sampleRate: options.sampleRate ?? 16_000,
+    numberOfChannels: options.numberOfChannels ?? 1,
+  }
+  const atSourceRateAndChannels: ConversionAudioOptions = { codec: 'pcm-s16' }
   try {
-    return await runWavConversion(
-      src,
-      {
-        codec: 'pcm-s16',
-        sampleRate: options.sampleRate ?? 16_000,
-        numberOfChannels: options.numberOfChannels ?? 1,
-      },
-      options.onProgress,
-    )
+    return await runWavConversion(src, resampled, options.onProgress)
   } catch (error) {
     if (error instanceof AudioNotDecodableError) throw error
-    return await runWavConversion(src, { codec: 'pcm-s16' }, options.onProgress)
+    return await runWavConversion(src, atSourceRateAndChannels, options.onProgress)
   }
 }

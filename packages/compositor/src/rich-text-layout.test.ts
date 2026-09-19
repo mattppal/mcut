@@ -5,7 +5,6 @@ import { layoutTextBlock } from './text'
 import { FakeContext2D } from './test-utils'
 import type { Canvas2D } from './types'
 
-/** Deterministic measure: 10px/char normal, 20px/char for bold (700) fonts. */
 const measure = (text: string, font: string) =>
   text.length * (font.includes('700') ? 20 : 10)
 
@@ -28,21 +27,20 @@ describe('layoutTextBlock with runs', () => {
     expect(layout.lines).toHaveLength(1)
     const segments = layout.lines[0]!.segments!
     expect(segments.map((s) => s.text)).toEqual(['hello ', 'world', '!'])
-    expect(segments[1]).toMatchObject({ width: 100, color: '#f00' }) // 5 chars × 20
+    expect(segments[1]).toMatchObject({ width: 100, color: '#f00' })
     expect(segments[0]!.width).toBe(60)
     expect(layout.lines[0]!.width).toBe(60 + 100 + 10)
   })
 
   test('bold segments affect wrapping inside a box', () => {
-    // "aaa bbb" — bold doubles bbb's width so it no longer fits beside aaa.
     const runs: TextRun[] = [{ start: 4, end: 7, style: { fontWeight: 700 } }]
     const plain = layoutTextBlock(measure, 'aaa bbb', style, { box: { width: 90, overflow: 'clip' } })
-    expect(plain.lines).toHaveLength(1) // 7 chars × 10 = 70 ≤ 90
+    expect(plain.lines).toHaveLength(1)
     const rich = layoutTextBlock(measure, 'aaa bbb', style, {
       box: { width: 90, overflow: 'clip' },
       runs,
     })
-    expect(rich.lines).toHaveLength(2) // "aaa " 40 + bold "bbb" 60 = 100 > 90
+    expect(rich.lines).toHaveLength(2)
     expect(rich.lines.map((l) => l.text)).toEqual(['aaa', 'bbb'])
   })
 
@@ -102,7 +100,7 @@ describe('runs render with per-segment fill', () => {
     const ctx = new FakeContext2D()
     renderFrame(ctx as unknown as Canvas2D, project, 1000, {})
     const fills = ctx.callsTo('fillText')
-    expect(fills).toHaveLength(2) // "Ti" + "tle"
+    expect(fills).toHaveLength(2)
     expect(fills[0]!.fillStyle).toBe('#ff0000')
     expect(fills[1]!.fillStyle).toBe('#ffffff')
   })

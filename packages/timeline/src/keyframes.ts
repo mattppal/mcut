@@ -4,24 +4,6 @@ import { assertNever } from './errors'
 import type { TimelineElement } from './model'
 import { valueAt } from './value-at'
 
-/**
- * Keyframes on CapCut/Premiere primitives: per-clip "fixed effect" properties
- * (Motion / Opacity / Volume), armed per property, with temporal
- * interpolation stored on the outgoing keyframe.
- *
- * Design decision: this closed property enum covers FIXED effects only.
- * Anything added later that has its own animatable parameters (effect
- * instances, masks) carries its own keyframe map next to those parameters —
- * keyframes live with the thing they animate — rather than widening this
- * enum with paths like `effects.0.amount`.
- */
-
-/**
- * Premiere fixed-effect naming: Motion (position/scale/rotation), Opacity,
- * Volume — plus `blur`, a uniform gaussian blur in project px that powers
- * blur-in/out reveals. Its static value is always 0; the resolved value
- * composes ON TOP of any static blur in the element's effect stack.
- */
 export const animatablePropertySchema = z.enum([
   'position.x',
   'position.y',
@@ -31,7 +13,6 @@ export const animatablePropertySchema = z.enum([
   'opacity',
   'blur',
   'volume',
-  // Text tracking in px (title widen/tighten reveals). Text elements only.
   'letterSpacing',
 ])
 
@@ -45,11 +26,6 @@ function isAnimatableProperty(value: string): value is AnimatableProperty {
   return ANIMATABLE_PROPERTY_NAMES.has(value)
 }
 
-/**
- * Temporal interpolation toward the NEXT keyframe (Premiere's interpolation
- * menu / CapCut's curve presets). Named easings are cubic-bezier aliases;
- * `hold` is a step.
- */
 export const easingSchema = z.union([
   z.enum(['linear', 'hold', 'easeIn', 'easeOut', 'easeInOut']),
   z.object({ cubicBezier: z.tuple([z.number(), z.number(), z.number(), z.number()]) }),
@@ -58,23 +34,16 @@ export const easingSchema = z.union([
 export type Easing = z.infer<typeof easingSchema>
 
 export const keyframeSchema = z.object({
-  /** Element-local ms (relative to `startMs`): moving a clip moves its animation. */
   timeMs: z.number().int().nonnegative(),
   value: z.number(),
-  /** Outgoing interpolation; default linear. */
   easing: easingSchema.optional(),
 })
 
 export type Keyframe = z.infer<typeof keyframeSchema>
 
-/** Sorted-by-time, unique-time per property (enforced by reducers). */
 export const keyframesSchema = z.partialRecord(animatablePropertySchema, z.array(keyframeSchema))
 
 export type KeyframeMap = z.infer<typeof keyframesSchema>
-
-// ---------------------------------------------------------------------------
-// Easing evaluation
-// ---------------------------------------------------------------------------
 
 type NamedBezierEasing = Exclude<Extract<Easing, string>, 'linear' | 'hold'>
 
@@ -84,12 +53,10 @@ const NAMED_BEZIERS: Record<NamedBezierEasing, readonly [number, number, number,
   easeInOut: [0.42, 0, 0.58, 1],
 }
 
-/** y of a CSS-style cubic-bezier timing curve at progress `x` (both 0–1). */
 export function cubicBezierAt(points: readonly [number, number, number, number], x: number): number {
   const [x1, y1, x2, y2] = points
   if (x <= 0) return 0
   if (x >= 1) return 1
-  // Solve the parametric t for the given x with Newton + bisection fallback.
   const sampleX = (t: number) =>
     3 * t * (1 - t) * (1 - t) * x1 + 3 * t * t * (1 - t) * x2 + t * t * t
   const sampleY = (t: number) =>
@@ -116,7 +83,6 @@ export function cubicBezierAt(points: readonly [number, number, number, number],
   return sampleY(t)
 }
 
-/** Eased progress (0–1) for linear progress `t` (0–1). */
 export function evaluateEasing(easing: Easing | undefined, t: number): number {
   if (!easing || easing === 'linear') return t
   if (easing === 'hold') return 0
@@ -124,21 +90,12 @@ export function evaluateEasing(easing: Easing | undefined, t: number): number {
   return cubicBezierAt(NAMED_BEZIERS[easing], t)
 }
 
-// ---------------------------------------------------------------------------
-// Track interpolation
-// ---------------------------------------------------------------------------
-
-/**
- * Value of a keyframe track at element-local `localMs`. Premiere semantics:
- * before the first keyframe → first value; after the last → last value.
- */
 export function interpolateTrack(track: readonly Keyframe[], localMs: number): number {
   const first = track[0]
   if (first === undefined) return NaN
   if (localMs <= first.timeMs) return first.value
   const last = valueAt(track, track.length - 1)
   if (localMs >= last.timeMs) return last.value
-  // Binary search for the segment containing localMs.
   let lo = 0
   let hi = track.length - 1
   while (hi - lo > 1) {
@@ -153,10 +110,6 @@ export function interpolateTrack(track: readonly Keyframe[], localMs: number): n
   const eased = evaluateEasing(from.easing, progress)
   return from.value + (to.value - from.value) * eased
 }
-
-// ---------------------------------------------------------------------------
-// Property access + element resolution
-// ---------------------------------------------------------------------------
 
 const MOTION_PROPERTIES: readonly AnimatableProperty[] = [
   'position.x',
@@ -193,7 +146,6 @@ export function elementSupportsProperty(
   return animatableProperties(element).includes(property)
 }
 
-/** The static (un-animated) value of a fixed-effect property. */
 export function getStaticValue(element: TimelineElement, property: AnimatableProperty): number {
   switch (property) {
     case 'position.x':
@@ -209,8 +161,6 @@ export function getStaticValue(element: TimelineElement, property: AnimatablePro
     case 'opacity':
       return 'opacity' in element ? element.opacity : NaN
     case 'blur':
-      // Animated blur composes on top of the static effect stack; its
-      // resting value is "no extra blur".
       return elementSupportsProperty(element, 'blur') ? 0 : NaN
     case 'volume':
       return 'volume' in element ? element.volume : NaN
@@ -226,7 +176,6 @@ export function getKeyframes(
   return ('keyframes' in element ? element.keyframes?.[property] : undefined) ?? []
 }
 
-/** Armed = has a keyframe track (Premiere stopwatch on). */
 export function hasKeyframes(element: TimelineElement, property?: AnimatableProperty): boolean {
   const keyframes = 'keyframes' in element ? element.keyframes : undefined
   if (!keyframes) return false
@@ -234,7 +183,6 @@ export function hasKeyframes(element: TimelineElement, property?: AnimatableProp
   return Object.values(keyframes).some((track) => (track?.length ?? 0) > 0)
 }
 
-/** Is the playhead exactly on a keyframe (drives the diamond's filled state)? */
 export function isOnKeyframe(
   element: TimelineElement,
   property: AnimatableProperty,
@@ -245,10 +193,6 @@ export function isOnKeyframe(
   return getKeyframes(element, property).some((k) => Math.abs(k.timeMs - localMs) <= toleranceMs)
 }
 
-/**
- * Property value at an absolute timeline time: the keyframe track when armed,
- * the static value otherwise.
- */
 export function getAnimatedValue(
   element: TimelineElement,
   property: AnimatableProperty,
@@ -259,13 +203,6 @@ export function getAnimatedValue(
   return interpolateTrack(track, timelineMs - element.startMs)
 }
 
-/**
- * The element with every armed property resolved at `timelineMs` — the single
- * seam through which preview, export, hit-testing, and the selection overlay
- * all see animation. Fast path: returns the SAME reference when the element
- * has no keyframes, so un-animated projects pay nothing.
- */
-/** Keep animated scale away from the degenerate 0 while allowing flips. */
 function clampScale(value: number): number {
   if (Math.abs(value) >= 0.001) return value
   return value < 0 ? -0.001 : 0.001
@@ -325,7 +262,6 @@ export function resolveAnimatedElement<E extends TimelineElement>(
   }
   if (transform && 'transform' in resolved) resolved.transform = transform
   if (blurRadius !== undefined && blurRadius > 0.01 && elementSupportsProperty(resolved, 'blur')) {
-    // Appended (= applied last) so it blurs the element's styled result.
     const visual: TimelineElement = resolved
     const effects = 'effects' in visual ? (visual.effects ?? []) : []
     const blur: Effect = { type: 'blur', enabled: true, radius: blurRadius }
@@ -334,11 +270,6 @@ export function resolveAnimatedElement<E extends TimelineElement>(
   return resolved
 }
 
-// ---------------------------------------------------------------------------
-// Track editing helpers (used by reducers; pure)
-// ---------------------------------------------------------------------------
-
-/** Insert-or-replace a keyframe, keeping the track sorted and unique by time. */
 export function upsertKeyframe(track: readonly Keyframe[], keyframe: Keyframe): Keyframe[] {
   const next = track.filter((k) => k.timeMs !== keyframe.timeMs)
   const index = next.findIndex((k) => k.timeMs > keyframe.timeMs)
@@ -347,12 +278,6 @@ export function upsertKeyframe(track: readonly Keyframe[], keyframe: Keyframe): 
   return next
 }
 
-/**
- * Split a keyframe map at element-local `offsetMs` (the cut point) into the
- * tracks for the left and right halves. Boundary keyframes carry the
- * evaluated value so motion stays continuous across the cut; the easing of a
- * crossed segment is approximated on each side by the segment's own easing.
- */
 export function splitKeyframes(
   keyframes: KeyframeMap | undefined,
   offsetMs: number,
@@ -364,8 +289,6 @@ export function splitKeyframes(
     const track = keyframes[property]
     if (!track || track.length === 0) continue
     const boundaryValue = interpolateTrack(track, offsetMs)
-    // Easing of the segment the cut lands in: the right boundary keyframe
-    // keeps it outgoing so the curve's tail shape is approximated.
     let segmentBefore: Keyframe | undefined
     for (const k of track) {
       if (k.timeMs <= offsetMs) segmentBefore = k
@@ -376,7 +299,6 @@ export function splitKeyframes(
     const rightTrack = track
       .filter((k) => k.timeMs > offsetMs || k.timeMs === offsetMs)
       .map((k) => ({ ...k, timeMs: k.timeMs - offsetMs }))
-    // Continuity: each side gets a boundary keyframe at the cut.
     const leftFinal =
       leftTrack.length > 0 || rightTrack.length > 0
         ? upsertKeyframe(leftTrack, { timeMs: offsetMs, value: boundaryValue })

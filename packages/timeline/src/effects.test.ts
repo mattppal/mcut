@@ -22,7 +22,7 @@ describe('buildFilterString', () => {
   test('compiles enabled effects in stack order and skips inert ones', () => {
     const effects = [
       effectSchema.parse({ type: 'blur', radius: 4 }),
-      effectSchema.parse({ type: 'brightness', amount: 1 }), // inert at 1
+      effectSchema.parse({ type: 'brightness', amount: 1 }),
       effectSchema.parse({ type: 'saturate', amount: 1.5, enabled: false }),
       effectSchema.parse({ type: 'hue-rotate', degrees: 45 }),
       effectSchema.parse({ type: 'css', filter: 'url(#custom)' }),
@@ -153,7 +153,6 @@ describe('transitions', () => {
     expect(pair.right.id).toBe('e-r')
     expect(pair.cutMs).toBe(2000)
 
-    // No adjacent neighbor → rejected.
     expect(() =>
       applyCommand(project, {
         type: 'setTransition',
@@ -197,7 +196,6 @@ describe('transitions', () => {
       type: 'dissolve',
       durationMs: 600,
     })
-    // The right half still forms a valid pair with the old neighbor.
     const pair = getTransitionPair(project.tracks[0]!, el(project, 'e-l2'))!
     expect(pair.right.id).toBe('e-r')
   })

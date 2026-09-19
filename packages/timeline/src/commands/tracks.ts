@@ -8,7 +8,6 @@ import { defineCommand, mustGetTrack, replaceTrack } from './shared'
 const addTrackSchema = z.object({
   id: trackIdSchema.optional(),
   name: z.string().optional(),
-  /** Insert position in paint order; defaults to topmost (end). */
   index: z.number().int().nonnegative().optional(),
 })
 

@@ -15,7 +15,6 @@ describe('planarAudioChunks', () => {
 
     expect(chunks.map((c) => c.frames)).toEqual([4, 4, 2])
     expect(chunks.map((c) => c.timestamp)).toEqual([0, 0.8, 1.6])
-    // f32-planar layout: each channel contiguous within the chunk.
     expect([...chunks[1]!.data]).toEqual([4, 5, 6, 7, 104, 105, 106, 107])
     expect([...chunks[2]!.data]).toEqual([8, 9, 108, 109])
   })
