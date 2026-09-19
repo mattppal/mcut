@@ -1,14 +1,14 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './electron-fixture'
 import path from 'node:path'
 import { clip, collectErrors, dragAssetToLane, openEditor, previewPixels } from './helpers'
 
 // Playwright's Chromium lacks the licensed codecs Chrome bundles, so the committed MKV fixture is VP9 rather than H.264. https://playwright.dev/docs/browsers#media-codecs
 const fixture = process.env.MKV_FIXTURE ?? 'fixture-vp9'
 
-test('mkv imports, shows a filmstrip, and renders preview frames', async ({ page }) => {
+test('mkv imports, shows a filmstrip, and renders preview frames', async ({ page, editorUrl }) => {
   test.slow()
   const errors = collectErrors(page)
-  await openEditor(page)
+  await openEditor(page, editorUrl)
 
   await page.setInputFiles('input[type="file"]', path.join(__dirname, 'fixtures', `${fixture}.mkv`))
   await expect(page.getByTitle(new RegExp(`${fixture}\\.mkv`))).toBeVisible({ timeout: 10_000 })

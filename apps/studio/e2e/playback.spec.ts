@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test as base, type Page } from './electron-fixture'
 import { dragAssetToLane, openEditor, previewPixels } from './helpers'
 
 const FIXTURE_DIR = join(tmpdir(), 'mcut-e2e-fixtures')
@@ -17,6 +17,58 @@ function ffmpeg(args: string[]): boolean {
     return false
   }
 }
+
+interface MediaRecord {
+  tag: string
+  el: HTMLMediaElement
+  seeks: number
+  events: Array<[string, number]>
+}
+
+declare global {
+  interface Window {
+    __mediaStats: {
+      elements: MediaRecord[]
+      poolVideo: () => MediaRecord | undefined
+    }
+  }
+}
+
+const test = base.extend<{ mediaStats: void }>({
+  mediaStats: async ({ page }, use) => {
+    const script = await page.addInitScript(() => {
+      const elements: Window['__mediaStats']['elements'] = []
+      const stats = (window.__mediaStats = {
+        elements,
+        poolVideo: () => elements.find((rec) => rec.tag === 'video' && rec.events.some(([name]) => name === 'playing')),
+      })
+      const desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'currentTime')!
+      const origCreate = Document.prototype.createElement
+      Document.prototype.createElement = function (this: Document, tag: string, ...rest: unknown[]) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const el = (origCreate as any).call(this, tag, ...rest) as HTMLElement
+        if (tag === 'video' || tag === 'audio') {
+          const media = el as HTMLMediaElement
+          const rec = { tag, el: media, seeks: 0, events: [] as Array<[string, number]> }
+          stats.elements.push(rec)
+          for (const name of ['seeking', 'seeked', 'waiting', 'stalled', 'playing', 'error']) {
+            media.addEventListener(name, () => rec.events.push([name, Math.round(performance.now())]))
+          }
+          Object.defineProperty(media, 'currentTime', {
+            get: () => desc.get!.call(media),
+            set(value: number) {
+              rec.seeks++
+              desc.set!.call(media, value)
+            },
+          })
+        }
+        return el
+      } as typeof Document.prototype.createElement
+    })
+    await use()
+    await script.dispose()
+  },
+})
 
 let haveFixtures = false
 test.beforeAll(() => {
@@ -52,54 +104,6 @@ test.beforeAll(() => {
       ]))
 })
 
-interface MediaRecord {
-  tag: string
-  el: HTMLMediaElement
-  seeks: number
-  events: Array<[string, number]>
-}
-
-declare global {
-  interface Window {
-    __mediaStats: {
-      elements: MediaRecord[]
-      poolVideo: () => MediaRecord | undefined
-    }
-  }
-}
-
-async function instrument(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    const elements: Window['__mediaStats']['elements'] = []
-    const stats = (window.__mediaStats = {
-      elements,
-      poolVideo: () => elements.find((rec) => rec.tag === 'video' && rec.events.some(([name]) => name === 'playing')),
-    })
-    const desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'currentTime')!
-    const origCreate = Document.prototype.createElement
-    Document.prototype.createElement = function (this: Document, tag: string, ...rest: unknown[]) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const el = (origCreate as any).call(this, tag, ...rest) as HTMLElement
-      if (tag === 'video' || tag === 'audio') {
-        const media = el as HTMLMediaElement
-        const rec = { tag, el: media, seeks: 0, events: [] as Array<[string, number]> }
-        stats.elements.push(rec)
-        for (const name of ['seeking', 'seeked', 'waiting', 'stalled', 'playing', 'error']) {
-          media.addEventListener(name, () => rec.events.push([name, Math.round(performance.now())]))
-        }
-        Object.defineProperty(media, 'currentTime', {
-          get: () => desc.get!.call(media),
-          set(value: number) {
-            rec.seeks++
-            desc.set!.call(media, value)
-          },
-        })
-      }
-      return el
-    } as typeof Document.prototype.createElement
-  })
-}
-
 async function importFile(page: Page, path: string, title: RegExp): Promise<void> {
   await page.setInputFiles('input[type="file"]', path)
   await expect(page.getByTitle(title)).toBeVisible({ timeout: 30_000 })
@@ -119,9 +123,8 @@ test.beforeEach(() => {
   test.skip(!haveFixtures, 'ffmpeg unavailable — cannot synthesize video fixtures')
 })
 
-test('paused preview displays the frame under the playhead', async ({ page }) => {
-  await instrument(page)
-  await openEditor(page)
+test('paused preview displays the frame under the playhead', async ({ page, editorUrl, mediaStats }) => {
+  await openEditor(page, editorUrl)
   await importFile(page, SMOOTH_FIXTURE, /smooth-8s\.webm/)
   await dragAssetToLane(page, /smooth-8s\.webm/, { offsetX: 120 })
   await dragClipToStart(page)
@@ -136,10 +139,9 @@ test('paused preview displays the frame under the playhead', async ({ page }) =>
   expect(await previewPixels(page)).toBeGreaterThan(100)
 })
 
-test('playback advances content at near-source fps without seek churn', async ({ page }) => {
+test('playback advances content at near-source fps without seek churn', async ({ page, editorUrl, mediaStats }) => {
   test.setTimeout(120_000)
-  await instrument(page)
-  await openEditor(page)
+  await openEditor(page, editorUrl)
   await importFile(page, SMOOTH_FIXTURE, /smooth-8s\.webm/)
   await dragAssetToLane(page, /smooth-8s\.webm/, { offsetX: 120 })
   await dragClipToStart(page)
@@ -217,10 +219,9 @@ test('playback advances content at near-source fps without seek churn', async ({
   ).toBeGreaterThan(Math.min(15, measured.rafHz / 2))
 })
 
-test('skip-ahead on a long-GOP file recovers without a seek spiral', async ({ page }) => {
+test('skip-ahead on a long-GOP file recovers without a seek spiral', async ({ page, editorUrl, mediaStats }) => {
   test.setTimeout(180_000)
-  await instrument(page)
-  await openEditor(page)
+  await openEditor(page, editorUrl)
   await importFile(page, LONG_GOP_FIXTURE, /long-gop-20s\.webm/)
   await dragAssetToLane(page, /long-gop-20s\.webm/, { offsetX: 120 })
   await dragClipToStart(page)

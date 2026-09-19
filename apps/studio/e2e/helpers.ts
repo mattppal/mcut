@@ -9,8 +9,8 @@ export function collectErrors(page: Page): string[] {
   return errors
 }
 
-export async function openEditor(page: Page): Promise<void> {
-  await page.goto('/', { waitUntil: 'networkidle' })
+export async function openEditor(page: Page, editorUrl: string): Promise<void> {
+  await page.goto(editorUrl, { waitUntil: 'networkidle' })
   await page.waitForTimeout(600)
   await page
     .getByText('Discard')
