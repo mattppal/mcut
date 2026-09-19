@@ -27,28 +27,19 @@ type Engine = ReturnType<typeof useEditor>;
 
 export type { ClipDragMode } from "@mcut/editor";
 
-// Timeline geometry shared between the panel (layout) and the drag
-// controller (row math, auto-scroll edges).
 export const TRACK_HEIGHT = 56;
 export const RULER_HEIGHT = 28;
-/** Height of the always-mounted "new track" drop lane above the rows. */
 export const NEW_TRACK_LANE_HEIGHT = 36;
 export const SNAP_PX = 8;
 
-/** Pointer travel before a press becomes a drag (vs a click/select). */
 const DRAG_THRESHOLD_PX = 4;
-/** Width of the auto-scroll zones at the scroller edges. */
 const AUTO_SCROLL_EDGE_PX = 36;
-/** Auto-scroll speed cap, px per frame. */
 const AUTO_SCROLL_MAX_PX = 18;
 
 export interface ClipDragBeginOptions {
   mode: ClipDragMode;
-  /** Every element in the gesture, anchor (grabbed clip) first. */
   ids: ElementId[];
-  /** Stationary elements to exclude from snapping/collision for this gesture. */
   ignoreIds?: ElementId[];
-  /** ⌥-drag: copy the clips onto new tracks and move the copies. */
   duplicateOnDrag: boolean;
 }
 
@@ -77,20 +68,14 @@ interface ClipDragGesture {
   lastClientX: number;
   lastClientY: number;
   lastAltKey: boolean;
-  /** Pointer travelled past the threshold; a transaction is open. */
   active: boolean;
   duplicateOnDrag: boolean;
   duplicated: boolean;
   createdTrackIds: Track["id"][];
-  /** The dragged element ids (excluded from snapping/collision). */
   ignore: ReadonlySet<string>;
-  /** Snap targets, collected once at activation — only the gesture's own clips move. */
   targets: SnapTarget[];
-  /** Delta already dispatched for delta-based modes (slip/slide/roll/ripple). */
   appliedDeltaMs: number;
-  /** roll-start rolls the PREVIOUS clip's end cut; resolved at begin(). */
   rollTargetId: ElementId | null;
-  /** Slip clamp across the gesture's members, computed at begin(). */
   slipRange: { minMs: number; maxMs: number } | null;
 }
 
@@ -123,7 +108,10 @@ function isDirectTrimMode(mode: ClipDragMode): boolean {
   return mode === "trim-start" || mode === "trim-end";
 }
 
-/** Scroll velocity toward whichever edge zone `pos` is inside, else 0. */
+function slipDeltaOpposingThePointer(pointerDeltaMs: number): number {
+  return -Math.round(pointerDeltaMs);
+}
+
 function edgeScrollSpeed(pos: number, min: number, max: number): number {
   if (pos < min + AUTO_SCROLL_EDGE_PX) {
     return -Math.min(AUTO_SCROLL_MAX_PX, ((min + AUTO_SCROLL_EDGE_PX - pos) / AUTO_SCROLL_EDGE_PX) * AUTO_SCROLL_MAX_PX);
@@ -134,34 +122,12 @@ function edgeScrollSpeed(pos: number, min: number, max: number): number {
   return 0;
 }
 
-/**
- * One drag gesture controller per timeline, owning clip move/trim from
- * pointerdown to commit.
- *
- * The listeners live on `window` and all state lives here — never on the
- * clip's DOM node. A cross-track move remounts the clip under another lane,
- * which destroys its node and would silently kill a node-bound gesture
- * (and strand the open transaction). With the controller, the clip is just
- * the place the gesture starts.
- *
- * Gesture model (matching desktop NLEs):
- * - press is a click until the pointer travels {@link DRAG_THRESHOLD_PX};
- *   only then does a transaction open (one undo entry per gesture)
- * - live dispatch, coalesced to the frame rate: the project is the preview
- * - Escape/blur/pointercancel aborts and rolls back via cancelTransaction
- * - a release we never see (outside the window) commits at the last applied
- *   position: pointer capture on the scroller catches most of these, and a
- *   buttons check on pointermove ends anything that slips through
- * - pointer near the scroller edges auto-scrolls, and the scroll delta is
- *   folded into the time/row math so the clip tracks the pointer
- */
 export class ClipDragController {
   constructor(private readonly deps: ClipDragDeps) {}
 
   private gesture: ClipDragGesture | null = null;
   private autoScrollFrame: number | null = null;
   private updateFrame: number | null = null;
-  /** A move arrived while a frame was pending; run one trailing update. */
   private pendingMove = false;
   private previousBodyUserSelect: string | null = null;
   private capture: { element: Element; pointerId: number } | null = null;
@@ -170,12 +136,10 @@ export class ClipDragController {
     event: { clientX: number; clientY: number; pointerId: number },
     options: ClipDragBeginOptions,
   ): void {
-    this.cancel(); // a stray previous gesture must not leak its transaction
+    this.cancel();
     const project = this.deps.engine.project;
     const bases = collectClipDragBases(project, options.ids);
     if (options.ids.length === 0 || !bases.has(options.ids[0]!)) return;
-    // Tool gestures degrade to their plain counterparts when their structural
-    // requirements (adjacent neighbors, slippable source) aren't met.
     const resolved = resolveToolMode(project, options.mode, options.ids);
     const scroller = this.deps.scrollerRef.current;
     this.gesture = {
@@ -203,7 +167,6 @@ export class ClipDragController {
     this.attach();
   }
 
-  /** True while a gesture is past the drag threshold. */
   get dragging(): boolean {
     return this.gesture?.active ?? false;
   }
@@ -212,15 +175,10 @@ export class ClipDragController {
     this.cancel();
   }
 
-  // -- listeners --------------------------------------------------------------
-
   private onPointerMove = (event: PointerEvent) => {
     const gesture = this.gesture;
     if (!gesture || event.pointerId !== gesture.pointerId) return;
     if ((event.buttons & 1) === 0) {
-      // The press was released where no pointerup reached us (outside the
-      // window, capture lost): commit at the last applied position instead
-      // of letting the clip chase a button-up pointer.
       this.finish();
       return;
     }
@@ -232,8 +190,6 @@ export class ClipDragController {
         event.clientX - gesture.startClientX,
         event.clientY - gesture.startClientY,
       );
-      // Body gestures (move/slip/slide) keep the click-vs-drag threshold;
-      // edge gestures react immediately.
       const bodyGesture =
         gesture.mode === "move" || gesture.mode === "slip" || gesture.mode === "slide";
       const threshold = bodyGesture ? DRAG_THRESHOLD_PX : 1;
@@ -243,11 +199,6 @@ export class ClipDragController {
     this.scheduleUpdate();
   };
 
-  /**
-   * Coalesce moves to the frame rate (pointermove fires at 120Hz+ on
-   * ProMotion): the first move of a burst applies immediately, the rest fold
-   * into one trailing update on the next frame.
-   */
   private scheduleUpdate(): void {
     if (this.updateFrame !== null) {
       this.pendingMove = true;
@@ -304,7 +255,6 @@ export class ClipDragController {
       try {
         this.capture.element.releasePointerCapture(this.capture.pointerId);
       } catch {
-        // Pointer already released the capture itself.
       }
       this.capture = null;
     }
@@ -323,21 +273,16 @@ export class ClipDragController {
     }
   }
 
-  // -- gesture lifecycle ------------------------------------------------------
-
   private activate(): void {
     const gesture = this.gesture!;
     gesture.active = true;
     this.deps.engine.beginTransaction();
-    // Capture on a stable node (never the clip, which remounts mid-drag) so
-    // pointerup still reaches us when the button is released outside the
-    // window. Also overrides touch's implicit capture on the clip node.
     const captureElement = this.deps.scrollerRef.current ?? document.body;
     try {
       captureElement.setPointerCapture(gesture.pointerId);
       this.capture = { element: captureElement, pointerId: gesture.pointerId };
     } catch {
-      this.capture = null; // pointer already gone; the buttons guard covers us
+      this.capture = null;
     }
     this.previousBodyUserSelect = document.body.style.userSelect;
     document.body.style.userSelect = "none";
@@ -352,8 +297,6 @@ export class ClipDragController {
         gesture.ignore = new Set<string>(gesture.ids);
       }
     }
-    // Everything else stands still during the gesture, so snap targets are
-    // collected once here instead of on every pointermove.
     gesture.targets = collectSnapTargets(
       this.deps.engine.project,
       this.deps.engine.playback.state.currentTimeMs,
@@ -366,7 +309,6 @@ export class ClipDragController {
     const gesture = this.gesture;
     if (!gesture) return;
     if (gesture.active && this.pendingMove) {
-      // Apply the coalesced final move before committing the transaction.
       this.pendingMove = false;
       this.update();
     }
@@ -382,7 +324,6 @@ export class ClipDragController {
         try {
           retimeSequentialCollage(this.deps.engine);
         } catch {
-          // Keep the user's trim if a partial collage cannot be inferred.
         }
       }
       this.deps.engine.endTransaction();
@@ -390,12 +331,6 @@ export class ClipDragController {
     }
   }
 
-  /**
-   * GES-inspired overlap-implies-crossfade, adapted to the no-overlap model:
-   * when a move commits flush against a neighbor AND the pointer actually
-   * wanted to overlap it, drop a dissolve sized to the attempted overlap.
-   * Opt-in (deps.autoCrossfade); part of the gesture's undo entry.
-   */
   private maybeAutoCrossfade(gesture: ClipDragGesture): void {
     const { engine } = this.deps;
     const { pxPerMs, autoCrossfade } = this.deps.prefs();
@@ -412,7 +347,6 @@ export class ClipDragController {
       try {
         engine.dispatch(command);
       } catch {
-        // Audio-only pair or clips too short for a window: skip silently.
       }
     }
   }
@@ -423,13 +357,10 @@ export class ClipDragController {
     this.gesture = null;
     this.detach();
     if (gesture.active) {
-      // Rolls back everything since activate(), created tracks included.
       this.deps.engine.cancelTransaction();
       this.deps.setSnapGuideMs(null);
     }
   }
-
-  // -- auto-scroll ------------------------------------------------------------
 
   private startAutoScroll(): void {
     if (this.autoScrollFrame !== null) return;
@@ -464,16 +395,12 @@ export class ClipDragController {
     this.autoScrollFrame = requestAnimationFrame(tick);
   }
 
-  // -- move/trim resolution ----------------------------------------------------
-
   private update(): void {
     const gesture = this.gesture;
     if (!gesture?.active) return;
     const { engine, setSnapGuideMs } = this.deps;
     const { pxPerMs, snapEnabled } = this.deps.prefs();
     const scroller = this.deps.scrollerRef.current;
-    // Fold scroll deltas in so auto-scroll (and mid-drag wheel) keeps the
-    // clip under the pointer.
     const scrollDx = (scroller?.scrollLeft ?? gesture.startScrollLeft) - gesture.startScrollLeft;
     const deltaRawMs = (gesture.lastClientX - gesture.startClientX + scrollDx) / pxPerMs;
     const liveProject = engine.project;
@@ -495,9 +422,6 @@ export class ClipDragController {
         deltaMs = Math.max(deltaMs, -minStart);
 
         if (gesture.ids.length === 1) {
-          // Target the lane under the pointer (rows render reversed: the top
-          // row is the last track). Outside the rows — above the top lane or
-          // below the bottom one — the gesture grows a new track on that side.
           const trackCount = liveProject.tracks.length;
           let targetIndex = anchorBase.trackIndex;
           if (scroller) {
@@ -529,14 +453,9 @@ export class ClipDragController {
           if (targetTrack.locked) return;
           let startMs = anchorBase.startMs + deltaMs;
           if (targetTrack.magnetic) {
-            // Magnetic: the engine's slot rule places the clip; raw pointer
-            // position chooses the slot and edge-snapping would fight it.
             startMs = Math.max(0, Math.round(anchorBase.startMs + deltaRawMs));
             guide = null;
           } else if (!canPlaceIgnoring(targetTrack, startMs, anchorBase.durationMs, ignore)) {
-            // Blocked: hold the last valid placement instead of teleporting
-            // to a free slot; the move resolves when the pointer reaches
-            // free space (and the commit is always the last valid state).
             setSnapGuideMs(null);
             return;
           }
@@ -547,7 +466,6 @@ export class ClipDragController {
             toTrackId: targetTrack.id,
           });
         } else {
-          // Group move: time-shift only, all-or-nothing.
           const placements = gesture.ids.map((id) => {
             const base = gesture.bases.get(id)!;
             return {
@@ -577,10 +495,8 @@ export class ClipDragController {
       const snapping = snapEnabled && !gesture.lastAltKey;
 
       if (gesture.mode === "slip") {
-        // Dragging right slides the filmstrip right — earlier source at the
-        // in point — so the trim delta is the pointer delta negated.
         const range = gesture.slipRange ?? { minMs: -Infinity, maxMs: Infinity };
-        const wanted = Math.max(range.minMs, Math.min(range.maxMs, -Math.round(deltaRawMs)));
+        const wanted = Math.max(range.minMs, Math.min(range.maxMs, slipDeltaOpposingThePointer(deltaRawMs)));
         const stepMs = wanted - gesture.appliedDeltaMs;
         if (stepMs !== 0) {
           for (const id of gesture.ids) {
@@ -603,8 +519,6 @@ export class ClipDragController {
         const wanted = Math.round(snapped.ms) - anchorBase.startMs;
         const stepMs = wanted - gesture.appliedDeltaMs;
         if (stepMs !== 0) {
-          // Throws when a neighbor hits its minimum: applied stays, the clip
-          // holds at the last valid spot.
           engine.dispatch({ type: "slideElement", elementId: anchorId, deltaMs: stepMs });
           gesture.appliedDeltaMs = wanted;
         }
@@ -635,8 +549,6 @@ export class ClipDragController {
         const edge = gesture.mode === "ripple-end" ? ("end" as const) : ("start" as const);
         const edgeBaseMs =
           edge === "end" ? anchorBase.startMs + anchorBase.durationMs : anchorBase.startMs;
-        // Downstream clips move with a ripple, so their edges are unreliable
-        // magnets — snap only to the stationary kinds.
         const rippleTargets = targets.filter(
           (t) => t.kind === "marker" || t.kind === "playhead" || t.kind === "origin",
         );
@@ -654,9 +566,6 @@ export class ClipDragController {
         return;
       }
 
-      // Trims cascade across the whole gesture (the grabbed clip plus its
-      // linked partners): one shared delta, clamped so every member fits,
-      // keeps linked video/audio edges in sync.
       const members = gesture.ids.flatMap((id) => {
         const base = gesture.bases.get(id);
         if (!base) return [];
@@ -673,8 +582,6 @@ export class ClipDragController {
           },
         ];
       });
-      // All-or-nothing: a partner hitting a neighbor blocks the whole trim,
-      // so linked edges never drift apart.
       const allFit = (startMs: (b: ClipDragBase) => number, durationMs: (b: ClipDragBase) => number) =>
         members.every(
           ({ base, track }) => track && canPlaceIgnoring(track, startMs(base), durationMs(base), ignore),
@@ -688,8 +595,6 @@ export class ClipDragController {
         const wantedDelta = Math.round(endSnap.ms) - (anchorBase.startMs + anchorBase.durationMs);
         let deltaMs = wantedDelta;
         for (const { base, assetDurationMs } of members) {
-          // Growing the end consumes later source (forward) or earlier
-          // source (reversed); a timeMap freezes at its boundary instead.
           if (!base.hasTimeMap && assetDurationMs !== undefined && base.trimStartMs !== undefined) {
             deltaMs = Math.min(
               deltaMs,
@@ -704,8 +609,6 @@ export class ClipDragController {
         if (fits) {
           for (const { id, base, element } of members) {
             if (!element) continue;
-            // trimEdge keeps content anchored (reversed/speed-aware); the
-            // step is the remaining distance from the LIVE element state.
             const stepMs = base.startMs + base.durationMs + deltaMs - (element.startMs + element.durationMs);
             if (stepMs !== 0) {
               engine.dispatch({ type: "trimEdge", elementId: id, edge: "end", deltaMs: stepMs });
@@ -716,7 +619,6 @@ export class ClipDragController {
         return;
       }
 
-      // trim-start
       const startSnap = snapTime(anchorBase.startMs + deltaRawMs, targets, thresholdMs, {
         enabled: snapping,
         fps: liveProject.fps,
@@ -725,8 +627,6 @@ export class ClipDragController {
       let shift = wantedShift;
       for (const { base, assetDurationMs } of members) {
         shift = Math.max(shift, -base.startMs);
-        // Growing the start reveals earlier source (forward) or later
-        // source (reversed); reversed speed ramps can't grow their head.
         if (!base.hasTimeMap && base.trimStartMs !== undefined) {
           shift = Math.max(
             shift,
@@ -750,14 +650,9 @@ export class ClipDragController {
       }
       setSnapGuideMs(fits && shift === wantedShift ? startSnap.guideMs : null);
     } catch {
-      // Engine rejected (overlap/bounds): keep last valid state.
     }
   }
 }
-
-// ---------------------------------------------------------------------------
-// React wiring
-// ---------------------------------------------------------------------------
 
 const ClipDragContext = createContext<ClipDragController | null>(null);
 
@@ -777,7 +672,6 @@ export function useClipDragController(): ClipDragController {
   );
 }
 
-/** The timeline's shared drag controller (begin a gesture from pointerdown). */
 export function useClipDrag(): ClipDragController {
   const controller = useContext(ClipDragContext);
   if (!controller) throw new Error("useClipDrag must be used inside <ClipDragProvider>");

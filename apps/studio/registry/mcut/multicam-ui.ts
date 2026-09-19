@@ -5,17 +5,11 @@ import {
   type Project,
 } from "@mcut/timeline";
 
-/**
- * Multicam UI helpers: which multicam the mode operates on, and the
- * playing-vs-paused switch semantics (Premiere parity — see the plan doc).
- */
-
 export interface LocatedMulticam {
   element: MulticamElement;
   trackId: Project["tracks"][number]["id"];
 }
 
-/** The multicam the bank/hotkeys target: selected first, else under playhead, else first. */
 export function findTargetMulticam(
   project: Project,
   selectedIds: readonly string[],
@@ -41,12 +35,6 @@ export function findTargetMulticam(
   return underPlayhead ?? first;
 }
 
-/**
- * The multicam switch gesture: while PLAYING a press cuts at the playhead
- * (you're performing the edit live); while PAUSED it corrects the layout of
- * the span under the playhead. This split is what makes multicam editing
- * fast — copy Premiere exactly.
- */
 export function switchToLayout(
   engine: EditorEngine,
   element: MulticamElement,
@@ -69,6 +57,5 @@ export function switchToLayout(
       });
     }
   } catch {
-    // Cut collided with an existing one at the same ms: ignore.
   }
 }

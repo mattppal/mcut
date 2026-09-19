@@ -1,13 +1,6 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
-/**
- * Machine-discovery surfaces: the MCP tool manifest and the agent skill
- * hosted under the RFC 8615 well-known prefix. The digest assertion keeps
- * index.json honest when SKILL.md is edited — regenerate it with
- * `shasum -a 256 public/.well-known/agent-skills/mcut/SKILL.md`.
- */
-
 const AGENT_TOOL_NAMES = [
   "get_summary",
   "get_project",
@@ -74,6 +67,7 @@ test("renders the human-readable tool catalog at /tools", async ({ page }) => {
   await expect(page.getByText("splitElement", { exact: true })).toBeVisible();
 });
 
+// The /.well-known/ prefix for site metadata is defined by RFC 8615. https://www.rfc-editor.org/rfc/rfc8615
 test("hosts the mcut agent skill under /.well-known/agent-skills", async ({ request }) => {
   const indexRes = await request.get("/.well-known/agent-skills/index.json");
   expect(indexRes.ok()).toBe(true);
@@ -88,5 +82,8 @@ test("hosts the mcut agent skill under /.well-known/agent-skills", async ({ requ
   expect(body.toString("utf8")).toContain("name: mcut");
 
   const digest = `sha256:${createHash("sha256").update(body).digest("hex")}`;
-  expect(digest).toBe(skill.digest);
+  expect(
+    digest,
+    "index.json digest is stale. Regenerate it with shasum -a 256 public/.well-known/agent-skills/mcut/SKILL.md",
+  ).toBe(skill.digest);
 });

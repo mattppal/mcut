@@ -10,13 +10,6 @@ import {
 } from "@mcut/transcription-local";
 import type { TranscribeOptions, TranscriptResult } from "@mcut/transcription";
 
-/**
- * On-device Whisper, offered but never forced: the server provider stays
- * the default, capable browsers (WebGPU + enough memory) get an opt-in
- * toggle in the captions panel. The choice persists per browser; the model
- * (~40–150MB) downloads once and is cached after that.
- */
-
 export { isLocalTranscriptionSupported };
 
 const STORAGE_KEY = "mcut:transcription:on-device:v1";
@@ -40,7 +33,6 @@ export function setOnDeviceTranscriptionEnabled(enabled: boolean): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, enabled ? "1" : "0");
   } catch {
-    // Private mode: the toggle just doesn't persist.
   }
   for (const listener of listeners) listener();
 }
@@ -56,12 +48,10 @@ export function useOnDeviceTranscription(): boolean {
   );
 }
 
-/** Rough one-time download size for the default model, for the opt-in copy. */
 export function defaultModelDownloadLabel(): string {
   return pickDefaultModel() === WHISPER_MODELS.base ? "~145 MB" : "~40 MB";
 }
 
-// The provider (and its worker + loaded model) lives for the session.
 let provider: ReturnType<typeof createLocalWhisperProvider> | null = null;
 
 const PROGRESS_TOAST_ID = "mcut-on-device-transcription";

@@ -5,14 +5,8 @@ import { createAssetFromFile } from "@mcut/media";
 import type { EditorEngine } from "@mcut/timeline";
 import type { AssetRef } from "@mcut/timeline";
 
-/** Optional hook for persistence layers: original Files by asset id. */
 export type OnAssetImported = (asset: AssetRef, file: File) => void;
 
-/**
- * Shared import path for the media bin, drag-drop, and the File menu:
- * probe each file (Mediabunny), register the asset, and hand the original
- * File to the persistence callback. Per-file failures toast and are skipped.
- */
 export async function importMediaFiles(
   engine: EditorEngine,
   files: File[],
@@ -33,7 +27,6 @@ export async function importMediaFiles(
   return imported;
 }
 
-/** One-shot native file picker (resolves [] when the user cancels). */
 export function pickFiles(accept: string, multiple = true): Promise<File[]> {
   return new Promise((resolve) => {
     const input = document.createElement("input");

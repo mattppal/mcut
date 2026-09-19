@@ -5,12 +5,6 @@ import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { dragAssetToLane, openEditor, previewPixels } from "./helpers";
 
-/**
- * Reversed playback health: a reversed clip must show real frames at rest
- * (including local t=0, which maps to the END of the source — the EOF seek
- * is the classic black-frame trap) and keep showing frames while playing.
- */
-
 const FIXTURE_DIR = join(tmpdir(), "mcut-e2e-fixtures");
 const SMOOTH_FIXTURE = join(FIXTURE_DIR, "smooth-8s.webm");
 
@@ -61,24 +55,19 @@ test("reversed clip shows frames at rest and during playback", async ({ page }) 
   await dragClipToStart(page);
   await page.locator("[data-mcut-clip]").first().click();
 
-  // Reverse via the inspector: Speed is a signed percentage (-100 = play
-  // the source backward at normal speed).
   const speed = page.getByLabel("Speed");
   await speed.fill("-100");
   await speed.press("Enter");
   await page.waitForTimeout(300);
 
-  // Local t=0 → END of source: the EOF-adjacent frame must still render.
   await page.getByRole("button", { name: "Go to start" }).click();
   await page.waitForTimeout(1500);
   expect(await previewPixels(page), "frame at clip start (source end)").toBeGreaterThan(100);
 
-  // Mid-clip while paused.
-  await page.keyboard.press("Shift+ArrowRight"); // +1s
+  await page.keyboard.press("Shift+ArrowRight");
   await page.waitForTimeout(1200);
   expect(await previewPixels(page), "frame 1s in").toBeGreaterThan(100);
 
-  // Playing: reversed clips seek-chase; frames must keep coming.
   await page.keyboard.press("Space");
   await page.waitForTimeout(2000);
   const playing = await previewPixels(page);

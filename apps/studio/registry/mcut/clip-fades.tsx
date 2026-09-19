@@ -7,12 +7,6 @@ import { cn } from "@/lib/utils";
 
 type FadeableClip = TimelineElement & { type: "video" | "audio" | "multicam" };
 
-/**
- * Audio fade handles on a clip: a dot at each top corner that drags inward
- * to set `fadeInMs`/`fadeOutMs`, with the faded span shaded as a ramp wedge
- * (the CapCut/Premiere clip-fade affordance). Edits are one undo step per
- * gesture.
- */
 export function FadeOverlay({
   element,
   pxPerMs,
@@ -50,7 +44,6 @@ export function FadeOverlay({
   const onPointerMove = (event: ReactPointerEvent<HTMLSpanElement>) => {
     const drag = dragRef.current;
     if (!drag) return;
-    // Fade-in grows rightward, fade-out grows leftward.
     const deltaMs = ((event.clientX - drag.startClientX) / pxPerMs) * (drag.edge === "in" ? 1 : -1);
     const nextMs = Math.round(
       Math.max(0, Math.min(element.durationMs, drag.startMs + deltaMs)),
@@ -62,7 +55,6 @@ export function FadeOverlay({
         patch: drag.edge === "in" ? { fadeInMs: nextMs } : { fadeOutMs: nextMs },
       });
     } catch {
-      // Element vanished mid-drag.
     }
   };
 
@@ -80,7 +72,6 @@ export function FadeOverlay({
 
   return (
     <>
-      {/* Ramp wedges: shade what the fade silences. */}
       {fadeInPx > 1 && (
         <svg
           className="pointer-events-none absolute inset-y-0 left-0 z-20 h-full"

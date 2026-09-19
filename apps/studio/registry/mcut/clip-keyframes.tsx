@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { useEditor, useProject } from "@mcut/react";
+import { useEditor } from "@mcut/react";
 import {
   animatableProperties,
   getEffectiveVolume,
@@ -12,14 +12,13 @@ import {
   type TimelineElement,
 } from "@mcut/timeline";
 import { cn } from "@/lib/utils";
-import { useEditorUI } from "./editor-ui";
+import { useEditorUI, useRerenderOnProjectEdits } from "./editor-ui";
 import { formatTimecode } from "./format";
 import { collectSnapTargets, snapTime, type SnapTarget } from "./timeline-snap";
 
 const SNAP_PX = 8;
 export const KEYFRAME_DRAG_THRESHOLD_PX = 3;
 
-/** Unique, sorted element-local keyframe times across every armed property. */
 function aggregatedTimes(element: TimelineElement): number[] {
   const times = new Set<number>();
   for (const property of animatableProperties(element)) {
@@ -28,7 +27,6 @@ function aggregatedTimes(element: TimelineElement): number[] {
   return [...times].sort((a, b) => a - b);
 }
 
-/** Animated properties that have a keyframe exactly at `timeMs`. */
 export function keyframePropertiesAt(
   element: TimelineElement,
   timeMs: number,
@@ -59,10 +57,6 @@ export function resolveKeyframeClickGesture({
   return startedAltKey || endedAltKey ? "delete" : "seek";
 }
 
-/**
- * Clamp a grouped keyframe move so every property in the group avoids its
- * neighboring keyframes. The moving key itself is identified by `originTimeMs`.
- */
 export function clampKeyframeDragTarget(
   element: TimelineElement,
   properties: readonly AnimatableProperty[],
@@ -122,11 +116,6 @@ function keyframeMarkerRows(element: TimelineElement): Array<{ timeMs: number; k
   });
 }
 
-/**
- * CapCut-style keyframe diamonds on a selected clip. Drag retimes (snapping
- * to clip edges and the playhead), Option-drag bypasses snapping, click seeks
- * to the keyframe, and Option-click deletes it across all properties.
- */
 export function KeyframeMarkers({
   element,
   pxPerMs,
@@ -135,7 +124,7 @@ export function KeyframeMarkers({
   pxPerMs: number;
 }) {
   const engine = useEditor();
-  const project = useProject();
+  useRerenderOnProjectEdits();
   const { snapEnabled, setSnapGuideMs } = useEditorUI();
   const dragRef = useRef<{
     originTimeMs: number;
@@ -158,7 +147,6 @@ export function KeyframeMarkers({
           try {
             engine.dispatch({ type: "removeKeyframe", elementId: element.id, property, timeMs });
           } catch {
-            // Already gone.
           }
         }
       }
@@ -257,8 +245,6 @@ export function KeyframeMarkers({
     if (gesture === "seek") engine.seek(element.startMs + drag.originTimeMs);
   };
 
-  void project; // markers re-render with project changes via parent
-
   return (
     <>
       {keyframeMarkerRows(element).map(({ timeMs, key }) => (
@@ -289,11 +275,6 @@ export function KeyframeMarkers({
   );
 }
 
-/**
- * Premiere-style volume rubber band on audio clips: the line shows the
- * resolved volume curve; drag vertically to set volume (the nearest keyframe
- * when armed), ⌘/Ctrl-click to add a keyframe on the band.
- */
 export function VolumeBand({
   element,
   widthPx,
@@ -315,7 +296,6 @@ export function VolumeBand({
     const coords: string[] = [];
     for (let x = 0; x <= width; x += 3) {
       const timelineMs = element.startMs + (x / width) * element.durationMs;
-      // Effective volume (keyframes × fades): the band shows what plays.
       const volume = Math.max(0, Math.min(2, getEffectiveVolume(element, timelineMs)));
       const y = Math.round((height - (volume / 2) * height) * 10) / 10;
       coords.push(`${x},${y}`);
@@ -337,7 +317,6 @@ export function VolumeBand({
 
   const dragTarget = (event: ReactPointerEvent<HTMLDivElement>): number | null => {
     if (event.metaKey || event.ctrlKey) {
-      // ⌘-click: add a keyframe on the band (arms the property).
       const timeMs = localTimeFromX(event);
       try {
         engine.dispatch({
@@ -348,12 +327,10 @@ export function VolumeBand({
           value: valueFromY(event),
         });
       } catch {
-        // Element vanished.
       }
       return timeMs;
     }
     if (armed) {
-      // Drag the nearest keyframe's value (time stays put).
       const timeMs = localTimeFromX(event);
       const track = getKeyframes(element, "volume");
       const nearest = track.reduce((best, k) =>
@@ -389,7 +366,6 @@ export function VolumeBand({
         });
       }
     } catch {
-      // Ignore mid-drag races.
     }
   };
 

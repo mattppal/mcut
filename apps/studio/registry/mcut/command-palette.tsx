@@ -1,7 +1,7 @@
 "use client";
 
 import { createElement } from "react";
-import { useEditor, useEditorState, useWindowEvent } from "@mcut/react";
+import { useEditor, useWindowEvent } from "@mcut/react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -23,20 +23,13 @@ import {
 } from "./action-registry";
 import { setCommandPaletteOpen, useCommandPaletteOpen } from "./command-palette-events";
 import { editorClipboard } from "./editor-clipboard";
-import { useEditorUI } from "./editor-ui";
+import { useEditorUI, useLiveActionEnabledStates } from "./editor-ui";
 
-/**
- * ⌘K palette — fully derived from the action registry: every action with
- * `palette !== false` appears, grouped by category, with its live enabled
- * state and shortcut. Declaring a new action is all it takes to show up here.
- */
 export function CommandPalette() {
   const engine = useEditor();
   const ui = useEditorUI();
   const open = useCommandPaletteOpen();
-  // Re-render with edits so enabled() states stay live while open.
-  useEditorState((s) => s.project);
-  useEditorState((s) => s.selection);
+  useLiveActionEnabledStates();
 
   useWindowEvent("keydown", (event) => {
     if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {

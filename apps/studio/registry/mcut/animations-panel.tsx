@@ -73,11 +73,6 @@ function prettyName(preset: AnimationPreset): string {
   return preset.replace(/-/g, " ");
 }
 
-/**
- * Saved zooms: built-ins plus the user's captured presets. Click applies at
- * the playhead (relative to the clip's current framing); Save captures the
- * selected clip's scale/position keyframes as a reusable preset.
- */
 function ZoomsSection() {
   const engine = useEditor();
   const selected = useSelectedElement();
@@ -163,7 +158,6 @@ function ZoomsSection() {
   );
 }
 
-/** Tiny scale-over-time curve preview. */
 function ZoomSparkline({ preset }: { preset: ZoomPreset }) {
   const track = preset.tracks["scale.x"] ?? preset.tracks["scale.y"];
   if (!track) return <span className="text-lg leading-none text-primary">⊕</span>;
@@ -181,11 +175,6 @@ function ZoomSparkline({ preset }: { preset: ZoomPreset }) {
   );
 }
 
-/**
- * CapCut-style In / Out / Emphasis animation gallery. Presets EXPAND into
- * ordinary keyframes on the selected element — open the inspector afterwards
- * and every diamond is there to edit.
- */
 export function AnimationsPanel({ className }: { className?: string }) {
   const engine = useEditor();
   const selected = useSelectedElement();

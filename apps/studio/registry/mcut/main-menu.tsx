@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEditor, useEditorState } from "@mcut/react";
+import { useEditor } from "@mcut/react";
 import { ChevronDownIcon } from "@/lib/hugeicons";
 import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
@@ -26,19 +26,11 @@ import {
   type ActionContext,
 } from "./action-registry";
 import { editorClipboard } from "./editor-clipboard";
-import { useEditorUI, type EditorUIValue } from "./editor-ui";
-
-/**
- * The brand-mark menu (CapCut-style logo dropdown): File / Edit / View /
- * Tools submenus over the same action registry as hotkeys and the ⌘K
- * palette — entries reference action ids, so labels, shortcuts, and enabled
- * states stay derived. The menu only curates grouping and order.
- */
+import { useEditorUI, useLiveActionEnabledStates, type EditorUIValue } from "./editor-ui";
 
 interface ActionEntry {
   kind?: "action";
   id: string;
-  /** Menu-friendly override of the registry label ("Paste" vs "Paste at playhead"). */
   label?: string;
 }
 
@@ -144,9 +136,7 @@ function MenuEntryItem({ entry, context }: { entry: MenuEntry; context: ActionCo
 export function MainMenu() {
   const engine = useEditor();
   const ui = useEditorUI();
-  // Re-render with edits so enabled() states stay live while open.
-  useEditorState((s) => s.project);
-  useEditorState((s) => s.selection);
+  useLiveActionEnabledStates();
   const context: ActionContext = { engine, ui, clipboard: editorClipboard };
   const shortcutsAction = getEditorAction("help.shortcuts");
 

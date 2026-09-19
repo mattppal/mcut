@@ -28,18 +28,7 @@ import { openProjectFromFile, saveProjectToFile } from "./project-file";
 import { focusTranscriptSearch } from "./transcript-keywords";
 import { applyOpeningClosingFades, removeTranscriptSilence } from "./agent-edit-actions";
 
-/**
- * The default action set. Declared once; hotkeys, the ⌘K palette, context
- * menus, and the shortcuts dialog all derive from these definitions.
- * Importing this module registers them (side-effectful by design — the same
- * pattern as the engine's command registry).
- */
-
 const hasSelection = ({ engine }: ActionContext) => engine.selection.elementIds.length > 0;
-
-// ---------------------------------------------------------------------------
-// Playback
-// ---------------------------------------------------------------------------
 
 defineAction({
   id: "playback.toggle",
@@ -102,10 +91,6 @@ defineAction({
   operator: { id: "playback.step", input: { deltaMs: 1000 } },
 });
 
-// ---------------------------------------------------------------------------
-// Selection
-// ---------------------------------------------------------------------------
-
 defineAction({
   id: "selection.select-all",
   label: "Select all clips",
@@ -133,10 +118,6 @@ defineAction({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Clipboard
-// ---------------------------------------------------------------------------
-
 defineAction({
   id: "clipboard.copy",
   label: "Copy",
@@ -160,8 +141,6 @@ defineAction({
   label: "Paste at playhead",
   category: "clipboard",
   shortcut: { key: "v", meta: true },
-  // The OS clipboard may hold an mcut envelope from another tab/project,
-  // so paste stays available even when the internal clipboard is empty.
   run: ({ engine }) => void pasteAtPlayheadFromAnywhere(engine),
 });
 
@@ -172,10 +151,6 @@ defineAction({
   shortcut: { key: "d", meta: true },
   operator: { id: "edit.duplicateSelection" },
 });
-
-// ---------------------------------------------------------------------------
-// Edit
-// ---------------------------------------------------------------------------
 
 defineAction({
   id: "edit.undo",
@@ -226,10 +201,6 @@ defineAction({
   operator: { id: "edit.addTrack" },
 });
 
-// ---------------------------------------------------------------------------
-// Keyframes
-// ---------------------------------------------------------------------------
-
 defineAction({
   id: "keyframes.previous",
   label: "Previous keyframe",
@@ -245,10 +216,6 @@ defineAction({
   shortcut: { key: "]" },
   operator: { id: "keyframes.next" },
 });
-
-// ---------------------------------------------------------------------------
-// Markers
-// ---------------------------------------------------------------------------
 
 defineAction({
   id: "markers.toggle",
@@ -273,10 +240,6 @@ defineAction({
   shortcut: { key: "m", alt: true },
   operator: { id: "markers.previous" },
 });
-
-// ---------------------------------------------------------------------------
-// Transcript
-// ---------------------------------------------------------------------------
 
 defineAction({
   id: "transcript.find",
@@ -331,10 +294,6 @@ defineAction({
   run: ({ engine, input }) => removeTranscriptSilence(engine, input),
 });
 
-// ---------------------------------------------------------------------------
-// Reverse
-// ---------------------------------------------------------------------------
-
 defineAction({
   id: "edit.toggle-reverse",
   label: "Reverse selected clips (toggle)",
@@ -374,10 +333,6 @@ defineAction({
   run: ({ engine, input }) => applyOpeningClosingFades(engine, input),
 });
 
-// ---------------------------------------------------------------------------
-// Project canvas (aspect-ratio presets)
-// ---------------------------------------------------------------------------
-
 for (const preset of ASPECT_PRESETS) {
   defineAction({
     id: `view.aspect-${preset.id}`,
@@ -387,10 +342,6 @@ for (const preset of ASPECT_PRESETS) {
       engine.dispatch({ type: "updateProject", width: preset.width, height: preset.height }),
   });
 }
-
-// ---------------------------------------------------------------------------
-// View
-// ---------------------------------------------------------------------------
 
 defineAction({
   id: "view.toggle-snap",
@@ -406,10 +357,6 @@ defineAction({
   category: "view",
   run: ({ ui }) => ui.setAutoCrossfade(!ui.autoCrossfade),
 });
-
-// ---------------------------------------------------------------------------
-// Timeline tools (Premiere palette letters) + edit modes (Kdenlive taxonomy)
-// ---------------------------------------------------------------------------
 
 const TOOL_ACTIONS = [
   { id: "select", label: "Select tool (move/trim)", key: "v" },
@@ -464,10 +411,6 @@ defineAction({
     document.querySelector<HTMLButtonElement>("[data-mcut-export-trigger]")?.click();
   },
 });
-
-// ---------------------------------------------------------------------------
-// Tracks + playhead (parity PR 2)
-// ---------------------------------------------------------------------------
 
 defineAction({
   id: "track.delete-current",
@@ -525,10 +468,6 @@ defineAction({
   palette: false,
   operator: { id: "playback.shuttle", input: { direction: 1 } },
 });
-
-// ---------------------------------------------------------------------------
-// Trim + view (parity PR 3)
-// ---------------------------------------------------------------------------
 
 defineAction({
   id: "edit.ripple-delete",
@@ -604,11 +543,6 @@ defineAction({
   operator: { id: "keyframes.toggleMasterAtPlayhead" },
 });
 
-// ---------------------------------------------------------------------------
-// Multicam (active in multicam mode): 1–9 switch layouts — cut while playing,
-// correct the span while paused (Premiere semantics).
-// ---------------------------------------------------------------------------
-
 function targetMulticam({ engine, ui }: ActionContext) {
   if (ui.mode !== "multicam") return null;
   return findTargetMulticam(
@@ -653,15 +587,9 @@ defineAction({
       engine.dispatch({ type: "createMulticam", elementIds: videoIds });
       ui.setMode("multicam");
     } catch {
-      // Mixed/invalid selection: leave the project untouched.
     }
   },
 });
-
-// ---------------------------------------------------------------------------
-// File (main menu): the document itself — new/open/save travel as JSON, media
-// relinks by content hash (see project-file.ts); import shares the bin's path.
-// ---------------------------------------------------------------------------
 
 defineAction({
   id: "file.new",
@@ -669,7 +597,6 @@ defineAction({
   category: "file",
   icon: FileVideoIcon,
   run: ({ engine }) => {
-    // Destructive for the autosaved session — the next snapshot replaces it.
     if (!window.confirm("Start a new project? The current project will be replaced.")) return;
     engine.loadProject(createProject());
     void clearSavedSession();
@@ -729,10 +656,6 @@ defineAction({
     }),
 });
 
-// ---------------------------------------------------------------------------
-// View extras (main menu)
-// ---------------------------------------------------------------------------
-
 defineAction({
   id: "view.toggle-theme",
   label: "Toggle light/dark theme",
@@ -761,10 +684,6 @@ defineAction({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Help
-// ---------------------------------------------------------------------------
-
 defineAction({
   id: "help.shortcuts",
   label: "Keyboard shortcuts…",
@@ -780,6 +699,6 @@ defineAction({
   id: "help.command-palette",
   label: "Command palette…",
   category: "help",
-  palette: false, // it IS the palette
+  palette: false,
   run: () => openCommandPalette(),
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
 import {
   OperatorError,
   applyCommands,
@@ -16,7 +16,7 @@ import {
   type AudioActivityOptions,
   type AudioActivityWindow,
 } from "@mcut/media";
-import { useEditor, useLatest } from "@mcut/react";
+import { useEditor, useWebSocket } from "@mcut/react";
 import {
   CommandError,
   ProjectFormatError,
@@ -364,123 +364,98 @@ const storedBridgeConfigSchema = z.object({
   token: z.string().nullable().catch(null),
 });
 
-function readStoredBridgeConfig(): { port: string; token: string | null } | null {
+interface BridgeLaunch {
+  source: "url" | "storage";
+  port: string;
+  token: string | null;
+}
+
+const RECONNECT_DELAY_MS: Record<BridgeLaunch["source"], number> = { url: 1000, storage: 5000 };
+
+function readStoredBridgeLaunch(): BridgeLaunch | null {
   try {
     const raw = window.sessionStorage.getItem(BRIDGE_CONFIG_STORAGE_KEY);
     if (!raw) return null;
     const stored = storedBridgeConfigSchema.safeParse(JSON.parse(raw));
     if (!stored.success) return null;
-    return { port: stored.data.port || DEFAULT_BRIDGE_PORT, token: stored.data.token };
+    return { source: "storage", port: stored.data.port || DEFAULT_BRIDGE_PORT, token: stored.data.token };
   } catch {
     return null;
   }
 }
 
-function writeStoredBridgeConfig(config: { port: string; token: string | null }): void {
+function rememberBridgeLaunch(launch: BridgeLaunch): void {
   try {
-    window.sessionStorage.setItem(BRIDGE_CONFIG_STORAGE_KEY, JSON.stringify(config));
+    window.sessionStorage.setItem(
+      BRIDGE_CONFIG_STORAGE_KEY,
+      JSON.stringify({ port: launch.port, token: launch.token }),
+    );
   } catch {
-    // Ignore storage failures; explicit URL params still connect for this page load.
   }
 }
 
-function bridgeConfig(): { port: string; token: string | null; quiet: boolean } | null {
+function readBridgeLaunch(): BridgeLaunch | null {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
-  if (params.has("mcpBridge")) {
-    const config = {
-      port: params.get("mcpBridge") || DEFAULT_BRIDGE_PORT,
-      token: params.get("mcpToken"),
-    };
-    writeStoredBridgeConfig(config);
-    return { ...config, quiet: false };
+  const port = params.get("mcpBridge");
+  if (port === null) return readStoredBridgeLaunch();
+  return { source: "url", port: port || DEFAULT_BRIDGE_PORT, token: params.get("mcpToken") };
+}
+
+function bridgeSocketUrl(launch: BridgeLaunch): string {
+  const url = new URL(`ws://127.0.0.1:${launch.port}/mcut-mcp`);
+  if (launch.token) url.searchParams.set("token", launch.token);
+  return url.href;
+}
+
+async function respondToBridgeFrame(
+  socket: WebSocket,
+  data: unknown,
+  engine: EditorEngine,
+  ui: ReturnType<typeof useEditorUI>,
+): Promise<void> {
+  const frame = parseBridgeFrame(data);
+  if (!frame.ok) {
+    socket.send(JSON.stringify({ id: frame.id, ok: false, error: frame.error }));
+    return;
   }
-  const stored = readStoredBridgeConfig();
-  return stored ? { ...stored, quiet: true } : null;
+  const { request } = frame;
+  try {
+    const result = await handleLiveMcpRequest(engine, ui, request);
+    socket.send(JSON.stringify({ id: request.id, ok: true, result }));
+  } catch (error) {
+    socket.send(JSON.stringify({ id: request.id, ok: false, error: serializeError(error) }));
+  }
+}
+
+function BridgeConnection({ launch }: { launch: BridgeLaunch }) {
+  const engine = useEditor();
+  const ui = useEditorUI();
+  useWebSocket(
+    bridgeSocketUrl(launch),
+    {
+      onOpen: (socket) => {
+        socket.send(
+          JSON.stringify({
+            type: "hello",
+            payload: { projectName: engine.project.name, userAgent: window.navigator.userAgent },
+          }),
+        );
+        if (launch.source === "url") {
+          rememberBridgeLaunch(launch);
+          toast.success("Live MCP connected");
+        }
+      },
+      onMessage: (socket, event) => {
+        void respondToBridgeFrame(socket, event.data, engine, ui);
+      },
+    },
+    { reconnectDelayMs: RECONNECT_DELAY_MS[launch.source] },
+  );
+  return null;
 }
 
 export function LiveMcpBridge() {
-  const engine = useEditor();
-  const ui = useLatest(useEditorUI());
-
-  useEffect(() => {
-    const config = bridgeConfig();
-    if (!config) return;
-
-    let stopped = false;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let socket: WebSocket | null = null;
-
-    const scheduleConnect = () => {
-      reconnectTimer = setTimeout(start, config.quiet ? 5000 : 1000);
-    };
-
-    const start = () => {
-      if (!config.quiet) {
-        connect();
-        return;
-      }
-      fetch(`http://127.0.0.1:${config.port}/status`, { mode: "no-cors" })
-        .then(() => connect())
-        .catch(() => {
-          if (!stopped) scheduleConnect();
-        });
-    };
-
-    const connect = () => {
-      if (stopped) return;
-      const url = new URL(`ws://127.0.0.1:${config.port}/mcut-mcp`);
-      if (config.token) url.searchParams.set("token", config.token);
-      socket = new WebSocket(url);
-
-      socket.addEventListener("open", () => {
-        socket?.send(
-          JSON.stringify({
-            type: "hello",
-            payload: {
-              projectName: engine.project.name,
-              userAgent: window.navigator.userAgent,
-            },
-          }),
-        );
-        if (!config.quiet) toast.success("Live MCP connected");
-      });
-
-      socket.addEventListener("message", (event) => {
-        void (async () => {
-          const frame = parseBridgeFrame(event.data);
-          if (!frame.ok) {
-            socket?.send(JSON.stringify({ id: frame.id, ok: false, error: frame.error }));
-            return;
-          }
-          const { request } = frame;
-          try {
-            const result = await handleLiveMcpRequest(engine, ui.current, request);
-            socket?.send(JSON.stringify({ id: request.id, ok: true, result }));
-          } catch (error) {
-            socket?.send(JSON.stringify({ id: request.id, ok: false, error: serializeError(error) }));
-          }
-        })();
-      });
-
-      socket.addEventListener("close", () => {
-        if (stopped) return;
-        scheduleConnect();
-      });
-
-      socket.addEventListener("error", () => {
-        socket?.close();
-      });
-    };
-
-    start();
-
-    return () => {
-      stopped = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      socket?.close();
-    };
-  }, [engine]);
-
-  return null;
+  const [launch] = useState(readBridgeLaunch);
+  return launch === null ? null : <BridgeConnection launch={launch} />;
 }

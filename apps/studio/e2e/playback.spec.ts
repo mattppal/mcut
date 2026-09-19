@@ -5,19 +5,8 @@ import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { dragAssetToLane, openEditor, previewPixels } from "./helpers";
 
-/**
- * Preview playback health. These guard the preview pool's seek discipline:
- * issuing a new seek while one is in flight aborts its decode, and on
- * long-GOP sources (seek latency > drift tolerance) that used to loop
- * forever — playback degraded to ~11fps scrub-cache frames and a paused
- * preview could stay black until reload.
- *
- * Fixtures are synthesized with ffmpeg; the suite is skipped without it.
- */
-
 const FIXTURE_DIR = join(tmpdir(), "mcut-e2e-fixtures");
 const SMOOTH_FIXTURE = join(FIXTURE_DIR, "smooth-8s.webm");
-// One keyframe for the whole file: every mid-file seek decodes from t=0.
 const LONG_GOP_FIXTURE = join(FIXTURE_DIR, "long-gop-20s.webm");
 
 function ffmpeg(args: string[]): boolean {
@@ -65,7 +54,6 @@ declare global {
   }
 }
 
-/** Count seeks/events on the pool's detached media elements (created pre-app). */
 async function instrument(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const elements: Window["__mediaStats"]["elements"] = [];
@@ -110,7 +98,6 @@ async function importFile(page: Page, path: string, title: RegExp): Promise<void
   await expect(page.getByTitle(title)).toBeVisible({ timeout: 30_000 });
 }
 
-/** Drag the (only) timeline clip flush to t=0 so the playhead intersects it. */
 async function dragClipToStart(page: Page): Promise<void> {
   const clipBox = (await page.locator("[data-mcut-clip]").first().boundingBox())!;
   const laneBox = (await page.locator("[data-mcut-lane]").first().boundingBox())!;
@@ -133,7 +120,7 @@ test("paused preview displays the frame under the playhead", async ({ page }) =>
   await dragClipToStart(page);
 
   await page.getByRole("button", { name: "Go to start" }).click();
-  await page.keyboard.press("Shift+ArrowRight"); // 1s into the clip
+  await page.keyboard.press("Shift+ArrowRight");
   await page.waitForTimeout(1200);
   expect(await previewPixels(page)).toBeGreaterThan(100);
 
@@ -236,14 +223,12 @@ test("skip-ahead on a long-GOP file recovers without a seek spiral", async ({ pa
   await page.getByRole("button", { name: "Go to start" }).click();
   await page.waitForTimeout(500);
 
-  // Approximate a loaded laptop: every mid-file seek now outlasts the
-  // pool's drift tolerance, which is what used to trigger the spiral.
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await page.waitForTimeout(2500);
-  await page.keyboard.press("Shift+ArrowRight"); // skip ahead mid-playback
+  await page.keyboard.press("Shift+ArrowRight");
   await page.waitForTimeout(6000);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
 
@@ -253,9 +238,6 @@ test("skip-ahead on a long-GOP file recovers without a seek spiral", async ({ pa
     return { seeks: video.seeks, currentTime: video.el.currentTime };
   });
 
-  // The broken pool issued 35+ seeks here (one every drift-tolerance tick,
-  // each aborting the last); a healthy one converges in a couple.
   expect(report.seeks, "seeks on the pool's <video>, not the filmstrip's").toBeLessThan(5);
-  // And playback actually progressed past the skip target afterwards.
   expect(report.currentTime).toBeGreaterThan(4);
 });

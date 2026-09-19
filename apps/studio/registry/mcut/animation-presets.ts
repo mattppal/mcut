@@ -18,12 +18,6 @@ const PUNCH_ZOOM_PRESET: ZoomPreset = {
   },
 };
 
-/**
- * Studio-level preset tuning. The SDK's punch-zoom is intentionally sharp and
- * starts at clip-local 0 with auto motion blur. In the product UI, "punch"
- * should land where the playhead is parked, so we apply it as a clean saved
- * zoom pattern instead.
- */
 export function applyStudioAnimationPreset(
   engine: EditorEngine,
   element: TimelineElement,

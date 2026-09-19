@@ -9,27 +9,12 @@ import { useEditorUI } from "./editor-ui";
 import { clamp, clamp01, roundTo } from "./math";
 import { findTargetMulticam } from "./multicam-ui";
 
-/**
- * On-canvas direct manipulation for a multicam layout, Figma-style: slots
- * are draggable boxes with eight resize handles (corners keep the aspect,
- * Shift frees it; edges stretch one axis), drags snap to the safe area /
- * canvas center / sibling slots with guide lines (⌘ disables), arrows nudge
- * by a pixel, and double-clicking a cover slot enters crop mode where
- * dragging pans the source inside the frame. Everything with a value — fit,
- * radius, shadow, aspect, exact position — lives in the inspector
- * (LayoutSlotInspector in properties-layout-slot.tsx), keyed off the shared
- * editingSlotIndex edit state. Every edit dispatches saveLayout, so the bank
- * tiles and program output restyle live.
- */
-
 const MIN_SIZE = 0.05;
 const CLICK_SLOP_PX = 4;
 const SNAP_PX = 8;
 
-/** Safe-area margin: 5% of the canvas short edge (uniform in pixels). */
 export const SAFE_MARGIN = 0.05;
 
-/** The safe-area rect in normalized canvas coordinates. */
 export function safeAreaRect(width: number, height: number): LayoutSlot["rect"] {
   const margin = SAFE_MARGIN * Math.min(width, height);
   return {
@@ -49,7 +34,6 @@ export function roundRect(rect: LayoutSlot["rect"]): LayoutSlot["rect"] {
   };
 }
 
-/** Patch one slot of a layout (shared with the inspector). */
 export function saveLayoutSlot(
   engine: EditorEngine,
   layout: Layout,
@@ -69,11 +53,9 @@ export function saveLayoutSlot(
       options,
     );
   } catch {
-    // Layout vanished mid-edit.
   }
 }
 
-/** Closest snap candidate to any of `positions` within `threshold`. */
 function snapAxis(
   positions: number[],
   candidates: number[],
@@ -91,7 +73,6 @@ function snapAxis(
   return best ?? { delta: 0, guide: null };
 }
 
-/** Snap targets on one axis: canvas edges/center, safe area, sibling slots. */
 function axisCandidates(
   layout: Layout,
   skipIndex: number,
@@ -125,7 +106,6 @@ const HANDLES: ReadonlyArray<{ id: HandleId; x: number; y: number; cursor: strin
 interface Guides {
   x: number | null;
   y: number | null;
-  /** True while a drag is live (shows the safe-area outline). */
   active: boolean;
 }
 
@@ -147,7 +127,6 @@ function SlotBox({
   index: number;
   selected: boolean;
   cropping: boolean;
-  /** Natural pixel size of the source filling this slot (for crop panning). */
   sourceSize: { width: number; height: number } | null;
   onSelect: (index: number) => void;
   onToggleCrop: (index: number) => void;
@@ -161,7 +140,6 @@ function SlotBox({
     startY: number;
     rect: LayoutSlot["rect"];
     focus: { x: number; y: number };
-    /** How many container px of the source overflow the slot per axis (crop). */
     overflow: { x: number; y: number };
     container: DOMRect;
     moved: boolean;
@@ -210,9 +188,6 @@ function SlotBox({
     if (!drag.moved) return;
 
     if (drag.mode === "crop") {
-      // Dragging the content right reveals more of the source's left side,
-      // so the focus moves opposite the pointer — and only where the cover
-      // crop actually overflows the slot.
       const fx = drag.overflow.x > 1 ? clamp01(drag.focus.x - dxPx / drag.overflow.x) : drag.focus.x;
       const fy = drag.overflow.y > 1 ? clamp01(drag.focus.y - dyPx / drag.overflow.y) : drag.focus.y;
       save({ focus: { x: roundTo(fx, 3), y: roundTo(fy, 3) } });
@@ -263,8 +238,6 @@ function SlotBox({
     let guideX: number | null = null;
     let guideY: number | null = null;
     if (!snapOff) {
-      // Snap the moving edges; with the aspect locked only the dominant axis
-      // snaps, then the other re-derives so the ratio survives.
       if ((!locked || dominantX) && handle.includes("e")) {
         const snap = snapAxis([r.x + w], candidatesX, thresholdX);
         w += snap.delta;
@@ -305,7 +278,6 @@ function SlotBox({
     engine.endTransaction();
     setGuides(NO_GUIDES);
     event.currentTarget.releasePointerCapture(event.pointerId);
-    // A press that never moved is a click: select the slot for the inspector.
     if (!drag.moved && drag.mode !== "resize") onSelect(index);
   };
 
@@ -324,7 +296,6 @@ function SlotBox({
         top: `${slot.rect.y * 100}%`,
         width: `${slot.rect.w * 100}%`,
         height: `${slot.rect.h * 100}%`,
-        // Mirror the render's rounding so radius edits read on the overlay too.
         borderRadius: `${slot.cornerRadius * 100}%`,
       }}
       onPointerDown={(event) => begin(cropping ? "crop" : "move", event)}
@@ -359,7 +330,6 @@ function SlotBox({
   );
 }
 
-/** Mounted over the preview while a layout is being edited (multicam mode). */
 export function LayoutSlotEditor() {
   const { editingLayoutId } = useEditorUI();
   const layout = useEditorState((s) =>
@@ -376,9 +346,6 @@ function LayoutEditor({ layout }: { layout: Layout }) {
   const [guides, setGuides] = useState<Guides>(NO_GUIDES);
   const selectedIds = useEditorState((s) => s.selection.elementIds);
 
-  // Esc walks out one level (crop → slot selection → editor); arrows nudge
-  // the selected slot by a pixel (Shift = 10). Capture phase so the global
-  // playhead/selection hotkeys don't also fire.
   useWindowEvent(
     "keydown",
     (event) => {
@@ -417,8 +384,6 @@ function LayoutEditor({ layout }: { layout: Layout }) {
     { capture: true },
   );
 
-  // Crop panning needs the source's natural size; resolve it through the
-  // multicam the bank targets (selected, else under playhead, else first).
   const target = findTargetMulticam(
     engine.project,
     selectedIds,
@@ -437,7 +402,6 @@ function LayoutEditor({ layout }: { layout: Layout }) {
       data-mcut-slot-editor=""
       className="absolute inset-0 z-10"
       onPointerDown={(event) => {
-        // Clicking empty canvas steps out of crop mode / slot selection.
         if (event.target !== event.currentTarget) return;
         setCropIndex(null);
         setEditingSlotIndex(null);

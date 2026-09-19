@@ -35,7 +35,6 @@ import { useEditorUI, type TimelineEditMode, type TimelineTool } from "./editor-
 import { formatTimecode } from "./format";
 import { captureViewportStill } from "./viewport-capture";
 
-/** Premiere-style pointer tools; letters double as their shortcuts. */
 const TIMELINE_TOOLS: Array<{ id: TimelineTool; label: string; hint: string; key: string }> = [
   { id: "select", label: "Select", hint: "move / trim", key: "V" },
   { id: "ripple", label: "Ripple", hint: "trim + close gaps", key: "B" },
@@ -58,7 +57,6 @@ const ASPECT_PRESETS = [
   { label: "Cinema", ratio: "21:9", width: 2560, height: 1080 },
 ];
 
-/** Preview-only raster quality (export always renders full resolution). */
 const QUALITY_PRESETS: Array<{ label: string; hint: string; value: PreviewQuality }> = [
   { label: "Auto", hint: "fit preview", value: "auto" },
   { label: "720p", hint: "performance", value: 720 },
@@ -122,10 +120,6 @@ function Timecode() {
   );
 }
 
-/**
- * CapCut-style transport strip under the preview: skip/step/play, timecode,
- * aspect presets, snap magnet, mute, fullscreen.
- */
 export function TransportBar() {
   const { engine, pool } = useEditorContext();
   const isPlaying = usePlayback((s) => s.isPlaying);

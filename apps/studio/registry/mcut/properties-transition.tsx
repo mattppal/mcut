@@ -1,7 +1,5 @@
 "use client";
 
-// Transition: the transition into the next flush clip.
-
 import { useEditor } from "@mcut/react";
 import {
   TRANSITION_TYPES,
@@ -36,7 +34,6 @@ export function TransitionSection({ element, track }: { element: TimelineElement
         },
       });
     } catch {
-      // No adjacent clip (or element vanished): inputs resync from state.
     }
   };
   return (

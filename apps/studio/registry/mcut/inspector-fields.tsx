@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useId, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { ChevronRightIcon, Undo2Icon } from "@/lib/hugeicons";
 import { useEditor } from "@mcut/react";
 import { cn } from "@/lib/utils";
@@ -20,14 +20,6 @@ import {
   ColorPickerSelection,
 } from "@/components/kibo-ui/color-picker";
 
-/**
- * The inspector's field vocabulary, shared by every editing surface (element
- * properties, multicam layout slots, project settings) so the same controls —
- * and muscle memory — apply everywhere. One row = a w-16 label + the control;
- * `Section` groups rows under a collapsible header.
- */
-
-/** Label + control row; the layout primitive every field builds on. */
 export function FieldRow({
   label,
   title,
@@ -47,18 +39,15 @@ export function FieldRow({
   );
 }
 
-/** The ONE input look for inspector fields (and the spinner-free numeric variant). */
 export const inspectorInputClass = "h-full font-mono text-xs";
 const numericInputClass = cn(
   inspectorInputClass,
   "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
 );
 
-/**
- * THE inspector number input, Figma-style: drag anywhere on the field (or
- * its label) to scrub the value horizontally — one undo entry per scrub — and
- * a clean click (or Tab) drops into text editing; commit on blur/Enter.
- */
+const keepLabelAScrubHandleThatNeverFocusesTheInput = (event: ReactMouseEvent<HTMLLabelElement>) =>
+  event.preventDefault();
+
 export function NumberField({
   label,
   value,
@@ -71,7 +60,6 @@ export function NumberField({
   controls,
   className,
 }: {
-  /** Row label; omit for compact embeds (the input still scrubs). */
   label?: string;
   value: number;
   onCommit: (value: number) => void;
@@ -79,9 +67,7 @@ export function NumberField({
   min?: number;
   max?: number;
   unit?: string;
-  /** Value change per pointer px while scrubbing. Default `step/2`. */
   scrubPerPx?: number;
-  /** Trailing row controls (keyframe navigator). */
   controls?: React.ReactNode;
   className?: string;
 }) {
@@ -118,7 +104,6 @@ export function NumberField({
     const raw = scrub.base + (event.clientX - scrub.startX) * perPx;
     onCommit(clamp(Number(raw.toFixed(decimals)), min, max));
   };
-  /** Ends a scrub; returns true when the pointer never moved (a click). */
   const scrubUp = (event: ReactPointerEvent<HTMLElement>): boolean => {
     const scrub = scrubRef.current;
     if (!scrub) return false;
@@ -128,8 +113,6 @@ export function NumberField({
     return !scrub.moved;
   };
 
-  // The input surface scrubs too (Figma): preventDefault holds off focus;
-  // a clean click then enters edit mode, dragging never does.
   const onInputPointerDown = (event: ReactPointerEvent<HTMLInputElement>) => {
     if (editing || event.button !== 0) return;
     event.preventDefault();
@@ -155,12 +138,7 @@ export function NumberField({
           onPointerMove={scrubMove}
           onPointerUp={scrubUp}
           onPointerCancel={scrubUp}
-          // Label activation forwards focus into the input after EVERY scrub
-          // — and editor shortcuts (incl. ⌘Z) are suppressed while an input
-          // has focus, so undo went dead until the user clicked elsewhere
-          // (usually losing their selection). Cancelling the click keeps the
-          // label a pure scrub handle; clicking the input still edits.
-          onClick={(event) => event.preventDefault()}
+          onClick={keepLabelAScrubHandleThatNeverFocusesTheInput}
         >
           {label}
         </label>
@@ -178,8 +156,6 @@ export function NumberField({
             commitDraft();
           }}
           onKeyDown={(e) => {
-            // Commit-and-exit (Figma/Premiere): leaving edit mode returns
-            // keyboard shortcuts to the editor right away.
             if (e.key === "Enter") e.currentTarget.blur();
           }}
           onPointerDown={onInputPointerDown}
@@ -219,9 +195,6 @@ export function ColorField({
   const engine = useEditor();
   const [draft, setDraft] = useState<string | null>(null);
 
-  // One undo entry per picker gesture: the picker commits on every pointer
-  // move, which used to record a history entry per tick — undo then crawled
-  // back through dozens of intermediate colors instead of reverting the drag.
   const beginPickerGesture = () => {
     engine.beginTransaction();
     const end = () => {
@@ -272,8 +245,6 @@ export function ColorField({
         value={draft ?? value}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {
-          // Commit once on exit, not per keystroke (each keystroke was a
-          // history entry — and invalid intermediate colors like "#f").
           if (draft !== null && draft !== value) onCommit(draft);
           setDraft(null);
         }}
@@ -293,7 +264,6 @@ export function Section({
 }: {
   title: string;
   children: React.ReactNode;
-  /** Header affordances (preset menu, …); shown on hover like reset. */
   actions?: React.ReactNode;
   onReset?: () => void;
   defaultOpen?: boolean;

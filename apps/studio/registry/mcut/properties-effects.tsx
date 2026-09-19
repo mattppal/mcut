@@ -1,7 +1,5 @@
 "use client";
 
-// Effects: the effect stack (drag to reorder), blend mode, and the keyframable blur.
-
 import { useState } from "react";
 import {
   closestCenter,
@@ -80,7 +78,6 @@ function EffectRow({
     try {
       engine.dispatch(command);
     } catch (error) {
-      // "Nothing happened" reads as a bug — say why the edit was refused.
       toast.error(error instanceof Error ? error.message : "Edit failed");
     }
   };
@@ -149,21 +146,16 @@ export function EffectsSection({ element }: { element: TimelineElement }) {
   const [adding, setAdding] = useState(false);
   const effects = ("effects" in element ? element.effects : undefined) ?? [];
   const blendMode = ("blendMode" in element ? element.blendMode : undefined) ?? "normal";
-  // The `blur` fixed-effect property: keyframable blur on top of the static
-  // stack (blur-in/out reveals). Committing a value keys it at the playhead.
   const blurArmed = hasKeyframes(element, "blur");
   const playheadMs = usePlayback((s) => (blurArmed ? Math.round(s.currentTimeMs) : -1));
   const nowMs = playheadMs >= 0 ? playheadMs : Math.round(engine.playback.state.currentTimeMs);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
-  // Whole-stack preset: the effects list plus blend mode, applied through
-  // updateElement so the merged element re-validates (bad data just toasts).
   const applyEffectsPreset = (values: Record<string, unknown>) => {
     const patch: Record<string, unknown> = {};
     if (Array.isArray(values.effects)) patch.effects = values.effects;
     if ("blendMode" in values) patch.blendMode = values.blendMode ?? undefined;
     engine.dispatch({ type: "updateElement", elementId: element.id, patch });
   };
-  // Stack order is z-order for filters: drag rows to re-apply in a new order.
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -175,7 +167,6 @@ export function EffectsSection({ element }: { element: TimelineElement }) {
         toIndex: Number(over.id),
       });
     } catch {
-      // Element vanished mid-drag.
     }
   };
   return (
@@ -234,7 +225,6 @@ export function EffectsSection({ element }: { element: TimelineElement }) {
               try {
                 engine.dispatch({ type: "addEffect", elementId: element.id, effect: { type } });
               } catch {
-                // Element vanished mid-edit.
               }
             }}
           >
@@ -271,7 +261,6 @@ export function EffectsSection({ element }: { element: TimelineElement }) {
               value: radius,
             });
           } catch {
-            // Element vanished mid-edit.
           }
         }}
         controls={<KeyframeRowControls element={element} property="blur" />}
