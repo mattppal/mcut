@@ -12,6 +12,8 @@ out/
 coverage/
 playwright-report/
 test-results/
+reports/
+/project.mcut.json
 .mcp.json
 .context/
 release-out/
