@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "apps/studio/public",
+    "apps/studio/components/ui",
+    "apps/studio/components/kibo-ui",
+    "apps/web/.source",
+    "dist",
+    "node_modules",
+    "skills/mcut-editing/references"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-unused-vars": "off",
+    "no-useless-escape": "off",
+    "oxc/double-comparisons": "off",
+    "oxc/erasing-op": "off",
+    "unicorn/no-useless-fallback-in-spread": "off",
+    "unicorn/no-useless-length-check": "off",
+    "unicorn/no-useless-spread": "off",
+    "unicorn/prefer-string-starts-ends-with": "off"
+  }
+}

@@ -74,9 +74,7 @@ describe('toOtio', () => {
     expect(transition.transition_type).toBe('SMPTE_Dissolve')
     expect(transition.in_offset.value).toBe(200)
     expect(transition.out_offset.value).toBe(200)
-    const total = children
-      .filter((c) => c.OTIO_SCHEMA !== 'Transition.1')
-      .reduce((sum, c) => sum + c.source_range.duration.value, 0)
+    const total = children.filter((c) => c.OTIO_SCHEMA !== 'Transition.1').reduce((sum, c) => sum + c.source_range.duration.value, 0)
     expect(total).toBe(4000)
   })
 

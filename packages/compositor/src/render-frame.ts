@@ -14,21 +14,11 @@ import { renderElementLayer } from './renderers'
 import { transitionRenderers, type TransitionRenderContext } from './transition-renderers'
 import type { Canvas2D, RenderFrameOptions } from './types'
 
-export function renderFrame(
-  ctx: Canvas2D,
-  project: Project,
-  timeMs: number,
-  options: RenderFrameOptions = {},
-): void {
+export function renderFrame(ctx: Canvas2D, project: Project, timeMs: number, options: RenderFrameOptions = {}): void {
   renderFrameWith(new Canvas2DBackend(ctx, project.width, project.height), project, timeMs, options)
 }
 
-export function renderFrameWith(
-  backend: RenderBackend,
-  project: Project,
-  timeMs: number,
-  options: RenderFrameOptions = {},
-): void {
+export function renderFrameWith(backend: RenderBackend, project: Project, timeMs: number, options: RenderFrameOptions = {}): void {
   backend.beginFrame(options.backgroundColor ?? '#000000')
 
   for (const track of project.tracks) {
@@ -53,33 +43,14 @@ export function renderFrameWith(
   backend.endFrame()
 }
 
-function renderElement(
-  backend: RenderBackend,
-  project: Project,
-  track: Track,
-  element: TimelineElement,
-  timeMs: number,
-  options: RenderFrameOptions,
-): void {
-  if (
-    renderElementWithMotionBlur(backend, project, track, element, timeMs, options, renderElementLayer)
-  ) {
+function renderElement(backend: RenderBackend, project: Project, track: Track, element: TimelineElement, timeMs: number, options: RenderFrameOptions): void {
+  if (renderElementWithMotionBlur(backend, project, track, element, timeMs, options, renderElementLayer)) {
     return
   }
-  renderElementLayer(
-    resolveAnimatedElement(element, timeMs),
-    createElementContext(backend, project, track, timeMs, options.source),
-  )
+  renderElementLayer(resolveAnimatedElement(element, timeMs), createElementContext(backend, project, track, timeMs, options.source))
 }
 
-function renderTransition(
-  backend: RenderBackend,
-  project: Project,
-  track: Track,
-  pair: TransitionPair,
-  timeMs: number,
-  options: RenderFrameOptions,
-): void {
+function renderTransition(backend: RenderBackend, project: Project, track: Track, pair: TransitionPair, timeMs: number, options: RenderFrameOptions): void {
   const completion = getTransitionCompletion(pair, timeMs)
   backend.pushRasterScope()
   try {

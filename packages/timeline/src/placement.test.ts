@@ -3,11 +3,9 @@ import type { TrackId } from './id'
 import { createProject, elementSchema, trackSchema, type Project, type TimelineElement, type Track } from './model'
 import { canPlace, compactTimelineIfMagnetic, placementFor } from './placement'
 
-const text = (id: string, startMs: number, durationMs: number): TimelineElement =>
-  elementSchema.parse({ id, type: 'text', text: id, startMs, durationMs })
+const text = (id: string, startMs: number, durationMs: number): TimelineElement => elementSchema.parse({ id, type: 'text', text: id, startMs, durationMs })
 
-const track = (id: TrackId, magnetic: boolean, elements: TimelineElement[]): Track =>
-  trackSchema.parse({ id, name: id, magnetic, elements })
+const track = (id: TrackId, magnetic: boolean, elements: TimelineElement[]): Track => trackSchema.parse({ id, name: id, magnetic, elements })
 
 const order = (elements: TimelineElement[]) => elements.map((e) => [e.id, e.startMs])
 
@@ -73,10 +71,7 @@ describe('compactTimelineIfMagnetic', () => {
   test('packs every track once any track is magnetic and leaves a gapped timeline untouched', () => {
     const mixed: Project = {
       ...createProject(),
-      tracks: [
-        track('t-1', true, [text('e-a', 0, 1000), text('e-b', 3000, 1000)]),
-        track('t-2', false, [text('e-x', 5000, 1000)]),
-      ],
+      tracks: [track('t-1', true, [text('e-a', 0, 1000), text('e-b', 3000, 1000)]), track('t-2', false, [text('e-x', 5000, 1000)])],
     }
     expect(compactTimelineIfMagnetic(mixed).tracks.map((t) => order(t.elements))).toEqual([
       [

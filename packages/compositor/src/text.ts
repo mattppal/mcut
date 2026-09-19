@@ -2,12 +2,7 @@ import { getRunStyleAt, type CaptionStyle, type TextBox, type TextRun, type Text
 
 export type MeasureFn = (text: string, font: string, letterSpacingPx?: number) => number
 
-export function buildFont(style: {
-  fontStyle?: 'normal' | 'italic'
-  fontWeight: number
-  fontSize: number
-  fontFamily: string
-}): string {
+export function buildFont(style: { fontStyle?: 'normal' | 'italic'; fontWeight: number; fontSize: number; fontFamily: string }): string {
   const fontStyle = style.fontStyle === 'italic' ? 'italic ' : ''
   const family = quoteFamily(style.fontFamily)
   return `${fontStyle}${style.fontWeight} ${style.fontSize}px ${family}`
@@ -101,15 +96,7 @@ function sliceSegments(
   return segments
 }
 
-function rangeWidth(
-  measure: MeasureFn,
-  text: string,
-  style: TextStyle,
-  runs: readonly TextRun[],
-  from: number,
-  to: number,
-  letterSpacing: number,
-): number {
+function rangeWidth(measure: MeasureFn, text: string, style: TextStyle, runs: readonly TextRun[], from: number, to: number, letterSpacing: number): number {
   let width = 0
   for (const seg of sliceSegments(measure, text, style, runs, from, to, letterSpacing)) {
     width += seg.width
@@ -117,13 +104,7 @@ function rangeWidth(
   return width
 }
 
-function wrapLine(
-  measure: MeasureFn,
-  font: string,
-  line: string,
-  maxWidth: number,
-  letterSpacing: number,
-): { text: string; width: number }[] {
+function wrapLine(measure: MeasureFn, font: string, line: string, maxWidth: number, letterSpacing: number): { text: string; width: number }[] {
   const [firstWord, ...restWords] = line.match(/\S+/g) ?? []
   if (firstWord === undefined) return [{ text: '', width: 0 }]
 
@@ -208,12 +189,7 @@ function layoutRunLines(
   return lines
 }
 
-export function layoutTextBlock(
-  measure: MeasureFn,
-  text: string,
-  style: TextStyle,
-  options: TextBlockOptions = {},
-): TextBlockLayout {
+export function layoutTextBlock(measure: MeasureFn, text: string, style: TextStyle, options: TextBlockOptions = {}): TextBlockLayout {
   const font = buildFont(style)
   const letterSpacing = style.letterSpacing ?? 0
   const lineHeight = style.fontSize * (style.lineHeight ?? 1.25)
@@ -226,9 +202,7 @@ export function layoutTextBlock(
     : applyTextTransform(text, style.textTransform ?? 'none')
         .split('\n')
         .flatMap((line) =>
-          innerBoxWidth
-            ? wrapLine(measure, font, line, innerBoxWidth, letterSpacing)
-            : [{ text: line, width: measure(line, font, letterSpacing) }],
+          innerBoxWidth ? wrapLine(measure, font, line, innerBoxWidth, letterSpacing) : [{ text: line, width: measure(line, font, letterSpacing) }],
         )
   const maxLineWidth = Math.max(0, ...lines.map((l) => l.width))
   const autoHeight = lines.length * lineHeight + padding * 2

@@ -20,6 +20,14 @@ interface MediaProbe {
 
 The result of `probeMedia`, duration, which tracks exist, optional dimensions, and MIME type.
 
+### MediaProbeErrorCode
+
+```ts
+type MediaProbeErrorCode = 'unreadable' | 'no-tracks' | 'no-duration'
+```
+
+Why a probe was rejected. `unreadable` when no demuxer or the browser can parse the file, `no-tracks` when it parses but has no audio or video track, `no-duration` when it has tracks but no measurable duration.
+
 ### MediaSourceLike
 
 ```ts

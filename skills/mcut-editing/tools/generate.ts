@@ -34,15 +34,7 @@ function rewriteColonConnectors(text: string): string {
     const prev = text.at(i - 1)
     const next = text.at(i + 1)
     const letter = text.at(i + 2)
-    if (
-      depth === 0 &&
-      ch === ':' &&
-      prev !== undefined &&
-      /\w/.test(prev) &&
-      next === ' ' &&
-      letter !== undefined &&
-      /[a-z]/.test(letter)
-    ) {
+    if (depth === 0 && ch === ':' && prev !== undefined && /\w/.test(prev) && next === ' ' && letter !== undefined && /[a-z]/.test(letter)) {
       result += `. ${letter.toUpperCase()}`
       i += 2
       continue
@@ -65,9 +57,7 @@ function sanitizePreset(preset: PlatformPreset): PlatformPreset {
   return { ...preset, notes: plainProse(preset.notes) }
 }
 
-const COMMANDS_HIDDEN_FROM_STUDIO = new Set([
-  'applyThumbnail',
-])
+const COMMANDS_HIDDEN_FROM_STUDIO = new Set(['applyThumbnail'])
 
 function typeLabel(schema: unknown): string {
   if (typeof schema !== 'object' || schema === null) return 'any'

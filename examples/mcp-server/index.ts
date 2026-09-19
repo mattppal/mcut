@@ -16,9 +16,7 @@ import { EditorEngine, parseProject } from '@mcut/timeline'
 
 const projectPath = process.argv[2] ?? process.env.MCUT_PROJECT ?? 'project.mcut.json'
 
-const engine = existsSync(projectPath)
-  ? new EditorEngine({ project: parseProject(JSON.parse(await readFile(projectPath, 'utf8'))) })
-  : new EditorEngine()
+const engine = existsSync(projectPath) ? new EditorEngine({ project: parseProject(JSON.parse(await readFile(projectPath, 'utf8'))) }) : new EditorEngine()
 
 const server = createMcutMcpServer({
   engine,

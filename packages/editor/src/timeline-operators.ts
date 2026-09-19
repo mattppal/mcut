@@ -160,19 +160,14 @@ function toCollageVideoAsset(asset: AssetRef): CollageVideoAsset {
 function collageVideoAssets(assets: readonly AssetRef[]): CollageVideoAssets {
   const [first, second, ...rest] = assets
   if (!first || !second) throw new OperatorError('invalid-payload', 'Select at least two videos')
-  const videos: CollageVideoAssets = [
-    toCollageVideoAsset(first),
-    toCollageVideoAsset(second),
-    ...rest.map(toCollageVideoAsset),
-  ]
+  const videos: CollageVideoAssets = [toCollageVideoAsset(first), toCollageVideoAsset(second), ...rest.map(toCollageVideoAsset)]
   const [base] = videos
   const baseRatio = base.width / base.height
   const mismatch = videos.find((asset) => Math.abs(asset.width / asset.height - baseRatio) > 0.001)
   if (mismatch) {
     throw new OperatorError(
       'invalid-payload',
-      `All videos must use the same aspect ratio (${base.width}:${base.height} vs ` +
-        `${mismatch.width}:${mismatch.height})`,
+      `All videos must use the same aspect ratio (${base.width}:${base.height} vs ` + `${mismatch.width}:${mismatch.height})`,
     )
   }
   return videos
@@ -254,16 +249,10 @@ function findSequentialCollageGroups(project: EditorEngine['project']): Complete
       }
     }
   }
-  return [...byGroup.values()].filter(
-    (parts): parts is CompleteCollageGroupParts =>
-      Boolean(parts.active && parts.audio && parts.audioTrackId),
-  )
+  return [...byGroup.values()].filter((parts): parts is CompleteCollageGroupParts => Boolean(parts.active && parts.audio && parts.audioTrackId))
 }
 
-function orderedCollageGroups(
-  project: EditorEngine['project'],
-  groupOrder?: readonly GroupId[],
-): CompleteCollageGroupParts[] {
+function orderedCollageGroups(project: EditorEngine['project'], groupOrder?: readonly GroupId[]): CompleteCollageGroupParts[] {
   const groups = findSequentialCollageGroups(project)
   const byId = new Map(groups.map((group) => [group.groupId, group]))
   const ordered: CompleteCollageGroupParts[] = []
@@ -292,18 +281,10 @@ export function fitCanvasToVideoCollage(
   return { width, height }
 }
 
-export function createSequentialVideoCollage(
-  engine: EditorEngine,
-  options: SequentialVideoCollageOptions,
-): SequentialVideoCollageResult {
+export function createSequentialVideoCollage(engine: EditorEngine, options: SequentialVideoCollageOptions): SequentialVideoCollageResult {
   const assets = collageVideoAssets(options.assets)
   const [first] = assets
-  const layout =
-    options.layout === 'horizontal' || options.layout === 'vertical'
-      ? options.layout
-      : first.width >= first.height
-        ? 'vertical'
-        : 'horizontal'
+  const layout = options.layout === 'horizontal' || options.layout === 'vertical' ? options.layout : first.width >= first.height ? 'vertical' : 'horizontal'
   const totalDurationMs = assets.reduce((sum, asset) => sum + asset.durationMs, 0)
   const cellWidth = Math.max(...assets.map((asset) => asset.width))
   const cellHeight = Math.round(cellWidth / (first.width / first.height))
@@ -317,63 +298,83 @@ export function createSequentialVideoCollage(
   const audioElementIds: `e-${string}`[] = []
   const trackIds: `t-${string}`[] = []
 
-  engine.transact(() => {
-    if (replaceTimeline) {
-      for (const track of [...engine.project.tracks]) {
-        engine.dispatch({ type: 'removeTrack', trackId: track.id })
+  engine.transact(
+    () => {
+      if (replaceTimeline) {
+        for (const track of [...engine.project.tracks]) {
+          engine.dispatch({ type: 'removeTrack', trackId: track.id })
+        }
       }
-    }
 
-    fitCanvasToVideoCollage(engine, assets, layout)
+      fitCanvasToVideoCollage(engine, assets, layout)
 
-    const audioTrackId = createTrackId()
-    trackIds.push(audioTrackId)
-    engine.dispatch({ type: 'addTrack', id: audioTrackId, name: 'Collage audio', index: 0 })
-    if (lockTracks || magnetic) {
-      engine.dispatch({ type: 'setTrackFlags', trackId: audioTrackId, locked: lockTracks, magnetic })
-    }
-
-    let cursorMs = 0
-    for (const [i, asset] of assets.entries()) {
-      const zoom = Math.max(1, options.zooms?.[i] ?? 1)
-      const crop = centeredCropForZoom(zoom)
-      const scale = (cellWidth / asset.width) * zoom
-      const x = layout === 'horizontal' ? -((cellWidth * (assets.length - 1)) / 2) + i * cellWidth : 0
-      const y = layout === 'vertical' ? -((cellHeight * (assets.length - 1)) / 2) + i * cellHeight : 0
-      const videoTrackId = createTrackId()
-      const groupId = createGroupId()
-      const activeVideoElementId = createElementId()
-      const audioElementId = createElementId()
-      trackIds.push(videoTrackId)
-      visualTrackIds.push(videoTrackId)
-      groupIds.push(groupId)
-      activeVideoElementIds.push(activeVideoElementId)
-      audioElementIds.push(audioElementId)
-      const transform: Transform = { x, y, scaleX: scale, scaleY: scale, rotation: 0 }
-
-      engine.dispatch({
-        type: 'addTrack',
-        id: videoTrackId,
-        name: asset.name ? `Collage ${i + 1}: ${asset.name}` : `Collage ${i + 1}`,
-      })
+      const audioTrackId = createTrackId()
+      trackIds.push(audioTrackId)
+      engine.dispatch({ type: 'addTrack', id: audioTrackId, name: 'Collage audio', index: 0 })
       if (lockTracks || magnetic) {
-        engine.dispatch({ type: 'setTrackFlags', trackId: videoTrackId, locked: lockTracks, magnetic })
+        engine.dispatch({ type: 'setTrackFlags', trackId: audioTrackId, locked: lockTracks, magnetic })
       }
-      if (cursorMs >= MIN_ELEMENT_DURATION_MS) {
-        const freezeId = createElementId()
-        freezeElementIds.push(freezeId)
+
+      let cursorMs = 0
+      for (const [i, asset] of assets.entries()) {
+        const zoom = Math.max(1, options.zooms?.[i] ?? 1)
+        const crop = centeredCropForZoom(zoom)
+        const scale = (cellWidth / asset.width) * zoom
+        const x = layout === 'horizontal' ? -((cellWidth * (assets.length - 1)) / 2) + i * cellWidth : 0
+        const y = layout === 'vertical' ? -((cellHeight * (assets.length - 1)) / 2) + i * cellHeight : 0
+        const videoTrackId = createTrackId()
+        const groupId = createGroupId()
+        const activeVideoElementId = createElementId()
+        const audioElementId = createElementId()
+        trackIds.push(videoTrackId)
+        visualTrackIds.push(videoTrackId)
+        groupIds.push(groupId)
+        activeVideoElementIds.push(activeVideoElementId)
+        audioElementIds.push(audioElementId)
+        const transform: Transform = { x, y, scaleX: scale, scaleY: scale, rotation: 0 }
+
+        engine.dispatch({
+          type: 'addTrack',
+          id: videoTrackId,
+          name: asset.name ? `Collage ${i + 1}: ${asset.name}` : `Collage ${i + 1}`,
+        })
+        if (lockTracks || magnetic) {
+          engine.dispatch({ type: 'setTrackFlags', trackId: videoTrackId, locked: lockTracks, magnetic })
+        }
+        if (cursorMs >= MIN_ELEMENT_DURATION_MS) {
+          const freezeId = createElementId()
+          freezeElementIds.push(freezeId)
+          engine.dispatch({
+            type: 'addElement',
+            trackId: videoTrackId,
+            element: {
+              type: 'video',
+              id: freezeId,
+              groupId,
+              startMs: 0,
+              durationMs: cursorMs,
+              assetId: asset.id,
+              trimStartMs: 0,
+              timeMap: flatFreezeMap(cursorMs, 0),
+              transform,
+              ...(crop ? { crop } : {}),
+              opacity: 1,
+              volume: 0,
+              muted: true,
+            },
+          })
+        }
         engine.dispatch({
           type: 'addElement',
           trackId: videoTrackId,
           element: {
             type: 'video',
-            id: freezeId,
+            id: activeVideoElementId,
             groupId,
-            startMs: 0,
-            durationMs: cursorMs,
+            startMs: cursorMs,
+            durationMs: asset.durationMs,
             assetId: asset.id,
             trimStartMs: 0,
-            timeMap: flatFreezeMap(cursorMs, 0),
             transform,
             ...(crop ? { crop } : {}),
             opacity: 1,
@@ -381,67 +382,50 @@ export function createSequentialVideoCollage(
             muted: true,
           },
         })
-      }
-      engine.dispatch({
-        type: 'addElement',
-        trackId: videoTrackId,
-        element: {
-          type: 'video',
-          id: activeVideoElementId,
-          groupId,
-          startMs: cursorMs,
-          durationMs: asset.durationMs,
-          assetId: asset.id,
-          trimStartMs: 0,
-          transform,
-          ...(crop ? { crop } : {}),
-          opacity: 1,
-          volume: 0,
-          muted: true,
-        },
-      })
-      const afterDurationMs = totalDurationMs - cursorMs - asset.durationMs
-      if (afterDurationMs >= MIN_ELEMENT_DURATION_MS) {
-        const freezeId = createElementId()
-        freezeElementIds.push(freezeId)
+        const afterDurationMs = totalDurationMs - cursorMs - asset.durationMs
+        if (afterDurationMs >= MIN_ELEMENT_DURATION_MS) {
+          const freezeId = createElementId()
+          freezeElementIds.push(freezeId)
+          engine.dispatch({
+            type: 'addElement',
+            trackId: videoTrackId,
+            element: {
+              type: 'video',
+              id: freezeId,
+              groupId,
+              startMs: cursorMs + asset.durationMs,
+              durationMs: afterDurationMs,
+              assetId: asset.id,
+              trimStartMs: 0,
+              timeMap: flatFreezeMap(afterDurationMs, asset.durationMs),
+              transform,
+              ...(crop ? { crop } : {}),
+              opacity: 1,
+              volume: 0,
+              muted: true,
+            },
+          })
+        }
         engine.dispatch({
           type: 'addElement',
-          trackId: videoTrackId,
+          trackId: audioTrackId,
           element: {
-            type: 'video',
-            id: freezeId,
+            type: 'audio',
+            id: audioElementId,
             groupId,
-            startMs: cursorMs + asset.durationMs,
-            durationMs: afterDurationMs,
+            startMs: cursorMs,
+            durationMs: asset.durationMs,
             assetId: asset.id,
             trimStartMs: 0,
-            timeMap: flatFreezeMap(afterDurationMs, asset.durationMs),
-            transform,
-            ...(crop ? { crop } : {}),
-            opacity: 1,
-            volume: 0,
-            muted: true,
+            volume: 1,
+            muted: false,
           },
         })
+        cursorMs += asset.durationMs
       }
-      engine.dispatch({
-        type: 'addElement',
-        trackId: audioTrackId,
-        element: {
-          type: 'audio',
-          id: audioElementId,
-          groupId,
-          startMs: cursorMs,
-          durationMs: asset.durationMs,
-          assetId: asset.id,
-          trimStartMs: 0,
-          volume: 1,
-          muted: false,
-        },
-      })
-      cursorMs += asset.durationMs
-    }
-  }, { selection: activeVideoElementIds })
+    },
+    { selection: activeVideoElementIds },
+  )
 
   return {
     layout,
@@ -456,10 +440,7 @@ export function createSequentialVideoCollage(
   }
 }
 
-export function retimeSequentialCollage(
-  engine: EditorEngine,
-  groupOrder?: readonly GroupId[],
-): SequentialVideoCollageResult | null {
+export function retimeSequentialCollage(engine: EditorEngine, groupOrder?: readonly GroupId[]): SequentialVideoCollageResult | null {
   const groups = orderedCollageGroups(engine.project, groupOrder)
   if (groups.length === 0) return null
 
@@ -468,99 +449,102 @@ export function retimeSequentialCollage(
   const activeVideoElementIds: `e-${string}`[] = groups.map((group) => group.active.id)
   const audioElementIds: `e-${string}`[] = groups.map((group) => group.audio.id)
   const visualTrackIds: `t-${string}`[] = groups.map((group) => group.visualTrackId)
-  const trackIds = [...new Set([...visualTrackIds, ...groups.flatMap((group) => group.audioTrackId ? [group.audioTrackId] : [])])]
+  const trackIds = [...new Set([...visualTrackIds, ...groups.flatMap((group) => (group.audioTrackId ? [group.audioTrackId] : []))])]
 
-  engine.transact(() => {
-    for (const group of groups) {
-      for (const freeze of group.freezes) {
-        engine.dispatch({ type: 'removeElement', elementId: freeze.id })
+  engine.transact(
+    () => {
+      for (const group of groups) {
+        for (const freeze of group.freezes) {
+          engine.dispatch({ type: 'removeElement', elementId: freeze.id })
+        }
+        if (group.audio) engine.dispatch({ type: 'removeElement', elementId: group.audio.id })
       }
-      if (group.audio) engine.dispatch({ type: 'removeElement', elementId: group.audio.id })
-    }
 
-    let cursorMs = 0
-    for (const group of groups) {
-      const current = getElement(engine.project, group.active.id)
-      const active = current?.type === 'video' ? current : undefined
-      if (!active) continue
-      const audioTrackId = group.audioTrackId
-      const visualProps = optionalVisualProps(active)
-      const activeSourceEndMs = getSourceSpanMs(active)
-      const activeDurationMs = active.durationMs
+      let cursorMs = 0
+      for (const group of groups) {
+        const current = getElement(engine.project, group.active.id)
+        const active = current?.type === 'video' ? current : undefined
+        if (!active) continue
+        const audioTrackId = group.audioTrackId
+        const visualProps = optionalVisualProps(active)
+        const activeSourceEndMs = getSourceSpanMs(active)
+        const activeDurationMs = active.durationMs
 
-      engine.dispatch({
-        type: 'trimElement',
-        elementId: active.id,
-        startMs: cursorMs,
-        durationMs: activeDurationMs,
-      })
-
-      if (cursorMs >= MIN_ELEMENT_DURATION_MS) {
-        const freezeId = createElementId()
-        freezeElementIds.push(freezeId)
         engine.dispatch({
-          type: 'addElement',
-          trackId: group.visualTrackId,
-          element: {
-            type: 'video',
-            id: freezeId,
-            groupId: group.groupId,
-            startMs: 0,
-            durationMs: cursorMs,
-            assetId: active.assetId,
-            trimStartMs: active.trimStartMs,
-            timeMap: flatFreezeMap(cursorMs, 0),
-            transform: active.transform,
-            opacity: active.opacity,
-            volume: 0,
-            muted: true,
-            ...visualProps,
-          },
+          type: 'trimElement',
+          elementId: active.id,
+          startMs: cursorMs,
+          durationMs: activeDurationMs,
         })
-      }
 
-      const afterDurationMs = totalDurationMs - cursorMs - activeDurationMs
-      if (afterDurationMs >= MIN_ELEMENT_DURATION_MS) {
-        const freezeId = createElementId()
-        freezeElementIds.push(freezeId)
-        engine.dispatch({
-          type: 'addElement',
-          trackId: group.visualTrackId,
-          element: {
-            type: 'video',
-            id: freezeId,
-            groupId: group.groupId,
-            startMs: cursorMs + activeDurationMs,
-            durationMs: afterDurationMs,
-            assetId: active.assetId,
-            trimStartMs: active.trimStartMs,
-            timeMap: flatFreezeMap(afterDurationMs, activeSourceEndMs),
-            transform: active.transform,
-            opacity: active.opacity,
-            volume: 0,
-            muted: true,
-            ...visualProps,
-          },
-        })
-      }
+        if (cursorMs >= MIN_ELEMENT_DURATION_MS) {
+          const freezeId = createElementId()
+          freezeElementIds.push(freezeId)
+          engine.dispatch({
+            type: 'addElement',
+            trackId: group.visualTrackId,
+            element: {
+              type: 'video',
+              id: freezeId,
+              groupId: group.groupId,
+              startMs: 0,
+              durationMs: cursorMs,
+              assetId: active.assetId,
+              trimStartMs: active.trimStartMs,
+              timeMap: flatFreezeMap(cursorMs, 0),
+              transform: active.transform,
+              opacity: active.opacity,
+              volume: 0,
+              muted: true,
+              ...visualProps,
+            },
+          })
+        }
 
-      if (group.audio && audioTrackId) {
-        engine.dispatch({
-          type: 'addElement',
-          trackId: audioTrackId,
-          element: {
-            ...group.audio,
-            startMs: cursorMs,
-            durationMs: activeDurationMs,
-            trimStartMs: active.trimStartMs,
-            timeMap: active.timeMap,
-          },
-        })
-      }
+        const afterDurationMs = totalDurationMs - cursorMs - activeDurationMs
+        if (afterDurationMs >= MIN_ELEMENT_DURATION_MS) {
+          const freezeId = createElementId()
+          freezeElementIds.push(freezeId)
+          engine.dispatch({
+            type: 'addElement',
+            trackId: group.visualTrackId,
+            element: {
+              type: 'video',
+              id: freezeId,
+              groupId: group.groupId,
+              startMs: cursorMs + activeDurationMs,
+              durationMs: afterDurationMs,
+              assetId: active.assetId,
+              trimStartMs: active.trimStartMs,
+              timeMap: flatFreezeMap(afterDurationMs, activeSourceEndMs),
+              transform: active.transform,
+              opacity: active.opacity,
+              volume: 0,
+              muted: true,
+              ...visualProps,
+            },
+          })
+        }
 
-      cursorMs += activeDurationMs
-    }
-  }, { selection: activeVideoElementIds })
+        if (group.audio && audioTrackId) {
+          engine.dispatch({
+            type: 'addElement',
+            trackId: audioTrackId,
+            element: {
+              ...group.audio,
+              startMs: cursorMs,
+              durationMs: activeDurationMs,
+              trimStartMs: active.trimStartMs,
+              timeMap: active.timeMap,
+            },
+          })
+        }
+
+        cursorMs += activeDurationMs
+      }
+    },
+    { selection: activeVideoElementIds },
+  )
 
   return {
     layout: engine.project.width >= engine.project.height ? 'horizontal' : 'vertical',
@@ -578,11 +562,7 @@ export function retimeSequentialCollage(
 export function splitSelectionAtPlayhead(engine: EditorEngine): void {
   const atMs = quantizeMsToFrame(engine.playback.state.currentTimeMs, engine.project.fps)
   if (engine.selection.elementIds.length === 0) return
-  const ids = [
-    ...new Set(
-      engine.selection.elementIds.flatMap((id) => getLinkedElementIds(engine.project, id)),
-    ),
-  ]
+  const ids = [...new Set(engine.selection.elementIds.flatMap((id) => getLinkedElementIds(engine.project, id)))]
   engine.transact(() => {
     const rightsByLink = new Map<string, `e-${string}`[]>()
     for (const elementId of ids) {
@@ -662,10 +642,7 @@ export function insertElementOnTrack(
 ): ElementId {
   const id = element.id ?? createElementId()
   const track = engine.project.tracks.find((t) => t.id === trackId)
-  const placedStartMs =
-    track && editMode === 'normal'
-      ? findNearestFreeSlot(track, startMs, element.durationMs)
-      : Math.max(0, Math.round(startMs))
+  const placedStartMs = track && editMode === 'normal' ? findNearestFreeSlot(track, startMs, element.durationMs) : Math.max(0, Math.round(startMs))
   engine.dispatch(
     {
       type: 'addElement',
@@ -678,11 +655,7 @@ export function insertElementOnTrack(
   return id
 }
 
-export function insertElementOnNewTrack(
-  engine: EditorEngine,
-  element: TimelineElementInput,
-  startMs: number,
-): ElementId {
+export function insertElementOnNewTrack(engine: EditorEngine, element: TimelineElementInput, startMs: number): ElementId {
   const id = element.id ?? createElementId()
   const trackId = createTrackId()
   engine.transact(
@@ -794,11 +767,7 @@ export function duplicateSelection(engine: EditorEngine): void {
       const location = getElementLocation(engine.project, id)
       if (!location) continue
       const newId = createElementId()
-      const startMs = findNearestFreeSlot(
-        location.track,
-        location.element.startMs + location.element.durationMs,
-        location.element.durationMs,
-      )
+      const startMs = findNearestFreeSlot(location.track, location.element.startMs + location.element.durationMs, location.element.durationMs)
       try {
         engine.dispatch(
           {
@@ -973,12 +942,7 @@ export function moveKeyframesAtTime(
   })
 }
 
-export function removeKeyframesAtTime(
-  engine: EditorEngine,
-  elementId: `e-${string}`,
-  timeMs: number,
-  properties?: AnimatableProperty[],
-): void {
+export function removeKeyframesAtTime(engine: EditorEngine, elementId: `e-${string}`, timeMs: number, properties?: AnimatableProperty[]): void {
   const element = getElement(engine.project, elementId)
   if (!element) return
   const targetProperties = properties ?? animatableProperties(element)

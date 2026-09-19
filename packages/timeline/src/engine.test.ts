@@ -36,9 +36,7 @@ describe('EditorEngine', () => {
       element: { id: 'e-1', type: 'text', startMs: 0, durationMs: 1000, text: 'one' },
     })
     const before = engine.project
-    expect(engine.dispatch({ type: 'trimEdge', elementId: 'e-1', edge: 'end', deltaMs: 0 })).toBe(
-      before,
-    )
+    expect(engine.dispatch({ type: 'trimEdge', elementId: 'e-1', edge: 'end', deltaMs: 0 })).toBe(before)
     expect(engine.undo()).toBe(true)
     expect(getTrack(engine.project, trackId)?.elements).toHaveLength(0)
     expect(engine.canUndo()).toBe(false)

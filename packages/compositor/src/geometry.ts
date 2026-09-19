@@ -28,10 +28,7 @@ export interface SizeHelpers {
   measureText?: (text: string, style: TextStyle, box?: TextBox, runs?: readonly TextRun[]) => ElementSize
 }
 
-export function getElementNaturalSize(
-  element: TimelineElement,
-  helpers: SizeHelpers = {},
-): ElementSize | null {
+export function getElementNaturalSize(element: TimelineElement, helpers: SizeHelpers = {}): ElementSize | null {
   if (element.type === 'audio' || element.type === 'caption' || element.type === 'multicam') {
     return null
   }
@@ -45,10 +42,7 @@ export function getElementNaturalSize(
   return size
 }
 
-export function getElementDisplaySize(
-  element: TimelineElement,
-  helpers: SizeHelpers = {},
-): ElementSize | null {
+export function getElementDisplaySize(element: TimelineElement, helpers: SizeHelpers = {}): ElementSize | null {
   if (!('transform' in element)) return null
   const natural = getElementNaturalSize(element, helpers)
   if (!natural || natural.width <= 0 || natural.height <= 0) return null
@@ -64,19 +58,13 @@ export interface DisplaySizePatch {
   preserveAspect?: boolean
 }
 
-export function getTransformForDisplaySize(
-  transform: Transform,
-  natural: ElementSize,
-  patch: DisplaySizePatch,
-): Transform {
+export function getTransformForDisplaySize(transform: Transform, natural: ElementSize, patch: DisplaySizePatch): Transform {
   if (natural.width <= 0 || natural.height <= 0) return transform
 
   const signX = transform.scaleX < 0 ? -1 : 1
   const signY = transform.scaleY < 0 ? -1 : 1
-  let scaleX =
-    patch.width !== undefined ? signX * Math.max(0.001, patch.width / natural.width) : transform.scaleX
-  let scaleY =
-    patch.height !== undefined ? signY * Math.max(0.001, patch.height / natural.height) : transform.scaleY
+  let scaleX = patch.width !== undefined ? signX * Math.max(0.001, patch.width / natural.width) : transform.scaleX
+  let scaleY = patch.height !== undefined ? signY * Math.max(0.001, patch.height / natural.height) : transform.scaleY
 
   if (patch.preserveAspect) {
     if (patch.width !== undefined && patch.height === undefined) scaleY = signY * Math.abs(scaleX)
@@ -86,11 +74,7 @@ export function getTransformForDisplaySize(
   return { ...transform, scaleX, scaleY }
 }
 
-export function getElementOBB(
-  project: Project,
-  element: TimelineElement,
-  helpers: SizeHelpers = {},
-): OBB | null {
+export function getElementOBB(project: Project, element: TimelineElement, helpers: SizeHelpers = {}): OBB | null {
   if (element.type === 'audio' || element.type === 'caption' || element.type === 'multicam') {
     return null
   }
@@ -118,16 +102,7 @@ export function hitTestOBB(obb: OBB, x: number, y: number): boolean {
   return Math.abs(localX) <= obb.width / 2 && Math.abs(localY) <= obb.height / 2
 }
 
-export type HandleId =
-  | 'nw'
-  | 'n'
-  | 'ne'
-  | 'e'
-  | 'se'
-  | 's'
-  | 'sw'
-  | 'w'
-  | 'rotate'
+export type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rotate'
 
 export interface Handle {
   id: HandleId

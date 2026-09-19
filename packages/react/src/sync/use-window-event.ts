@@ -1,11 +1,7 @@
 import { useEffect } from 'react'
 import { useLatest } from './use-latest'
 
-export function useWindowEvent<K extends keyof WindowEventMap>(
-  type: K,
-  handler: (event: WindowEventMap[K]) => void,
-  options?: AddEventListenerOptions,
-): void {
+export function useWindowEvent<K extends keyof WindowEventMap>(type: K, handler: (event: WindowEventMap[K]) => void, options?: AddEventListenerOptions): void {
   const latest = useLatest(handler)
   const capture = options?.capture ?? false
   const passive = options?.passive

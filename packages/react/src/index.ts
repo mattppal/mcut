@@ -1,20 +1,8 @@
 'use client'
 
-export {
-  EditorProvider,
-  useEditorContext,
-  type EditorContextValue,
-  type EditorProviderProps,
-} from './context'
+export { EditorProvider, useEditorContext, type EditorContextValue, type EditorProviderProps } from './context'
 
-export {
-  useEditor,
-  useEditorState,
-  usePlayback,
-  useProject,
-  useSelectedElement,
-  useSelection,
-} from './hooks'
+export { useEditor, useEditorState, usePlayback, useProject, useSelectedElement, useSelection } from './hooks'
 
 export { PlayerCanvas, type PlayerCanvasProps, type PreviewQuality } from './player-canvas'
 
@@ -29,11 +17,4 @@ export { useDocumentRootAttribute } from './sync/use-document-root-attribute'
 export { useDisposable, type Disposable } from './sync/use-disposable'
 export { useLatest } from './sync/use-latest'
 
-export {
-  applyMove,
-  applyBoxResize,
-  applyResize,
-  applyRotate,
-  type BoxResizeResult,
-  type GesturePoint,
-} from './gestures'
+export { applyMove, applyBoxResize, applyResize, applyRotate, type BoxResizeResult, type GesturePoint } from './gestures'

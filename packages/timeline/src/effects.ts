@@ -54,9 +54,7 @@ export type EffectType = Effect['type']
 export type EffectOfType<K extends EffectType> = Extract<Effect, { type: K }>
 export type CurvePoint = z.infer<typeof curvePointSchema>
 
-export const EFFECT_TYPES: readonly EffectType[] = effectSchema.options.map(
-  (option) => option.shape.type.value,
-)
+export const EFFECT_TYPES: readonly EffectType[] = effectSchema.options.map((option) => option.shape.type.value)
 
 export interface EffectParam<K extends EffectType = EffectType> {
   key: Exclude<keyof EffectOfType<K>, 'type' | 'enabled'>

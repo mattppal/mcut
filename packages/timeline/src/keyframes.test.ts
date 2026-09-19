@@ -107,7 +107,12 @@ describe('upsertKeyframe', () => {
 describe('splitKeyframes', () => {
   test('boundary keyframes keep the value continuous across the cut', () => {
     const { left, right } = splitKeyframes(
-      { opacity: [{ timeMs: 0, value: 0 }, { timeMs: 2000, value: 1 }] },
+      {
+        opacity: [
+          { timeMs: 0, value: 0 },
+          { timeMs: 2000, value: 1 },
+        ],
+      },
       1000,
     )
     expect(left?.opacity?.at(-1)).toEqual({ timeMs: 1000, value: 0.5 })
@@ -117,7 +122,12 @@ describe('splitKeyframes', () => {
   })
   test('a side with no original keyframes still stays armed at the boundary value', () => {
     const { left, right } = splitKeyframes(
-      { rotation: [{ timeMs: 100, value: 45 }, { timeMs: 400, value: 90 }] },
+      {
+        rotation: [
+          { timeMs: 100, value: 45 },
+          { timeMs: 400, value: 90 },
+        ],
+      },
       2000,
     )
     expect(left?.rotation?.length).toBe(3)
@@ -165,9 +175,7 @@ describe('keyframe commands', () => {
 
   test('rejects unsupported properties with a typed error', () => {
     const { project, elementId } = projectWithText()
-    expect(() =>
-      applyCommand(project, { type: 'setKeyframe', elementId, property: 'volume', timeMs: 0, value: 1 }),
-    ).toThrow(/no animatable "volume"/)
+    expect(() => applyCommand(project, { type: 'setKeyframe', elementId, property: 'volume', timeMs: 0, value: 1 })).toThrow(/no animatable "volume"/)
   })
 
   test('moveKeyframe retimes and rejects collisions', () => {
@@ -177,9 +185,7 @@ describe('keyframe commands', () => {
     next = applyCommand(next, { type: 'moveKeyframe', elementId, property: 'rotation', fromTimeMs: 1000, toTimeMs: 1500 })
     const element = next.tracks[0]!.elements[0]!
     expect(element.keyframes?.rotation?.map((k) => k.timeMs)).toEqual([0, 1500])
-    expect(() =>
-      applyCommand(next, { type: 'moveKeyframe', elementId, property: 'rotation', fromTimeMs: 1500, toTimeMs: 0 }),
-    ).toThrow(/already exists/)
+    expect(() => applyCommand(next, { type: 'moveKeyframe', elementId, property: 'rotation', fromTimeMs: 1500, toTimeMs: 0 })).toThrow(/already exists/)
   })
 
   test('setKeyframeEasing changes interpolation', () => {
@@ -262,9 +268,7 @@ describe('applyAnimationPreset', () => {
     expect(getAnimatedValue(element, 'blur', 0)).toBe(16)
     expect(getAnimatedValue(element, 'blur', 450)).toBe(0)
     const atStart = resolveAnimatedElement(element, 0)
-    expect('effects' in atStart ? atStart.effects : undefined).toEqual([
-      { type: 'blur', enabled: true, radius: 16 },
-    ])
+    expect('effects' in atStart ? atStart.effects : undefined).toEqual([{ type: 'blur', enabled: true, radius: 16 }])
     const atEnd = resolveAnimatedElement(element, 1000)
     expect('effects' in atEnd ? atEnd.effects : undefined).toBeUndefined()
   })
@@ -363,7 +367,11 @@ describe('rippleDelete', () => {
     let project = createProject()
     const trackId = project.tracks[0]!.id
     project = applyCommand(project, { type: 'addTrack', id: 't-other' })
-    for (const [id, startMs] of [['e-a', 0], ['e-b', 4000], ['e-c', 9000]] as const) {
+    for (const [id, startMs] of [
+      ['e-a', 0],
+      ['e-b', 4000],
+      ['e-c', 9000],
+    ] as const) {
       project = applyCommand(project, {
         type: 'addElement',
         trackId,
@@ -377,9 +385,7 @@ describe('rippleDelete', () => {
     })
 
     const next = applyCommand(project, { type: 'rippleDelete', elementIds: ['e-b'] })
-    const starts = Object.fromEntries(
-      next.tracks.flatMap((t) => t.elements.map((e) => [e.id, e.startMs])),
-    )
+    const starts = Object.fromEntries(next.tracks.flatMap((t) => t.elements.map((e) => [e.id, e.startMs])))
     expect(starts['e-a']).toBe(0)
     expect(starts['e-c']).toBe(7000)
     expect(starts['e-x']).toBe(5000)
@@ -388,7 +394,11 @@ describe('rippleDelete', () => {
   test('multiple removals accumulate shifts; unknown ids reject', () => {
     let project = createProject()
     const trackId = project.tracks[0]!.id
-    for (const [id, startMs] of [['e-1', 0], ['e-2', 3000], ['e-3', 6000]] as const) {
+    for (const [id, startMs] of [
+      ['e-1', 0],
+      ['e-2', 3000],
+      ['e-3', 6000],
+    ] as const) {
       project = applyCommand(project, {
         type: 'addElement',
         trackId,
@@ -397,8 +407,6 @@ describe('rippleDelete', () => {
     }
     const next = applyCommand(project, { type: 'rippleDelete', elementIds: ['e-1', 'e-2'] })
     expect(next.tracks[0]!.elements.map((e) => [e.id, e.startMs])).toEqual([['e-3', 4000]])
-    expect(() => applyCommand(project, { type: 'rippleDelete', elementIds: ['e-zzz'] })).toThrow(
-      /no element/,
-    )
+    expect(() => applyCommand(project, { type: 'rippleDelete', elementIds: ['e-zzz'] })).toThrow(/no element/)
   })
 })

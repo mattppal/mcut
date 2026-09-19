@@ -2,15 +2,7 @@ import { z } from 'zod'
 import type { TimelineElement, Track, Project } from './model'
 import { isElementActiveAt } from './selectors'
 
-export const transitionTypeSchema = z.enum([
-  'dissolve',
-  'fade-black',
-  'fade-white',
-  'slide-left',
-  'slide-right',
-  'wipe-left',
-  'wipe-right',
-])
+export const transitionTypeSchema = z.enum(['dissolve', 'fade-black', 'fade-white', 'slide-left', 'slide-right', 'wipe-left', 'wipe-right'])
 
 export type TransitionType = z.infer<typeof transitionTypeSchema>
 
@@ -33,9 +25,7 @@ export interface TransitionPair {
   type: TransitionType
 }
 
-const hasTransition = (
-  element: TimelineElement,
-): element is TimelineElement & { transition: Transition } =>
+const hasTransition = (element: TimelineElement): element is TimelineElement & { transition: Transition } =>
   'transition' in element && element.transition !== undefined
 
 export function getTransitionPair(track: Track, left: TimelineElement): TransitionPair | null {

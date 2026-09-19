@@ -2,15 +2,7 @@ import { z } from 'zod'
 import { effectSchema } from '../effects'
 import { elementInputSchema, type Project } from '../model'
 import { TRANSITION_TYPES } from '../transitions'
-import {
-  generateArgs,
-  isRecord,
-  isSlot,
-  type ArgTemplate,
-  type Overrides,
-  type Slot,
-  type SlotKind,
-} from './json-schema-gen'
+import { generateArgs, isRecord, isSlot, type ArgTemplate, type Overrides, type Slot, type SlotKind } from './json-schema-gen'
 import { Rng } from './rng'
 
 export type Seed = number

@@ -66,9 +66,7 @@ describe('effect commands', () => {
         patch: { type: 'sepia' },
       }),
     ).toThrow(CommandError)
-    expect(() =>
-      applyCommand(project, { type: 'updateEffect', elementId: 'e-t', index: 5, patch: {} }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'updateEffect', elementId: 'e-t', index: 5, patch: {} })).toThrow(CommandError)
 
     project = applyCommand(project, {
       type: 'reorderEffect',
@@ -97,9 +95,7 @@ describe('effect commands', () => {
       trackId,
       element: { type: 'audio', id: 'e-a', assetId: 'a-au', startMs: 0, durationMs: 1000 },
     })
-    expect(() =>
-      applyCommand(project, { type: 'addEffect', elementId: 'e-a', effect: { type: 'blur' } }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'addEffect', elementId: 'e-a', effect: { type: 'blur' } })).toThrow(CommandError)
   })
 
   test('setBlendMode sets and clears', () => {

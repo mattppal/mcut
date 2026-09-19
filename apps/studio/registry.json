@@ -574,12 +574,7 @@
         "@mcut/transcription",
         "zod"
       ],
-      "registryDependencies": [
-        "button",
-        "context-menu",
-        "input",
-        "slider"
-      ],
+      "registryDependencies": ["button", "context-menu", "input", "slider"],
       "files": [
         {
           "path": "registry/mcut/timeline-panel.tsx",
@@ -731,14 +726,7 @@
         "sonner",
         "zod"
       ],
-      "registryDependencies": [
-        "button",
-        "dialog",
-        "dropdown-menu",
-        "kbd",
-        "progress",
-        "tooltip"
-      ],
+      "registryDependencies": ["button", "dialog", "dropdown-menu", "kbd", "progress", "tooltip"],
       "files": [
         {
           "path": "registry/mcut/editor-toolbar.tsx",
@@ -1029,13 +1017,7 @@
         "@mcut/editor",
         "zod"
       ],
-      "registryDependencies": [
-        "badge",
-        "button",
-        "context-menu",
-        "input",
-        "scroll-area"
-      ],
+      "registryDependencies": ["badge", "button", "context-menu", "input", "scroll-area"],
       "files": [
         {
           "path": "registry/mcut/media-bin.tsx",
@@ -1293,12 +1275,7 @@
         "unicode-animations@1.0.3",
         "@mcut/transcription-local"
       ],
-      "registryDependencies": [
-        "button",
-        "textarea",
-        "switch",
-        "scroll-area"
-      ],
+      "registryDependencies": ["button", "textarea", "switch", "scroll-area"],
       "files": [
         {
           "path": "registry/mcut/captions-panel.tsx",
@@ -1355,11 +1332,7 @@
         "sonner",
         "unicode-animations@1.0.3"
       ],
-      "registryDependencies": [
-        "button",
-        "input",
-        "scroll-area"
-      ],
+      "registryDependencies": ["button", "input", "scroll-area"],
       "files": [
         {
           "path": "registry/mcut/transcript-panel.tsx",
@@ -1403,11 +1376,7 @@
         "unicode-animations@1.0.3",
         "zod"
       ],
-      "registryDependencies": [
-        "button",
-        "dialog",
-        "progress"
-      ],
+      "registryDependencies": ["button", "dialog", "progress"],
       "files": [
         {
           "path": "registry/mcut/export-dialog.tsx",

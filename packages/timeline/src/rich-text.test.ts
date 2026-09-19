@@ -1,11 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import {
-  applyRunStyle,
-  getRunStyleAt,
-  normalizeRuns,
-  shiftRunsForEdit,
-  type TextRun,
-} from './rich-text'
+import { applyRunStyle, getRunStyleAt, normalizeRuns, shiftRunsForEdit, type TextRun } from './rich-text'
 
 const bold = { fontWeight: 700 }
 const red = { color: '#ff0000' }
@@ -27,9 +21,7 @@ describe('normalizeRuns', () => {
 
 describe('applyRunStyle', () => {
   test('styles a plain range', () => {
-    expect(applyRunStyle([], 2, 5, { fontWeight: 700 }, 10)).toEqual([
-      { start: 2, end: 5, style: bold },
-    ])
+    expect(applyRunStyle([], 2, 5, { fontWeight: 700 }, 10)).toEqual([{ start: 2, end: 5, style: bold }])
   })
 
   test('splits a covering run and merges the patch', () => {
@@ -59,27 +51,19 @@ describe('shiftRunsForEdit', () => {
   const runs: TextRun[] = [{ start: 6, end: 11, style: bold }]
 
   test('insertion before the run shifts it', () => {
-    expect(shiftRunsForEdit(runs, 'hello world!', 'hey hello world!')).toEqual([
-      { start: 10, end: 15, style: bold },
-    ])
+    expect(shiftRunsForEdit(runs, 'hello world!', 'hey hello world!')).toEqual([{ start: 10, end: 15, style: bold }])
   })
 
   test('typing inside the run grows it', () => {
-    expect(shiftRunsForEdit(runs, 'hello world!', 'hello worXYld!')).toEqual([
-      { start: 6, end: 13, style: bold },
-    ])
+    expect(shiftRunsForEdit(runs, 'hello world!', 'hello worXYld!')).toEqual([{ start: 6, end: 13, style: bold }])
   })
 
   test('typing right after the run keeps typing styled', () => {
-    expect(shiftRunsForEdit(runs, 'hello world!', 'hello worldZZ!')).toEqual([
-      { start: 6, end: 13, style: bold },
-    ])
+    expect(shiftRunsForEdit(runs, 'hello world!', 'hello worldZZ!')).toEqual([{ start: 6, end: 13, style: bold }])
   })
 
   test('deleting across the run boundary clamps it', () => {
-    expect(shiftRunsForEdit(runs, 'hello world!', 'hellrld!')).toEqual([
-      { start: 4, end: 7, style: bold },
-    ])
+    expect(shiftRunsForEdit(runs, 'hello world!', 'hellrld!')).toEqual([{ start: 4, end: 7, style: bold }])
   })
 
   test('deleting the whole styled span drops the run', () => {

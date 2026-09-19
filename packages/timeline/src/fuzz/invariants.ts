@@ -33,10 +33,7 @@ function noOverlap(project: Project): string[] {
     track.elements.forEach((a, i) => {
       for (const b of track.elements.slice(i + 1)) {
         if (rangesOverlap(a.startMs, a.durationMs, b.startMs, b.durationMs)) {
-          details.push(
-            `tracks[${t}] "${a.id}" [${a.startMs}, ${a.startMs + a.durationMs}) overlaps ` +
-              `"${b.id}" [${b.startMs}, ${b.startMs + b.durationMs})`,
-          )
+          details.push(`tracks[${t}] "${a.id}" [${a.startMs}, ${a.startMs + a.durationMs}) overlaps ` + `"${b.id}" [${b.startMs}, ${b.startMs + b.durationMs})`)
         }
       }
     })
@@ -50,10 +47,7 @@ function sortedByStart(project: Project): string[] {
     track.elements.forEach((element, e) => {
       const previous = track.elements[e - 1]
       if (previous && previous.startMs > element.startMs) {
-        details.push(
-          `tracks[${t}].elements[${e}] "${element.id}" starts at ${element.startMs} ` +
-            `before "${previous.id}" at ${previous.startMs}`,
-        )
+        details.push(`tracks[${t}].elements[${e}] "${element.id}" starts at ${element.startMs} ` + `before "${previous.id}" at ${previous.startMs}`)
       }
     })
   })
@@ -107,9 +101,7 @@ function namespacedIds(project: Project): string[] {
 function uniqueIds(project: Project): string[] {
   const collections = [
     project.tracks.map((track, t) => ({ id: track.id, path: `tracks[${t}]` })),
-    project.tracks.flatMap((track, t) =>
-      track.elements.map((element, e) => ({ id: element.id, path: `tracks[${t}].elements[${e}]` })),
-    ),
+    project.tracks.flatMap((track, t) => track.elements.map((element, e) => ({ id: element.id, path: `tracks[${t}].elements[${e}]` }))),
     project.markers.map((marker, m) => ({ id: marker.id, path: `markers[${m}]` })),
     project.layouts.map((layout, l) => ({ id: layout.id, path: `layouts[${l}]` })),
     project.presets.map((preset, p) => ({ id: preset.id, path: `presets[${p}]` })),

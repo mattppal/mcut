@@ -108,11 +108,7 @@ async function cmdValidate(argv: string[]): Promise<void> {
   }
   const errors = issues.filter((i) => i.severity === 'error').length
   const warnings = issues.length - errors
-  console.log(
-    issues.length === 0
-      ? `OK: ${file} is valid`
-      : `${file}: ${errors} error(s), ${warnings} warning(s)`,
-  )
+  console.log(issues.length === 0 ? `OK: ${file} is valid` : `${file}: ${errors} error(s), ${warnings} warning(s)`)
   if (errors > 0 || (values.strict && warnings > 0)) process.exitCode = 1
 }
 
@@ -135,9 +131,7 @@ async function cmdApply(argv: string[]): Promise<void> {
   const engine = new EditorEngine({ project: await readProjectFile(file) })
   applyCommands(engine, commands)
   if (!values['dry-run']) await writeProjectFile(file, engine.project)
-  console.log(
-    `${values['dry-run'] ? '(dry run) ' : ''}Applied ${commands.length} command(s) to ${file}\n`,
-  )
+  console.log(`${values['dry-run'] ? '(dry run) ' : ''}Applied ${commands.length} command(s) to ${file}\n`)
   console.log(summarizeProject(engine.project))
 }
 
@@ -210,9 +204,7 @@ async function cmdSilenceCuts(argv: string[]): Promise<void> {
     return
   }
   await writeProjectFile(file, plan.project)
-  console.log(
-    `Cut ${plan.silences.length} silence(s), ${(plan.removedMs / 1000).toFixed(2)}s removed\n`,
-  )
+  console.log(`Cut ${plan.silences.length} silence(s), ${(plan.removedMs / 1000).toFixed(2)}s removed\n`)
   console.log(summarizeProject(plan.project))
 }
 

@@ -1,9 +1,5 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  type Tool,
-} from '@modelcontextprotocol/sdk/types.js'
+import { CallToolRequestSchema, ListToolsRequestSchema, type Tool } from '@modelcontextprotocol/sdk/types.js'
 import {
   OperatorError,
   PLATFORM_PRESETS,
@@ -73,20 +69,16 @@ export interface McutMcpServerForTargetOptions {
 const text = (value: string) => ({ content: [{ type: 'text' as const, text: value }] })
 const failure = (value: string) => ({ ...text(value), isError: true })
 
-const targetProject = async (target: McutMcpTarget): Promise<Project> =>
-  parseProject(await target.getProject())
+const targetProject = async (target: McutMcpTarget): Promise<Project> => parseProject(await target.getProject())
 
 type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure>
 
-const withResult = (lead: string, result: unknown) =>
-  result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`
+const withResult = (lead: string, result: unknown) => (result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`)
 
 function searchProjectTranscript(project: Project, query: string): unknown {
   const captionRefs = getProjectCaptions(project)
   const captions = captionRefs.map((ref) => ref.caption)
-  const byId = new Map<string, (typeof captionRefs)[number]>(
-    captionRefs.map((ref) => [ref.caption.id, ref]),
-  )
+  const byId = new Map<string, (typeof captionRefs)[number]>(captionRefs.map((ref) => [ref.caption.id, ref]))
   const matches = searchCaptions(captions, query).map((match) => {
     const ref = byId.get(match.captionId)
     const text = ref?.caption.text ?? ''
@@ -103,10 +95,7 @@ function searchProjectTranscript(project: Project, query: string): unknown {
   return { query, count: matches.length, matches }
 }
 
-function createEngineTarget(
-  engine: EditorEngine,
-  onChange: () => void | Promise<void>,
-): McutMcpTarget {
+function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise<void>): McutMcpTarget {
   return {
     getSummary: () => summarizeEngine(engine),
     getProject: () => engine.toJSON(),
@@ -235,10 +224,7 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
   const tools = listServerToolDefinitions()
   const operatorIdsByTool = new Map(operatorIds.map((id) => [operatorToolName(id), id]))
 
-  const server = new Server(
-    { name: options.name ?? 'mcut', version: options.version ?? '0.1.0' },
-    { capabilities: { tools: {} } },
-  )
+  const server = new Server({ name: options.name ?? 'mcut', version: options.version ?? '0.1.0' }, { capabilities: { tools: {} } })
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: tools as unknown as Tool[],
@@ -260,11 +246,7 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
       await target.dispatchCommand(name, args ?? {})
       return text(`OK: ${name} applied.\n\n${await target.getSummary()}`)
     } catch (error) {
-      if (
-        error instanceof CommandError ||
-        error instanceof ProjectFormatError ||
-        error instanceof OperatorError
-      ) {
+      if (error instanceof CommandError || error instanceof ProjectFormatError || error instanceof OperatorError) {
         return failure(`${error.name} (${error.code}): ${error.message}`)
       }
       return failure(error instanceof Error ? error.message : String(error))

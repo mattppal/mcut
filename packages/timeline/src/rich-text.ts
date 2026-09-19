@@ -59,13 +59,7 @@ export type TextRunStylePatch = {
   [K in keyof TextRunStyle]?: TextRunStyle[K] | null
 }
 
-export function applyRunStyle(
-  runs: readonly TextRun[],
-  start: number,
-  end: number,
-  patch: TextRunStylePatch,
-  textLength: number,
-): TextRun[] {
+export function applyRunStyle(runs: readonly TextRun[], start: number, end: number, patch: TextRunStylePatch, textLength: number): TextRun[] {
   const from = Math.max(0, Math.min(start, textLength))
   const to = Math.max(from, Math.min(end, textLength))
   if (to <= from) return normalizeRuns(runs, textLength)
@@ -96,21 +90,14 @@ export function applyRunStyle(
   return normalizeRuns(next, textLength)
 }
 
-export function shiftRunsForEdit(
-  runs: readonly TextRun[],
-  oldText: string,
-  newText: string,
-): TextRun[] {
+export function shiftRunsForEdit(runs: readonly TextRun[], oldText: string, newText: string): TextRun[] {
   if (oldText === newText) return normalizeRuns(runs, newText.length)
   let prefix = 0
   const maxPrefix = Math.min(oldText.length, newText.length)
   while (prefix < maxPrefix && oldText[prefix] === newText[prefix]) prefix++
   let suffix = 0
   const maxSuffix = Math.min(oldText.length, newText.length) - prefix
-  while (
-    suffix < maxSuffix &&
-    oldText[oldText.length - 1 - suffix] === newText[newText.length - 1 - suffix]
-  ) {
+  while (suffix < maxSuffix && oldText[oldText.length - 1 - suffix] === newText[newText.length - 1 - suffix]) {
     suffix++
   }
   const oldEditEnd = oldText.length - suffix

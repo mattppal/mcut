@@ -10,9 +10,7 @@ export interface ToolReply {
   text: string
 }
 
-export type ProjectSnapshot =
-  | { kind: 'parsed'; document: unknown; project: Project }
-  | { kind: 'unparseable'; document: unknown; message: string }
+export type ProjectSnapshot = { kind: 'parsed'; document: unknown; project: Project } | { kind: 'unparseable'; document: unknown; message: string }
 
 const CLI_PATH = fileURLToPath(new URL('../cli.ts', import.meta.url))
 const CALL_TIMEOUT_MS = 15_000
@@ -46,11 +44,7 @@ export class McpFuzzServer {
   }
 
   async call(name: string, args: unknown): Promise<ToolReply> {
-    const result = await this.client.callTool(
-      { name, arguments: isRecord(args) ? args : {} },
-      undefined,
-      { timeout: CALL_TIMEOUT_MS },
-    )
+    const result = await this.client.callTool({ name, arguments: isRecord(args) ? args : {} }, undefined, { timeout: CALL_TIMEOUT_MS })
     return { isError: isRecord(result) && result.isError === true, text: textOf(result) }
   }
 

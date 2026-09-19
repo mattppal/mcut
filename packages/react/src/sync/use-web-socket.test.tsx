@@ -14,8 +14,7 @@ const serverSockets: ServerWebSocket<undefined>[] = []
 const serverReceived: string[] = []
 const server = Bun.serve<undefined>({
   port: 0,
-  fetch: (request, bunServer) =>
-    bunServer.upgrade(request) ? undefined : new Response('websocket only', { status: 426 }),
+  fetch: (request, bunServer) => (bunServer.upgrade(request) ? undefined : new Response('websocket only', { status: 426 })),
   websocket: {
     open: (socket) => {
       serverSockets.push(socket)

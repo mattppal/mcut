@@ -1,14 +1,7 @@
 import { existsSync } from 'node:fs'
 import { z } from 'zod'
 import type { MeasuredTruth } from './manifest'
-import {
-  VFR_SCHEDULE,
-  type AudioCodec,
-  type Container,
-  type FixtureRecipe,
-  type Rotation,
-  type VideoCodec,
-} from './recipes'
+import { VFR_SCHEDULE, type AudioCodec, type Container, type FixtureRecipe, type Rotation, type VideoCodec } from './recipes'
 
 export interface ExecResult {
   code: number
@@ -18,11 +11,7 @@ export interface ExecResult {
 
 export async function exec(args: string[]): Promise<ExecResult> {
   const proc = Bun.spawn(args, { stdout: 'pipe', stderr: 'pipe', stdin: 'ignore' })
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ])
+  const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited])
   return { code, stdout, stderr }
 }
 
@@ -50,12 +39,13 @@ function namesFromListing(listing: string, flagWidth: number): Set<string> {
 export async function detectTooling(): Promise<Tooling | null> {
   const version = await exec(['ffmpeg', '-version']).catch(() => null)
   if (!version || version.code !== 0) return null
-  const [encoders, filters] = await Promise.all([
-    exec(['ffmpeg', '-hide_banner', '-encoders']),
-    exec(['ffmpeg', '-hide_banner', '-filters']),
-  ])
+  const [encoders, filters] = await Promise.all([exec(['ffmpeg', '-hide_banner', '-encoders']), exec(['ffmpeg', '-hide_banner', '-filters'])])
   return {
-    ffmpeg: version.stdout.split('\n')[0]?.replace(/^ffmpeg version\s+/, '').split(' ')[0] ?? 'unknown',
+    ffmpeg:
+      version.stdout
+        .split('\n')[0]
+        ?.replace(/^ffmpeg version\s+/, '')
+        .split(' ')[0] ?? 'unknown',
     encoders: namesFromListing(encoders.stdout, 6),
     filters: namesFromListing(filters.stdout, 3),
     fontFile: fontCandidates.find((path) => existsSync(path)) ?? null,
@@ -176,8 +166,7 @@ function videoFilter(recipe: FixtureRecipe, pixelFormat: string, fontFile: strin
   return parts.join(',')
 }
 
-const rotationArgs = (rotation: Rotation): string[] =>
-  rotation === 0 ? [] : ['-noautorotate', '-display_rotation', String(rotation)]
+const rotationArgs = (rotation: Rotation): string[] => (rotation === 0 ? [] : ['-noautorotate', '-display_rotation', String(rotation)])
 
 export type RenderPlan = { kind: 'skip'; reason: string } | { kind: 'render'; args: string[] }
 
@@ -206,7 +195,23 @@ export function planRender(recipe: FixtureRecipe, tooling: Tooling, stillImage: 
 
 export function stillImageArgs(recipe: FixtureRecipe, output: string): string[] {
   const size = `${Math.max(2, recipe.width)}x${Math.max(2, recipe.height)}`
-  return ['ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', `testsrc2=size=${size}:rate=1:duration=1`, '-frames:v', '1', '-update', '1', output]
+  return [
+    'ffmpeg',
+    '-nostdin',
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    `testsrc2=size=${size}:rate=1:duration=1`,
+    '-frames:v',
+    '1',
+    '-update',
+    '1',
+    output,
+  ]
 }
 
 const probeOutputSchema = z.object({
@@ -225,8 +230,7 @@ const probeOutputSchema = z.object({
   ),
 })
 
-const probeEntries =
-  'format=duration:stream=codec_type,codec_name,width,height,nb_frames,sample_rate,channels:stream_side_data=rotation'
+const probeEntries = 'format=duration:stream=codec_type,codec_name,width,height,nb_frames,sample_rate,channels:stream_side_data=rotation'
 
 export async function probeTruth(path: string): Promise<MeasuredTruth> {
   const result = await exec(['ffprobe', '-v', 'error', '-show_entries', probeEntries, '-of', 'json', path])
