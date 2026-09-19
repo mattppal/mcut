@@ -108,6 +108,7 @@ describe('splitting reversed clips', () => {
       type: 'addElement',
       trackId: 't-default',
       element: {
+        id: 'e-ramp',
         type: 'video',
         assetId: 'a-1',
         startMs: 2862,
@@ -119,21 +120,16 @@ describe('splitting reversed clips', () => {
         ],
       },
     })
-    const id = engine.project.tracks[0]!.elements[0]!.id
-    engine.dispatch({ type: 'splitElement', elementId: id, atMs: 2943 })
-    const halves = (engine.project.tracks[0]!.elements as VideoElement[]).map((e) => [
-      e.startMs,
-      e.durationMs,
-      e.trimStartMs,
-    ])
-    expect(halves).toEqual([
+    engine.dispatch({ type: 'splitElement', elementId: 'e-ramp', atMs: 2943 })
+    const halves = (project: Project) =>
+      project.tracks.flatMap((track) =>
+        track.elements.flatMap((e) => (e.type === 'video' ? [[e.startMs, e.durationMs, e.trimStartMs]] : [])),
+      )
+    expect(halves(engine.project)).toEqual([
       [2862, 81, 3111],
       [2943, 2938, 0],
     ])
-    const restored = parseProject(JSON.parse(JSON.stringify(engine.project)))
-    expect(
-      (restored.tracks[0]!.elements as VideoElement[]).map((e) => [e.startMs, e.durationMs, e.trimStartMs]),
-    ).toEqual([
+    expect(halves(parseProject(JSON.parse(JSON.stringify(engine.project))))).toEqual([
       [2862, 81, 3111],
       [2943, 2938, 0],
     ])
