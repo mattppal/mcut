@@ -1,12 +1,5 @@
 import { z } from 'zod'
-import {
-  easingSchema,
-  getAnimatedValue,
-  getKeyframes,
-  upsertKeyframe,
-  type Keyframe,
-  type KeyframeMap,
-} from './keyframes'
+import { easingSchema, getAnimatedValue, getKeyframes, upsertKeyframe, type Keyframe, type KeyframeMap } from './keyframes'
 import type { TimelineElement } from './model'
 
 export const ZOOMABLE_PROPERTIES = ['position.x', 'position.y', 'scale.x', 'scale.y'] as const
@@ -92,18 +85,11 @@ export const ZOOM_PRESETS: ZoomPreset[] = [
   },
 ]
 
-export function expandZoomPreset(
-  element: TimelineElement,
-  preset: ZoomPreset,
-  atLocalMs: number,
-  durationMs?: number,
-): KeyframeMap {
+export function expandZoomPreset(element: TimelineElement, preset: ZoomPreset, atLocalMs: number, durationMs?: number): KeyframeMap {
   const length = Math.max(100, Math.round(durationMs ?? preset.durationMs))
   const existing: KeyframeMap = 'keyframes' in element ? { ...(element.keyframes ?? {}) } : {}
 
-  for (const [property, keys] of Object.entries(preset.tracks) as Array<
-    [ZoomableProperty, ZoomPreset['tracks'][ZoomableProperty]]
-  >) {
+  for (const [property, keys] of Object.entries(preset.tracks) as Array<[ZoomableProperty, ZoomPreset['tracks'][ZoomableProperty]]>) {
     if (!keys || keys.length === 0) continue
     const base = getAnimatedValue(element, property, element.startMs + atLocalMs)
     if (Number.isNaN(base)) continue
@@ -111,9 +97,7 @@ export function expandZoomPreset(
 
     const windowStart = atLocalMs
     const windowEnd = atLocalMs + length
-    let track: Keyframe[] = (existing[property] ?? []).filter(
-      (k) => k.timeMs < windowStart || k.timeMs > windowEnd,
-    )
+    let track: Keyframe[] = (existing[property] ?? []).filter((k) => k.timeMs < windowStart || k.timeMs > windowEnd)
     for (const key of keys) {
       track = upsertKeyframe(track, {
         timeMs: Math.round(atLocalMs + key.t * length),
@@ -126,12 +110,7 @@ export function expandZoomPreset(
   return existing
 }
 
-export function captureZoomPreset(
-  element: TimelineElement,
-  name: string,
-  fromLocalMs?: number,
-  toLocalMs?: number,
-): ZoomPreset | null {
+export function captureZoomPreset(element: TimelineElement, name: string, fromLocalMs?: number, toLocalMs?: number): ZoomPreset | null {
   const all = ZOOMABLE_PROPERTIES.flatMap((p) => getKeyframes(element, p))
   if (all.length === 0) return null
   const from = fromLocalMs ?? Math.min(...all.map((k) => k.timeMs))
@@ -141,9 +120,7 @@ export function captureZoomPreset(
 
   const tracks: ZoomPreset['tracks'] = {}
   for (const property of ZOOMABLE_PROPERTIES) {
-    const inRange = getKeyframes(element, property).filter(
-      (k) => k.timeMs >= from && k.timeMs <= to,
-    )
+    const inRange = getKeyframes(element, property).filter((k) => k.timeMs >= from && k.timeMs <= to)
     if (inRange.length < 2) continue
     const first = inRange[0]!.value
     const isScale = property.startsWith('scale')

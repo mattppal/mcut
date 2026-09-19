@@ -4,17 +4,7 @@ import { assertNever } from './errors'
 import type { TimelineElement } from './model'
 import { valueAt } from './value-at'
 
-export const animatablePropertySchema = z.enum([
-  'position.x',
-  'position.y',
-  'scale.x',
-  'scale.y',
-  'rotation',
-  'opacity',
-  'blur',
-  'volume',
-  'letterSpacing',
-])
+export const animatablePropertySchema = z.enum(['position.x', 'position.y', 'scale.x', 'scale.y', 'rotation', 'opacity', 'blur', 'volume', 'letterSpacing'])
 
 export type AnimatableProperty = z.infer<typeof animatablePropertySchema>
 
@@ -57,16 +47,13 @@ export function cubicBezierAt(points: readonly [number, number, number, number],
   const [x1, y1, x2, y2] = points
   if (x <= 0) return 0
   if (x >= 1) return 1
-  const sampleX = (t: number) =>
-    3 * t * (1 - t) * (1 - t) * x1 + 3 * t * t * (1 - t) * x2 + t * t * t
-  const sampleY = (t: number) =>
-    3 * t * (1 - t) * (1 - t) * y1 + 3 * t * t * (1 - t) * y2 + t * t * t
+  const sampleX = (t: number) => 3 * t * (1 - t) * (1 - t) * x1 + 3 * t * t * (1 - t) * x2 + t * t * t
+  const sampleY = (t: number) => 3 * t * (1 - t) * (1 - t) * y1 + 3 * t * t * (1 - t) * y2 + t * t * t
   let t = x
   for (let i = 0; i < 8; i++) {
     const error = sampleX(t) - x
     if (Math.abs(error) < 1e-6) return sampleY(t)
-    const d =
-      3 * (1 - t) * (1 - t) * x1 + 6 * t * (1 - t) * (x2 - x1) + 3 * t * t * (1 - x2)
+    const d = 3 * (1 - t) * (1 - t) * x1 + 6 * t * (1 - t) * (x2 - x1) + 3 * t * t * (1 - x2)
     if (Math.abs(d) < 1e-6) break
     t -= error / d
   }
@@ -111,15 +98,7 @@ export function interpolateTrack(track: readonly Keyframe[], localMs: number): n
   return from.value + (to.value - from.value) * eased
 }
 
-const MOTION_PROPERTIES: readonly AnimatableProperty[] = [
-  'position.x',
-  'position.y',
-  'scale.x',
-  'scale.y',
-  'rotation',
-  'opacity',
-  'blur',
-]
+const MOTION_PROPERTIES: readonly AnimatableProperty[] = ['position.x', 'position.y', 'scale.x', 'scale.y', 'rotation', 'opacity', 'blur']
 
 export function animatableProperties(element: TimelineElement): AnimatableProperty[] {
   switch (element.type) {
@@ -139,10 +118,7 @@ export function animatableProperties(element: TimelineElement): AnimatableProper
   }
 }
 
-export function elementSupportsProperty(
-  element: TimelineElement,
-  property: AnimatableProperty,
-): boolean {
+export function elementSupportsProperty(element: TimelineElement, property: AnimatableProperty): boolean {
   return animatableProperties(element).includes(property)
 }
 
@@ -169,10 +145,7 @@ export function getStaticValue(element: TimelineElement, property: AnimatablePro
   }
 }
 
-export function getKeyframes(
-  element: TimelineElement,
-  property: AnimatableProperty,
-): Keyframe[] {
+export function getKeyframes(element: TimelineElement, property: AnimatableProperty): Keyframe[] {
   return ('keyframes' in element ? element.keyframes?.[property] : undefined) ?? []
 }
 
@@ -183,21 +156,12 @@ export function hasKeyframes(element: TimelineElement, property?: AnimatableProp
   return Object.values(keyframes).some((track) => (track?.length ?? 0) > 0)
 }
 
-export function isOnKeyframe(
-  element: TimelineElement,
-  property: AnimatableProperty,
-  timelineMs: number,
-  toleranceMs = 1,
-): boolean {
+export function isOnKeyframe(element: TimelineElement, property: AnimatableProperty, timelineMs: number, toleranceMs = 1): boolean {
   const localMs = timelineMs - element.startMs
   return getKeyframes(element, property).some((k) => Math.abs(k.timeMs - localMs) <= toleranceMs)
 }
 
-export function getAnimatedValue(
-  element: TimelineElement,
-  property: AnimatableProperty,
-  timelineMs: number,
-): number {
+export function getAnimatedValue(element: TimelineElement, property: AnimatableProperty, timelineMs: number): number {
   const track = getKeyframes(element, property)
   if (track.length === 0) return getStaticValue(element, property)
   return interpolateTrack(track, timelineMs - element.startMs)
@@ -208,10 +172,7 @@ function clampScale(value: number): number {
   return value < 0 ? -0.001 : 0.001
 }
 
-export function resolveAnimatedElement<E extends TimelineElement>(
-  element: E,
-  timelineMs: number,
-): E {
+export function resolveAnimatedElement<E extends TimelineElement>(element: E, timelineMs: number): E {
   const keyframes = 'keyframes' in element ? element.keyframes : undefined
   if (!keyframes) return element
   const localMs = timelineMs - element.startMs
@@ -278,10 +239,7 @@ export function upsertKeyframe(track: readonly Keyframe[], keyframe: Keyframe): 
   return next
 }
 
-export function splitKeyframes(
-  keyframes: KeyframeMap | undefined,
-  offsetMs: number,
-): { left: KeyframeMap | undefined; right: KeyframeMap | undefined } {
+export function splitKeyframes(keyframes: KeyframeMap | undefined, offsetMs: number): { left: KeyframeMap | undefined; right: KeyframeMap | undefined } {
   if (!keyframes) return { left: undefined, right: undefined }
   const left: KeyframeMap = {}
   const right: KeyframeMap = {}
@@ -296,13 +254,8 @@ export function splitKeyframes(
     }
     const boundaryEasing = segmentBefore?.easing
     const leftTrack = track.filter((k) => k.timeMs < offsetMs)
-    const rightTrack = track
-      .filter((k) => k.timeMs > offsetMs || k.timeMs === offsetMs)
-      .map((k) => ({ ...k, timeMs: k.timeMs - offsetMs }))
-    const leftFinal =
-      leftTrack.length > 0 || rightTrack.length > 0
-        ? upsertKeyframe(leftTrack, { timeMs: offsetMs, value: boundaryValue })
-        : leftTrack
+    const rightTrack = track.filter((k) => k.timeMs > offsetMs || k.timeMs === offsetMs).map((k) => ({ ...k, timeMs: k.timeMs - offsetMs }))
+    const leftFinal = leftTrack.length > 0 || rightTrack.length > 0 ? upsertKeyframe(leftTrack, { timeMs: offsetMs, value: boundaryValue }) : leftTrack
     const rightFinal =
       rightTrack.length > 0 || leftTrack.length > 0
         ? upsertKeyframe(rightTrack, {

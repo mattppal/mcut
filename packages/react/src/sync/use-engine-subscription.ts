@@ -6,11 +6,7 @@ export interface EngineStore<T> {
   subscribe: (listener: (state: T) => void) => { unsubscribe: () => void }
 }
 
-export function useEngineSubscription<T>(
-  store: EngineStore<T>,
-  onChange: (state: T, previous: T) => void,
-  options?: { debounceMs?: number },
-): void {
+export function useEngineSubscription<T>(store: EngineStore<T>, onChange: (state: T, previous: T) => void, options?: { debounceMs?: number }): void {
   const latest = useLatest(onChange)
   const debounceMs = options?.debounceMs
   useEffect(() => {

@@ -16,41 +16,24 @@ import { transitionSchema } from './transitions'
 export const MIN_ELEMENT_DURATION_MS = 10
 
 const trackIdSchema = z
-  .custom<TrackId>(
-    (v) => typeof v === 'string' && /^t-[\w-]+$/.test(v),
-    'invalid track id (expected "t-..." prefix)',
-  )
+  .custom<TrackId>((v) => typeof v === 'string' && /^t-[\w-]+$/.test(v), 'invalid track id (expected "t-..." prefix)')
   .meta({ type: 'string', pattern: '^t-[\\w-]+$' })
 const elementIdSchema = z
-  .custom<ElementId>(
-    (v) => typeof v === 'string' && /^e-[\w-]+$/.test(v),
-    'invalid element id (expected "e-..." prefix)',
-  )
+  .custom<ElementId>((v) => typeof v === 'string' && /^e-[\w-]+$/.test(v), 'invalid element id (expected "e-..." prefix)')
   .meta({ type: 'string', pattern: '^e-[\\w-]+$' })
 const assetIdSchema = z
-  .custom<AssetId>(
-    (v) => typeof v === 'string' && /^a-[\w-]+$/.test(v),
-    'invalid asset id (expected "a-..." prefix)',
-  )
+  .custom<AssetId>((v) => typeof v === 'string' && /^a-[\w-]+$/.test(v), 'invalid asset id (expected "a-..." prefix)')
   .meta({ type: 'string', pattern: '^a-[\\w-]+$' })
 const markerIdSchema = z
-  .custom<MarkerId>(
-    (v) => typeof v === 'string' && /^m-[\w-]+$/.test(v),
-    'invalid marker id (expected "m-..." prefix)',
-  )
+  .custom<MarkerId>((v) => typeof v === 'string' && /^m-[\w-]+$/.test(v), 'invalid marker id (expected "m-..." prefix)')
   .meta({ type: 'string', pattern: '^m-[\\w-]+$' })
 const groupIdSchema = z
-  .custom<GroupId>(
-    (v) => typeof v === 'string' && /^g-[\w-]+$/.test(v),
-    'invalid group id (expected "g-..." prefix)',
-  )
+  .custom<GroupId>((v) => typeof v === 'string' && /^g-[\w-]+$/.test(v), 'invalid group id (expected "g-..." prefix)')
   .meta({ type: 'string', pattern: '^g-[\\w-]+$' })
 
 export { trackIdSchema, elementIdSchema, assetIdSchema, markerIdSchema, groupIdSchema }
 
-const scaleSchema = z
-  .number()
-  .refine((v) => v !== 0, 'scale may be negative (flip) but not zero')
+const scaleSchema = z.number().refine((v) => v !== 0, 'scale may be negative (flip) but not zero')
 export const transformSchema = z
   .object({
     x: z.number().default(0),
@@ -99,11 +82,13 @@ export const captionStyleSchema = z
   })
   .prefault({})
 
-export const captionWordSchema = z.object({
-  text: z.string(),
-  startMs: z.number().int().nonnegative(),
-  endMs: z.number().int().nonnegative(),
-}).refine((word) => word.endMs >= word.startMs, 'caption word endMs must be >= startMs')
+export const captionWordSchema = z
+  .object({
+    text: z.string(),
+    startMs: z.number().int().nonnegative(),
+    endMs: z.number().int().nonnegative(),
+  })
+  .refine((word) => word.endMs >= word.startMs, 'caption word endMs must be >= startMs')
 
 const visualShape = {
   effects: effectsSchema.optional(),
@@ -224,13 +209,7 @@ export type TextElement = z.infer<typeof textElementSchema>
 export type CaptionElement = z.infer<typeof captionElementSchema>
 export type MulticamElement = z.infer<typeof multicamElementSchema>
 
-export type TimelineElement =
-  | VideoElement
-  | AudioElement
-  | ImageElement
-  | TextElement
-  | CaptionElement
-  | MulticamElement
+export type TimelineElement = VideoElement | AudioElement | ImageElement | TextElement | CaptionElement | MulticamElement
 
 export type ElementType = TimelineElement['type']
 
@@ -261,15 +240,14 @@ export type TimelineElementDraft =
   | WithOptionalId<CaptionElement>
   | WithOptionalId<MulticamElement>
 
-export const elementInputSchema: z.ZodType<TimelineElementDraft, TimelineElementInput> =
-  z.discriminatedUnion('type', [
-    composeInput('video', videoShape),
-    composeInput('audio', audioShape),
-    composeInput('image', imageShape),
-    composeInput('text', textShape),
-    composeInput('caption', captionShape),
-    composeInput('multicam', multicamShape),
-  ])
+export const elementInputSchema: z.ZodType<TimelineElementDraft, TimelineElementInput> = z.discriminatedUnion('type', [
+  composeInput('video', videoShape),
+  composeInput('audio', audioShape),
+  composeInput('image', imageShape),
+  composeInput('text', textShape),
+  composeInput('caption', captionShape),
+  composeInput('multicam', multicamShape),
+])
 
 export const assetRefSchema = z.object({
   id: assetIdSchema,
@@ -338,8 +316,7 @@ function validateAssetClip(project: Project, element: VideoElement | AudioElemen
   if (asset.durationMs !== undefined && element.trimStartMs + sourceSpanMs > asset.durationMs) {
     throw new CommandError(
       'out-of-bounds',
-      `element plays past the end of asset "${asset.id}" ` +
-        `(trimStartMs ${element.trimStartMs} + source span ${sourceSpanMs} > ${asset.durationMs})`,
+      `element plays past the end of asset "${asset.id}" ` + `(trimStartMs ${element.trimStartMs} + source span ${sourceSpanMs} > ${asset.durationMs})`,
     )
   }
 }
@@ -393,10 +370,7 @@ function timingHalves<E extends TimelineElement>(element: E, offsetMs: number): 
   return { left, right }
 }
 
-function splitTrimmedMedia(
-  element: VideoElement | AudioElement,
-  offsetMs: number,
-): SplitHalves<VideoElement | AudioElement> {
+function splitTrimmedMedia(element: VideoElement | AudioElement, offsetMs: number): SplitHalves<VideoElement | AudioElement> {
   const { left, right } = timingHalves(element, offsetMs)
   const originalSpanMs = getSourceSpanMs(element)
   if (element.timeMap) {
@@ -419,9 +393,7 @@ function splitCaption(element: CaptionElement, offsetMs: number): SplitHalves<Ca
   const { left, right } = timingHalves(element, offsetMs)
   const words = element.words ?? []
   left.words = words.filter((w) => w.startMs < offsetMs)
-  right.words = words
-    .filter((w) => w.startMs >= offsetMs)
-    .map((w) => ({ ...w, startMs: w.startMs - offsetMs, endMs: w.endMs - offsetMs }))
+  right.words = words.filter((w) => w.startMs >= offsetMs).map((w) => ({ ...w, startMs: w.startMs - offsetMs, endMs: w.endMs - offsetMs }))
   left.text = left.words.map((w) => w.text).join(' ') || left.text
   right.text = right.words.map((w) => w.text).join(' ') || right.text
   return { left, right }
@@ -474,9 +446,7 @@ export function createProject(options: CreateProjectOptions = {}): Project {
     width: options.width ?? 1920,
     height: options.height ?? 1080,
     fps: options.fps ?? 30,
-    tracks: [
-      { id: 't-default', name: 'Track 1', elements: [] },
-    ],
+    tracks: [{ id: 't-default', name: 'Track 1', elements: [] }],
     assets: {},
   })
 }

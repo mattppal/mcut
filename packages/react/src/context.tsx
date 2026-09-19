@@ -18,12 +18,7 @@ export interface EditorProviderProps {
   children: ReactNode
 }
 
-export function EditorProvider({
-  engine: externalEngine,
-  project,
-  maxHistorySize,
-  children,
-}: EditorProviderProps) {
+export function EditorProvider({ engine: externalEngine, project, maxHistorySize, children }: EditorProviderProps) {
   const [value] = useState<EditorContextValue>(() => {
     const engine =
       externalEngine ??

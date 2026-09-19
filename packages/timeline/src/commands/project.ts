@@ -57,11 +57,9 @@ export const removeAsset = defineCommand({
     const assets = { ...project.assets }
     delete assets[payload.assetId]
     const tracks = project.tracks.map((track) => ({
-        ...track,
-        elements: track.elements.filter(
-          (e) => !('assetId' in e) || e.assetId !== payload.assetId,
-        ),
-      }))
+      ...track,
+      elements: track.elements.filter((e) => !('assetId' in e) || e.assetId !== payload.assetId),
+    }))
     return compactTimelineIfMagnetic({ ...project, assets, tracks })
   },
 })
@@ -77,9 +75,7 @@ export const savePreset = defineCommand({
     const exists = project.presets.some((p) => p.id === payload.preset.id)
     return {
       ...project,
-      presets: exists
-        ? project.presets.map((p) => (p.id === payload.preset.id ? payload.preset : p))
-        : [...project.presets, payload.preset],
+      presets: exists ? project.presets.map((p) => (p.id === payload.preset.id ? payload.preset : p)) : [...project.presets, payload.preset],
     }
   },
 })

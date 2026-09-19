@@ -1,12 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import {
-  discoverPublicPackages,
-  repoRoot,
-  type PackageManifest,
-  type PublicPackage,
-} from './lib/packages'
+import { discoverPublicPackages, repoRoot, type PackageManifest, type PublicPackage } from './lib/packages'
 
 const rootLicense = await readFile(join(repoRoot, 'LICENSE'), 'utf8')
 

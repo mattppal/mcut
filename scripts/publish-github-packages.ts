@@ -62,10 +62,7 @@ function isNotFound(output: string): boolean {
 }
 
 function packageVersionExists(pkg: PublishedPackage, npmrcPath: string): boolean {
-  const result = tryRun(
-    ['npm', 'view', `${pkg.name}@${pkg.version}`, 'version', '--registry', registry, '--userconfig', npmrcPath],
-    { env: npmEnv(npmrcPath) },
-  )
+  const result = tryRun(['npm', 'view', `${pkg.name}@${pkg.version}`, 'version', '--registry', registry, '--userconfig', npmrcPath], { env: npmEnv(npmrcPath) })
   if (result.success) return true
   const output = `${result.stdout}\n${result.stderr}`
   if (isNotFound(output)) return false
@@ -86,12 +83,7 @@ async function main(): Promise<void> {
   const npmrcPath = join(tempRoot, '.npmrc')
   await writeFile(
     npmrcPath,
-    [
-      '@mcut:registry=https://npm.pkg.github.com',
-      '//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}',
-      'always-auth=true',
-      '',
-    ].join('\n'),
+    ['@mcut:registry=https://npm.pkg.github.com', '//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}', 'always-auth=true', ''].join('\n'),
   )
 
   try {
@@ -108,18 +100,7 @@ async function main(): Promise<void> {
         continue
       }
 
-      const command = [
-        'npm',
-        'publish',
-        dir,
-        '--registry',
-        registry,
-        '--tag',
-        tag,
-        '--provenance=false',
-        '--userconfig',
-        npmrcPath,
-      ]
+      const command = ['npm', 'publish', dir, '--registry', registry, '--tag', tag, '--provenance=false', '--userconfig', npmrcPath]
       if (dryRun) command.push('--dry-run')
       run(command, { env: npmEnv(npmrcPath) })
       console.log(`Mirrored ${pkg.name}@${pkg.version} to GitHub Packages`)

@@ -28,4 +28,4 @@ export {
   type SequentialVideoCollageOptions,
   type SequentialVideoCollageResult,
   type TextPreset,
-} from "@mcut/editor";
+} from '@mcut/editor'

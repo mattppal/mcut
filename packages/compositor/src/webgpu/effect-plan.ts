@@ -119,14 +119,7 @@ export function planEffects(effects: readonly Effect[] | undefined): EffectPlan 
         const key = parseCssColor(effect.keyColor)
         colorRun().ops.push({
           kind: COLOR_OP.chromaKey,
-          params: params(
-            key[0],
-            key[1],
-            key[2],
-            effect.tolerance,
-            effect.softness,
-            effect.spillSuppression,
-          ),
+          params: params(key[0], key[1], key[2], effect.tolerance, effect.softness, effect.spillSuppression),
         })
         break
       }

@@ -81,12 +81,7 @@ function chromeOf(context: ElementRenderContext, element: VisualChrome): LayerCh
   }
 }
 
-function withTransform(
-  ctx: Canvas2D,
-  context: ElementRenderContext,
-  element: VisualChrome,
-  draw: () => void,
-): void {
+function withTransform(ctx: Canvas2D, context: ElementRenderContext, element: VisualChrome, draw: () => void): void {
   applyChrome(ctx, chromeOf(context, element), draw)
 }
 
@@ -96,13 +91,7 @@ interface FrameStyle {
   shadow?: Shadow | undefined
 }
 
-function withFrameChrome(
-  ctx: Canvas2D,
-  style: FrameStyle,
-  dw: number,
-  dh: number,
-  draw: () => void,
-): void {
+function withFrameChrome(ctx: Canvas2D, style: FrameStyle, dw: number, dh: number, draw: () => void): void {
   const radius = (style.cornerRadius ?? 0) * Math.min(dw, dh)
   const tracePath = () => {
     ctx.beginPath()
@@ -138,10 +127,7 @@ function withFrameChrome(
   }
 }
 
-function cropSourceRect(
-  crop: Crop | undefined,
-  frame: CanvasImageSource,
-): { sx: number; sy: number; sw: number; sh: number } | null {
+function cropSourceRect(crop: Crop | undefined, frame: CanvasImageSource): { sx: number; sy: number; sw: number; sh: number } | null {
   if (!crop) return null
   const { width: fw, height: fh } = getImageSize(frame)
   if (fw <= 0 || fh <= 0) return null
@@ -187,8 +173,7 @@ const renderVideo: ElementRenderer<VideoElement> = (element, context) => {
   const frame = context.source.getFrame(element.assetId, sourceTimeMs)
   if (!frame) return
   const asset = context.project.assets[element.assetId]
-  const { width, height } =
-    asset?.width && asset?.height ? { width: asset.width, height: asset.height } : getImageSize(frame)
+  const { width, height } = asset?.width && asset?.height ? { width: asset.width, height: asset.height } : getImageSize(frame)
   if (width <= 0 || height <= 0) return
   const dw = width * (element.crop?.w ?? 1)
   const dh = height * (element.crop?.h ?? 1)
@@ -216,13 +201,7 @@ const renderText: ElementRenderer<TextElement> = (element, context) => {
     if (element.style.backgroundColor) {
       ctx.fillStyle = element.style.backgroundColor
       ctx.beginPath()
-      ctx.roundRect(
-        -layout.width / 2,
-        -layout.height / 2,
-        layout.width,
-        layout.height,
-        element.style.fontSize * 0.15,
-      )
+      ctx.roundRect(-layout.width / 2, -layout.height / 2, layout.width, layout.height, element.style.fontSize * 0.15)
       ctx.fill()
     }
     if (layout.overflow === 'clip') {
@@ -258,12 +237,7 @@ const renderText: ElementRenderer<TextElement> = (element, context) => {
       const y = -layout.height / 2 + layout.padding + layout.lineHeight * (i + 0.5)
       if (line.segments) {
         ctx.textAlign = 'left'
-        let x =
-          style.align === 'left'
-            ? -innerWidth / 2
-            : style.align === 'right'
-              ? innerWidth / 2 - line.width
-              : -line.width / 2
+        let x = style.align === 'left' ? -innerWidth / 2 : style.align === 'right' ? innerWidth / 2 - line.width : -line.width / 2
         for (const segment of line.segments) {
           ctx.font = segment.font
           setShadow()
@@ -346,11 +320,7 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
     }
 
     for (const word of line.words) {
-      const isActive =
-        word.startMs !== undefined &&
-        word.endMs !== undefined &&
-        relativeMs >= word.startMs &&
-        relativeMs < word.endMs
+      const isActive = word.startMs !== undefined && word.endMs !== undefined && relativeMs >= word.startMs && relativeMs < word.endMs
       ctx.fillStyle = isActive && style.activeWordColor !== undefined ? style.activeWordColor : style.color
       ctx.fillText(word.text, lineLeft + word.x, lineCenterY)
     }
@@ -395,8 +365,7 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
           ctx.restore()
         }
 
-        const scale =
-          slot.fit === 'cover' ? Math.max(rw / fw, rh / fh) : Math.min(rw / fw, rh / fh)
+        const scale = slot.fit === 'cover' ? Math.max(rw / fw, rh / fh) : Math.min(rw / fw, rh / fh)
         const sw = Math.min(fw, rw / scale)
         const sh = Math.min(fh, rh / scale)
         const sx = (fw - sw) * (slot.focus?.x ?? 0.5)
@@ -464,15 +433,10 @@ export const elementRenderers: { readonly [K in ElementType]: ElementRenderer<El
   audio: () => {},
 }
 
-function renderTyped<K extends ElementType>(
-  type: K,
-  element: ElementByType[K],
-  context: ElementRenderContext,
-): void {
+function renderTyped<K extends ElementType>(type: K, element: ElementByType[K], context: ElementRenderContext): void {
   elementRenderers[type](element, context)
 }
 
-export const renderElementLayer: ElementRenderer = (element, context) =>
-  renderTyped(element.type, element, context)
+export const renderElementLayer: ElementRenderer = (element, context) => renderTyped(element.type, element, context)
 
 export { measureWith }

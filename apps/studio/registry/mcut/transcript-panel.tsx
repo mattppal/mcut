@@ -1,27 +1,12 @@
-"use client";
+'use client'
 
-import { useCallback, useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  LinkIcon,
-  PlusIcon,
-  ScissorsIcon,
-  SearchIcon,
-  SparklesIcon,
-  XIcon,
-} from "@/lib/hugeicons";
-import { toast } from "sonner";
-import { extractAudioToWav } from "@mcut/media";
-import { useEditor, usePlayback, useProject, useSelectedElement } from "@mcut/react";
-import {
-  isElementActiveAt,
-  type CaptionElement,
-  type ElementAudioSource,
-  type Project,
-  resolveElementAudioSource,
-} from "@mcut/timeline";
+import { useCallback, useMemo, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { ChevronDownIcon, ChevronUpIcon, LinkIcon, PlusIcon, ScissorsIcon, SearchIcon, SparklesIcon, XIcon } from '@/lib/hugeicons'
+import { toast } from 'sonner'
+import { extractAudioToWav } from '@mcut/media'
+import { useEditor, usePlayback, useProject, useSelectedElement } from '@mcut/react'
+import { isElementActiveAt, type CaptionElement, type ElementAudioSource, type Project, resolveElementAudioSource } from '@mcut/timeline'
 import {
   buildApplyCaptionsCommand,
   mapCaptionWords,
@@ -33,120 +18,111 @@ import {
   splitCaptionAtWord,
   type TranscriptMatch,
   type TranscriptResult,
-} from "@mcut/transcription";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { EmptyState, PanelHeader, PanelSectionLabel, Spinner } from "./editor-primitives";
-import { formatTimecode } from "./format";
-import {
-  addTranscriptKeyword,
-  attachTranscriptSearch,
-  removeTranscriptKeyword,
-  useTranscriptKeywords,
-} from "./transcript-keywords";
+} from '@mcut/transcription'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { EmptyState, PanelHeader, PanelSectionLabel, Spinner } from './editor-primitives'
+import { formatTimecode } from './format'
+import { addTranscriptKeyword, attachTranscriptSearch, removeTranscriptKeyword, useTranscriptKeywords } from './transcript-keywords'
 
 export interface TranscriptPanelProps {
-  className?: string;
-  transcribe?: (audio: Blob) => Promise<TranscriptResult>;
+  className?: string
+  transcribe?: (audio: Blob) => Promise<TranscriptResult>
 }
 
 function captionsOf(project: Project): CaptionElement[] {
   return project.tracks
     .flatMap((track) => track.elements)
-    .filter((e): e is CaptionElement => e.type === "caption")
-    .sort((a, b) => a.startMs - b.startMs);
+    .filter((e): e is CaptionElement => e.type === 'caption')
+    .sort((a, b) => a.startMs - b.startMs)
 }
 
 function matchedWordIndices(captionId: string, matches: TranscriptMatch[]): Set<number> {
-  const indices = new Set<number>();
+  const indices = new Set<number>()
   for (const match of matches) {
-    if (match.captionId !== captionId) continue;
-    if (match.firstWord === undefined || match.lastWord === undefined) continue;
-    for (let i = match.firstWord; i <= match.lastWord; i++) indices.add(i);
+    if (match.captionId !== captionId) continue
+    if (match.firstWord === undefined || match.lastWord === undefined) continue
+    for (let i = match.firstWord; i <= match.lastWord; i++) indices.add(i)
   }
-  return indices;
+  return indices
 }
 
 interface WordSelection {
-  captionId: string;
-  wordIndex: number;
+  captionId: string
+  wordIndex: number
 }
 
 export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps) {
-  const engine = useEditor();
-  const project = useProject();
-  const captions = useMemo(() => captionsOf(project), [project]);
+  const engine = useEditor()
+  const project = useProject()
+  const captions = useMemo(() => captionsOf(project), [project])
 
-  const [query, setQuery] = useState("");
-  const [replacement, setReplacement] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [selectedWord, setSelectedWord] = useState<WordSelection | null>(null);
-  const [keywordDraft, setKeywordDraft] = useState("");
+  const [query, setQuery] = useState('')
+  const [replacement, setReplacement] = useState('')
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [selectedWord, setSelectedWord] = useState<WordSelection | null>(null)
+  const [keywordDraft, setKeywordDraft] = useState('')
 
-  const keywords = useTranscriptKeywords(project.id);
-  const trimmedQuery = query.trim();
-  const matches = useMemo(() => searchCaptions(captions, trimmedQuery), [captions, trimmedQuery]);
-  const keywordMatches = useMemo(
-    () => keywords.flatMap((keyword) => searchCaptions(captions, keyword)),
-    [captions, keywords],
-  );
-  const active = matches.length > 0 ? matches[Math.min(activeIndex, matches.length - 1)]! : null;
+  const keywords = useTranscriptKeywords(project.id)
+  const trimmedQuery = query.trim()
+  const matches = useMemo(() => searchCaptions(captions, trimmedQuery), [captions, trimmedQuery])
+  const keywordMatches = useMemo(() => keywords.flatMap((keyword) => searchCaptions(captions, keyword)), [captions, keywords])
+  const active = matches.length > 0 ? matches[Math.min(activeIndex, matches.length - 1)]! : null
 
-  const [navigated, setNavigated] = useState(false);
+  const [navigated, setNavigated] = useState(false)
   const goTo = (index: number) => {
-    if (matches.length === 0) return;
-    const wrapped = ((index % matches.length) + matches.length) % matches.length;
-    setNavigated(true);
-    setActiveIndex(wrapped);
-    engine.seek(matches[wrapped]!.timeMs);
-  };
+    if (matches.length === 0) return
+    const wrapped = ((index % matches.length) + matches.length) % matches.length
+    setNavigated(true)
+    setActiveIndex(wrapped)
+    engine.seek(matches[wrapped]!.timeMs)
+  }
   const step = (direction: 1 | -1) => {
-    goTo(navigated ? activeIndex + direction : activeIndex);
-  };
+    goTo(navigated ? activeIndex + direction : activeIndex)
+  }
 
   const replaceCurrent = () => {
-    if (!active) return;
-    const caption = captions.find((c) => c.id === active.captionId);
-    if (!caption) return;
-    const patch = replaceMatch(caption, active, replacement);
+    if (!active) return
+    const caption = captions.find((c) => c.id === active.captionId)
+    if (!caption) return
+    const patch = replaceMatch(caption, active, replacement)
     try {
       engine.dispatch({
-        type: "updateElement",
+        type: 'updateElement',
         elementId: caption.id,
         patch: { text: patch.text, words: patch.words ?? [] },
-      });
+      })
     } catch {
-      return;
+      return
     }
-    setActiveIndex((i) => i);
-  };
+    setActiveIndex((i) => i)
+  }
 
   const replaceEverywhere = () => {
-    const patches = replaceAllMatches(captions, trimmedQuery, replacement);
-    if (patches.length === 0) return;
+    const patches = replaceAllMatches(captions, trimmedQuery, replacement)
+    if (patches.length === 0) return
     engine.transact(() => {
       for (const patch of patches) {
-        const caption = captions.find((c) => c.id === patch.captionId);
-        if (!caption) continue;
+        const caption = captions.find((c) => c.id === patch.captionId)
+        if (!caption) continue
         try {
           engine.dispatch({
-            type: "updateElement",
+            type: 'updateElement',
             elementId: caption.id,
             patch: { text: patch.text, words: patch.words ?? [] },
-          });
-        } catch {
-        }
+          })
+        } catch {}
       }
-    });
-    toast.success(`Replaced ${matches.length} ${matches.length === 1 ? "match" : "matches"}`);
-  };
+    })
+    toast.success(`Replaced ${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`)
+  }
 
-  const retranscribe = useRetranscribe(transcribe);
+  const retranscribe = useRetranscribe(transcribe)
 
   return (
-    <div className={cn("flex h-full min-h-0 flex-col", className)}>
+    <div className={cn('flex h-full min-h-0 flex-col', className)}>
       <PanelHeader>
         <PanelSectionLabel>Transcript</PanelSectionLabel>
       </PanelHeader>
@@ -161,21 +137,21 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
               placeholder="Find in transcript…"
               className="h-7 pl-7 text-xs"
               onChange={(event) => {
-                setQuery(event.target.value);
-                setActiveIndex(0);
-                setNavigated(false);
+                setQuery(event.target.value)
+                setActiveIndex(0)
+                setNavigated(false)
               }}
               onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  step(event.shiftKey ? -1 : 1);
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  step(event.shiftKey ? -1 : 1)
                 }
-                if (event.key === "Escape") event.currentTarget.blur();
+                if (event.key === 'Escape') event.currentTarget.blur()
               }}
             />
           </div>
           <span className="w-12 text-center font-mono text-2xs text-muted-foreground">
-            {trimmedQuery ? `${matches.length === 0 ? 0 : Math.min(activeIndex, matches.length - 1) + 1}/${matches.length}` : ""}
+            {trimmedQuery ? `${matches.length === 0 ? 0 : Math.min(activeIndex, matches.length - 1) + 1}/${matches.length}` : ''}
           </span>
           <Button variant="ghost" size="icon-xs" title="Previous match (⇧↵)" disabled={matches.length === 0} onClick={() => step(-1)}>
             <ChevronUpIcon />
@@ -193,9 +169,9 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
               className="h-7 flex-1 text-xs"
               onChange={(event) => setReplacement(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  replaceCurrent();
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  replaceCurrent()
                 }
               }}
             />
@@ -227,19 +203,14 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
             <form
               className="flex items-center gap-1"
               onSubmit={(event) => {
-                event.preventDefault();
+                event.preventDefault()
                 if (keywordDraft.trim()) {
-                  addTranscriptKeyword(project.id, keywordDraft);
-                  setKeywordDraft("");
+                  addTranscriptKeyword(project.id, keywordDraft)
+                  setKeywordDraft('')
                 }
               }}
             >
-              <Input
-                value={keywordDraft}
-                placeholder="Add keyword"
-                className="h-6 w-28 text-2xs"
-                onChange={(event) => setKeywordDraft(event.target.value)}
-              />
+              <Input value={keywordDraft} placeholder="Add keyword" className="h-6 w-28 text-2xs" onChange={(event) => setKeywordDraft(event.target.value)} />
               <Button type="submit" variant="ghost" size="icon-xs" title="Add keyword (marks occurrences on the timeline ruler)">
                 <PlusIcon />
               </Button>
@@ -252,25 +223,17 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
             variant="outline"
             size="xs"
             disabled={retranscribe.isPending || !retranscribe.eligible}
-            title={
-              retranscribe.eligible
-                ? "Re-run transcription on the selected clip's time range only"
-                : "Select a video, audio, or multicam clip first"
-            }
+            title={retranscribe.eligible ? "Re-run transcription on the selected clip's time range only" : 'Select a video, audio, or multicam clip first'}
             onClick={() => retranscribe.mutate()}
           >
             {retranscribe.isPending ? <Spinner /> : <SparklesIcon />}
-            {retranscribe.isPending ? "Re-transcribing…" : "Re-transcribe selected clip"}
+            {retranscribe.isPending ? 'Re-transcribing…' : 'Re-transcribe selected clip'}
           </Button>
         )}
       </div>
 
       {captions.length === 0 ? (
-        <EmptyState
-          className="mx-3 mb-3 flex-1"
-          icon={SearchIcon}
-          description="No transcript yet. Auto-caption a clip in the Captions tab first."
-        />
+        <EmptyState className="mx-3 mb-3 flex-1" icon={SearchIcon} description="No transcript yet. Auto-caption a clip in the Captions tab first." />
       ) : (
         <ScrollArea className="min-h-0 flex-1 scroll-mask-b">
           <div className="flex flex-col gap-0.5 px-3 pb-3">
@@ -290,35 +253,34 @@ export function TranscriptPanel({ className, transcribe }: TranscriptPanelProps)
         </ScrollArea>
       )}
     </div>
-  );
+  )
 }
 
 function countOf(captions: CaptionElement[], keyword: string): number {
-  return searchCaptions(captions, keyword).length;
+  return searchCaptions(captions, keyword).length
 }
 
-function useRetranscribe(transcribe: TranscriptPanelProps["transcribe"]) {
-  const engine = useEditor();
-  const selected = useSelectedElement();
-  const source = selected ? resolveElementAudioSource(engine.project, selected.element.id) : null;
+function useRetranscribe(transcribe: TranscriptPanelProps['transcribe']) {
+  const engine = useEditor()
+  const selected = useSelectedElement()
+  const source = selected ? resolveElementAudioSource(engine.project, selected.element.id) : null
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!transcribe || !source) throw new Error("Select a video, audio, or multicam clip first.");
-      const wav = await extractAudioToWav(source.asset.src);
-      if (!wav) throw new Error(`"${source.asset.name ?? source.asset.id}" has no audio track.`);
-      const result = await transcribe(wav);
-      return { result, source };
+      if (!transcribe || !source) throw new Error('Select a video, audio, or multicam clip first.')
+      const wav = await extractAudioToWav(source.asset.src)
+      if (!wav) throw new Error(`"${source.asset.name ?? source.asset.id}" has no audio track.`)
+      const result = await transcribe(wav)
+      return { result, source }
     },
     onSuccess: ({ result, source }: { result: TranscriptResult; source: ElementAudioSource }) => {
-      const start = source.timelineStartMs;
-      const end = source.timelineStartMs + source.timelineDurationMs;
+      const start = source.timelineStartMs
+      const end = source.timelineStartMs + source.timelineDurationMs
       engine.transact(() => {
         for (const caption of captionsOf(engine.project)) {
           if (caption.startMs < end && caption.startMs + caption.durationMs > start) {
             try {
-              engine.dispatch({ type: "removeElement", elementId: caption.id });
-            } catch {
-            }
+              engine.dispatch({ type: 'removeElement', elementId: caption.id })
+            } catch {}
           }
         }
         engine.dispatch(
@@ -328,15 +290,15 @@ function useRetranscribe(transcribe: TranscriptPanelProps["transcribe"]) {
             sourceStartMs: source.sourceStartMs,
             sourceEndMs: source.sourceEndMs,
           }),
-        );
-      });
-      toast.success("Clip re-transcribed");
+        )
+      })
+      toast.success('Clip re-transcribed')
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Transcription failed");
+      toast.error(error instanceof Error ? error.message : 'Transcription failed')
     },
-  });
-  return { ...mutation, eligible: !!source && !!transcribe };
+  })
+  return { ...mutation, eligible: !!source && !!transcribe }
 }
 
 function TranscriptRow({
@@ -348,75 +310,65 @@ function TranscriptRow({
   selectedWord,
   onSelectWord,
 }: {
-  caption: CaptionElement;
-  previous: CaptionElement | null;
-  activeMatch: TranscriptMatch | null;
-  queryMatches: TranscriptMatch[];
-  keywordMatches: TranscriptMatch[];
-  selectedWord: WordSelection | null;
-  onSelectWord: (selection: WordSelection | null) => void;
+  caption: CaptionElement
+  previous: CaptionElement | null
+  activeMatch: TranscriptMatch | null
+  queryMatches: TranscriptMatch[]
+  keywordMatches: TranscriptMatch[]
+  selectedWord: WordSelection | null
+  onSelectWord: (selection: WordSelection | null) => void
 }) {
-  const engine = useEditor();
-  const playbackActive = usePlayback((s) => isElementActiveAt(caption, s.currentTimeMs));
-  const mapped = useMemo(() => mapCaptionWords(caption), [caption]);
-  const queryWords = useMemo(
-    () => matchedWordIndices(caption.id, queryMatches),
-    [caption.id, queryMatches],
-  );
-  const keywordWords = useMemo(
-    () => matchedWordIndices(caption.id, keywordMatches),
-    [caption.id, keywordMatches],
-  );
-  const activeWords = useMemo(
-    () => (activeMatch ? matchedWordIndices(caption.id, [activeMatch]) : new Set<number>()),
-    [caption.id, activeMatch],
-  );
-  const [editing, setEditing] = useState<number | null>(null);
+  const engine = useEditor()
+  const playbackActive = usePlayback((s) => isElementActiveAt(caption, s.currentTimeMs))
+  const mapped = useMemo(() => mapCaptionWords(caption), [caption])
+  const queryWords = useMemo(() => matchedWordIndices(caption.id, queryMatches), [caption.id, queryMatches])
+  const keywordWords = useMemo(() => matchedWordIndices(caption.id, keywordMatches), [caption.id, keywordMatches])
+  const activeWords = useMemo(() => (activeMatch ? matchedWordIndices(caption.id, [activeMatch]) : new Set<number>()), [caption.id, activeMatch])
+  const [editing, setEditing] = useState<number | null>(null)
   const revealActive = useCallback(
     (node: HTMLDivElement | null) => {
-      if (node && activeMatch) node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      if (node && activeMatch) node.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
     },
     [activeMatch],
-  );
+  )
 
   const dispatchContent = (patch: { text: string; words?: { text: string; startMs: number; endMs: number }[] }) => {
     try {
       engine.dispatch({
-        type: "updateElement",
+        type: 'updateElement',
         elementId: caption.id,
         patch: { text: patch.text, words: patch.words ?? [] },
-      });
-    } catch {
-    }
-  };
+      })
+    } catch {}
+  }
 
   const splitAt = (wordIndex: number) => {
-    const result = splitCaptionAtWord(caption, wordIndex);
-    if (!result) return;
-    const location = engine.project.tracks.find((t) => t.elements.some((e) => e.id === caption.id));
-    if (!location) return;
+    const result = splitCaptionAtWord(caption, wordIndex)
+    if (!result) return
+    const location = engine.project.tracks.find((t) => t.elements.some((e) => e.id === caption.id))
+    if (!location) return
     engine.transact(() => {
       engine.dispatch({
-        type: "updateElement",
+        type: 'updateElement',
         elementId: caption.id,
         patch: { text: result.left.text, words: result.left.words, durationMs: result.left.durationMs },
-      });
+      })
       engine.dispatch({
-        type: "addElement",
+        type: 'addElement',
         trackId: location.id,
-        element: { type: "caption", style: caption.style, ...result.right },
-      });
-    });
-    onSelectWord(null);
-  };
+        element: { type: 'caption', style: caption.style, ...result.right },
+      })
+    })
+    onSelectWord(null)
+  }
 
   const mergeUp = () => {
-    if (!previous) return;
-    const merged = mergeCaptions(previous, caption);
+    if (!previous) return
+    const merged = mergeCaptions(previous, caption)
     engine.transact(() => {
-      engine.dispatch({ type: "removeElement", elementId: caption.id });
+      engine.dispatch({ type: 'removeElement', elementId: caption.id })
       engine.dispatch({
-        type: "updateElement",
+        type: 'updateElement',
         elementId: previous.id,
         patch: {
           text: merged.text,
@@ -424,19 +376,15 @@ function TranscriptRow({
           startMs: merged.startMs,
           durationMs: merged.durationMs,
         },
-      });
-    });
-    onSelectWord(null);
-  };
+      })
+    })
+    onSelectWord(null)
+  }
 
   return (
     <div
       ref={revealActive}
-      className={cn(
-        "group rounded-lg p-2 transition-colors hover:bg-muted/60",
-        playbackActive && "bg-primary/10",
-        activeMatch && "ring-1 ring-primary/40",
-      )}
+      className={cn('group rounded-lg p-2 transition-colors hover:bg-muted/60', playbackActive && 'bg-primary/10', activeMatch && 'ring-1 ring-primary/40')}
     >
       <div className="flex items-center gap-1">
         <button
@@ -470,36 +418,36 @@ function TranscriptRow({
                   key={`${i}-edit`}
                   initial={m.word.text}
                   onCommit={(value) => {
-                    setEditing(null);
+                    setEditing(null)
                     if (value && value !== m.word.text) {
-                      const patch = retypeWord(caption, i, value);
-                      if (patch) dispatchContent(patch);
+                      const patch = retypeWord(caption, i, value)
+                      if (patch) dispatchContent(patch)
                     }
                   }}
                   onCancel={() => setEditing(null)}
                 />
-              );
+              )
             }
-            const isSelected = selectedWord?.wordIndex === i;
+            const isSelected = selectedWord?.wordIndex === i
             return (
               <span key={i} className="relative">
                 <button
                   type="button"
                   title="Click to seek · double-click to retype"
                   className={cn(
-                    "cursor-pointer rounded px-0.5 hover:bg-muted",
-                    keywordWords.has(i) && "bg-(--clip-caption)/20 text-(--clip-caption)",
-                    queryWords.has(i) && "bg-primary/15",
-                    activeWords.has(i) && "bg-primary/30",
-                    isSelected && "ring-1 ring-primary",
+                    'cursor-pointer rounded px-0.5 hover:bg-muted',
+                    keywordWords.has(i) && 'bg-(--clip-caption)/20 text-(--clip-caption)',
+                    queryWords.has(i) && 'bg-primary/15',
+                    activeWords.has(i) && 'bg-primary/30',
+                    isSelected && 'ring-1 ring-primary',
                   )}
                   onClick={() => {
-                    engine.seek(caption.startMs + m.word.startMs);
-                    onSelectWord(isSelected ? null : { captionId: caption.id, wordIndex: i });
+                    engine.seek(caption.startMs + m.word.startMs)
+                    onSelectWord(isSelected ? null : { captionId: caption.id, wordIndex: i })
                   }}
                   onDoubleClick={() => {
-                    onSelectWord(null);
-                    setEditing(i);
+                    onSelectWord(null)
+                    setEditing(i)
                   }}
                 >
                   {m.word.text}
@@ -512,7 +460,7 @@ function TranscriptRow({
                   </span>
                 )}
               </span>
-            );
+            )
           })}
         </p>
       ) : (
@@ -525,19 +473,11 @@ function TranscriptRow({
         </p>
       )}
     </div>
-  );
+  )
 }
 
-function WordEditor({
-  initial,
-  onCommit,
-  onCancel,
-}: {
-  initial: string;
-  onCommit: (value: string) => void;
-  onCancel: () => void;
-}) {
-  const [value, setValue] = useState(initial);
+function WordEditor({ initial, onCommit, onCancel }: { initial: string; onCommit: (value: string) => void; onCancel: () => void }) {
+  const [value, setValue] = useState(initial)
   return (
     <input
       autoFocus
@@ -547,9 +487,9 @@ function WordEditor({
       onChange={(event) => setValue(event.target.value)}
       onBlur={() => onCommit(value.trim())}
       onKeyDown={(event) => {
-        if (event.key === "Enter") onCommit(value.trim());
-        if (event.key === "Escape") onCancel();
+        if (event.key === 'Enter') onCommit(value.trim())
+        if (event.key === 'Escape') onCancel()
       }}
     />
-  );
+  )
 }

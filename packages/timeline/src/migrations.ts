@@ -25,10 +25,7 @@ export function migrateProject(data: unknown): unknown {
   }
   let version = (declared as number | undefined) ?? 1
   if (version > PROJECT_VERSION) {
-    throw new ProjectFormatError(
-      'newer-version',
-      `project was saved by a newer mcut (format v${version}; this build reads up to v${PROJECT_VERSION})`,
-    )
+    throw new ProjectFormatError('newer-version', `project was saved by a newer mcut (format v${version}; this build reads up to v${PROJECT_VERSION})`)
   }
   while (version < PROJECT_VERSION) {
     const migrate = MIGRATIONS[version]

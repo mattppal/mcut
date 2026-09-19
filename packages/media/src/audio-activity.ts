@@ -83,16 +83,12 @@ function finitePositive(value: unknown, fallback: number): number {
 
 function normalizeOptions(options: AudioActivityOptions = {}): NormalizedOptions {
   const waveformBuckets =
-    typeof options.waveformBuckets === 'number' &&
-    Number.isFinite(options.waveformBuckets) &&
-    options.waveformBuckets > 0
+    typeof options.waveformBuckets === 'number' && Number.isFinite(options.waveformBuckets) && options.waveformBuckets > 0
       ? Math.floor(options.waveformBuckets)
       : undefined
   return {
     startMs: finiteNonNegative(options.startMs, 0),
-    ...(typeof options.endMs === 'number' && Number.isFinite(options.endMs) && options.endMs >= 0
-      ? { endMs: options.endMs }
-      : {}),
+    ...(typeof options.endMs === 'number' && Number.isFinite(options.endMs) && options.endMs >= 0 ? { endMs: options.endMs } : {}),
     frameMs: finitePositive(options.frameMs, DEFAULT_ACTIVITY_FRAME_MS),
     threshold: finiteNonNegative(options.threshold, DEFAULT_ACTIVITY_THRESHOLD),
     minSoundMs: finiteNonNegative(options.minSoundMs, DEFAULT_MIN_SOUND_MS),
@@ -113,9 +109,7 @@ function roundMetric(value: number): number {
 function sliceSamples(samples: Float32Array, sampleRate: number, options: NormalizedOptions) {
   const sampleStart = Math.min(samples.length, Math.floor((options.startMs / 1000) * sampleRate))
   const sampleEnd =
-    options.endMs === undefined
-      ? samples.length
-      : Math.min(samples.length, Math.max(sampleStart, Math.ceil((options.endMs / 1000) * sampleRate)))
+    options.endMs === undefined ? samples.length : Math.min(samples.length, Math.max(sampleStart, Math.ceil((options.endMs / 1000) * sampleRate)))
   return samples.subarray(sampleStart, sampleEnd)
 }
 
@@ -183,13 +177,7 @@ function smoothRuns(frames: FrameStats[], options: NormalizedOptions): void {
   }
 }
 
-function windowFromRun(
-  run: Run,
-  frames: readonly FrameStats[],
-  samples: Float32Array,
-  sampleRate: number,
-  paddingMs: number,
-): AudioActivityWindow | null {
+function windowFromRun(run: Run, frames: readonly FrameStats[], samples: Float32Array, sampleRate: number, paddingMs: number): AudioActivityWindow | null {
   const first = frames[run.startFrame]
   const last = frames[run.endFrame - 1]
   if (!first || !last) return null
@@ -249,11 +237,7 @@ function summarizeWindows(
   }
 }
 
-export function analyzeAudioSamples(
-  samples: Float32Array,
-  sampleRate: number,
-  options: AudioActivityOptions = {},
-): AudioActivity {
+export function analyzeAudioSamples(samples: Float32Array, sampleRate: number, options: AudioActivityOptions = {}): AudioActivity {
   const normalized = normalizeOptions(options)
   const sourceSamples = sliceSamples(samples, sampleRate, normalized)
   const durationMs = roundMs((sourceSamples.length / sampleRate) * 1000)
@@ -283,10 +267,7 @@ export function analyzeAudioSamples(
   return activity
 }
 
-export async function analyzeAudioActivity(
-  src: MediaSourceLike,
-  options: AudioActivityOptions = {},
-): Promise<AudioActivity | null> {
+export async function analyzeAudioActivity(src: MediaSourceLike, options: AudioActivityOptions = {}): Promise<AudioActivity | null> {
   const normalized = normalizeOptions(options)
   const input = inputFor(src)
   try {

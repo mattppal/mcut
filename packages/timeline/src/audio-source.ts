@@ -21,10 +21,7 @@ export interface ElementAudioSource {
   multicamSourceKey?: string
 }
 
-export function resolveElementAudioSource(
-  project: Project,
-  elementId: ElementId,
-): ElementAudioSource | null {
+export function resolveElementAudioSource(project: Project, elementId: ElementId): ElementAudioSource | null {
   const element = getElementLocation(project, elementId)?.element
   if (!element) return null
 

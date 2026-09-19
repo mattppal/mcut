@@ -17,8 +17,7 @@ function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
   return { project, trackId }
 }
 
-const video = (project: Project): VideoElement =>
-  project.tracks[0]!.elements[0] as VideoElement
+const video = (project: Project): VideoElement => project.tracks[0]!.elements[0] as VideoElement
 
 describe('frame style fields', () => {
   test('updateElement sets cornerRadius, stroke, shadow, crop', () => {

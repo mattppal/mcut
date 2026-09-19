@@ -45,10 +45,7 @@ export function mapCaptionWords(caption: TranscriptCaption): MappedWord[] | null
   return mapped
 }
 
-export function searchCaptions(
-  captions: readonly TranscriptCaption[],
-  query: string,
-): TranscriptMatch[] {
+export function searchCaptions(captions: readonly TranscriptCaption[], query: string): TranscriptMatch[] {
   const needle = query.toLowerCase()
   if (needle.length === 0) return []
   const matches: TranscriptMatch[] = []
@@ -67,12 +64,7 @@ export function searchCaptions(
   return matches.sort((a, b) => a.timeMs - b.timeMs || a.startChar - b.startChar)
 }
 
-function buildMatch(
-  caption: TranscriptCaption,
-  mapped: MappedWord[] | null,
-  startChar: number,
-  endChar: number,
-): TranscriptMatch {
+function buildMatch(caption: TranscriptCaption, mapped: MappedWord[] | null, startChar: number, endChar: number): TranscriptMatch {
   let firstWord: number | undefined
   let lastWord: number | undefined
   if (mapped) {
@@ -84,14 +76,8 @@ function buildMatch(
       lastWord = i
     }
   }
-  const start =
-    mapped && firstWord !== undefined
-      ? caption.startMs + mapped[firstWord]!.word.startMs
-      : caption.startMs
-  const end =
-    mapped && lastWord !== undefined
-      ? caption.startMs + mapped[lastWord]!.word.endMs
-      : caption.startMs + caption.durationMs
+  const start = mapped && firstWord !== undefined ? caption.startMs + mapped[firstWord]!.word.startMs : caption.startMs
+  const end = mapped && lastWord !== undefined ? caption.startMs + mapped[lastWord]!.word.endMs : caption.startMs + caption.durationMs
   return {
     captionId: caption.id,
     startChar,
@@ -103,13 +89,8 @@ function buildMatch(
   }
 }
 
-function spliceMatch(
-  caption: TranscriptCaption,
-  match: TranscriptMatch,
-  replacement: string,
-): { text: string; words: CaptionWord[] | null } {
-  const text =
-    caption.text.slice(0, match.startChar) + replacement + caption.text.slice(match.endChar)
+function spliceMatch(caption: TranscriptCaption, match: TranscriptMatch, replacement: string): { text: string; words: CaptionWord[] | null } {
+  const text = caption.text.slice(0, match.startChar) + replacement + caption.text.slice(match.endChar)
   const mapped = mapCaptionWords(caption)
   if (!mapped || match.firstWord === undefined || match.lastWord === undefined) {
     return { text, words: null }
@@ -117,28 +98,17 @@ function spliceMatch(
 
   const first = mapped[match.firstWord]!
   const last = mapped[match.lastWord]!
-  const spanText =
-    caption.text.slice(first.startChar, match.startChar) +
-    replacement +
-    caption.text.slice(match.endChar, last.endChar)
+  const spanText = caption.text.slice(first.startChar, match.startChar) + replacement + caption.text.slice(match.endChar, last.endChar)
   const tokens = spanText.split(/\s+/).filter((t) => t.length > 0)
   const spanStartMs = first.word.startMs
   const spanEndMs = Math.max(spanStartMs, last.word.endMs)
   const replacementWords = distributeTokens(tokens, spanStartMs, spanEndMs)
 
-  const words = [
-    ...mapped.slice(0, match.firstWord).map((m) => m.word),
-    ...replacementWords,
-    ...mapped.slice(match.lastWord + 1).map((m) => m.word),
-  ]
+  const words = [...mapped.slice(0, match.firstWord).map((m) => m.word), ...replacementWords, ...mapped.slice(match.lastWord + 1).map((m) => m.word)]
   return { text, words }
 }
 
-export function replaceMatch(
-  caption: TranscriptCaption,
-  match: TranscriptMatch,
-  replacement: string,
-): CaptionContentPatch {
+export function replaceMatch(caption: TranscriptCaption, match: TranscriptMatch, replacement: string): CaptionContentPatch {
   const spliced = spliceMatch(caption, match, replacement)
   return {
     captionId: caption.id,
@@ -147,11 +117,7 @@ export function replaceMatch(
   }
 }
 
-export function replaceAllMatches(
-  captions: readonly TranscriptCaption[],
-  query: string,
-  replacement: string,
-): CaptionContentPatch[] {
+export function replaceAllMatches(captions: readonly TranscriptCaption[], query: string, replacement: string): CaptionContentPatch[] {
   const patches: CaptionContentPatch[] = []
   for (const caption of captions) {
     const matches = searchCaptions([caption], query)
@@ -172,11 +138,7 @@ export function replaceAllMatches(
   return patches
 }
 
-export function retypeWord(
-  caption: TranscriptCaption,
-  wordIndex: number,
-  newText: string,
-): CaptionContentPatch | null {
+export function retypeWord(caption: TranscriptCaption, wordIndex: number, newText: string): CaptionContentPatch | null {
   const mapped = mapCaptionWords(caption)
   const target = mapped?.[wordIndex]
   if (!mapped || !target) return null
@@ -193,10 +155,7 @@ function distributeTokens(tokens: string[], startMs: number, endMs: number): Cap
   let usedChars = 0
   for (const [i, token] of tokens.entries()) {
     usedChars += token.length
-    const end =
-      i === tokens.length - 1
-        ? endMs
-        : startMs + Math.round((span * usedChars) / Math.max(1, totalChars))
+    const end = i === tokens.length - 1 ? endMs : startMs + Math.round((span * usedChars) / Math.max(1, totalChars))
     words.push({ text: token, startMs: Math.round(cursorMs), endMs: Math.max(Math.round(cursorMs), end) })
     cursorMs = end
   }
@@ -221,10 +180,7 @@ export interface CaptionSplitResult {
   }
 }
 
-export function splitCaptionAtWord(
-  caption: TranscriptCaption,
-  wordIndex: number,
-): CaptionSplitResult | null {
+export function splitCaptionAtWord(caption: TranscriptCaption, wordIndex: number): CaptionSplitResult | null {
   const mapped = mapCaptionWords(caption)
   if (!mapped || wordIndex <= 0 || wordIndex >= mapped.length) return null
   const boundary = mapped[wordIndex]!
@@ -258,10 +214,7 @@ export interface CaptionMergeResult {
   words?: CaptionWord[]
 }
 
-export function mergeCaptions(
-  a: TranscriptCaption,
-  b: TranscriptCaption,
-): CaptionMergeResult {
+export function mergeCaptions(a: TranscriptCaption, b: TranscriptCaption): CaptionMergeResult {
   const [first, second] = a.startMs <= b.startMs ? [a, b] : [b, a]
   const startMs = first.startMs
   const endMs = Math.max(first.startMs + first.durationMs, second.startMs + second.durationMs)

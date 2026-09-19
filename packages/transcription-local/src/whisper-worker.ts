@@ -21,12 +21,7 @@ type AsrPipeline = (
 let asrKey: string | null = null
 let asrPromise: Promise<AsrPipeline> | null = null
 
-function ensurePipeline(
-  model: string,
-  device: 'webgpu' | 'wasm',
-  dtype: WhisperDtype,
-  onProgress: (progress: number) => void,
-): Promise<AsrPipeline> {
+function ensurePipeline(model: string, device: 'webgpu' | 'wasm', dtype: WhisperDtype, onProgress: (progress: number) => void): Promise<AsrPipeline> {
   const key = `${model}|${device}|${dtype}`
   if (asrKey !== key || !asrPromise) {
     asrKey = key
@@ -48,10 +43,7 @@ function isEnglishOnlyWhisperModel(model: string): boolean {
   return model.endsWith('.en')
 }
 
-function whisperLanguageTaskOptions(
-  multilingual: boolean,
-  language: string | undefined,
-): { task?: string; language?: string } {
+function whisperLanguageTaskOptions(multilingual: boolean, language: string | undefined): { task?: string; language?: string } {
   if (!multilingual) return {}
   return { task: 'transcribe', ...(language ? { language } : {}) }
 }
@@ -90,10 +82,7 @@ async function handleTranscribe(message: WhisperWorkerRequest): Promise<Transcri
   const chunks = planChunks(durationS)
   const results: ChunkSegmentResult[] = []
   for (const [index, chunk] of chunks.entries()) {
-    const window = audio.subarray(
-      Math.floor(chunk.startS * WHISPER_SAMPLE_RATE),
-      Math.floor(chunk.endS * WHISPER_SAMPLE_RATE),
-    )
+    const window = audio.subarray(Math.floor(chunk.startS * WHISPER_SAMPLE_RATE), Math.floor(chunk.endS * WHISPER_SAMPLE_RATE))
     if (hasSpeech(window, WHISPER_SAMPLE_RATE)) {
       const raw = await transcribeWindow(asr, window, multilingual, language)
       if (raw) {
@@ -104,8 +93,7 @@ async function handleTranscribe(message: WhisperWorkerRequest): Promise<Transcri
           if (!text) continue
           const [startS, endS] = piece.timestamp
           const startMs = Math.round(offsetMs + (startS ?? 0) * 1000)
-          const endMs =
-            endS !== null ? Math.round(offsetMs + endS * 1000) : startMs + 1000
+          const endMs = endS !== null ? Math.round(offsetMs + endS * 1000) : startMs + 1000
           segments.push({ text, startMs, endMs: Math.max(startMs, endMs) })
         }
         results.push({ chunk, segments })
