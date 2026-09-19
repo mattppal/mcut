@@ -1,21 +1,29 @@
 import path from 'node:path'
+import type { DesktopInfo, InvokeHandlers } from '@mcut/desktop-ipc'
 import { LiveBridgeError } from '@mcut/mcp-server'
-import { app, session } from 'electron'
+import { app, safeStorage, session } from 'electron'
 import { parseLaunchOptions, resolveToken, type BridgeConfig, type LaunchOptions } from './bridge-config'
 import { startBridge, type BridgeHost, type BridgeHostOptions } from './bridge-host'
+import { registerDesktopIpc } from './ipc'
+import { cursorInstallUrl, installAppMenu } from './menu'
+import { projectHandlers } from './projects'
 import { STUDIO_ORIGIN, registerStudioScheme, serveStudio } from './serve-studio'
-import { openEditorWindow } from './window'
+import { openSettings, reportSafeStorageBackend, type DesktopSettings } from './settings'
+import { handleTranscribeRequest } from './transcribe'
+import { hardenSession, openEditorWindow } from './window'
 
 const APP_TITLE = 'mcut Studio'
 
 registerStudioScheme()
+if (process.platform === 'linux') safeStorage.setUsePlainTextEncryption(true)
+
+function allowedOrigins(options: LaunchOptions): string[] {
+  return options.devUrl === undefined ? [STUDIO_ORIGIN] : [STUDIO_ORIGIN, options.devUrl.origin]
+}
 
 function bridgeHostOptions(options: LaunchOptions): BridgeHostOptions {
   const studioOrigin = options.devUrl?.origin ?? STUDIO_ORIGIN
-  return {
-    editorUrl: `${studioOrigin}/editor`,
-    allowedOrigins: options.devUrl === undefined ? [STUDIO_ORIGIN] : [STUDIO_ORIGIN, options.devUrl.origin],
-  }
+  return { editorUrl: `${studioOrigin}/editor`, allowedOrigins: allowedOrigins(options) }
 }
 
 async function hostBridge(config: BridgeConfig, options: BridgeHostOptions): Promise<{ host: BridgeHost; title: string }> {
@@ -35,19 +43,38 @@ function routeDownloadsToSaveDialog(): void {
   })
 }
 
+function desktopHandlers(mcp: DesktopInfo['mcp'], settings: DesktopSettings): InvokeHandlers {
+  return {
+    ...projectHandlers,
+    'app.info': async () => ({
+      appVersion: app.getVersion(),
+      platform: process.platform === 'darwin' ? 'darwin' : 'linux',
+      mcp,
+      transcription: { configured: settings.transcriptionConfigured() },
+    }),
+    'app.setTranscriptionKey': async ({ key }) => ({ configured: settings.setTranscriptionKey(key) }),
+  }
+}
+
 async function main(): Promise<void> {
   const options = parseLaunchOptions({ argv: process.argv, env: process.env })
   await app.whenReady()
-  serveStudio()
+  reportSafeStorageBackend()
+  const settings = openSettings(path.join(app.getPath('userData'), 'settings.json'))
+  serveStudio({ transcribe: (request) => handleTranscribeRequest(request, settings) })
+  hardenSession()
   routeDownloadsToSaveDialog()
   const token = resolveToken(options.tokenSource, path.join(app.getPath('userData'), 'bridge-token'))
   const port = options.bridgePort === 'ephemeral' ? 0 : options.bridgePort
   const { host, title } = await hostBridge({ port, token }, bridgeHostOptions(options))
+  const mcp = { url: host.mcpUrl, cursorInstallUrl: cursorInstallUrl(host.mcpUrl) }
+  registerDesktopIpc(desktopHandlers(mcp, settings), { allowedOrigins: allowedOrigins(options) })
+  installAppMenu({ mcp })
   app.on('window-all-closed', () => {
     host.bridge.close()
     app.quit()
   })
-  await openEditorWindow({ url: host.editorUrl, title })
+  await openEditorWindow({ url: host.editorUrl, title, allowedOrigins: allowedOrigins(options) })
 }
 
 main().catch((error: unknown) => {
