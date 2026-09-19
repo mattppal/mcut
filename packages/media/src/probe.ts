@@ -1,4 +1,4 @@
-import { ALL_FORMATS, BlobSource, Input, UrlSource } from 'mediabunny'
+import { ALL_FORMATS, BlobSource, EncodedPacketSink, Input, UrlSource } from 'mediabunny'
 import { createAssetId, type AssetRef } from '@mcut/timeline'
 import { hashBlob } from './media-store'
 import { isMatroskaLike } from './video-capabilities'
@@ -153,11 +153,19 @@ async function hasNativeVideoPreview(file: File, mimeType?: string): Promise<boo
   return canDecodeNatively(file)
 }
 
+async function computeDurationSeconds(input: Input): Promise<number> {
+  const tracks = await input.getTracks()
+  const firstPackets = await Promise.all(
+    tracks.map((track) => new EncodedPacketSink(track).getFirstPacket({ metadataOnly: true })),
+  )
+  return input.computeDuration(tracks.filter((_, index) => firstPackets[index] !== null))
+}
+
 export async function probeMedia(src: MediaSourceLike): Promise<MediaProbe> {
   const input = inputFor(src)
   try {
     const [durationSeconds, video, audio, mimeType] = await Promise.all([
-      input.computeDuration(),
+      computeDurationSeconds(input),
       input.getPrimaryVideoTrack(),
       input.getPrimaryAudioTrack(),
       input.getMimeType().catch(() => undefined),

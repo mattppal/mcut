@@ -18,7 +18,6 @@ const truncatedMatroska = [
 ]
 
 export const knownFailures: readonly KnownFailure[] = [
-  { issue: `${issues}/71`, fixtures: ['gaps-flac.head4k'], invariants: ['settles'], detail: /neither resolved nor rejected/ },
   { issue: `${issues}/72`, fixtures: truncatedMatroska, invariants: ['truncated-duration-positive'] },
 ]
 
