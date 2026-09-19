@@ -39,32 +39,32 @@ function launchTarget(): { executablePath: string; args: string[] } {
 
 export const test = base.extend<{ page: Page; downloads: Downloads }, { app: ElectronApplication; editorUrl: string }>({
   app: [
-    async ({}, use) => {
+    async ({}, provide) => {
       const configHome = await mkdtemp(path.join(tmpdir(), 'mcut-e2e-'))
       const app = await _electron.launch({ ...launchTarget(), cwd: repoRoot, env: launchEnv(configHome), chromiumSandbox: true })
       const window = await app.firstWindow()
       await window.waitForURL(/^app:\/\/studio\/editor\?mcpBridge=\d+&mcpToken=[0-9a-f]{64}$/)
       const handle = await app.browserWindow(window)
       await handle.evaluate((browserWindow, size) => browserWindow.setContentSize(size.width, size.height), WINDOW)
-      await use(app)
+      await provide(app)
       await app.close()
       await rm(configHome, { recursive: true, force: true })
     },
     { scope: 'worker', timeout: 120_000 },
   ],
-  editorUrl: [async ({ app }, use) => use((await app.firstWindow()).url()), { scope: 'worker', auto: true }],
-  page: async ({ app }, use, testInfo) => {
+  editorUrl: [async ({ app }, provide) => provide((await app.firstWindow()).url()), { scope: 'worker', auto: true }],
+  page: async ({ app }, provide, testInfo) => {
     const page = await app.firstWindow()
     await app.evaluate(({ session }) => session.defaultSession.clearStorageData())
     await app.context().tracing.start({ screenshots: true, snapshots: true })
-    await use(page)
+    await provide(page)
     const failed = testInfo.status !== testInfo.expectedStatus
     await app.context().tracing.stop(failed ? { path: testInfo.outputPath('trace.zip') } : {})
   },
-  downloads: async ({ app }, use, testInfo) => {
+  downloads: async ({ app }, provide, testInfo) => {
     const dir = testInfo.outputPath('downloads')
     await mkdir(dir, { recursive: true })
-    await use({
+    await provide({
       next: (timeoutMs) =>
         app.evaluate(
           ({ session }, options) =>

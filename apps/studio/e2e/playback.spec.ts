@@ -35,39 +35,42 @@ declare global {
 }
 
 const test = base.extend<{ mediaStats: void }>({
-  mediaStats: async ({ page }, use) => {
-    const script = await page.addInitScript(() => {
-      const elements: Window['__mediaStats']['elements'] = []
-      const stats = (window.__mediaStats = {
-        elements,
-        poolVideo: () => elements.find((rec) => rec.tag === 'video' && rec.events.some(([name]) => name === 'playing')),
-      })
-      const desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'currentTime')!
-      const origCreate = Document.prototype.createElement
-      Document.prototype.createElement = function (this: Document, tag: string, ...rest: unknown[]) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const el = (origCreate as any).call(this, tag, ...rest) as HTMLElement
-        if (tag === 'video' || tag === 'audio') {
-          const media = el as HTMLMediaElement
-          const rec = { tag, el: media, seeks: 0, events: [] as Array<[string, number]> }
-          stats.elements.push(rec)
-          for (const name of ['seeking', 'seeked', 'waiting', 'stalled', 'playing', 'error']) {
-            media.addEventListener(name, () => rec.events.push([name, Math.round(performance.now())]))
+  mediaStats: [
+    async ({ page }, provide) => {
+      const script = await page.addInitScript(() => {
+        const elements: Window['__mediaStats']['elements'] = []
+        const stats = (window.__mediaStats = {
+          elements,
+          poolVideo: () => elements.find((rec) => rec.tag === 'video' && rec.events.some(([name]) => name === 'playing')),
+        })
+        const desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'currentTime')!
+        const origCreate = Document.prototype.createElement
+        Document.prototype.createElement = function (this: Document, tag: string, ...rest: unknown[]) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const el = (origCreate as any).call(this, tag, ...rest) as HTMLElement
+          if (tag === 'video' || tag === 'audio') {
+            const media = el as HTMLMediaElement
+            const rec = { tag, el: media, seeks: 0, events: [] as Array<[string, number]> }
+            stats.elements.push(rec)
+            for (const name of ['seeking', 'seeked', 'waiting', 'stalled', 'playing', 'error']) {
+              media.addEventListener(name, () => rec.events.push([name, Math.round(performance.now())]))
+            }
+            Object.defineProperty(media, 'currentTime', {
+              get: () => desc.get!.call(media),
+              set(value: number) {
+                rec.seeks++
+                desc.set!.call(media, value)
+              },
+            })
           }
-          Object.defineProperty(media, 'currentTime', {
-            get: () => desc.get!.call(media),
-            set(value: number) {
-              rec.seeks++
-              desc.set!.call(media, value)
-            },
-          })
-        }
-        return el
-      } as typeof Document.prototype.createElement
-    })
-    await use()
-    await script.dispose()
-  },
+          return el
+        } as typeof Document.prototype.createElement
+      })
+      await provide()
+      await script.dispose()
+    },
+    { auto: true },
+  ],
 })
 
 let haveFixtures = false
@@ -123,7 +126,7 @@ test.beforeEach(() => {
   test.skip(!haveFixtures, 'ffmpeg unavailable — cannot synthesize video fixtures')
 })
 
-test('paused preview displays the frame under the playhead', async ({ page, editorUrl, mediaStats }) => {
+test('paused preview displays the frame under the playhead', async ({ page, editorUrl }) => {
   await openEditor(page, editorUrl)
   await importFile(page, SMOOTH_FIXTURE, /smooth-8s\.webm/)
   await dragAssetToLane(page, /smooth-8s\.webm/, { offsetX: 120 })
@@ -139,7 +142,7 @@ test('paused preview displays the frame under the playhead', async ({ page, edit
   expect(await previewPixels(page)).toBeGreaterThan(100)
 })
 
-test('playback advances content at near-source fps without seek churn', async ({ page, editorUrl, mediaStats }) => {
+test('playback advances content at near-source fps without seek churn', async ({ page, editorUrl }) => {
   test.setTimeout(120_000)
   await openEditor(page, editorUrl)
   await importFile(page, SMOOTH_FIXTURE, /smooth-8s\.webm/)
@@ -219,7 +222,7 @@ test('playback advances content at near-source fps without seek churn', async ({
   ).toBeGreaterThan(Math.min(15, measured.rafHz / 2))
 })
 
-test('skip-ahead on a long-GOP file recovers without a seek spiral', async ({ page, editorUrl, mediaStats }) => {
+test('skip-ahead on a long-GOP file recovers without a seek spiral', async ({ page, editorUrl }) => {
   test.setTimeout(180_000)
   await openEditor(page, editorUrl)
   await importFile(page, LONG_GOP_FIXTURE, /long-gop-20s\.webm/)
