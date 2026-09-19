@@ -2,7 +2,7 @@ import { checkProjectInvariants, firstDifference, type Violation } from '../../.
 import { matchKnownFailure, type KnownFailure } from '../../../timeline/src/fuzz/known-failures'
 import { resolveArgs, type Plan } from '../../../timeline/src/fuzz/plan'
 import type { Project } from '../../../timeline/src/model'
-import { MCP_SERVER_STATIC_TOOLS } from '../contract'
+import { MCP_BRIDGE_ONLY_TOOLS, MCP_SERVER_STATIC_TOOLS } from '../contract'
 import type { McpFuzzServer, ProjectSnapshot, ToolReply } from './stdio-harness'
 
 export type ToolFamily = 'command' | 'operator' | 'static'
@@ -36,7 +36,7 @@ interface Quarantined {
 const TYPED_ERROR = /^(CommandError|ProjectFormatError|OperatorError) \([a-z-]+\): /
 const FAMILIES: readonly ToolFamily[] = ['command', 'operator', 'static']
 const OUTCOMES: readonly Outcome[] = ['ok', 'typed-error', 'untyped-error']
-const staticTools: ReadonlySet<string> = new Set(MCP_SERVER_STATIC_TOOLS.map((tool) => tool.name))
+const staticTools: ReadonlySet<string> = new Set([...MCP_SERVER_STATIC_TOOLS, ...MCP_BRIDGE_ONLY_TOOLS].map((tool) => tool.name))
 const redoTools: ReadonlySet<string> = new Set(['redo', 'operator_edit_redo'])
 
 export function toolFamily(name: string): ToolFamily {
