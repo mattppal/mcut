@@ -235,8 +235,6 @@
   --clip-multicam: oklch(25.7% 0.09 281.288 / 90%);
 }
 
-/* The command palette is a keyboard toggle. It opens and closes with no motion,
-   so it also skips the popup starting and ending styles. */
 [data-slot="dialog-content"][data-command-palette],
 [data-slot="dialog-overlay"]:has(~ [data-slot="dialog-content"][data-command-palette]) {
   transition-duration: 0s;
