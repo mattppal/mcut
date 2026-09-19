@@ -9,7 +9,7 @@ Studio's primitives are Base UI, not Radix. `apps/studio/package.json` pins `@ba
 
 ## Read the docs first
 
-Fetch `https://base-ui.com/llms.txt` and follow the link for the component you touch. The Cursor cloud VM cannot reach `base-ui.com` (TLS fails at connect), so on a cloud agent read the source of the installed version instead. `node_modules/@base-ui/react/<component>/index.d.ts` lists every part and prop, and `node_modules/@base-ui/react/<component>/**/*.d.ts` carries the prop documentation.
+Fetch `https://base-ui.com/llms.txt` and follow the link for the component you touch. The Cursor cloud VM cannot reach `base-ui.com` (TLS fails at connect), so on a cloud agent read the installed types instead. `apps/studio/node_modules/@base-ui/react/<component>/index.parts.d.ts` lists every part, and `apps/studio/node_modules/@base-ui/react/<component>/<part>/<Component><Part>.d.ts` carries each prop with its documentation, for example `dialog/root/DialogRoot.d.ts`. `CHANGELOG.md` in the same package records breaking changes per version.
 
 ## Where the primitives live
 
