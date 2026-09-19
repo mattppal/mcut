@@ -1,24 +1,25 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Instrument_Serif, Inter } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { cn } from '@/lib/utils'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
-const instrumentSerif = Instrument_Serif({
-  subsets: ['latin'],
+const inter = localFont({
+  src: './fonts/inter-latin.woff2',
+  weight: '100 900',
+  variable: '--font-sans',
+})
+
+const instrumentSerif = localFont({
+  src: './fonts/instrument-serif-italic-latin.woff2',
   style: 'italic',
   weight: '400',
   variable: '--font-logo',
 })
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-})
-
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: './fonts/geist-mono-latin.woff2',
+  weight: '100 900',
   variable: '--font-geist-mono',
-  subsets: ['latin'],
 })
 
 export const metadata: Metadata = {
@@ -46,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={cn('h-full', 'antialiased', geistSans.variable, geistMono.variable, instrumentSerif.variable, 'font-sans', inter.variable)}>
+    <html lang="en" className={cn('h-full', 'antialiased', geistMono.variable, instrumentSerif.variable, 'font-sans', inter.variable)}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   )

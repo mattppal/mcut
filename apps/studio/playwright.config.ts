@@ -13,7 +13,7 @@ export default defineConfig({
     launchOptions: process.env.MCUT_CHROME_PATH ? { executablePath: process.env.MCUT_CHROME_PATH } : {},
   },
   webServer: {
-    command: 'bun run start --port 3123',
+    command: 'bun ../../scripts/serve-out.ts --port 3123',
     url: 'http://127.0.0.1:3123',
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

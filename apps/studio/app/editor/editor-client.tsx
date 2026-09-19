@@ -11,11 +11,15 @@ async function transcribeRemote(audio: Blob): Promise<TranscriptResult> {
   const form = new FormData()
   form.append('audio', audio, 'audio.wav')
   const response = await fetch('/api/transcribe', { method: 'POST', body: form })
-  const json: unknown = await response.json()
+  const isJson = response.headers.get('content-type')?.includes('application/json') ?? false
   if (!response.ok) {
-    const failure = transcribeFailureSchema.safeParse(json)
-    throw new Error(failure.success ? failure.data.error : `Transcription failed (${response.status})`)
+    const failure = isJson ? transcribeFailureSchema.safeParse(await response.json()) : undefined
+    throw new Error(failure?.success ? failure.data.error : `Transcription failed (${response.status})`)
   }
+  if (!isJson) {
+    throw new Error(`Transcription returned an unexpected response: ${response.headers.get('content-type') ?? 'no content type'}`)
+  }
+  const json: unknown = await response.json()
   const result = transcriptResultSchema.safeParse(json)
   if (!result.success) {
     throw new Error(`Transcription returned an unexpected response: ${z.prettifyError(result.error)}`)
