@@ -522,7 +522,7 @@ describe('createMcutMcpServer', () => {
     }
   })
 
-  test('live bridge reports the editor URL when no browser tab is connected', async () => {
+  test('live bridge /status lists only connection state when no browser tab is connected', async () => {
     const bridge = new LiveMcutBridge({
       token: 'missing-tab-token',
       editorUrl: 'http://localhost:3000/editor',
@@ -532,10 +532,8 @@ describe('createMcutMcpServer', () => {
 
     try {
       await expect(bridge.createTarget().getSummary()).rejects.toThrow(`http://localhost:3000/editor?mcpBridge=${port}&mcpToken=missing-tab-token`)
-      await expect(bridge.rpc('status')).resolves.toMatchObject({
-        connected: false,
-        openEditorUrl: `http://localhost:3000/editor?mcpBridge=${port}&mcpToken=missing-tab-token`,
-      })
+      const body = await (await fetch(`http://127.0.0.1:${port}/status`)).json()
+      expect(body).toEqual({ ok: true, result: { connected: false, tab: null } })
     } finally {
       bridge.close()
     }

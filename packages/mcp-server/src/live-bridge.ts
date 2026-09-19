@@ -228,7 +228,6 @@ export class LiveMcutBridge {
         return {
           connected: this.isConnected(),
           tab: this.tabInfo,
-          openEditorUrl: this.getOpenEditorUrl(),
         }
       default:
         return await this.request(type, payload)
