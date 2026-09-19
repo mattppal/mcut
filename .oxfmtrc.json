@@ -15,6 +15,7 @@
     "apps/studio/components/ui",
     "apps/studio/components/kibo-ui",
     "apps/web/.source",
+    "apps/web/next-env.d.ts",
     "dist",
     "node_modules",
     "skills/mcut-editing/references",
