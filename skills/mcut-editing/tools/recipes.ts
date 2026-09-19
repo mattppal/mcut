@@ -55,10 +55,7 @@ export const RECIPES: Recipe[] = [
       const [left, right] = track.elements
       assert(left!.durationMs === 30000, 'left piece should end at the cut')
       assert(right!.startMs === 30000, 'ripple should close the gap (butt cut at 30s)')
-      assert(
-        right!.type === 'video' && right!.trimStartMs === 33000,
-        'right piece should resume at source 33s',
-      )
+      assert(right!.type === 'video' && right!.trimStartMs === 33000, 'right piece should resume at source 33s')
     },
   },
   {
@@ -74,23 +71,16 @@ export const RECIPES: Recipe[] = [
       'as commands JSON without writing. The element must play at 1x, with no timeMap. ' +
       'Transcript times are source-media times, so trims and offsets are handled for you. Cutting ' +
       'leading silence replaces the element id with a fresh one. Re-read the summary after.',
-    apply: (project) =>
-      planSilenceCuts(project, 'e-camera', SAMPLE_TRANSCRIPT, { minGapMs: 600, paddingMs: 120 })
-        .project,
+    apply: (project) => planSilenceCuts(project, 'e-camera', SAMPLE_TRANSCRIPT, { minGapMs: 600, paddingMs: 120 }).project,
     verify: (project) => {
       const track = project.tracks.find((t) => t.name === 'A-roll')
       assert(track, 'A-roll track should survive')
-      const total = track.elements
-        .filter((e) => e.type === 'video')
-        .reduce((sum, e) => sum + e.durationMs, 0)
+      const total = track.elements.filter((e) => e.type === 'video').reduce((sum, e) => sum + e.durationMs, 0)
       assert(total < 90000, 'silence cuts should shorten the A-roll')
       assert(track.elements.length > 1, 'interior silences should split the clip')
       for (let i = 1; i < track.elements.length; i++) {
         const prev = track.elements[i - 1]!
-        assert(
-          track.elements[i]!.startMs === prev.startMs + prev.durationMs,
-          'ripple should leave butt cuts, not gaps',
-        )
+        assert(track.elements[i]!.startMs === prev.startMs + prev.durationMs, 'ripple should leave butt cuts, not gaps')
       }
     },
   },
@@ -126,7 +116,7 @@ export const RECIPES: Recipe[] = [
     intent: '"start the audio before the video" or "make the intro feel less abrupt"',
     template: 'talking-head',
     notes:
-      '`detachAudio` puts the clip\'s sound on its own element. The video mutes. Both share a ' +
+      "`detachAudio` puts the clip's sound on its own element. The video mutes. Both share a " +
       '`linkId`. Delaying the VIDEO by 500ms while trimming its in-point by the same amount keeps ' +
       'picture and sound in sync. The audio starts first. The same shape against the next ' +
       'clip on a track gives the classic conversation J-cut. Swap which element you delay for an L-cut.',
@@ -159,8 +149,12 @@ export const RECIPES: Recipe[] = [
         type: 'addElement',
         trackId: 't-titles',
         element: {
-          id: 'e-title', type: 'text', startMs: 300, durationMs: 3200,
-          text: 'Agents can edit video', style: { fontSize: 96, fontWeight: 800 },
+          id: 'e-title',
+          type: 'text',
+          startMs: 300,
+          durationMs: 3200,
+          text: 'Agents can edit video',
+          style: { fontSize: 96, fontWeight: 800 },
         },
       },
       { type: 'applyAnimationPreset', elementId: 'e-title', preset: 'pop-in' },
@@ -202,10 +196,7 @@ export const RECIPES: Recipe[] = [
     verify: (project) => {
       const camera = element(project, 'e-camera')
       assert(camera.type === 'video' && camera.timeMap?.length === 4, 'timeMap should have 4 points')
-      assert(
-        camera.timeMap![1]!.value === camera.timeMap![2]!.value,
-        'the flat segment is the freeze',
-      )
+      assert(camera.timeMap![1]!.value === camera.timeMap![2]!.value, 'the flat segment is the freeze')
       assert(camera.durationMs === 90000, 'a timeMap does not change timeline duration')
     },
   },
@@ -215,7 +206,7 @@ export const RECIPES: Recipe[] = [
     intent: '"make this 1.25x" or "speed it up a little"',
     template: 'talking-head',
     notes:
-      'Constant speed rescales the clip\'s timeline duration to play the same source span. 90s of ' +
+      "Constant speed rescales the clip's timeline duration to play the same source span. 90s of " +
       'source at 1.25x occupies 72s. The in-point is kept. Later clips on the track do not move. ' +
       'Follow with `compactTrackGaps`, or cut the music to match, if the change opens a gap. ' +
       'Speed 1 removes the map.',
@@ -246,9 +237,7 @@ export const RECIPES: Recipe[] = [
       }),
     ],
     verify: (project) => {
-      const captionTrack = project.tracks.find(
-        (track) => track.elements.length > 0 && track.elements.every((e) => e.type === 'caption'),
-      )
+      const captionTrack = project.tracks.find((track) => track.elements.length > 0 && track.elements.every((e) => e.type === 'caption'))
       assert(captionTrack, 'captions should land on their own track')
       const first = captionTrack.elements[0]!
       assert(first.type === 'caption' && first.words && first.words.length > 0, 'captions carry word timings')
@@ -306,16 +295,10 @@ export const RECIPES: Recipe[] = [
     verify: (project) => {
       for (const id of ['e-photo-1', 'e-photo-2', 'e-photo-3']) {
         const photo = element(project, id)
-        assert(
-          'keyframes' in photo && photo.keyframes?.['scale.x'] !== undefined,
-          `${id} should have ken-burns scale keyframes`,
-        )
+        assert('keyframes' in photo && photo.keyframes?.['scale.x'] !== undefined, `${id} should have ken-burns scale keyframes`)
       }
       const first = element(project, 'e-photo-1')
-      assert(
-        'transition' in first && first.transition?.type === 'dissolve',
-        'transition rides on the left clip',
-      )
+      assert('transition' in first && first.transition?.type === 'dissolve', 'transition rides on the left clip')
     },
   },
   {
@@ -340,10 +323,7 @@ export const RECIPES: Recipe[] = [
     verify: (project) => {
       assert(project.width === 1080 && project.height === 1920, 'project should be 9:16')
       const camera = element(project, 'e-camera')
-      assert(
-        camera.type === 'video' && camera.transform.scaleX === 1.78,
-        'footage should scale to cover',
-      )
+      assert(camera.type === 'video' && camera.transform.scaleX === 1.78, 'footage should scale to cover')
     },
   },
 ]

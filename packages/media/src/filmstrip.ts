@@ -17,10 +17,7 @@ export interface Filmstrip {
   timestampsMs: number[]
 }
 
-async function getCanvasSinkFilmstrip(
-  src: MediaSourceLike,
-  options: FilmstripOptions,
-): Promise<Filmstrip | null> {
+async function getCanvasSinkFilmstrip(src: MediaSourceLike, options: FilmstripOptions): Promise<Filmstrip | null> {
   const frameWidth = options.frameWidth ?? 80
   const frameCount = Math.max(1, Math.round(options.frameCount))
   const input = inputFor(src)
@@ -31,10 +28,7 @@ async function getCanvasSinkFilmstrip(
     const startMs = options.startMs ?? 0
     const spanMs = Math.max(1, durationMs - startMs)
 
-    const timestampsMs = Array.from(
-      { length: frameCount },
-      (_, i) => startMs + ((i + 0.5) / frameCount) * spanMs,
-    )
+    const timestampsMs = Array.from({ length: frameCount }, (_, i) => startMs + ((i + 0.5) / frameCount) * spanMs)
     const sink = new CanvasSink(track, { width: frameWidth, fit: 'cover' })
 
     let strip: CanvasSurface | null = null
@@ -57,12 +51,7 @@ async function getCanvasSinkFilmstrip(
   }
 }
 
-async function getNativeFilmstrip(
-  src: MediaSourceLike,
-  frameWidth: number,
-  frameCount: number,
-  options: FilmstripOptions,
-): Promise<Filmstrip | null> {
+async function getNativeFilmstrip(src: MediaSourceLike, frameWidth: number, frameCount: number, options: FilmstripOptions): Promise<Filmstrip | null> {
   return getNativeVideoFilmstrip(src, {
     frameWidth,
     frameCount,
@@ -79,10 +68,7 @@ function decodeUnavailable(_error: unknown): null {
   return null
 }
 
-export async function getFilmstrip(
-  src: MediaSourceLike,
-  options: FilmstripOptions,
-): Promise<Filmstrip | null> {
+export async function getFilmstrip(src: MediaSourceLike, options: FilmstripOptions): Promise<Filmstrip | null> {
   const frameWidth = options.frameWidth ?? 80
   const frameCount = Math.max(1, Math.round(options.frameCount))
 

@@ -68,9 +68,7 @@ function reexportedNames(statement: ts.ExportDeclaration, depth: number): string
 }
 
 function collectExports(path: string, depth: number): string[] {
-  return parse(path).statements.flatMap((statement) =>
-    ts.isExportDeclaration(statement) ? reexportedNames(statement, depth) : declaredNames(statement),
-  )
+  return parse(path).statements.flatMap((statement) => (ts.isExportDeclaration(statement) ? reexportedNames(statement, depth) : declaredNames(statement)))
 }
 
 export function listExports(indexPath: string): string[] {

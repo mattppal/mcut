@@ -26,13 +26,7 @@ const fakeIndex = [
   '',
 ].join('\n')
 
-const fakeHelpers = [
-  'export const kappa = 1',
-  "export { lambda } from './deep'",
-  "export * from './deeper'",
-  'const secret = 3',
-  '',
-].join('\n')
+const fakeHelpers = ['export const kappa = 1', "export { lambda } from './deep'", "export * from './deeper'", 'const secret = 3', ''].join('\n')
 
 const fakePage = [
   '---',
@@ -118,9 +112,7 @@ describe('coverPackages', () => {
   })
 
   test('a page that documents every export and nothing else is clean', () => {
-    const clean = ['alpha', 'gamma', 'Delta', 'Eta', 'Iota', 'Theta', 'epsilon', 'kappa', 'lambda', 'zeta']
-      .map((name) => `### ${name}\n`)
-      .join('\n')
+    const clean = ['alpha', 'gamma', 'Delta', 'Eta', 'Iota', 'Theta', 'epsilon', 'kappa', 'lambda', 'zeta'].map((name) => `### ${name}\n`).join('\n')
     writeFileSync(join(docsRoot, 'widget.mdx'), clean)
     expect(formatFindings(coverPackages(packagesRoot, docsRoot))).toEqual([])
   })

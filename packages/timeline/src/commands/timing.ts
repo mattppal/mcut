@@ -1,13 +1,7 @@
 import { z } from 'zod'
 import { applyEdgeTrim } from '../edge-trim'
 import { CommandError } from '../errors'
-import {
-  elementIdSchema,
-  MIN_ELEMENT_DURATION_MS,
-  validateElement,
-  type TimelineElement,
-  type Track,
-} from '../model'
+import { elementIdSchema, MIN_ELEMENT_DURATION_MS, validateElement, type TimelineElement, type Track } from '../model'
 import { compactTimelineIfMagnetic, placementFor } from '../placement'
 import { getSourceSpanMs, makeConstantSpeedMap, timeMapSchema } from '../speed'
 import { defineCommand, mustLocate, replaceTrack, sortByStart } from './shared'
@@ -80,9 +74,7 @@ function adjacentNext(track: Track, element: TimelineElement): TimelineElement |
 }
 
 function adjacentPrevious(track: Track, element: TimelineElement): TimelineElement | undefined {
-  return track.elements.find(
-    (e) => e.startMs + e.durationMs === element.startMs && e.id !== element.id,
-  )
+  return track.elements.find((e) => e.startMs + e.durationMs === element.startMs && e.id !== element.id)
 }
 
 export const trimEdge = defineCommand({
@@ -92,7 +84,7 @@ export const trimEdge = defineCommand({
     'spans, speed maps, keyframes, and caption words all keep showing the ' +
     'same frames. Positive deltaMs moves the edge later. The other edge and ' +
     'every other clip stay put. Prefer this over raw trimElement for edge ' +
-    "drags — trimElement edits the source window directly and shifts a " +
+    'drags — trimElement edits the source window directly and shifts a ' +
     "reversed clip's content.",
   payloadSchema: z.object({
     elementId: elementIdSchema,
@@ -136,10 +128,7 @@ export const slipElement = defineCommand({
         sources: element.sources.map((source) => {
           const trimStartMs = source.trimStartMs + payload.deltaMs
           if (trimStartMs < 0) {
-            throw new CommandError(
-              'out-of-bounds',
-              `multicam source "${source.key}" has no media before its trim start`,
-            )
+            throw new CommandError('out-of-bounds', `multicam source "${source.key}" has no media before its trim start`)
           }
           return { ...source, trimStartMs }
         }),
@@ -166,10 +155,7 @@ export const rollEdit = defineCommand({
     const { track, element } = mustLocate(project, payload.elementId)
     const right = adjacentNext(track, element)
     if (!right) {
-      throw new CommandError(
-        'invalid-payload',
-        `element "${element.id}" has no exactly-adjacent next clip to roll against`,
-      )
+      throw new CommandError('invalid-payload', `element "${element.id}" has no exactly-adjacent next clip to roll against`)
     }
     if (payload.deltaMs === 0) return project
     const newLeft = applyEdgeTrim(element, 'end', payload.deltaMs)
@@ -178,9 +164,7 @@ export const rollEdit = defineCommand({
     validateElement(project, newRight)
     return replaceTrack(project, track.id, (t) => ({
       ...t,
-      elements: sortByStart(
-        t.elements.map((e) => (e.id === element.id ? newLeft : e.id === right.id ? newRight : e)),
-      ),
+      elements: sortByStart(t.elements.map((e) => (e.id === element.id ? newLeft : e.id === right.id ? newRight : e))),
     }))
   },
 })
@@ -189,18 +173,15 @@ export const slideElement = defineCommand({
   type: 'slideElement',
   description:
     'Slide a clip along its exactly-adjacent neighbors: the clip moves by ' +
-    'deltaMs keeping its content; the left neighbor\'s end and the right ' +
-    'neighbor\'s start absorb the change. Use moveElement across gaps.',
+    "deltaMs keeping its content; the left neighbor's end and the right " +
+    "neighbor's start absorb the change. Use moveElement across gaps.",
   payloadSchema: z.object({ elementId: elementIdSchema, deltaMs: z.number().int() }),
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
     const left = adjacentPrevious(track, element)
     const right = adjacentNext(track, element)
     if (!left || !right) {
-      throw new CommandError(
-        'invalid-payload',
-        `slide requires exactly-adjacent clips on both sides of "${element.id}"`,
-      )
+      throw new CommandError('invalid-payload', `slide requires exactly-adjacent clips on both sides of "${element.id}"`)
     }
     if (payload.deltaMs === 0) return project
     const newLeft = applyEdgeTrim(left, 'end', payload.deltaMs)
@@ -211,11 +192,7 @@ export const slideElement = defineCommand({
     validateElement(project, moved)
     return replaceTrack(project, track.id, (t) => ({
       ...t,
-      elements: sortByStart(
-        t.elements.map((e) =>
-          e.id === left.id ? newLeft : e.id === right.id ? newRight : e.id === element.id ? moved : e,
-        ),
-      ),
+      elements: sortByStart(t.elements.map((e) => (e.id === left.id ? newLeft : e.id === right.id ? newRight : e.id === element.id ? moved : e))),
     }))
   },
 })
@@ -240,13 +217,9 @@ export const rippleTrim = defineCommand({
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
     if (payload.deltaMs === 0) return project
-    const trimmed =
-      payload.edge === 'start'
-        ? trimStartKeepingPosition(element, payload.deltaMs)
-        : applyEdgeTrim(element, 'end', payload.deltaMs)
+    const trimmed = payload.edge === 'start' ? trimStartKeepingPosition(element, payload.deltaMs) : applyEdgeTrim(element, 'end', payload.deltaMs)
     const shiftMs = payload.edge === 'end' ? payload.deltaMs : -payload.deltaMs
-    const boundaryMs =
-      payload.edge === 'end' ? element.startMs + element.durationMs : element.startMs
+    const boundaryMs = payload.edge === 'end' ? element.startMs + element.durationMs : element.startMs
     validateElement(project, trimmed)
 
     const tracks = project.tracks.map((t) => {
@@ -258,10 +231,7 @@ export const rippleTrim = defineCommand({
           if (e.startMs < boundaryMs) return e
           const startMs = e.startMs + shiftMs
           if (startMs < 0) {
-            throw new CommandError(
-              'out-of-bounds',
-              `ripple would move "${e.id}" before the start of the timeline`,
-            )
+            throw new CommandError('out-of-bounds', `ripple would move "${e.id}" before the start of the timeline`)
           }
           return { ...e, startMs }
         }),

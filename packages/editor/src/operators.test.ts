@@ -43,11 +43,15 @@ describe('editor operators', () => {
       value: 0.2,
     })
 
-    await runOperator('keyframes.moveAtTime', { engine }, {
-      elementId: result.elementId,
-      fromTimeMs: 500,
-      toTimeMs: 900,
-    })
+    await runOperator(
+      'keyframes.moveAtTime',
+      { engine },
+      {
+        elementId: result.elementId,
+        fromTimeMs: 500,
+        toTimeMs: 900,
+      },
+    )
 
     const element = getElement(engine.project, result.elementId)
     expect(element?.keyframes?.opacity?.map((keyframe) => keyframe.timeMs)).toEqual([900])

@@ -28,10 +28,7 @@ export interface CollectSnapTargetsOptions {
   excludeElementIds?: ReadonlySet<string>
 }
 
-export function collectSnapTargets(
-  project: Project,
-  options: CollectSnapTargetsOptions = {},
-): SnapTarget[] {
+export function collectSnapTargets(project: Project, options: CollectSnapTargetsOptions = {}): SnapTarget[] {
   const exclude = options.excludeElementIds
   const targets: SnapTarget[] = [{ timeMs: 0, kind: 'origin' }]
   if (options.playheadMs !== undefined) {
@@ -50,11 +47,7 @@ export function collectSnapTargets(
   return targets.sort((a, b) => a.timeMs - b.timeMs)
 }
 
-export function nearestSnapTarget(
-  timeMs: number,
-  targets: readonly SnapTarget[],
-  thresholdMs: number,
-): SnapTarget | null {
+export function nearestSnapTarget(timeMs: number, targets: readonly SnapTarget[], thresholdMs: number): SnapTarget | null {
   if (targets.length === 0 || thresholdMs <= 0) return null
   let lo = 0
   let hi = targets.length
@@ -78,25 +71,14 @@ const passthrough = (ms: number, fps: number | undefined): SnapResult => ({
   target: null,
 })
 
-export function snapTime(
-  candidateMs: number,
-  targets: readonly SnapTarget[],
-  thresholdMs: number,
-  options: SnapOptions = {},
-): SnapResult {
+export function snapTime(candidateMs: number, targets: readonly SnapTarget[], thresholdMs: number, options: SnapOptions = {}): SnapResult {
   if (options.enabled === false) return passthrough(candidateMs, options.fps)
   const target = nearestSnapTarget(candidateMs, targets, thresholdMs)
   if (!target) return passthrough(candidateMs, options.fps)
   return { ms: target.timeMs, guideMs: target.timeMs, target }
 }
 
-export function snapClip(
-  startMs: number,
-  durationMs: number,
-  targets: readonly SnapTarget[],
-  thresholdMs: number,
-  options: SnapOptions = {},
-): SnapClipResult {
+export function snapClip(startMs: number, durationMs: number, targets: readonly SnapTarget[], thresholdMs: number, options: SnapOptions = {}): SnapClipResult {
   if (options.enabled === false) return { ...passthrough(startMs, options.fps), edge: null }
   const startTarget = nearestSnapTarget(startMs, targets, thresholdMs)
   const endTarget = nearestSnapTarget(startMs + durationMs, targets, thresholdMs)

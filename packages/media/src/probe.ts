@@ -37,10 +37,7 @@ function trackListLength(trackList: unknown): number | undefined {
   return typeof trackList.length === 'number' ? trackList.length : undefined
 }
 
-function loadNativeMetadata(
-  tag: 'video' | 'audio',
-  src: string,
-): Promise<NativeMediaMetadata | null> {
+function loadNativeMetadata(tag: 'video' | 'audio', src: string): Promise<NativeMediaMetadata | null> {
   return new Promise((resolve) => {
     const media = document.createElement(tag)
     let settled = false

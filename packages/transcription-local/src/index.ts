@@ -1,9 +1,4 @@
-import type {
-  TranscribeInput,
-  TranscribeOptions,
-  TranscriptionProvider,
-  TranscriptResult,
-} from '@mcut/transcription'
+import type { TranscribeInput, TranscribeOptions, TranscriptionProvider, TranscriptResult } from '@mcut/transcription'
 import type { WhisperDtype, WhisperWorkerRequest, WhisperWorkerResponse } from './protocol'
 import { parseWav, resampleTo, WHISPER_SAMPLE_RATE } from './wav'
 
@@ -20,12 +15,7 @@ export {
 export { hasRepetitionLoop, textHasRepetitionLoop, type RepetitionOptions } from './repetition'
 export { hasSpeech, measureActivity, type SpeechActivity } from './vad'
 export { parseWav, resampleTo, WHISPER_SAMPLE_RATE, type DecodedAudio } from './wav'
-export type {
-  WhisperDtype,
-  WhisperWorkerConfig,
-  WhisperWorkerRequest,
-  WhisperWorkerResponse,
-} from './protocol'
+export type { WhisperDtype, WhisperWorkerConfig, WhisperWorkerRequest, WhisperWorkerResponse } from './protocol'
 
 export const WHISPER_MODELS = {
   base: 'onnx-community/whisper-base',
@@ -54,9 +44,7 @@ export function isLocalTranscriptionSupported(): boolean {
 
 export function pickDefaultModel(): string {
   const { deviceMemory } = capabilities()
-  return deviceMemory !== undefined && deviceMemory < ROOMY_DEVICE_MEMORY_GIB
-    ? WHISPER_MODELS['tiny.en']
-    : WHISPER_MODELS.base
+  return deviceMemory !== undefined && deviceMemory < ROOMY_DEVICE_MEMORY_GIB ? WHISPER_MODELS['tiny.en'] : WHISPER_MODELS.base
 }
 
 export interface LocalWhisperProgress {
@@ -73,13 +61,9 @@ export interface CreateLocalWhisperProviderOptions {
   id?: string
 }
 
-export function createLocalWhisperProvider(
-  options: CreateLocalWhisperProviderOptions = {},
-): TranscriptionProvider {
+export function createLocalWhisperProvider(options: CreateLocalWhisperProviderOptions = {}): TranscriptionProvider {
   const model =
-    options.model && options.model in WHISPER_MODELS
-      ? WHISPER_MODELS[options.model as keyof typeof WHISPER_MODELS]
-      : (options.model ?? pickDefaultModel())
+    options.model && options.model in WHISPER_MODELS ? WHISPER_MODELS[options.model as keyof typeof WHISPER_MODELS] : (options.model ?? pickDefaultModel())
   const device = options.device ?? 'webgpu'
   const dtype = options.dtype ?? 'q8'
 
@@ -87,9 +71,7 @@ export function createLocalWhisperProvider(
   let requestId = 0
 
   const ensureWorker = (): Worker => {
-    reusedWorker ??= options.createWorker
-      ? options.createWorker()
-      : new Worker(new URL('./whisper-worker.js', import.meta.url), { type: 'module' })
+    reusedWorker ??= options.createWorker ? options.createWorker() : new Worker(new URL('./whisper-worker.js', import.meta.url), { type: 'module' })
     return reusedWorker
   }
 
@@ -100,10 +82,7 @@ export function createLocalWhisperProvider(
 
   return {
     id: options.id ?? 'whisper-local',
-    async transcribe(
-      input: TranscribeInput,
-      transcribeOptions?: TranscribeOptions,
-    ): Promise<TranscriptResult> {
+    async transcribe(input: TranscribeInput, transcribeOptions?: TranscribeOptions): Promise<TranscriptResult> {
       const signal = transcribeOptions?.signal
       signal?.throwIfAborted()
       const audio = await decodeToWhisperInput(input)

@@ -1,18 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import type { Effect } from '@mcut/timeline'
 import { parseCssColor } from './color'
-import {
-  COLOR_OP,
-  curveToLut,
-  hasUnsupportedEffects,
-  MAX_COLOR_OPS,
-  planEffects,
-} from './effect-plan'
+import { COLOR_OP, curveToLut, hasUnsupportedEffects, MAX_COLOR_OPS, planEffects } from './effect-plan'
 import { BLEND_MODE_IDS, COLOR_SHADER, COMPOSITE_SHADER } from './shaders'
 import { gaussianKernel, invertChrome } from './transform'
 
-const effect = (record: Record<string, unknown>): Effect =>
-  ({ enabled: true, ...record }) as unknown as Effect
+const effect = (record: Record<string, unknown>): Effect => ({ enabled: true, ...record }) as unknown as Effect
 
 describe('parseCssColor', () => {
   test('hex forms', () => {
@@ -34,19 +27,11 @@ describe('parseCssColor', () => {
 
 describe('planEffects', () => {
   test('fuses consecutive color effects into one pass, in order', () => {
-    const plan = planEffects([
-      effect({ type: 'brightness', amount: 1.2 }),
-      effect({ type: 'saturate', amount: 0.5 }),
-      effect({ type: 'invert', amount: 1 }),
-    ])
+    const plan = planEffects([effect({ type: 'brightness', amount: 1.2 }), effect({ type: 'saturate', amount: 0.5 }), effect({ type: 'invert', amount: 1 })])
     expect(plan.passes).toHaveLength(1)
     const pass = plan.passes[0]!
     if (pass.kind !== 'color') throw new Error('expected color pass')
-    expect(pass.ops.map((o) => o.kind)).toEqual([
-      COLOR_OP.brightness,
-      COLOR_OP.saturate,
-      COLOR_OP.invert,
-    ])
+    expect(pass.ops.map((o) => o.kind)).toEqual([COLOR_OP.brightness, COLOR_OP.saturate, COLOR_OP.invert])
   })
 
   test('preserves stack order across pass kinds', () => {
@@ -74,9 +59,7 @@ describe('planEffects', () => {
   })
 
   test('chroma key packs key color + tolerances', () => {
-    const plan = planEffects([
-      effect({ type: 'chroma-key', keyColor: '#00ff00', tolerance: 0.3, softness: 0.2, spillSuppression: 0.7 }),
-    ])
+    const plan = planEffects([effect({ type: 'chroma-key', keyColor: '#00ff00', tolerance: 0.3, softness: 0.2, spillSuppression: 0.7 })])
     const pass = plan.passes[0]!
     if (pass.kind !== 'color') throw new Error('expected color pass')
     expect(pass.ops[0]!.kind).toBe(COLOR_OP.chromaKey)
@@ -85,7 +68,14 @@ describe('planEffects', () => {
 
   test('curves produce per-channel LUTs with master composed after', () => {
     const plan = planEffects([
-      effect({ type: 'curves', rgb: [{ x: 0, y: 1 }, { x: 1, y: 0 }], red: [] }),
+      effect({
+        type: 'curves',
+        rgb: [
+          { x: 0, y: 1 },
+          { x: 1, y: 0 },
+        ],
+        red: [],
+      }),
     ])
     const pass = plan.passes[0]!
     if (pass.kind !== 'color') throw new Error('expected color pass')

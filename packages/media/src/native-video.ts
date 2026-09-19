@@ -85,11 +85,7 @@ function seekVideo(video: HTMLVideoElement, timeSeconds: number): Promise<void> 
   })
 }
 
-function drawVideoFrame(
-  video: HTMLVideoElement,
-  width: number,
-  fit: 'contain' | 'cover' = 'contain',
-): HTMLCanvasElement | OffscreenCanvas | null {
+function drawVideoFrame(video: HTMLVideoElement, width: number, fit: 'contain' | 'cover' = 'contain'): HTMLCanvasElement | OffscreenCanvas | null {
   if (video.videoWidth <= 0 || video.videoHeight <= 0) return null
 
   const sourceAspect = video.videoWidth / video.videoHeight
@@ -120,10 +116,7 @@ function cleanupVideo(video: HTMLVideoElement): void {
   video.load()
 }
 
-async function withNativeVideo<T>(
-  src: MediaSourceLike,
-  callback: (video: HTMLVideoElement) => Promise<T>,
-): Promise<T | null> {
+async function withNativeVideo<T>(src: MediaSourceLike, callback: (video: HTMLVideoElement) => Promise<T>): Promise<T | null> {
   if (typeof document === 'undefined') return null
 
   const { url, revoke } = sourceUrl(src)
@@ -138,14 +131,9 @@ async function withNativeVideo<T>(
   }
 }
 
-export async function getNativeVideoFrame(
-  src: MediaSourceLike,
-  options: NativeVideoFrameOptions,
-): Promise<NativeVideoFrame | null> {
+export async function getNativeVideoFrame(src: MediaSourceLike, options: NativeVideoFrameOptions): Promise<NativeVideoFrame | null> {
   return withNativeVideo(src, async (video) => {
-    const maxTimeMs = Number.isFinite(video.duration)
-      ? Math.max(0, video.duration * 1000 - 1)
-      : options.timeMs
+    const maxTimeMs = Number.isFinite(video.duration) ? Math.max(0, video.duration * 1000 - 1) : options.timeMs
     const timestampMs = Math.min(Math.max(0, options.timeMs), maxTimeMs)
     await seekVideo(video, timestampMs / 1000)
     const canvas = drawVideoFrame(video, options.width, options.fit)
@@ -153,30 +141,20 @@ export async function getNativeVideoFrame(
   })
 }
 
-export async function getNativeVideoFilmstrip(
-  src: MediaSourceLike,
-  options: NativeVideoFilmstripOptions,
-): Promise<NativeVideoFilmstrip | null> {
+export async function getNativeVideoFilmstrip(src: MediaSourceLike, options: NativeVideoFilmstripOptions): Promise<NativeVideoFilmstrip | null> {
   return withNativeVideo(src, async (video) => {
-    const durationMs = Number.isFinite(video.duration)
-      ? Math.round(video.duration * 1000)
-      : (options.endMs ?? 0)
+    const durationMs = Number.isFinite(video.duration) ? Math.round(video.duration * 1000) : (options.endMs ?? 0)
     const startMs = options.startMs ?? 0
     const endMs = options.endMs ?? durationMs
     const spanMs = Math.max(1, endMs - startMs)
-    const timestampsMs = Array.from(
-      { length: options.frameCount },
-      (_, i) => startMs + ((i + 0.5) / options.frameCount) * spanMs,
-    )
+    const timestampsMs = Array.from({ length: options.frameCount }, (_, i) => startMs + ((i + 0.5) / options.frameCount) * spanMs)
 
     let strip: CanvasSurface | null = null
     let frameHeight = 0
 
     for (let index = 0; index < timestampsMs.length; index++) {
       const timestampMs = timestampsMs[index] ?? startMs
-      const maxTimeMs = Number.isFinite(video.duration)
-        ? Math.max(0, video.duration * 1000 - 1)
-        : timestampMs
+      const maxTimeMs = Number.isFinite(video.duration) ? Math.max(0, video.duration * 1000 - 1) : timestampMs
       await seekVideo(video, Math.min(Math.max(0, timestampMs), maxTimeMs) / 1000)
       const frame = drawVideoFrame(video, options.frameWidth, 'cover')
       if (!frame) continue

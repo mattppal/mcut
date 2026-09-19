@@ -10,19 +10,10 @@
  * (and, later, an AI copilot) calls under the hood.
  */
 
-import {
-  createAssetId,
-  createElementId,
-  createProject,
-  createTrackId,
-  EditorEngine,
-  getProjectDurationMs,
-  listCommands,
-} from '@mcut/timeline'
+import { createAssetId, createElementId, createProject, createTrackId, EditorEngine, getProjectDurationMs, listCommands } from '@mcut/timeline'
 import { buildApplyCaptionsCommand, toSrt, toVtt, type TranscriptResult } from '@mcut/transcription'
 
-const log = (label: string, value?: unknown) =>
-  console.log(`\n— ${label}${value === undefined ? '' : `\n${JSON.stringify(value, null, 2)}`}`)
+const log = (label: string, value?: unknown) => console.log(`\n— ${label}${value === undefined ? '' : `\n${JSON.stringify(value, null, 2)}`}`)
 
 // ---------------------------------------------------------------------------
 // 1. An engine over a fresh 1080p/30fps project
@@ -100,12 +91,15 @@ const rightHalfId = createElementId()
 engine.dispatch({ type: 'splitElement', elementId: clipId, atMs: 4000, rightElementId: rightHalfId })
 engine.dispatch({ type: 'moveElement', elementId: rightHalfId, startMs: 4500 })
 
-log('after split + move', engine.project.tracks[0]!.elements.map((e) => ({
-  id: e.id,
-  startMs: e.startMs,
-  durationMs: e.durationMs,
-  trimStartMs: 'trimStartMs' in e ? e.trimStartMs : undefined,
-})))
+log(
+  'after split + move',
+  engine.project.tracks[0]!.elements.map((e) => ({
+    id: e.id,
+    startMs: e.startMs,
+    durationMs: e.durationMs,
+    trimStartMs: 'trimStartMs' in e ? e.trimStartMs : undefined,
+  })),
+)
 
 engine.undo()
 engine.undo()
@@ -163,11 +157,17 @@ const transcript: TranscriptResult = {
 engine.dispatch(buildApplyCaptionsCommand(transcript, { maxChars: 32 }))
 
 const captionTrack = engine.project.tracks.at(-1)!
-log('captions applied', captionTrack.elements.map((e) => e.type === 'caption' && {
-  text: e.text,
-  startMs: e.startMs,
-  words: e.words?.length,
-}))
+log(
+  'captions applied',
+  captionTrack.elements.map(
+    (e) =>
+      e.type === 'caption' && {
+        text: e.text,
+        startMs: e.startMs,
+        words: e.words?.length,
+      },
+  ),
+)
 
 await Bun.write('out/captions.srt', toSrt(transcript))
 await Bun.write('out/captions.vtt', toVtt(transcript))

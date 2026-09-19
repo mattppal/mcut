@@ -1,81 +1,75 @@
-import { describe, expect, test } from "bun:test";
-import { parseBridgeFrame } from "./bridge-request";
+import { describe, expect, test } from 'bun:test'
+import { parseBridgeFrame } from './bridge-request'
 
-describe("parseBridgeFrame", () => {
-  test("a valid frame parses to the exact request", () => {
-    expect(
-      parseBridgeFrame('{"id":"1","type":"search_transcript","payload":{"query":"hello"}}'),
-    ).toEqual({
+describe('parseBridgeFrame', () => {
+  test('a valid frame parses to the exact request', () => {
+    expect(parseBridgeFrame('{"id":"1","type":"search_transcript","payload":{"query":"hello"}}')).toEqual({
       ok: true,
-      request: { id: "1", type: "search_transcript", payload: { query: "hello" } },
-    });
-  });
+      request: { id: '1', type: 'search_transcript', payload: { query: 'hello' } },
+    })
+  })
 
   test("a frame without a payload gets the tool's empty default", () => {
     expect(parseBridgeFrame('{"id":"4","type":"get_transcript"}')).toEqual({
       ok: true,
-      request: { id: "4", type: "get_transcript", payload: {} },
-    });
-  });
+      request: { id: '4', type: 'get_transcript', payload: {} },
+    })
+  })
 
-  test("a frame missing a required field is rejected with the field named and the id kept", () => {
+  test('a frame missing a required field is rejected with the field named and the id kept', () => {
     expect(parseBridgeFrame('{"id":"2","type":"search_transcript","payload":{}}')).toEqual({
       ok: false,
-      id: "2",
+      id: '2',
       error: {
-        name: "BridgeRequestError",
-        code: "invalid-request",
-        message: "✖ Invalid input: expected string, received undefined\n  → at payload.query",
+        name: 'BridgeRequestError',
+        code: 'invalid-request',
+        message: '✖ Invalid input: expected string, received undefined\n  → at payload.query',
       },
-    });
-  });
+    })
+  })
 
-  test("a wrong-typed payload field is rejected with the field named", () => {
-    expect(
-      parseBridgeFrame(
-        '{"id":"5","type":"ensure_transcript","payload":{"elementId":"e-video","replace":"yes"}}',
-      ),
-    ).toEqual({
+  test('a wrong-typed payload field is rejected with the field named', () => {
+    expect(parseBridgeFrame('{"id":"5","type":"ensure_transcript","payload":{"elementId":"e-video","replace":"yes"}}')).toEqual({
       ok: false,
-      id: "5",
+      id: '5',
       error: {
-        name: "BridgeRequestError",
-        code: "invalid-request",
-        message: "✖ Invalid input: expected boolean, received string\n  → at payload.replace",
+        name: 'BridgeRequestError',
+        code: 'invalid-request',
+        message: '✖ Invalid input: expected boolean, received string\n  → at payload.replace',
       },
-    });
-  });
+    })
+  })
 
-  test("an unknown request type is rejected at the type field", () => {
-    const frame = parseBridgeFrame('{"id":"3","type":"nope"}');
-    expect(frame.ok).toBe(false);
-    if (frame.ok) return;
-    expect(frame.id).toBe("3");
-    expect(frame.error.code).toBe("invalid-request");
-    expect(frame.error.message).toEndWith("→ at type");
-  });
+  test('an unknown request type is rejected at the type field', () => {
+    const frame = parseBridgeFrame('{"id":"3","type":"nope"}')
+    expect(frame.ok).toBe(false)
+    if (frame.ok) return
+    expect(frame.id).toBe('3')
+    expect(frame.error.code).toBe('invalid-request')
+    expect(frame.error.message).toEndWith('→ at type')
+  })
 
-  test("a frame that is not JSON is rejected without an id", () => {
-    expect(parseBridgeFrame("nope")).toEqual({
+  test('a frame that is not JSON is rejected without an id', () => {
+    expect(parseBridgeFrame('nope')).toEqual({
       ok: false,
       id: undefined,
       error: {
-        name: "BridgeRequestError",
-        code: "invalid-request",
-        message: "Bridge frame is not valid JSON.",
+        name: 'BridgeRequestError',
+        code: 'invalid-request',
+        message: 'Bridge frame is not valid JSON.',
       },
-    });
-  });
+    })
+  })
 
-  test("a JSON value that is not an object is rejected without an id", () => {
-    expect(parseBridgeFrame("[1,2]")).toEqual({
+  test('a JSON value that is not an object is rejected without an id', () => {
+    expect(parseBridgeFrame('[1,2]')).toEqual({
       ok: false,
       id: undefined,
       error: {
-        name: "BridgeRequestError",
-        code: "invalid-request",
-        message: "✖ Invalid input: expected object, received array",
+        name: 'BridgeRequestError',
+        code: 'invalid-request',
+        message: '✖ Invalid input: expected object, received array',
       },
-    });
-  });
-});
+    })
+  })
+})

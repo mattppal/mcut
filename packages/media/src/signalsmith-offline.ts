@@ -23,18 +23,10 @@ function createPortPair(): { node: PortEnd; processor: PortEnd } {
 }
 
 interface ProcessorInstance {
-  process(
-    inputList: Float32Array[][],
-    outputList: Float32Array[][],
-    parameters: Record<string, unknown>,
-  ): boolean
+  process(inputList: Float32Array[][], outputList: Float32Array[][], parameters: Record<string, unknown>): boolean
 }
 
-type ProcessorClass = new (options: {
-  numberOfInputs: number
-  numberOfOutputs: number
-  outputChannelCount: number[]
-}) => ProcessorInstance
+type ProcessorClass = new (options: { numberOfInputs: number; numberOfOutputs: number; outputChannelCount: number[] }) => ProcessorInstance
 
 const globals = globalThis as Record<string, unknown>
 
@@ -77,12 +69,7 @@ function loadProcessorClass(): Promise<ProcessorClass> {
 
 let renderQueue: Promise<unknown> = Promise.resolve()
 
-export function renderStretchOffline(
-  channels: Float32Array[],
-  sampleRate: number,
-  tempo: number,
-  outputFrames: number,
-): Promise<Float32Array[]> {
+export function renderStretchOffline(channels: Float32Array[], sampleRate: number, tempo: number, outputFrames: number): Promise<Float32Array[]> {
   const run = renderQueue.then(
     () => doRender(channels, sampleRate, tempo, outputFrames),
     () => doRender(channels, sampleRate, tempo, outputFrames),
@@ -94,12 +81,7 @@ export function renderStretchOffline(
   return run
 }
 
-async function doRender(
-  channels: Float32Array[],
-  sampleRate: number,
-  tempo: number,
-  outputFrames: number,
-): Promise<Float32Array[]> {
+async function doRender(channels: Float32Array[], sampleRate: number, tempo: number, outputFrames: number): Promise<Float32Array[]> {
   if (channels.length === 0 || outputFrames <= 0) return channels.map(() => new Float32Array(0))
   const Processor = await loadProcessorClass()
 

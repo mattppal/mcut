@@ -41,10 +41,7 @@ function buildRemapPlan(timeMap: TimeMap, durationMs: number): RemapPlan {
   return { grid, stepMs }
 }
 
-function remapSourceToOutput(
-  plan: RemapPlan,
-  sourceOffsetMs: number,
-): { outputMs: number; rate: number } | null {
+function remapSourceToOutput(plan: RemapPlan, sourceOffsetMs: number): { outputMs: number; rate: number } | null {
   const { grid, stepMs } = plan
   const last = grid.length - 1
   if (sourceOffsetMs >= valueAt(grid, last)) {
@@ -65,10 +62,7 @@ function remapSourceToOutput(
   return { outputMs: (lo + frac) * stepMs, rate: seg / stepMs }
 }
 
-function sampleVolumeCurve(
-  element: { startMs: number; durationMs: number },
-  getValue: (timelineMs: number) => number,
-): Float32Array {
+function sampleVolumeCurve(element: { startMs: number; durationMs: number }, getValue: (timelineMs: number) => number): Float32Array {
   const steps = Math.min(2000, Math.max(2, Math.ceil(element.durationMs / 50) + 1))
   const curve = new Float32Array(steps)
   for (let i = 0; i < steps; i++) {
@@ -99,9 +93,7 @@ function collectAudibleSegments(project: Project): AudibleSegment[] {
           volume: element.volume,
           ...(curved
             ? {
-                volumeCurve: sampleVolumeCurve(element, (timelineMs) =>
-                  getEffectiveVolume(element, timelineMs),
-                ),
+                volumeCurve: sampleVolumeCurve(element, (timelineMs) => getEffectiveVolume(element, timelineMs)),
               }
             : {}),
         })
@@ -123,9 +115,7 @@ function collectAudibleSegments(project: Project): AudibleSegment[] {
         volume: element.volume,
         ...(curved
           ? {
-              volumeCurve: sampleVolumeCurve(element, (timelineMs) =>
-                getEffectiveVolume(element, timelineMs),
-              ),
+              volumeCurve: sampleVolumeCurve(element, (timelineMs) => getEffectiveVolume(element, timelineMs)),
             }
           : {}),
       })
@@ -134,11 +124,7 @@ function collectAudibleSegments(project: Project): AudibleSegment[] {
   return segments
 }
 
-export async function mixProjectAudio(
-  project: Project,
-  totalDurationMs: number,
-  signal?: AbortSignal,
-): Promise<MixedAudioData | null> {
+export async function mixProjectAudio(project: Project, totalDurationMs: number, signal?: AbortSignal): Promise<MixedAudioData | null> {
   const segments = collectAudibleSegments(project)
   if (segments.length === 0) return null
   const buffer = await mixAudioSegments(segments, totalDurationMs, signal)
@@ -149,11 +135,7 @@ export async function mixProjectAudio(
   }
 }
 
-async function mixAudioSegments(
-  segments: AudibleSegment[],
-  totalDurationMs: number,
-  signal?: AbortSignal,
-): Promise<AudioBuffer> {
+async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: number, signal?: AbortSignal): Promise<AudioBuffer> {
   const length = Math.ceil((totalDurationMs / 1000) * AUDIO_SAMPLE_RATE)
   const offline = new OfflineAudioContext(2, length, AUDIO_SAMPLE_RATE)
 
@@ -231,12 +213,7 @@ interface CompositeAudio {
   sampleRate: number
 }
 
-async function decodeCompositeRange(
-  sink: AudioBufferSink,
-  startS: number,
-  spanS: number,
-  signal?: AbortSignal,
-): Promise<CompositeAudio | null> {
+async function decodeCompositeRange(sink: AudioBufferSink, startS: number, spanS: number, signal?: AbortSignal): Promise<CompositeAudio | null> {
   let composite: CompositeAudio | null = null
   for await (const { buffer, timestamp } of sink.buffers(startS, startS + spanS)) {
     signal?.throwIfAborted()
@@ -310,12 +287,7 @@ async function scheduleReversedSegment(
   signal?: AbortSignal,
 ): Promise<boolean> {
   try {
-    const composite = await decodeCompositeRange(
-      sink,
-      segment.trimStartMs / 1000,
-      segment.sourceSpanMs / 1000,
-      signal,
-    )
+    const composite = await decodeCompositeRange(sink, segment.trimStartMs / 1000, segment.sourceSpanMs / 1000, signal)
     if (!composite) return false
     composite.left.reverse()
     composite.right.reverse()

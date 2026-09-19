@@ -2,13 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError } from './commands'
 import { getFrameRequests } from './frame-requests'
 import { createProject, type MulticamElement, type Project } from './model'
-import {
-  getActiveAngleIndex,
-  getActiveLayout,
-  getAngleTransitionAt,
-  getMulticamSourceTimeMs,
-  splitAngles,
-} from './multicam'
+import { getActiveAngleIndex, getActiveLayout, getAngleTransitionAt, getMulticamSourceTimeMs, splitAngles } from './multicam'
 import { getElement } from './selectors'
 
 function projectWithRecordings(): { project: Project; trackId: `t-${string}` } {
@@ -123,9 +117,7 @@ describe('createMulticam', () => {
       trackId,
       element: { type: 'text', id: 'e-t', text: 'x', startMs: 0, durationMs: 1000 },
     })
-    expect(() =>
-      applyCommand(project, { type: 'createMulticam', elementIds: ['e-t'] }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'createMulticam', elementIds: ['e-t'] })).toThrow(CommandError)
   })
 })
 
@@ -151,9 +143,7 @@ describe('angle cuts', () => {
     const { next } = withCuts()
     const moved = applyCommand(next, { type: 'moveAngleCut', elementId: 'e-mc', fromMs: 5000, toMs: 8000 })
     expect(mc(moved).angles[1]!.atMs).toBe(8000)
-    expect(() =>
-      applyCommand(next, { type: 'moveAngleCut', elementId: 'e-mc', fromMs: 0, toMs: 100 }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(next, { type: 'moveAngleCut', elementId: 'e-mc', fromMs: 0, toMs: 100 })).toThrow(CommandError)
   })
 
   test('setAngleLayout corrects a span; removeAngleCut merges back', () => {
@@ -187,9 +177,7 @@ describe('angle cuts', () => {
 
   test('removeLayout refuses while a cut uses it', () => {
     const { next, camLayout } = withCuts()
-    expect(() =>
-      applyCommand(next, { type: 'removeLayout', layoutId: camLayout.id }),
-    ).toThrow(CommandError)
+    expect(() => applyCommand(next, { type: 'removeLayout', layoutId: camLayout.id })).toThrow(CommandError)
   })
 })
 
@@ -308,7 +296,9 @@ describe('angle transitions', () => {
     const { next } = withAngleTransition()
     const element = mc(next)
     const assetsAt = (timeMs: number) =>
-      getFrameRequests(next, element, timeMs).map((r) => r.assetId).sort()
+      getFrameRequests(next, element, timeMs)
+        .map((r) => r.assetId)
+        .sort()
     expect(assetsAt(4000)).toEqual(['a-screen'])
     expect(assetsAt(4800)).toEqual(['a-cam', 'a-screen'])
     expect(assetsAt(5200)).toEqual(['a-cam', 'a-screen'])

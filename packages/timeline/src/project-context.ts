@@ -1,19 +1,6 @@
-import {
-  getAverageSpeed,
-  getSourceSpanMs,
-} from './speed'
+import { getAverageSpeed, getSourceSpanMs } from './speed'
 import { getProjectDurationMs } from './selectors'
-import type {
-  AssetRef,
-  AudioElement,
-  CaptionElement,
-  Marker,
-  MulticamElement,
-  Project,
-  TimelineElement,
-  Track,
-  VideoElement,
-} from './model'
+import type { AssetRef, AudioElement, CaptionElement, Marker, MulticamElement, Project, TimelineElement, Track, VideoElement } from './model'
 import type { PlaybackState } from './engine'
 
 export interface ProjectCaptionRef {
@@ -85,8 +72,7 @@ export interface ProjectMediaContext {
   }
 }
 
-export interface ProjectMediaAssetContext
-  extends Omit<AssetRef, 'src'> {
+export interface ProjectMediaAssetContext extends Omit<AssetRef, 'src'> {
   usedBy: string[]
 }
 
@@ -166,18 +152,10 @@ export function getProjectCaptions(project: Project): ProjectCaptionRef[] {
           caption,
         })),
     )
-    .sort(
-      (a, b) =>
-        a.caption.startMs - b.caption.startMs ||
-        a.trackIndex - b.trackIndex ||
-        a.caption.id.localeCompare(b.caption.id),
-    )
+    .sort((a, b) => a.caption.startMs - b.caption.startMs || a.trackIndex - b.trackIndex || a.caption.id.localeCompare(b.caption.id))
 }
 
-export function getProjectTranscript(
-  project: Project,
-  options: ProjectTranscriptOptions = {},
-): ProjectTranscriptContext {
+export function getProjectTranscript(project: Project, options: ProjectTranscriptOptions = {}): ProjectTranscriptContext {
   const captions = getProjectCaptions(project).map(({ trackId, trackName, caption }) => {
     const words = caption.words ?? []
     const context: ProjectTranscriptCaptionContext = {
@@ -210,10 +188,7 @@ export function getProjectTranscript(
   }
 }
 
-export function getProjectMediaContext(
-  project: Project,
-  options: ProjectViewContextOptions = {},
-): ProjectMediaContext {
+export function getProjectMediaContext(project: Project, options: ProjectViewContextOptions = {}): ProjectMediaContext {
   const selected = new Set(options.selection?.elementIds ?? [])
   const usedBy = collectAssetUsage(project)
   const transcript = getProjectTranscript(project)
@@ -248,9 +223,7 @@ export function getProjectMediaContext(
       hidden: track.hidden,
       locked: track.locked,
       magnetic: track.magnetic,
-      elements: track.elements.map((element) =>
-        elementContext(project, track, trackIndex, element, selected, options.playback),
-      ),
+      elements: track.elements.map((element) => elementContext(project, track, trackIndex, element, selected, options.playback)),
     })),
     markers: project.markers,
     transcript: {
@@ -304,9 +277,7 @@ function elementContext(
     selected: selected.has(element.id),
     ...(playback
       ? {
-          active:
-            playback.currentTimeMs >= element.startMs &&
-            playback.currentTimeMs < element.startMs + element.durationMs,
+          active: playback.currentTimeMs >= element.startMs && playback.currentTimeMs < element.startMs + element.durationMs,
         }
       : {}),
     ...(element.linkId ? { linkId: element.linkId } : {}),
@@ -352,11 +323,7 @@ function elementContext(
   return base
 }
 
-function addAssetContext(
-  target: ProjectMediaElementContext,
-  project: Project,
-  assetId: string,
-): void {
+function addAssetContext(target: ProjectMediaElementContext, project: Project, assetId: string): void {
   const asset = project.assets[assetId]
   if (!asset) {
     target.asset = { id: assetId }
@@ -374,10 +341,7 @@ function addAssetContext(
   }
 }
 
-function addSourceContext(
-  target: ProjectMediaElementContext,
-  element: VideoElement | AudioElement,
-): void {
+function addSourceContext(target: ProjectMediaElementContext, element: VideoElement | AudioElement): void {
   const sourceStartMs = element.trimStartMs
   const sourceDurationMs = getSourceSpanMs(element)
   target.source = {
@@ -390,11 +354,7 @@ function addSourceContext(
   }
 }
 
-function addMulticamContext(
-  target: ProjectMediaElementContext,
-  project: Project,
-  element: MulticamElement,
-): void {
+function addMulticamContext(target: ProjectMediaElementContext, project: Project, element: MulticamElement): void {
   const sourceDurationMs = getSourceSpanMs(element)
   target.source = {
     startMs: 0,
@@ -410,9 +370,7 @@ function addMulticamContext(
     sources: element.sources.map((source) => ({
       key: source.key,
       assetId: source.assetId,
-      ...(project.assets[source.assetId]?.name
-        ? { assetName: project.assets[source.assetId]!.name }
-        : {}),
+      ...(project.assets[source.assetId]?.name ? { assetName: project.assets[source.assetId]!.name } : {}),
       trimStartMs: source.trimStartMs,
     })),
   }

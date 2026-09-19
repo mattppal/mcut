@@ -2,15 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError } from './commands'
 import { createProject, type Project, type VideoElement } from './model'
 import { getElement } from './selectors'
-import {
-  getAverageSpeed,
-  getSourceSpanMs,
-  getSourceTimeMs,
-  getSpeedAt,
-  makeConstantSpeedMap,
-  splitTimeMap,
-  timeMapSchema,
-} from './speed'
+import { getAverageSpeed, getSourceSpanMs, getSourceTimeMs, getSpeedAt, makeConstantSpeedMap, splitTimeMap, timeMapSchema } from './speed'
 
 function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
   let project = createProject({ name: 'speed' })
@@ -125,9 +117,7 @@ describe('setElementSpeed command', () => {
       trackId,
       element: { type: 'text', id: 'e-t', text: 'x', startMs: 0, durationMs: 1000 },
     })
-    expect(() => applyCommand(project, { type: 'setElementSpeed', elementId: 'e-t', speed: 2 })).toThrow(
-      CommandError,
-    )
+    expect(() => applyCommand(project, { type: 'setElementSpeed', elementId: 'e-t', speed: 2 })).toThrow(CommandError)
   })
 })
 

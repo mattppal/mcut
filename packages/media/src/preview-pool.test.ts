@@ -16,9 +16,7 @@ describe('coalesceActiveMediaItems', () => {
       { ...base, kind: 'audio', sourceTimeMs: 1000, volume: 0.8 },
     ])
 
-    expect(items).toEqual([
-      { ...base, kind: 'video', sourceTimeMs: 1000, rate: 1, volume: 0.8 },
-    ])
+    expect(items).toEqual([{ ...base, kind: 'video', sourceTimeMs: 1000, rate: 1, volume: 0.8 }])
   })
 
   test('keeps video capability when an audio item is the audible source', () => {

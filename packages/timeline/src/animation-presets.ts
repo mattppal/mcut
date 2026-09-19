@@ -1,12 +1,5 @@
 import { z } from 'zod'
-import {
-  getStaticValue,
-  upsertKeyframe,
-  type AnimatableProperty,
-  type Easing,
-  type Keyframe,
-  type KeyframeMap,
-} from './keyframes'
+import { getStaticValue, upsertKeyframe, type AnimatableProperty, type Easing, type Keyframe, type KeyframeMap } from './keyframes'
 import type { TimelineElement } from './model'
 
 export const animationPresetSchema = z.enum([
@@ -86,11 +79,7 @@ export const ANIMATION_PRESET_DEFAULT_DURATION_MS: Record<AnimationPreset, numbe
   shake: 350,
 }
 
-export const MOTION_BLUR_PRESETS: ReadonlySet<AnimationPreset> = new Set([
-  'whip-in',
-  'whip-out',
-  'punch-zoom',
-])
+export const MOTION_BLUR_PRESETS: ReadonlySet<AnimationPreset> = new Set(['whip-in', 'whip-out', 'punch-zoom'])
 
 const SLIDE_DISTANCE = 120
 const WHIP_DISTANCE = 480
@@ -109,10 +98,7 @@ function staticValue(element: TimelineElement, property: AnimatableProperty): nu
 
 type TrackPatch = Partial<Record<AnimatableProperty, Keyframe[]>>
 
-function offsetFor(
-  ctx: PresetContext,
-  distance: number,
-): { property: AnimatableProperty; offset: number } {
+function offsetFor(ctx: PresetContext, distance: number): { property: AnimatableProperty; offset: number } {
   switch (ctx.direction) {
     case 'up':
       return { property: 'position.y', offset: distance }
@@ -176,13 +162,7 @@ function scaleOutTracks(ctx: PresetContext, to: number, easing: Easing): TrackPa
   }
 }
 
-function oscillateTrack(
-  ctx: PresetContext,
-  base: number,
-  amplitude: number,
-  easing: Easing,
-  bipolar = false,
-): Keyframe[] {
+function oscillateTrack(ctx: PresetContext, base: number, amplitude: number, easing: Easing, bipolar = false): Keyframe[] {
   const end = ctx.element.durationMs
   const steps = Math.max(2, Math.round(end / Math.max(100, ctx.durationMs)))
   const track: Keyframe[] = []
@@ -329,50 +309,18 @@ const generators: Record<AnimationPreset, (ctx: PresetContext) => TrackPatch> = 
     }
   },
   pulse: (ctx) => ({
-    'scale.x': oscillateTrack(
-      ctx,
-      staticValue(ctx.element, 'scale.x'),
-      staticValue(ctx.element, 'scale.x') * 0.05 * ctx.intensity,
-      EASINGS.inOutCubic,
-    ),
-    'scale.y': oscillateTrack(
-      ctx,
-      staticValue(ctx.element, 'scale.y'),
-      staticValue(ctx.element, 'scale.y') * 0.05 * ctx.intensity,
-      EASINGS.inOutCubic,
-    ),
+    'scale.x': oscillateTrack(ctx, staticValue(ctx.element, 'scale.x'), staticValue(ctx.element, 'scale.x') * 0.05 * ctx.intensity, EASINGS.inOutCubic),
+    'scale.y': oscillateTrack(ctx, staticValue(ctx.element, 'scale.y'), staticValue(ctx.element, 'scale.y') * 0.05 * ctx.intensity, EASINGS.inOutCubic),
   }),
   breathe: (ctx) => ({
-    'scale.x': oscillateTrack(
-      ctx,
-      staticValue(ctx.element, 'scale.x'),
-      staticValue(ctx.element, 'scale.x') * 0.02 * ctx.intensity,
-      EASINGS.inOutSine,
-    ),
-    'scale.y': oscillateTrack(
-      ctx,
-      staticValue(ctx.element, 'scale.y'),
-      staticValue(ctx.element, 'scale.y') * 0.02 * ctx.intensity,
-      EASINGS.inOutSine,
-    ),
+    'scale.x': oscillateTrack(ctx, staticValue(ctx.element, 'scale.x'), staticValue(ctx.element, 'scale.x') * 0.02 * ctx.intensity, EASINGS.inOutSine),
+    'scale.y': oscillateTrack(ctx, staticValue(ctx.element, 'scale.y'), staticValue(ctx.element, 'scale.y') * 0.02 * ctx.intensity, EASINGS.inOutSine),
   }),
   float: (ctx) => ({
-    'position.y': oscillateTrack(
-      ctx,
-      staticValue(ctx.element, 'position.y'),
-      8 * ctx.intensity,
-      EASINGS.inOutSine,
-      true,
-    ),
+    'position.y': oscillateTrack(ctx, staticValue(ctx.element, 'position.y'), 8 * ctx.intensity, EASINGS.inOutSine, true),
   }),
   sway: (ctx) => ({
-    rotation: oscillateTrack(
-      ctx,
-      staticValue(ctx.element, 'rotation'),
-      1.5 * ctx.intensity,
-      EASINGS.inOutSine,
-      true,
-    ),
+    rotation: oscillateTrack(ctx, staticValue(ctx.element, 'rotation'), 1.5 * ctx.intensity, EASINGS.inOutSine, true),
   }),
   shake: (ctx) => {
     const end = Math.min(ctx.element.durationMs, ctx.durationMs)
@@ -388,28 +336,17 @@ const generators: Record<AnimationPreset, (ctx: PresetContext) => TrackPatch> = 
   },
 }
 
-export function expandAnimationPreset(
-  element: TimelineElement,
-  preset: AnimationPreset,
-  options: AnimationPresetOptions = {},
-): KeyframeMap {
+export function expandAnimationPreset(element: TimelineElement, preset: AnimationPreset, options: AnimationPresetOptions = {}): KeyframeMap {
   const ctx: PresetContext = {
     element,
-    durationMs: Math.min(
-      options.durationMs ?? ANIMATION_PRESET_DEFAULT_DURATION_MS[preset],
-      element.durationMs,
-    ),
-    direction:
-      options.direction ??
-      (preset === 'slide-out' ? 'down' : preset === 'whip-in' || preset === 'whip-out' ? 'left' : 'up'),
+    durationMs: Math.min(options.durationMs ?? ANIMATION_PRESET_DEFAULT_DURATION_MS[preset], element.durationMs),
+    direction: options.direction ?? (preset === 'slide-out' ? 'down' : preset === 'whip-in' || preset === 'whip-out' ? 'left' : 'up'),
     intensity: options.intensity ?? 1,
   }
   const patch = generators[preset](ctx)
   const existing = ('keyframes' in element ? element.keyframes : undefined) ?? {}
   const merged: KeyframeMap = { ...existing }
-  for (const [property, additions] of Object.entries(patch) as Array<
-    [AnimatableProperty, Keyframe[]]
-  >) {
+  for (const [property, additions] of Object.entries(patch) as Array<[AnimatableProperty, Keyframe[]]>) {
     let track = merged[property] ?? []
     for (const keyframe of additions) track = upsertKeyframe(track, keyframe)
     merged[property] = track
