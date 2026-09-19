@@ -1,0 +1,16 @@
+# Grok Build project scope MCP servers. Grok reads this file when started
+# inside the repo (https://docs.x.ai/build/features/mcp-servers). Run grok
+# from the repo root so the relative paths below resolve, after bun install
+# and bun run build. Tools appear as mcut__<tool> and mcut-live__<tool>.
+
+# Headless, file backed editor. Every edit is written to the project file.
+[mcp_servers.mcut]
+command = "bun"
+args = ["packages/mcp-server/src/cli.ts", "${MCUT_PROJECT:-project.mcut.json}"]
+startup_timeout_sec = 60
+
+# Live Studio tab through the local bridge started by `bun run dev`.
+# Enable it once the bridge is running, or toggle it from /mcps in the TUI.
+[mcp_servers.mcut-live]
+url = "http://127.0.0.1:${MCUT_BRIDGE_PORT:-44737}/mcp?token=${MCUT_BRIDGE_TOKEN:-mcut-local-dev}"
+enabled = false
