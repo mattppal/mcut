@@ -2,7 +2,7 @@
 
 import { useEditor } from '@mcut/react'
 import { TRANSITION_TYPES, transitionTypeSchema, type TimelineElement, type Track } from '@mcut/timeline'
-import { Trash2Icon } from '@/lib/hugeicons'
+import { Trash2Icon } from '@/lib/icons'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { NumberField, Section } from './inspector-fields'

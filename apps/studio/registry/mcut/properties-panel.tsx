@@ -1,6 +1,6 @@
 'use client'
 
-import { Trash2Icon } from '@/lib/hugeicons'
+import { Trash2Icon } from '@/lib/icons'
 import { useEditor, usePlayback, useProject, useSelectedElement } from '@mcut/react'
 import { getElementDisplaySize, getElementNaturalSize, getTransformForDisplaySize } from '@mcut/compositor'
 import {

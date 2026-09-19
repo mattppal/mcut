@@ -3,13 +3,13 @@
   "ignoreExportsUsedInFile": true,
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.ts", "scripts/standards/*.ts", "scripts/fixtures/*.ts", "scripts/agent-e2e/*.test.ts"],
+      "entry": ["scripts/*.ts", "scripts/codemods/*.ts", "scripts/standards/*.ts", "scripts/fixtures/*.ts", "scripts/agent-e2e/*.test.ts"],
       "project": ["scripts/**/*.ts"],
       "ignoreDependencies": ["@arethetypeswrong/cli"]
     },
     "apps/studio": {
       "entry": ["registry/mcut/**/*.{ts,tsx}"],
-      "ignore": ["components/ui/**", "components/kibo-ui/**", "lib/hugeicons.tsx"],
+      "ignore": ["components/ui/**", "components/kibo-ui/**"],
       "ignoreDependencies": ["@types/color", "mcut-editing-skill"],
       "ignoreBinaries": ["ffmpeg"]
     },

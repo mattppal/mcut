@@ -1,7 +1,7 @@
 'use client'
 
 import { toast } from 'sonner'
-import { SparklesIcon } from '@/lib/hugeicons'
+import { SparklesIcon } from '@/lib/icons'
 import { useEditor, useSelectedElement } from '@mcut/react'
 import { ANIMATION_PRESET_CATEGORIES, animatableProperties, captureZoomPreset, type AnimationPreset, type ZoomPreset } from '@mcut/timeline'
 import { Button } from '@/components/ui/button'

@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronRightIcon, XIcon } from '@/lib/hugeicons'
+import { ChevronRightIcon, XIcon } from '@/lib/icons'
 import { useEditor, usePlayback } from '@mcut/react'
 import { getKeyframes, getStaticValue, hasKeyframes, isOnKeyframe, type AnimatableProperty, type Easing, type TimelineElement } from '@mcut/timeline'
 import { cn } from '@/lib/utils'

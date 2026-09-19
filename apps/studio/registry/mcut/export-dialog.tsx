@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { DownloadIcon, TriangleAlertIcon } from '@/lib/hugeicons'
+import { DownloadIcon, TriangleAlertIcon } from '@/lib/icons'
 import { exportProject, getExportSupport, listContainerFormats, type ContainerFormatId, type ExportProgress } from '@mcut/media'
 import { useEditor, useEditorState } from '@mcut/react'
 import { getProjectDurationMs } from '@mcut/timeline'

@@ -1,6 +1,6 @@
 'use client'
 
-import { CaptionsIcon, ClapperboardIcon, FilmIcon, ImageIcon, LayersIcon, MusicIcon, TypeIcon } from '@/lib/hugeicons'
+import { CaptionsIcon, ClapperboardIcon, FilmIcon, ImageIcon, LayersIcon, MusicIcon, TypeIcon } from '@/lib/icons'
 
 export interface ElementUI {
   clipClassName: string

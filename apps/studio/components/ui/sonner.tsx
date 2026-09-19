@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
-import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon } from "@/lib/hugeicons"
+import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon } from "@/lib/icons"
 // App-local customization: registry consumers install stock shadcn sonner.
 import { Spinner } from "@/registry/mcut/editor-primitives"
 

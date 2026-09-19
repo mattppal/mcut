@@ -16,7 +16,7 @@ import {
   StepForwardIcon,
   Volume2Icon,
   VolumeXIcon,
-} from '@/lib/hugeicons'
+} from '@/lib/icons'
 import { toast } from 'sonner'
 import { useEditorContext, useEditorState, usePlayback, type PreviewQuality } from '@mcut/react'
 import { getProjectDurationMs } from '@mcut/timeline'

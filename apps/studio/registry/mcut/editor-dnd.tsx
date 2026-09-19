@@ -15,7 +15,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { FileVideoIcon, ImageIcon, MusicIcon, TypeIcon } from '@/lib/hugeicons'
+import { FileVideoIcon, ImageIcon, MusicIcon, TypeIcon } from '@/lib/icons'
 import { useEditor, useProject } from '@mcut/react'
 import { type AssetRef, type TrackId } from '@mcut/timeline'
 import { useDropPreview, useEditorUI, type DropPreview } from './editor-ui'

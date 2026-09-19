@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { CaptionsIcon, DownloadIcon, SparklesIcon, Trash2Icon } from '@/lib/hugeicons'
+import { CaptionsIcon, DownloadIcon, SparklesIcon, Trash2Icon } from '@/lib/icons'
 import { toast } from 'sonner'
 import { extractAudioToWav } from '@mcut/media'
 import { useEditor, useProject, usePlayback } from '@mcut/react'

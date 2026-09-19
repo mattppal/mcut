@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useRef, type PointerEvent as ReactPointerEvent } from 'react'
-import { LinkIcon } from '@/lib/hugeicons'
+import { LinkIcon } from '@/lib/icons'
 import { useEditor, useEditorState } from '@mcut/react'
 import {
   getAverageSpeed,

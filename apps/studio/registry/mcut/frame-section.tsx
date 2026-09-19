@@ -10,7 +10,7 @@ import {
   AlignTopIcon,
   LockIcon,
   LockOpenIcon,
-} from '@/lib/hugeicons'
+} from '@/lib/icons'
 import { Button } from '@/components/ui/button'
 import { FieldRow, NumberField } from './inspector-fields'
 import { roundTo } from './math'

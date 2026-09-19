@@ -2,7 +2,7 @@
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { MaximizeIcon, PlusIcon, ZoomInIcon, ZoomOutIcon } from '@/lib/hugeicons'
+import { MaximizeIcon, PlusIcon, ZoomInIcon, ZoomOutIcon } from '@/lib/icons'
 import { useEditor, useEditorState, useElementEvent, usePlayback, useProject } from '@mcut/react'
 import { getProjectDurationMs, rangesOverlap, type ElementId } from '@mcut/timeline'
 import { cn } from '@/lib/utils'

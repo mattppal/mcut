@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVerticalIcon, PlusIcon, Trash2Icon, XIcon } from '@/lib/hugeicons'
+import { GripVerticalIcon, PlusIcon, Trash2Icon, XIcon } from '@/lib/icons'
 import { useEditor, usePlayback } from '@mcut/react'
 import {
   EFFECT_PARAMS,

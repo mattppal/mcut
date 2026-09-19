@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { DownloadIcon, FileVideoIcon, GripVerticalIcon, MusicIcon, PlusIcon, SearchIcon, Trash2Icon, UploadIcon } from '@/lib/hugeicons'
+import { DownloadIcon, FileVideoIcon, GripVerticalIcon, MusicIcon, PlusIcon, SearchIcon, Trash2Icon, UploadIcon } from '@/lib/icons'
 import { toast } from 'sonner'
 import { getVideoThumbnailUrl } from '@mcut/media'
 import { useEditor, useProject } from '@mcut/react'

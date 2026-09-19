@@ -19,8 +19,7 @@
         "@mcut/timeline",
         "@mcut/transcription",
         "@tanstack/react-query",
-        "@hugeicons/react",
-        "@hugeicons/core-free-icons",
+        "iconoir-react",
         "sonner",
         "unicode-animations@1.0.3",
         "@mcut/transcription-local",
@@ -239,9 +238,9 @@
           "target": "components/mcut/format.ts"
         },
         {
-          "path": "lib/hugeicons.tsx",
+          "path": "lib/icons.ts",
           "type": "registry:lib",
-          "target": "lib/hugeicons.tsx"
+          "target": "lib/icons.ts"
         },
         {
           "path": "registry/mcut/action-registry.ts",
@@ -567,8 +566,7 @@
         "@mcut/react",
         "@mcut/timeline",
         "@mcut/compositor",
-        "@hugeicons/react",
-        "@hugeicons/core-free-icons",
+        "iconoir-react",
         "unicode-animations@1.0.3",
         "@mcut/editor",
         "@mcut/transcription",
@@ -627,9 +625,9 @@
           "target": "components/mcut/format.ts"
         },
         {
-          "path": "lib/hugeicons.tsx",
+          "path": "lib/icons.ts",
           "type": "registry:lib",
-          "target": "lib/hugeicons.tsx"
+          "target": "lib/icons.ts"
         },
         {
           "path": "registry/mcut/editor-primitives.tsx",
@@ -719,8 +717,7 @@
         "@mcut/timeline",
         "@mcut/compositor",
         "@tanstack/react-query",
-        "@hugeicons/react",
-        "@hugeicons/core-free-icons",
+        "iconoir-react",
         "unicode-animations@1.0.3",
         "@mcut/editor",
         "sonner",
@@ -794,9 +791,9 @@
           "target": "components/mcut/font-css.ts"
         },
         {
-          "path": "lib/hugeicons.tsx",
+          "path": "lib/icons.ts",
           "type": "registry:lib",
-          "target": "lib/hugeicons.tsx"
+          "target": "lib/icons.ts"
         },
         {
           "path": "registry/mcut/action-registry.ts",
@@ -1010,8 +1007,7 @@
         "@mcut/react",
         "@mcut/timeline",
         "@tanstack/react-query",
-        "@hugeicons/react",
-        "@hugeicons/core-free-icons",
+        "iconoir-react",
         "sonner",
         "unicode-animations@1.0.3",
         "@mcut/editor",
@@ -1060,9 +1056,9 @@
           "target": "components/mcut/format.ts"
         },
         {
-          "path": "lib/hugeicons.tsx",
+          "path": "lib/icons.ts",
           "type": "registry:lib",
-          "target": "lib/hugeicons.tsx"
+          "target": "lib/icons.ts"
         },
         {
           "path": "registry/mcut/editor-primitives.tsx",
@@ -1101,8 +1097,7 @@
       "dependencies": [
         "@mcut/react",
         "@mcut/timeline",
-        "@hugeicons/react",
-        "@hugeicons/core-free-icons",
+        "iconoir-react",
         "unicode-animations@1.0.3",
         "@base-ui/react",
         "@dnd-kit/core",
@@ -1155,9 +1150,9 @@
           "target": "components/mcut/preset-menu.tsx"
         },
         {
-          "path": "lib/hugeicons.tsx",
+          "path": "lib/icons.ts",
           "type": "registry:lib",
-          "target": "lib/hugeicons.tsx"
+          "target": "lib/icons.ts"
         },
         {
           "path": "registry/mcut/keyframe-controls.tsx",
@@ -1269,8 +1264,7 @@
         "@mcut/timeline",
         "@mcut/transcription",
         "@tanstack/react-query",
-        "@hugeicons/react",
-        "@hugeicons/core-free-icons",
+        "iconoir-react",
         "sonner",
         "unicode-animations@1.0.3",
         "@mcut/transcription-local"
@@ -1288,9 +1282,9 @@
           "target": "components/mcut/format.ts"
         },
         {
-          "path": "lib/hugeicons.tsx",
+          "path": "lib/icons.ts",
           "type": "registry:lib",
-          "target": "lib/hugeicons.tsx"
+          "target": "lib/icons.ts"
         },
         {
           "path": "registry/mcut/editor-primitives.tsx",
@@ -1327,8 +1321,7 @@
         "@mcut/timeline",
         "@mcut/transcription",
         "@tanstack/react-query",
-        "@hugeicons/react",
-        "@hugeicons/core-free-icons",
+        "iconoir-react",
         "sonner",
         "unicode-animations@1.0.3"
       ],
@@ -1350,9 +1343,9 @@
           "target": "components/mcut/format.ts"
         },
         {
-          "path": "lib/hugeicons.tsx",
+          "path": "lib/icons.ts",
           "type": "registry:lib",
-          "target": "lib/hugeicons.tsx"
+          "target": "lib/icons.ts"
         },
         {
           "path": "registry/mcut/editor-primitives.tsx",
@@ -1366,16 +1359,7 @@
       "type": "registry:component",
       "title": "mcut Export Dialog",
       "description": "Deterministic client-side MP4/WebM export with WebCodecs support detection and progress.",
-      "dependencies": [
-        "@mcut/media",
-        "@mcut/react",
-        "@mcut/timeline",
-        "@tanstack/react-query",
-        "@hugeicons/react",
-        "@hugeicons/core-free-icons",
-        "unicode-animations@1.0.3",
-        "zod"
-      ],
+      "dependencies": ["@mcut/media", "@mcut/react", "@mcut/timeline", "@tanstack/react-query", "iconoir-react", "unicode-animations@1.0.3", "zod"],
       "registryDependencies": ["button", "dialog", "progress"],
       "files": [
         {
@@ -1384,9 +1368,9 @@
           "target": "components/mcut/export-dialog.tsx"
         },
         {
-          "path": "lib/hugeicons.tsx",
+          "path": "lib/icons.ts",
           "type": "registry:lib",
-          "target": "lib/hugeicons.tsx"
+          "target": "lib/icons.ts"
         },
         {
           "path": "registry/mcut/editor-primitives.tsx",

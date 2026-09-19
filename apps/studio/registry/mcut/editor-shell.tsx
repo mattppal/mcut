@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState, useSyncExternalStore, type RefObject } from 'react'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { usePanelRef, type GroupProps, type PanelImperativeHandle } from 'react-resizable-panels'
-import { CaptionsIcon, FolderOpenIcon, SearchIcon, SparklesIcon, TypeIcon } from '@/lib/hugeicons'
+import { CaptionsIcon, FolderOpenIcon, SearchIcon, SparklesIcon, TypeIcon } from '@/lib/icons'
 import { toast } from 'sonner'
 import { isWebGPUSupported } from '@mcut/compositor'
 import {

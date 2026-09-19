@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { ChevronDownIcon, ChevronUpIcon, LinkIcon, PlusIcon, ScissorsIcon, SearchIcon, SparklesIcon, XIcon } from '@/lib/hugeicons'
+import { ChevronDownIcon, ChevronUpIcon, LinkIcon, PlusIcon, ScissorsIcon, SearchIcon, SparklesIcon, XIcon } from '@/lib/icons'
 import { toast } from 'sonner'
 import { extractAudioToWav } from '@mcut/media'
 import { useEditor, usePlayback, useProject, useSelectedElement } from '@mcut/react'
