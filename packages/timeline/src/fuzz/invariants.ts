@@ -1,5 +1,5 @@
 import { parseProject, type Project } from '../model'
-import { rangesOverlap } from '../selectors'
+import { rangesOverlap } from '../placement'
 import { isRecord } from './json-schema-gen'
 
 export interface Violation {
