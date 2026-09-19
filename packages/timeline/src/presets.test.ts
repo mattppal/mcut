@@ -35,9 +35,7 @@ describe('preset commands', () => {
     project = applyCommand(project, { type: 'savePreset', preset: preset() })
     project = applyCommand(project, { type: 'removePreset', presetId: 'ps-1' })
     expect(project.presets).toHaveLength(0)
-    expect(() => applyCommand(project, { type: 'removePreset', presetId: 'ps-1' })).toThrow(
-      CommandError,
-    )
+    expect(() => applyCommand(project, { type: 'removePreset', presetId: 'ps-1' })).toThrow(CommandError)
   })
 
   test('listPresets filters by kind in saved order', () => {

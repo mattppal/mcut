@@ -104,7 +104,7 @@ Zod schema for a keyframe map, one keyframe track per animatable property.
 function animatableProperties(element: TimelineElement): AnimatableProperty[]
 ```
 
-Returns the animatable properties the element's registered type declares as keyframeable.
+Returns the animatable properties for the element's kind, motion properties plus `volume` for video and multicam, `volume` alone for audio, motion for images, motion plus `letterSpacing` for text, and none for captions.
 
 ### cubicBezierAt
 

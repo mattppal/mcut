@@ -1,23 +1,10 @@
 import { getProjectDurationMs, type Project } from '@mcut/timeline'
 import { mixProjectAudio } from './export-audio'
 import { getExportSupport, resolveContainerFormat, runExportPipeline } from './export-core'
-import type {
-  ExportFontFaceInit,
-  ExportProjectOptions,
-  ExportResult,
-  ExportWorkerResponse,
-  ExportWorkerStartMessage,
-  MixedAudioData,
-} from './export-types'
+import type { ExportFontFaceInit, ExportProjectOptions, ExportResult, ExportWorkerResponse, ExportWorkerStartMessage, MixedAudioData } from './export-types'
 
 export { getExportSupport }
-export type {
-  ContainerFormatId,
-  ExportFontFaceInit,
-  ExportProgress,
-  ExportProjectOptions,
-  ExportResult,
-} from './export-types'
+export type { ContainerFormatId, ExportFontFaceInit, ExportProgress, ExportProjectOptions, ExportResult } from './export-types'
 
 function noteExportMode(mode: 'worker' | 'local'): void {
   Reflect.set(globalThis, '__mcutLastExportMode', mode)
@@ -27,10 +14,7 @@ const WORKER_READY_TIMEOUT_MS = 15_000
 
 class WorkerStartError extends Error {}
 
-export async function exportProject(
-  project: Project,
-  options: ExportProjectOptions = {},
-): Promise<ExportResult> {
+export async function exportProject(project: Project, options: ExportProjectOptions = {}): Promise<ExportResult> {
   const { onProgress, signal } = options
   signal?.throwIfAborted()
   const durationMs = getProjectDurationMs(project)
@@ -46,8 +30,7 @@ export async function exportProject(
     onProgress?.({ phase: 'audio', progress: 0.1 })
   }
 
-  const serializableBitrate =
-    options.videoBitrate === undefined || typeof options.videoBitrate === 'number'
+  const serializableBitrate = options.videoBitrate === undefined || typeof options.videoBitrate === 'number'
   let worker: Worker | null = null
   if (serializableBitrate) {
     try {
@@ -105,19 +88,12 @@ function runInWorker(
     const onAbort = () => settle(() => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError')))
     signal?.addEventListener('abort', onAbort)
 
-    const readyTimer = setTimeout(
-      () => settle(() => reject(new WorkerStartError('export worker did not start in time'))),
-      WORKER_READY_TIMEOUT_MS,
-    )
+    const readyTimer = setTimeout(() => settle(() => reject(new WorkerStartError('export worker did not start in time'))), WORKER_READY_TIMEOUT_MS)
 
     worker.onerror = (event) =>
       settle(() => {
         const detail = event.message || 'unknown error'
-        reject(
-          started
-            ? new Error(`Export worker crashed: ${detail}`)
-            : new WorkerStartError(`export worker failed to load (${detail})`),
-        )
+        reject(started ? new Error(`Export worker crashed: ${detail}`) : new WorkerStartError(`export worker failed to load (${detail})`))
       })
     worker.onmessage = (event: MessageEvent<ExportWorkerResponse>) => {
       const message = event.data
@@ -130,9 +106,7 @@ function runInWorker(
             project,
             options: {
               ...(options.format ? { format: options.format } : {}),
-              ...(typeof options.videoBitrate === 'number'
-                ? { videoBitrate: options.videoBitrate }
-                : {}),
+              ...(typeof options.videoBitrate === 'number' ? { videoBitrate: options.videoBitrate } : {}),
             },
             mixedAudio,
             fonts: options.fonts ?? [],
@@ -160,10 +134,7 @@ function runInWorker(
   })
 }
 
-function collectTransfers(
-  mixedAudio: MixedAudioData | null,
-  fonts: ExportFontFaceInit[] | undefined,
-): Transferable[] {
+function collectTransfers(mixedAudio: MixedAudioData | null, fonts: ExportFontFaceInit[] | undefined): Transferable[] {
   const transfers = new Set<Transferable>()
   if (mixedAudio) {
     transfers.add(mixedAudio.left.buffer)

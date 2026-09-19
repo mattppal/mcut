@@ -20,7 +20,9 @@ interface SkillIndex {
 }
 
 async function digest(path: string): Promise<string> {
-  return `sha256:${createHash('sha256').update(await readFile(path)).digest('hex')}`
+  return `sha256:${createHash('sha256')
+    .update(await readFile(path))
+    .digest('hex')}`
 }
 
 function frontmatterValue(content: string, key: string): string {

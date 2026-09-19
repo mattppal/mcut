@@ -15,7 +15,7 @@ import {
   InputGroup,
   InputGroupAddon,
 } from "@/components/ui/input-group"
-import { SearchIcon, CheckIcon } from "@/lib/hugeicons"
+import { SearchIcon, CheckIcon } from "@/lib/icons"
 
 function Command({
   className,
@@ -50,8 +50,9 @@ function CommandDialog({
   return (
     <Dialog {...props}>
       <DialogContent
+        data-command-palette=""
         className={cn(
-          "top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0",
+          "top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0 duration-0",
           className
         )}
         showCloseButton={showCloseButton}

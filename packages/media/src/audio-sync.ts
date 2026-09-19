@@ -14,11 +14,7 @@ export interface AudioSyncOptions {
   signal?: AbortSignal
 }
 
-export function crossCorrelateEnvelopes(
-  a: Float32Array,
-  b: Float32Array,
-  maxLagBuckets: number,
-): { lag: number; confidence: number } {
+export function crossCorrelateEnvelopes(a: Float32Array, b: Float32Array, maxLagBuckets: number): { lag: number; confidence: number } {
   const center = (env: Float32Array) => {
     let mean = 0
     for (const v of env) mean += v
@@ -57,10 +53,7 @@ export function crossCorrelateEnvelopes(
   return { lag: bestLag, confidence }
 }
 
-export async function extractEnvelope(
-  src: MediaSourceLike,
-  { windowS = 60, rateHz = 100, signal }: AudioSyncOptions = {},
-): Promise<Float32Array | null> {
+export async function extractEnvelope(src: MediaSourceLike, { windowS = 60, rateHz = 100, signal }: AudioSyncOptions = {}): Promise<Float32Array | null> {
   const input = inputFor(src)
   try {
     const track = await input.getPrimaryAudioTrack()
@@ -91,17 +84,10 @@ export async function extractEnvelope(
   }
 }
 
-export async function findSyncOffsetMs(
-  a: MediaSourceLike,
-  b: MediaSourceLike,
-  options: AudioSyncOptions = {},
-): Promise<SyncResult | null> {
+export async function findSyncOffsetMs(a: MediaSourceLike, b: MediaSourceLike, options: AudioSyncOptions = {}): Promise<SyncResult | null> {
   const rateHz = options.rateHz ?? 100
   const maxLagS = options.maxLagS ?? 30
-  const [envA, envB] = await Promise.all([
-    extractEnvelope(a, options),
-    extractEnvelope(b, options),
-  ])
+  const [envA, envB] = await Promise.all([extractEnvelope(a, options), extractEnvelope(b, options)])
   if (!envA || !envB) return null
   const { lag, confidence } = crossCorrelateEnvelopes(envA, envB, Math.round(maxLagS * rateHz))
   return { offsetMs: Math.round((-lag * 1000) / rateHz), confidence }

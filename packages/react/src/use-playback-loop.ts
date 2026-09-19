@@ -15,10 +15,7 @@ const requestAnimationFrameOnce: RequestFrame = (callback) => {
   return () => cancelAnimationFrame(handle)
 }
 
-export function usePlaybackLoop(
-  engine: EditorEngine,
-  { onFrame, requestFrame = requestAnimationFrameOnce }: PlaybackLoopOptions,
-): void {
+export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = requestAnimationFrameOnce }: PlaybackLoopOptions): void {
   const onFrameRef = useRef(onFrame)
   useLayoutEffect(() => {
     onFrameRef.current = onFrame

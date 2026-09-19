@@ -1,10 +1,5 @@
 import { experimental_transcribe as transcribe } from 'ai'
-import type {
-  TranscribeInput,
-  TranscribeOptions,
-  TranscriptionProvider,
-  TranscriptResult,
-} from '@mcut/transcription'
+import type { TranscribeInput, TranscribeOptions, TranscriptionProvider, TranscriptResult } from '@mcut/transcription'
 
 type TranscribeArgs = Parameters<typeof transcribe>[0]
 
@@ -35,9 +30,7 @@ export function normalizeAISDKResult(result: AISDKTranscriptionResultLike): Tran
   return {
     text: result.text,
     ...(result.language !== undefined ? { language: result.language } : {}),
-    ...(result.durationInSeconds !== undefined
-      ? { durationMs: Math.round(result.durationInSeconds * 1000) }
-      : {}),
+    ...(result.durationInSeconds !== undefined ? { durationMs: Math.round(result.durationInSeconds * 1000) } : {}),
     words: isWordLevel ? mapped : [],
     segments: isWordLevel ? [] : mapped,
   }
@@ -50,15 +43,10 @@ async function toAudioArg(audio: TranscribeInput['audio']): Promise<TranscribeAr
   return audio
 }
 
-export function createAISDKTranscriptionProvider(
-  options: AISDKTranscriptionProviderOptions,
-): TranscriptionProvider {
+export function createAISDKTranscriptionProvider(options: AISDKTranscriptionProviderOptions): TranscriptionProvider {
   return {
     id: options.id ?? 'ai-sdk',
-    async transcribe(
-      input: TranscribeInput,
-      transcribeOptions?: TranscribeOptions,
-    ): Promise<TranscriptResult> {
+    async transcribe(input: TranscribeInput, transcribeOptions?: TranscribeOptions): Promise<TranscriptResult> {
       const result = await transcribe({
         model: options.model,
         audio: await toAudioArg(input.audio),

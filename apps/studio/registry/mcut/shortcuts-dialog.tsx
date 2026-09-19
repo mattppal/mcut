@@ -1,46 +1,32 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { KeyboardIcon } from "@/lib/hugeicons";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Kbd } from "@/components/ui/kbd";
-import "./editor-default-actions";
-import { formatShortcut, listEditorActions } from "./action-registry";
+import { useState } from 'react'
+import { KeyboardIcon } from '@/lib/icons'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Kbd } from '@/components/ui/kbd'
+import './editor-default-actions'
+import { formatShortcut, listEditorActions } from './action-registry'
 
-/** Pointer gestures that aren't registry actions. */
 const GESTURES: Array<{ keys: string; label: string }> = [
-  { keys: "⌘ Scroll", label: "Zoom timeline at pointer" },
-  { keys: "⇧ Click", label: "Add clip to selection" },
-  { keys: "⌥ Drag ◆", label: "No snap" },
-  { keys: "⌥ Click ◆", label: "Delete keyframe" },
-  { keys: "⌘ Click", label: "Add volume keyframe on the band" },
-  { keys: "⌘K", label: "Command palette" },
-  { keys: "Esc", label: "Blur field / clear selection" },
-];
+  { keys: '⌘ Scroll', label: 'Zoom timeline at pointer' },
+  { keys: '⇧ Click', label: 'Add clip to selection' },
+  { keys: '⌥ Drag ◆', label: 'No snap' },
+  { keys: '⌥ Click ◆', label: 'Delete keyframe' },
+  { keys: '⌘ Click', label: 'Add volume keyframe on the band' },
+  { keys: '⌘K', label: 'Command palette' },
+  { keys: 'Esc', label: 'Blur field / clear selection' },
+]
 
-/** Derived from the action registry — never hand-maintained again. */
 export function ShortcutsDialog() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
   const rows = listEditorActions()
     .filter((action) => action.shortcut)
-    .map((action) => ({ label: action.label, keys: formatShortcut(action.shortcut) }));
+    .map((action) => ({ label: action.label, keys: formatShortcut(action.shortcut) }))
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        title="Keyboard shortcuts"
-        data-mcut-shortcuts-trigger=""
-        onClick={() => setOpen(true)}
-      >
+      <Button variant="ghost" size="icon-sm" title="Keyboard shortcuts" data-mcut-shortcuts-trigger="" onClick={() => setOpen(true)}>
         <KeyboardIcon />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -60,5 +46,5 @@ export function ShortcutsDialog() {
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

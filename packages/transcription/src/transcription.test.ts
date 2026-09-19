@@ -25,23 +25,14 @@ const result: TranscriptResult = {
 describe('groupWords', () => {
   test('splits on silence gaps', () => {
     const groups = groupWords(words)
-    expect(groups.map((g) => g.text)).toEqual([
-      'Hello world, this is mcut.',
-      'Second caption.',
-    ])
+    expect(groups.map((g) => g.text)).toEqual(['Hello world, this is mcut.', 'Second caption.'])
     expect(groups[0]).toMatchObject({ startMs: 0, endMs: 1700 })
     expect(groups[1]).toMatchObject({ startMs: 3700, endMs: 4600 })
   })
 
   test('splits on character budget', () => {
     const groups = groupWords(words, { maxChars: 12 })
-    expect(groups.map((g) => g.text)).toEqual([
-      'Hello world,',
-      'this is',
-      'mcut.',
-      'Second',
-      'caption.',
-    ])
+    expect(groups.map((g) => g.text)).toEqual(['Hello world,', 'this is', 'mcut.', 'Second', 'caption.'])
   })
 
   test('splits on speaker change', () => {
@@ -87,9 +78,7 @@ describe('toCaptionElements', () => {
 
   test('falls back to a single caption when only text is available', () => {
     const bare: TranscriptResult = { text: 'Just text.', words: [], segments: [], durationMs: 3000 }
-    expect(toCaptionElements(bare)).toEqual([
-      { type: 'caption', startMs: 0, durationMs: 3000, text: 'Just text.' },
-    ])
+    expect(toCaptionElements(bare)).toEqual([{ type: 'caption', startMs: 0, durationMs: 3000, text: 'Just text.' }])
   })
 
   test('offsets captions to the timeline clip start', () => {

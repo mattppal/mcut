@@ -84,6 +84,38 @@ interface GesturePoint {
 
 A pointer position in canvas pixels.
 
+### Disposable
+
+```ts
+interface Disposable {
+  dispose: () => void
+}
+```
+
+Anything `useDisposable` can own, an object with a `dispose` method to call on unmount.
+
+### EngineStore
+
+```ts
+interface EngineStore<T> {
+  get: () => T
+  subscribe: (listener: (state: T) => void) => { unsubscribe: () => void }
+}
+```
+
+The store shape `useEngineSubscription` reads, matched by `EditorEngine.store` and `EditorEngine.playback`.
+
+### WebSocketHandlers
+
+```ts
+interface WebSocketHandlers {
+  onOpen: (socket: WebSocket) => void
+  onMessage: (socket: WebSocket, event: MessageEvent) => void
+}
+```
+
+The callbacks `useWebSocket` runs when a connection opens and when a frame arrives, each handed the socket to reply on.
+
 ## Functions
 
 ### applyMove
@@ -200,6 +232,107 @@ function useSelection(): SelectionState
 
 Returns the current `SelectionState` from editor state.
 
+### useLatest
+
+```ts
+function useLatest<T>(value: T): { readonly current: T }
+```
+
+Returns a ref whose `current` is the value from the latest committed render, so a long-lived callback can read fresh props without resubscribing.
+
+### useWindowEvent
+
+```ts
+function useWindowEvent<K extends keyof WindowEventMap>(
+  type: K,
+  handler: (event: WindowEventMap[K]) => void,
+  options?: AddEventListenerOptions,
+): void
+```
+
+Listens for a `window` event for the life of the component, always calling the latest handler without resubscribing when it changes.
+
+### useDocumentEvent
+
+```ts
+function useDocumentEvent<K extends keyof DocumentEventMap>(
+  type: K,
+  handler: (event: DocumentEventMap[K]) => void,
+  options?: AddEventListenerOptions,
+): void
+```
+
+Listens for a `document` event for the life of the component, always calling the latest handler without resubscribing when it changes.
+
+### useElementEvent
+
+```ts
+function useElementEvent<K extends keyof HTMLElementEventMap>(
+  ref: RefObject<HTMLElement | null>,
+  type: K,
+  handler: (event: HTMLElementEventMap[K]) => void,
+  options?: AddEventListenerOptions,
+): void
+```
+
+Listens for an event on the element in `ref` for the life of the component, doing nothing while the ref is empty.
+
+### useEngineSubscription
+
+```ts
+function useEngineSubscription<T>(
+  store: EngineStore<T>,
+  onChange: (state: T, previous: T) => void,
+  options?: { debounceMs?: number },
+): void
+```
+
+Subscribes to an engine store outside React rendering and calls `onChange` with the new and previous state, coalescing bursts into one call when `debounceMs` is set.
+
+### useEngineSync
+
+```ts
+function useEngineSync<T, S>(
+  store: EngineStore<T>,
+  select: (state: T) => S,
+  sync: (selected: S) => void,
+): void
+```
+
+Runs `sync` once on mount with the selected slice of the store and again whenever the selected value changes by `Object.is`, for keeping something outside React in step with engine state.
+
+### useWebSocket
+
+```ts
+useWebSocket(url, { onOpen, onMessage }, { reconnectDelayMs: 1000 })
+```
+
+Opens a `WebSocket` to the string `url` for the life of the component, reconnects `reconnectDelayMs` milliseconds after every close, and closes the socket on unmount. The latest `WebSocketHandlers` run without reopening the connection, and a `null` url opens nothing.
+
+### useDocumentRootClass
+
+```ts
+function useDocumentRootClass(className: string, enabled: boolean): void
+```
+
+Toggles a class on `document.documentElement` while `enabled` is true and restores the previous state on unmount.
+
+### useDocumentRootAttribute
+
+```ts
+function useDocumentRootAttribute(name: string, value: string): void
+```
+
+Sets an attribute on `document.documentElement` and restores the previous value, or removes the attribute, on unmount.
+
+### useDisposable
+
+```ts
+function useDisposable<T extends Disposable>(create: () => T): T
+```
+
+Creates an object once for the life of the component and calls its `dispose` method on unmount.
+
 ## Components
 
 ### EditorProvider
@@ -218,15 +351,7 @@ Creates or adopts an `EditorEngine` and a `PreviewMediaPool` and provides both t
 ### PlayerCanvas
 
 ```ts
-function PlayerCanvas({
-  className,
-  interactive = true,
-  background,
-  quality = 'auto',
-  hiddenElementIds,
-  onElementDoubleClick,
-  renderer = 'webgpu',
-}: PlayerCanvasProps)
+function PlayerCanvas({ renderer = 'webgpu', ...props }: PlayerCanvasProps)
 ```
 
-Renders the project at the current playback time onto a canvas and, when interactive, handles element selection, drag, resize, and rotate gestures.
+Picks the WebGPU or Canvas2D playback loop for the chosen renderer, then renders the project at the current playback time onto a canvas and, when interactive, handles element selection, drag, resize, and rotate gestures.

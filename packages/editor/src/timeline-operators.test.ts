@@ -1,18 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import {
-  EditorEngine,
-  getElement,
-  getGroupedElementIds,
-  getLinkedElementIds,
-  type AudioElement,
-  type VideoElement,
-} from '@mcut/timeline'
-import {
-  createSequentialVideoCollage,
-  retimeSequentialCollage,
-  splitSelectionAtPlayhead,
-  unlinkElements,
-} from './timeline-operators'
+import { EditorEngine, getElement, getGroupedElementIds, getLinkedElementIds, type AudioElement, type VideoElement } from '@mcut/timeline'
+import { createSequentialVideoCollage, retimeSequentialCollage, splitSelectionAtPlayhead, unlinkElements } from './timeline-operators'
 
 function engineWithLinkedPair(): { engine: EditorEngine; videoId: `e-${string}`; audioId: `e-${string}` } {
   const engine = new EditorEngine()
@@ -139,22 +127,16 @@ describe('sequential video collage', () => {
     expect(result.activeVideoElementIds).toHaveLength(2)
     expect(result.audioElementIds).toHaveLength(2)
 
-    const videos = engine.project.tracks
-      .flatMap((track) => track.elements)
-      .filter((element): element is VideoElement => element.type === 'video')
-    const audios = engine.project.tracks
-      .flatMap((track) => track.elements)
-      .filter((element): element is AudioElement => element.type === 'audio')
+    const videos = engine.project.tracks.flatMap((track) => track.elements).filter((element): element is VideoElement => element.type === 'video')
+    const audios = engine.project.tracks.flatMap((track) => track.elements).filter((element): element is AudioElement => element.type === 'audio')
 
     expect(videos).toHaveLength(4)
     expect(audios.map((element) => [element.startMs, element.durationMs])).toEqual([
       [0, 1000],
       [1000, 2000],
     ])
-    const firstGroup = getGroupedElementIds(engine.project, result.activeVideoElementIds[0]!)
-      .map((id) => getElement(engine.project, id)!)
-    const secondGroup = getGroupedElementIds(engine.project, result.activeVideoElementIds[1]!)
-      .map((id) => getElement(engine.project, id)!)
+    const firstGroup = getGroupedElementIds(engine.project, result.activeVideoElementIds[0]!).map((id) => getElement(engine.project, id)!)
+    const secondGroup = getGroupedElementIds(engine.project, result.activeVideoElementIds[1]!).map((id) => getElement(engine.project, id)!)
     expect(firstGroup).toHaveLength(3)
     expect(secondGroup).toHaveLength(3)
     expect(firstGroup.every((element) => element.groupId === result.groupIds[0])).toBe(true)

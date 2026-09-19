@@ -9,11 +9,7 @@ export interface FrameRequest {
   sourceTimeMs: number
 }
 
-function multicamFrameRequests(
-  project: Project,
-  element: MulticamElement,
-  timelineMs: number,
-): FrameRequest[] {
+function multicamFrameRequests(project: Project, element: MulticamElement, timelineMs: number): FrameRequest[] {
   const window = getAngleTransitionAt(element, timelineMs - element.startMs)
   const layouts = window
     ? [getLayout(project.layouts, window.fromLayoutId), getLayout(project.layouts, window.toLayoutId)]
@@ -34,11 +30,7 @@ function multicamFrameRequests(
   return requests
 }
 
-export function getFrameRequests(
-  project: Project,
-  element: TimelineElement,
-  timelineMs: number,
-): FrameRequest[] {
+export function getFrameRequests(project: Project, element: TimelineElement, timelineMs: number): FrameRequest[] {
   switch (element.type) {
     case 'video':
       return [

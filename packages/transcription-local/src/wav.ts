@@ -58,8 +58,7 @@ function decodeData(
     if (audioFormat === 1 && bitsPerSample === 32) return view.getInt32(at, true) / 0x80000000
     if (audioFormat === 1 && bitsPerSample === 8) return (view.getUint8(at) - 128) / 128
     if (audioFormat === 1 && bitsPerSample === 24) {
-      const value =
-        view.getUint8(at) | (view.getUint8(at + 1) << 8) | (view.getInt8(at + 2) << 16)
+      const value = view.getUint8(at) | (view.getUint8(at + 1) << 8) | (view.getInt8(at + 2) << 16)
       return value / 0x800000
     }
     return Number.NaN
@@ -75,11 +74,7 @@ function decodeData(
   return { samples, sampleRate }
 }
 
-function firstFrameUsesSupportedEncoding(
-  read: (at: number) => number,
-  start: number,
-  frames: number,
-): boolean {
+function firstFrameUsesSupportedEncoding(read: (at: number) => number, start: number, frames: number): boolean {
   return frames === 0 || !Number.isNaN(read(start))
 }
 

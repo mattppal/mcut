@@ -7,13 +7,7 @@ export interface VideoPreviewCapability {
 export function isMatroskaLike(media: VideoPreviewCapability): boolean {
   const name = media.name?.toLowerCase() ?? ''
   const mime = media.mimeType?.toLowerCase() ?? ''
-  return (
-    name.endsWith('.mkv') ||
-    name.endsWith('.mk3d') ||
-    name.endsWith('.mka') ||
-    mime.includes('matroska') ||
-    mime === 'video/x-matroska'
-  )
+  return name.endsWith('.mkv') || name.endsWith('.mk3d') || name.endsWith('.mka') || mime.includes('matroska') || mime === 'video/x-matroska'
 }
 
 const canPlayTypeCache = new Map<string, boolean>()

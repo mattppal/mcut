@@ -2,13 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { applyCommand } from './commands'
 import { createProject, type Project, type TimelineElement } from './model'
 import { mustFind } from './test-helpers'
-import {
-  captureThumbnailTemplate,
-  expandThumbnailTemplate,
-  findThumbnailTracks,
-  THUMBNAIL_TEMPLATES,
-  thumbnailDurationMs,
-} from './thumbnails'
+import { captureThumbnailTemplate, expandThumbnailTemplate, findThumbnailTracks, THUMBNAIL_TEMPLATES, thumbnailDurationMs } from './thumbnails'
 
 const textOf = (element: TimelineElement) => (element.type === 'text' ? element.text : element.type)
 const template = (index: number) => mustFind(THUMBNAIL_TEMPLATES[index], `starter template ${index}`)
@@ -21,14 +15,8 @@ describe('thumbnails', () => {
   })
 
   test('expand scales geometry and fonts to the project size', () => {
-    const small = expandThumbnailTemplate(
-      { width: 1280, height: 720, fps: 30 },
-      THUMBNAIL_TEMPLATES[0]!,
-    )
-    const big = expandThumbnailTemplate(
-      { width: 3840, height: 2160, fps: 30 },
-      THUMBNAIL_TEMPLATES[0]!,
-    )
+    const small = expandThumbnailTemplate({ width: 1280, height: 720, fps: 30 }, THUMBNAIL_TEMPLATES[0]!)
+    const big = expandThumbnailTemplate({ width: 3840, height: 2160, fps: 30 }, THUMBNAIL_TEMPLATES[0]!)
     expect(small.length).toBeGreaterThan(0)
     const smallText = small[0]! as Extract<(typeof small)[number], { type: 'text' }>
     const bigText = big[0]! as typeof smallText
@@ -43,16 +31,26 @@ describe('thumbnails', () => {
     const layers = findThumbnailTracks(project)
     expect(layers.map((t) => t.locked)).toEqual([true, true])
     expect(layers.map((t) => t.elements.map(textOf))).toEqual([['BIG TITLE'], ['episode label']])
-    expect(layers.flatMap((t) => t.elements.map((e) => [e.startMs, e.durationMs]))).toEqual([[0, 167], [0, 167]])
+    expect(layers.flatMap((t) => t.elements.map((e) => [e.startMs, e.durationMs]))).toEqual([
+      [0, 167],
+      [0, 167],
+    ])
   })
 
   test('a thumbnail headline stays editable after apply', () => {
     let project = createProject({ fps: 30 })
     project = applyCommand(project, { type: 'applyThumbnail', template: template(0) })
     const elements = (p: Project) => p.tracks.flatMap((t) => t.elements)
-    const headline = mustFind(elements(project).find((e) => textOf(e) === 'BIG TITLE'), 'headline')
+    const headline = mustFind(
+      elements(project).find((e) => textOf(e) === 'BIG TITLE'),
+      'headline',
+    )
     project = applyCommand(project, { type: 'updateElement', elementId: headline.id, patch: { text: 'NEW' } })
-    expect(elements(project).filter((e) => e.id === headline.id).map(textOf)).toEqual(['NEW'])
+    expect(
+      elements(project)
+        .filter((e) => e.id === headline.id)
+        .map(textOf),
+    ).toEqual(['NEW'])
   })
 
   test('re-applying a template replaces the text layers', () => {
@@ -101,13 +99,13 @@ describe('thumbnails', () => {
   })
 
   test('expand scales tracking, stroke, and shadow with the font', () => {
-    const big = expandThumbnailTemplate(
-      { width: 3840, height: 2160, fps: 30 },
-      THUMBNAIL_TEMPLATES[0]!,
-    ) as Array<Extract<ReturnType<typeof expandThumbnailTemplate>[number], { type: 'text' }>>
-    const headlineTemplate = THUMBNAIL_TEMPLATES[0]!.items.find(
-      (i) => i.kind === 'text' && i.style.stroke,
-    ) as Extract<(typeof THUMBNAIL_TEMPLATES)[number]['items'][number], { kind: 'text' }>
+    const big = expandThumbnailTemplate({ width: 3840, height: 2160, fps: 30 }, THUMBNAIL_TEMPLATES[0]!) as Array<
+      Extract<ReturnType<typeof expandThumbnailTemplate>[number], { type: 'text' }>
+    >
+    const headlineTemplate = THUMBNAIL_TEMPLATES[0]!.items.find((i) => i.kind === 'text' && i.style.stroke) as Extract<
+      (typeof THUMBNAIL_TEMPLATES)[number]['items'][number],
+      { kind: 'text' }
+    >
     const headline = big.find((e) => e.style.stroke)!
     expect(headline.style.stroke!.width).toBeCloseTo(headlineTemplate.style.stroke!.width * 2, 5)
     expect(headline.style.shadow!.blur).toBeCloseTo(headlineTemplate.style.shadow!.blur * 2, 5)

@@ -10,12 +10,7 @@ import {
   type TranscriptCaption,
 } from './transcript-tools'
 
-const caption = (
-  id: string,
-  startMs: number,
-  text: string,
-  words?: Array<[string, number, number]>,
-): TranscriptCaption => ({
+const caption = (id: string, startMs: number, text: string, words?: Array<[string, number, number]>): TranscriptCaption => ({
   id,
   startMs,
   durationMs: 2000,
@@ -140,14 +135,7 @@ describe('replaceAllMatches', () => {
     const patches = replaceAllMatches([a, b], 'acme', 'Acme Corp')
     expect(patches).toHaveLength(1)
     expect(patches[0]!.text).toBe('Acme Corp makes Acme Corp tools')
-    expect(patches[0]!.words!.map((w) => w.text)).toEqual([
-      'Acme',
-      'Corp',
-      'makes',
-      'Acme',
-      'Corp',
-      'tools',
-    ])
+    expect(patches[0]!.words!.map((w) => w.text)).toEqual(['Acme', 'Corp', 'makes', 'Acme', 'Corp', 'tools'])
     expect(patches[0]!.words![0]).toMatchObject({ startMs: 0 })
     expect(patches[0]!.words![1]).toMatchObject({ endMs: 200 })
   })

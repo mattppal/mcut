@@ -1,4 +1,4 @@
-import { planSilenceCuts } from "@mcut/editor";
+import { planSilenceCuts } from '@mcut/editor'
 import {
   elementIdSchema,
   getElementLocation,
@@ -7,8 +7,8 @@ import {
   type ElementId,
   type ProjectTranscriptWordContext,
   type TimelineElement,
-} from "@mcut/timeline";
-import { z } from "zod";
+} from '@mcut/timeline'
+import { z } from 'zod'
 
 const silenceActionInputSchema = z.strictObject({
   elementId: elementIdSchema.optional(),
@@ -16,33 +16,28 @@ const silenceActionInputSchema = z.strictObject({
   paddingMs: z.number().min(0).optional(),
   minKeepMs: z.number().min(0).optional(),
   trimEnds: z.boolean().optional(),
-});
+})
 
 const fadeActionInputSchema = z.strictObject({
   elementId: elementIdSchema.optional(),
   durationMs: z.number().min(10).optional(),
-});
+})
 
-type VisualElement = TimelineElement & { type: "video" | "image" | "text" | "multicam" };
-type MediaElement = TimelineElement & { type: "video" | "audio" };
+type VisualElement = TimelineElement & { type: 'video' | 'image' | 'text' | 'multicam' }
+type MediaElement = TimelineElement & { type: 'video' | 'audio' }
 
 function parseActionInput<Schema extends z.ZodType>(schema: Schema, value: unknown): z.output<Schema> {
-  const parsed = schema.safeParse(value ?? {});
-  if (parsed.success) return parsed.data;
-  throw new Error(z.prettifyError(parsed.error));
+  const parsed = schema.safeParse(value ?? {})
+  if (parsed.success) return parsed.data
+  throw new Error(z.prettifyError(parsed.error))
 }
 
 function isMediaElement(element: TimelineElement): element is MediaElement {
-  return element.type === "video" || element.type === "audio";
+  return element.type === 'video' || element.type === 'audio'
 }
 
 function isVisualElement(element: TimelineElement): element is VisualElement {
-  return (
-    element.type === "video" ||
-    element.type === "image" ||
-    element.type === "text" ||
-    element.type === "multicam"
-  );
+  return element.type === 'video' || element.type === 'image' || element.type === 'text' || element.type === 'multicam'
 }
 
 function pickElement<T extends TimelineElement>(
@@ -52,25 +47,25 @@ function pickElement<T extends TimelineElement>(
   emptyMessage: string,
 ): T {
   if (explicitId) {
-    const location = getElementLocation(engine.project, explicitId);
+    const location = getElementLocation(engine.project, explicitId)
     if (!location || !predicate(location.element)) {
-      throw new Error(`Element "${explicitId}" is not a supported target.`);
+      throw new Error(`Element "${explicitId}" is not a supported target.`)
     }
-    return location.element;
+    return location.element
   }
 
   for (const elementId of engine.selection.elementIds) {
-    const location = getElementLocation(engine.project, elementId);
-    if (location && predicate(location.element)) return location.element;
+    const location = getElementLocation(engine.project, elementId)
+    if (location && predicate(location.element)) return location.element
   }
 
   for (const track of engine.project.tracks) {
     for (const element of track.elements) {
-      if (predicate(element)) return element;
+      if (predicate(element)) return element
     }
   }
 
-  throw new Error(emptyMessage);
+  throw new Error(emptyMessage)
 }
 
 function transcriptWordsForElement(
@@ -78,32 +73,27 @@ function transcriptWordsForElement(
   element: MediaElement,
 ): Array<ProjectTranscriptWordContext & { sourceStartMs: number; sourceEndMs: number }> {
   if (element.timeMap) {
-    throw new Error("Transcript silence removal requires a 1x clip with no time remap.");
+    throw new Error('Transcript silence removal requires a 1x clip with no time remap.')
   }
 
-  const startMs = element.startMs;
-  const endMs = element.startMs + element.durationMs;
-  return getProjectTranscript(engine.project, { includeWords: true }).captions
-    .flatMap((caption) => caption.words ?? [])
+  const startMs = element.startMs
+  const endMs = element.startMs + element.durationMs
+  return getProjectTranscript(engine.project, { includeWords: true })
+    .captions.flatMap((caption) => caption.words ?? [])
     .filter((word) => word.endMs > startMs && word.startMs < endMs)
     .map((word) => ({
       ...word,
       sourceStartMs: element.trimStartMs + (word.startMs - element.startMs),
       sourceEndMs: element.trimStartMs + (word.endMs - element.startMs),
-    }));
+    }))
 }
 
 export function removeTranscriptSilence(engine: EditorEngine, value: unknown): unknown {
-  const input = parseActionInput(silenceActionInputSchema, value);
-  const element = pickElement(
-    engine,
-    input.elementId,
-    isMediaElement,
-    "Add or select a video/audio clip before removing silence.",
-  );
-  const words = transcriptWordsForElement(engine, element);
+  const input = parseActionInput(silenceActionInputSchema, value)
+  const element = pickElement(engine, input.elementId, isMediaElement, 'Add or select a video/audio clip before removing silence.')
+  const words = transcriptWordsForElement(engine, element)
   if (words.length === 0) {
-    throw new Error("No word-timed transcript overlaps the target clip. Call ensure_transcript first.");
+    throw new Error('No word-timed transcript overlaps the target clip. Call ensure_transcript first.')
   }
 
   const plan = planSilenceCuts(
@@ -121,12 +111,12 @@ export function removeTranscriptSilence(engine: EditorEngine, value: unknown): u
       ...(input.minKeepMs !== undefined ? { minKeepMs: input.minKeepMs } : {}),
       ...(input.trimEnds !== undefined ? { trimEnds: input.trimEnds } : {}),
     },
-  );
+  )
 
   if (plan.commands.length > 0) {
     engine.transact(() => {
-      for (const command of plan.commands) engine.dispatch(command);
-    });
+      for (const command of plan.commands) engine.dispatch(command)
+    })
   }
 
   return {
@@ -134,37 +124,32 @@ export function removeTranscriptSilence(engine: EditorEngine, value: unknown): u
     applied: plan.commands.length,
     removedMs: plan.removedMs,
     silences: plan.silences,
-  };
+  }
 }
 
 export function applyOpeningClosingFades(engine: EditorEngine, value: unknown): unknown {
-  const input = parseActionInput(fadeActionInputSchema, value);
-  const element = pickElement(
-    engine,
-    input.elementId,
-    isVisualElement,
-    "Add or select a visual clip before applying opening/closing fades.",
-  );
-  const durationMs = Math.max(10, Math.round(input.durationMs ?? 500));
+  const input = parseActionInput(fadeActionInputSchema, value)
+  const element = pickElement(engine, input.elementId, isVisualElement, 'Add or select a visual clip before applying opening/closing fades.')
+  const durationMs = Math.max(10, Math.round(input.durationMs ?? 500))
 
   engine.transact(() => {
     engine.dispatch({
-      type: "applyAnimationPreset",
+      type: 'applyAnimationPreset',
       elementId: element.id,
-      preset: "fade-in",
+      preset: 'fade-in',
       options: { durationMs },
-    });
+    })
     engine.dispatch({
-      type: "applyAnimationPreset",
+      type: 'applyAnimationPreset',
       elementId: element.id,
-      preset: "fade-out",
+      preset: 'fade-out',
       options: { durationMs },
-    });
-  });
+    })
+  })
 
   return {
     elementId: element.id,
     durationMs,
-    presets: ["fade-in", "fade-out"],
-  };
+    presets: ['fade-in', 'fade-out'],
+  }
 }

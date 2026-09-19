@@ -20,7 +20,8 @@
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "fuzz:media": "bun test src/media-fuzz.test.ts"
   },
   "repository": {
     "type": "git",
@@ -33,6 +34,9 @@
     "@mediabunny/aac-encoder": "1.46.0",
     "mediabunny": "1.46.0",
     "signalsmith-stretch": "1.3.2"
+  },
+  "devDependencies": {
+    "@mcut/editor": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

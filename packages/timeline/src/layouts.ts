@@ -11,9 +11,7 @@ export const layoutSlotSchema = z.object({
     h: z.number().positive().max(3),
   }),
   fit: z.enum(['cover', 'contain']).default('cover'),
-  focus: z
-    .object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) })
-    .default({ x: 0.5, y: 0.5 }),
+  focus: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).default({ x: 0.5, y: 0.5 }),
   cornerRadius: z.number().min(0).max(0.5).default(0),
   shadow: z.boolean().default(false),
   stroke: strokeSchema.optional(),
