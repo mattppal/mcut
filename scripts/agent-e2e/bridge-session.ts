@@ -25,6 +25,7 @@ const DESKTOP_MAIN = join(DESKTOP_DIR, 'dist/main.mjs')
 const ELECTRON_BINARIES = [join(DESKTOP_DIR, 'node_modules/.bin/electron'), join(repoRoot, 'node_modules/.bin/electron')]
 const DEFAULT_READY_TIMEOUT_MS = 90_000
 const STATUS_POLL_MS = 100
+const STATUS_FETCH_TIMEOUT_MS = 2_000
 const KILL_GRACE_MS = 5_000
 const LOG_TAIL_LINES = 30
 
@@ -169,9 +170,11 @@ function portFrom(line: string): number {
   return port
 }
 
-async function readStatus(bridgePort: number): Promise<string | { connected: boolean; tab: unknown }> {
+async function readStatus(bridgePort: number, deadline: Deadline): Promise<string | { connected: boolean; tab: unknown }> {
   try {
-    const response = await fetch(`http://127.0.0.1:${bridgePort}/status`)
+    const response = await fetch(`http://127.0.0.1:${bridgePort}/status`, {
+      signal: AbortSignal.timeout(Math.min(STATUS_FETCH_TIMEOUT_MS, remainingMs(deadline))),
+    })
     const parsed = statusSchema.safeParse(await response.json())
     if (!parsed.success) return `unexpected /status body (${response.status})`
     return parsed.data.result
@@ -186,7 +189,7 @@ const describeStatus = (status: { connected: boolean; tab: unknown }): string =>
 async function waitForTab(bridgePort: number, deadline: Deadline, app: DesktopApp): Promise<void> {
   let last = 'no status response yet'
   while (remainingMs(deadline) > 0) {
-    const status = await readStatus(bridgePort)
+    const status = await readStatus(bridgePort, deadline)
     if (typeof status !== 'string' && status.connected && status.tab !== null) {
       app.note(`studio window connected, hello frame ${JSON.stringify(status.tab)}`)
       return
@@ -209,20 +212,24 @@ export async function openBridgeSession(options: BridgeSessionOptions): Promise<
   const token = randomBytes(32).toString('hex')
   const app = new DesktopApp([electron, DESKTOP_DIR, '--port', '0', '--token', token], options.logDir, log)
   let fixtures: FixtureServer | undefined
-  let closed = false
+  let closing: Promise<void> | undefined
 
-  const close = async (): Promise<void> => {
-    if (closed) return
-    closed = true
-    process.off('SIGTERM', onSignal)
-    process.off('SIGINT', onSignal)
-    process.off('exit', app.killSync)
-    await fixtures?.stop()
-    await app.shutdown()
+  const close = (): Promise<void> => {
+    closing ??= (async () => {
+      process.off('SIGTERM', onSignal)
+      process.off('SIGINT', onSignal)
+      await fixtures?.stop()
+      await app.shutdown()
+      process.off('exit', app.killSync)
+    })()
+    return closing
   }
   const onSignal = (signal: NodeJS.Signals): void => {
     log(`received ${signal}, tearing down`)
-    void close().finally(() => process.exit(signal === 'SIGINT' ? 130 : 143))
+    void (async () => {
+      await close()
+      process.exit(signal === 'SIGINT' ? 130 : 143)
+    })()
   }
   process.once('SIGTERM', onSignal)
   process.once('SIGINT', onSignal)
@@ -230,7 +237,7 @@ export async function openBridgeSession(options: BridgeSessionOptions): Promise<
 
   const lost = new Promise<never>((_, reject) => {
     void app.proc.exited.then((code) => {
-      if (closed) return
+      if (closing !== undefined) return
       reject(new BridgeSessionError(`the Electron app exited with ${app.proc.signalCode ?? `code ${code}`} while the session was open.\n${app.output()}`))
     })
   })
