@@ -1,0 +1,290 @@
+---
+title: "Time, speed, snapping, and trimming"
+description: "Frame and time conversion, speed maps, snap targets, and edge trims."
+---
+
+## Types
+
+### TimeMap
+
+```ts
+type TimeMap = z.infer<typeof timeMapSchema>
+```
+
+A time map as inferred from `timeMapSchema`, mapping element-local output time to a source offset relative to `trimStartMs`.
+
+### TimeMappedElement
+
+```ts
+interface TimeMappedElement {
+  startMs: number
+  durationMs: number
+  trimStartMs: number
+  timeMap?: TimeMap | undefined
+  reversed?: boolean | undefined
+}
+```
+
+The timing fields of a video or audio element that the speed helpers read.
+
+### EdgeTrimRange
+
+```ts
+interface EdgeTrimRange {
+  minDeltaMs: number
+  maxDeltaMs: number
+}
+```
+
+The most negative and most positive `deltaMs` an edge trim accepts.
+
+### TrimEdge
+
+```ts
+type TrimEdge = 'start' | 'end'
+```
+
+The clip boundary an edge trim moves, `'start'` or `'end'`.
+
+### CollectSnapTargetsOptions
+
+```ts
+interface CollectSnapTargetsOptions {
+  playheadMs?: number
+  excludeElementIds?: ReadonlySet<string>
+}
+```
+
+Options for `collectSnapTargets`, a playhead time to include and element ids to leave out.
+
+### SnapClipResult
+
+```ts
+interface SnapClipResult extends SnapResult {
+  edge: 'start' | 'end' | null
+}
+```
+
+A `SnapResult` plus which clip edge snapped, or `null`.
+
+### SnapOptions
+
+```ts
+interface SnapOptions {
+  enabled?: boolean
+  fps?: number
+}
+```
+
+Options for snapping, whether magnets are enabled and an fps for frame quantization when nothing snaps.
+
+### SnapResult
+
+```ts
+interface SnapResult {
+  ms: number
+  guideMs: number | null
+  target: SnapTarget | null
+}
+```
+
+The snapped time, the guide line time to draw or `null`, and the target that won or `null`.
+
+### SnapTarget
+
+```ts
+interface SnapTarget {
+  timeMs: number
+  kind: SnapTargetKind
+}
+```
+
+A time that attracts editing gestures, with its kind.
+
+### SnapTargetKind
+
+```ts
+type SnapTargetKind = 'origin' | 'clip-start' | 'clip-end' | 'marker' | 'playhead'
+```
+
+What a snap target represents, timeline zero, a clip start or end, a marker, or the playhead.
+
+## Schemas
+
+### timeMapSchema
+
+```ts
+const timeMapSchema = z
+  .array(keyframeSchema)
+  .min(2)
+  .refine(
+    (frames) => frames.every((k, i) => i === 0 || k.timeMs > frames[i - 1]!.timeMs),
+    'timeMap keyframes must be strictly increasing in time',
+  )
+  .refine(
+    (frames) => frames.every((k) => k.value >= 0),
+    'timeMap values are source offsets and must be >= 0',
+  )
+  .refine(
+    (frames) => frames.every((k, i) => i === 0 || k.value >= frames[i - 1]!.value),
+    'timeMap values must be non-decreasing (reverse playback is not supported)',
+  )
+```
+
+Zod schema for a time map, at least two keyframes with strictly increasing times and non-negative, non-decreasing source offsets.
+
+## Functions
+
+### getAverageSpeed
+
+```ts
+function getAverageSpeed(element: { durationMs: number; timeMap?: TimeMap | undefined }): number
+```
+
+Returns the source span divided by the output duration, or 1 without a time map.
+
+### getSourceSpanMs
+
+```ts
+function getSourceSpanMs(element: { durationMs: number; timeMap?: TimeMap | undefined }): number
+```
+
+Returns the source duration the element consumes, which is `durationMs` without a time map and the last keyframe value with one.
+
+### getSourceTimeMs
+
+```ts
+function getSourceTimeMs(element: TimeMappedElement, localMs: number): number
+```
+
+Returns the source media time that plays at an element-local output time, following the time map when present and running the span backward when `reversed` is set.
+
+### getSpeedAt
+
+```ts
+function getSpeedAt(element: TimeMappedElement, localMs: number, windowMs = 8): number
+```
+
+Returns the instantaneous speed at an element-local time by finite difference over `windowMs`, which is 0 inside a freeze and 1 without a time map.
+
+### makeConstantSpeedMap
+
+```ts
+function makeConstantSpeedMap(durationMs: number, speed: number): TimeMap
+```
+
+Returns a two-keyframe time map that plays a clip of `durationMs` at a constant speed.
+
+### splitTimeMap
+
+```ts
+function splitTimeMap(timeMap: TimeMap, offsetMs: number): { left: TimeMap; right: TimeMap }
+```
+
+Splits a time map at an element-local offset into maps for both halves, pinning the boundary value on each side and rebasing the right half to start at 0.
+
+### frameToMs
+
+```ts
+function frameToMs(frame: number, fps: number): number
+```
+
+Returns the integer millisecond timestamp of a frame, which is the time export samples for that frame.
+
+### msPerFrame
+
+```ts
+function msPerFrame(fps: number): number
+```
+
+Returns the length of one frame in fractional milliseconds.
+
+### msToFrame
+
+```ts
+function msToFrame(timeMs: number, fps: number): number
+```
+
+Returns the frame index nearest to `timeMs`.
+
+### quantizeMsToFrame
+
+```ts
+function quantizeMsToFrame(timeMs: number, fps: number, mode: 'round' | 'floor' | 'ceil' = 'round'): number
+```
+
+Rounds, floors, or ceils a timestamp to a frame boundary and returns it in integer milliseconds.
+
+### applyEdgeTrim
+
+```ts
+function applyEdgeTrim(
+  element: TimelineElement,
+  edge: TrimEdge,
+  deltaMs: number,
+): TimelineElement
+```
+
+Moves one edge of an element by `deltaMs` while its content stays in place, shrinking through the split machinery and growing by revealing more source, and throws `CommandError` when the result is too short, starts before 0, or is unsupported.
+
+### getEdgeTrimRange
+
+```ts
+function getEdgeTrimRange(
+  project: Project,
+  element: TimelineElement,
+  edge: TrimEdge,
+): EdgeTrimRange
+```
+
+Returns the `deltaMs` range `applyEdgeTrim` accepts for an element and edge, bounded by the minimum duration, timeline zero, and the available media, with infinite bounds where media is unbounded.
+
+### collectSnapTargets
+
+```ts
+function collectSnapTargets(
+  project: Project,
+  options: CollectSnapTargetsOptions = {},
+): SnapTarget[]
+```
+
+Returns every snap target in the project sorted by time, timeline zero, markers, clip edges, and the playhead when given.
+
+### nearestSnapTarget
+
+```ts
+function nearestSnapTarget(
+  timeMs: number,
+  targets: readonly SnapTarget[],
+  thresholdMs: number,
+): SnapTarget | null
+```
+
+Returns the target nearest to `timeMs` within `thresholdMs`, preferring the earlier one on ties, or `null`.
+
+### snapClip
+
+```ts
+function snapClip(
+  startMs: number,
+  durationMs: number,
+  targets: readonly SnapTarget[],
+  thresholdMs: number,
+  options: SnapOptions = {},
+): SnapClipResult
+```
+
+Snaps whichever clip edge is closer to a target and shifts the clip so that edge lands on it, and otherwise returns the start quantized to a frame when an fps is given.
+
+### snapTime
+
+```ts
+function snapTime(
+  candidateMs: number,
+  targets: readonly SnapTarget[],
+  thresholdMs: number,
+  options: SnapOptions = {},
+): SnapResult
+```
+
+Snaps a time to the nearest target within `thresholdMs`, and otherwise returns the time quantized to a frame when an fps is given.

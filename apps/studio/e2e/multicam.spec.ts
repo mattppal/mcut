@@ -41,7 +41,9 @@ test("multicam: create from selection, style a slot shadow without crashing", as
 
   // Multicam mode shows the layout bank; open the slot editor on tile 1.
   await page.getByRole("button", { name: "Multicam" }).click();
-  const tile = page.getByTitle(/cuts while playing/).first();
+  const tiles = page.getByTitle(/cuts while playing/);
+  await expect(tiles, "one tile per layout from createDefaultLayouts").toHaveCount(5);
+  const tile = tiles.first();
   await tile.hover();
   await page.getByTitle("Edit slots on the canvas").first().click();
 
@@ -95,7 +97,7 @@ test("multicam: create from selection, style a slot shadow without crashing", as
   await page.keyboard.press("Escape"); // leave crop mode
   page.once("dialog", (dialog) => void dialog.accept("Square cam"));
   await page.getByRole("button", { name: "Save as preset" }).click();
-  await expect(page.getByTitle(/cuts while playing/)).toHaveCount(5);
+  await expect(tiles, "saveLayout appends the preset to the five defaults").toHaveCount(6);
   await page.waitForTimeout(400);
   expect(errors).toEqual([]);
   expect(await previewPixels(page), "preview after crop edits").toBeGreaterThan(0);

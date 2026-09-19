@@ -1,0 +1,18 @@
+---
+globs:
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+alwaysApply: false
+---
+
+# No tests for configuration values
+
+A test that restates a hand-maintained constant, name, table row, or default
+is a constant pin. It fails only when someone edits the constant. Delete it.
+
+Test the mechanism that reads the constant with one representative input
+instead.
+
+A relation across table rows stays. A key present in two tables, a parent that
+exists, or a total that matches can fail for a defect, so that test earns its
+place.

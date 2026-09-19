@@ -8,20 +8,65 @@ import { expect, test } from "@playwright/test";
  * `shasum -a 256 public/.well-known/agent-skills/mcut/SKILL.md`.
  */
 
-test("serves the MCP tool manifest at /tools.json", async ({ request }) => {
+const AGENT_TOOL_NAMES = [
+  "get_summary",
+  "get_project",
+  "get_media_context",
+  "get_audio_activity",
+  "get_transcript",
+  "search_transcript",
+  "ensure_transcript",
+  "list_commands",
+  "apply_commands",
+  "list_operators",
+  "run_operator",
+  "list_actions",
+  "run_action",
+  "undo",
+  "redo",
+];
+
+const FULL_TOOL_COUNT = 116;
+
+type Tool = { name: string; description: string; inputSchema: { type: string; properties: object } };
+
+test("serves the curated agent profile at /tools.json and every command under ?profile=full", async ({
+  request,
+}) => {
   const res = await request.get("/tools.json");
   expect(res.ok()).toBe(true);
-  const { tools } = await res.json();
-  expect(tools.length).toBeGreaterThan(40);
-  const split = tools.find((t: { name: string }) => t.name === "splitElement");
-  expect(split.description).toContain("Split");
-  expect(split.inputSchema.type).toBe("object");
-  expect(Object.keys(split.inputSchema.properties)).toContain("elementId");
+  const agent: { profile: string; tools: Tool[] } = await res.json();
+  expect(agent.profile).toBe("agent");
+  expect(
+    agent.tools.map((tool) => tool.name),
+    "MCP_AGENT_TOOL_NAMES in @mcut/mcp-server/contract",
+  ).toEqual(AGENT_TOOL_NAMES);
+
+  const fullRes = await request.get("/tools.json?profile=full");
+  expect(fullRes.ok()).toBe(true);
+  const full: { profile: string; tools: Tool[] } = await fullRes.json();
+  expect(full.profile).toBe("full");
+  expect(
+    full.tools.length,
+    "15 agent tools + 42 core editor operators + 59 timeline commands",
+  ).toBe(FULL_TOOL_COUNT);
+  const split = full.tools.find((tool) => tool.name === "splitElement");
+  expect(split?.description).toContain("Split");
+  expect(split?.inputSchema.type).toBe("object");
+  expect(Object.keys(split?.inputSchema.properties ?? {})).toContain("elementId");
 });
 
 test("renders the human-readable tool catalog at /tools", async ({ page }) => {
   await page.goto("/tools");
-  await expect(page.getByRole("heading", { name: /MCP tools/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /MCP tools/ })).toHaveText(
+    new RegExp(`\\(${AGENT_TOOL_NAMES.length}\\)`),
+  );
+  await expect(page.getByText("apply_commands", { exact: true })).toBeVisible();
+
+  await page.goto("/tools?profile=full");
+  await expect(page.getByRole("heading", { name: /MCP tools/ })).toHaveText(
+    new RegExp(`\\(${FULL_TOOL_COUNT}\\)`),
+  );
   await expect(page.getByText("splitElement", { exact: true })).toBeVisible();
 });
 

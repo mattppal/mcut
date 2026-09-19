@@ -1,0 +1,316 @@
+---
+title: "Types"
+description: "Types and Zod schemas exported by @mcut/compositor."
+---
+
+## Types
+
+### DisplaySizePatch
+
+```ts
+interface DisplaySizePatch {
+  width?: number
+  height?: number
+  preserveAspect?: boolean
+}
+```
+
+The requested display width or height for `getTransformForDisplaySize`, with a flag to keep the aspect ratio.
+
+### ElementSize
+
+```ts
+interface ElementSize {
+  width: number
+  height: number
+}
+```
+
+A width and height in pixels.
+
+### Handle
+
+```ts
+interface Handle {
+  id: HandleId
+  x: number
+  y: number
+}
+```
+
+One handle with its id and canvas position.
+
+### HandleId
+
+```ts
+type HandleId =
+  | 'nw'
+  | 'n'
+  | 'ne'
+  | 'e'
+  | 'se'
+  | 's'
+  | 'sw'
+  | 'w'
+  | 'rotate'
+```
+
+The eight compass-point resize handles plus the rotate handle.
+
+### OBB
+
+```ts
+interface OBB {
+  cx: number
+  cy: number
+  width: number
+  height: number
+  rotation: number
+}
+```
+
+An oriented bounding box in canvas pixels with center, size, and clockwise rotation in degrees.
+
+### SizeHelpers
+
+```ts
+interface SizeHelpers {
+  getAssetSize?: (assetId: string) => ElementSize | null
+  measureText?: (text: string, style: TextStyle, box?: TextBox, runs?: readonly TextRun[]) => ElementSize
+}
+```
+
+Optional callbacks that report an asset's pixel size and measure text, used to size elements.
+
+### ImageQuad
+
+```ts
+interface ImageQuad {
+  image: CanvasImageSource
+  src: { sx: number; sy: number; sw: number; sh: number } | null
+  dw: number
+  dh: number
+  cornerRadius: number
+}
+```
+
+One image draw into a centered rectangle with an optional source crop and corner radius.
+
+### LayerChrome
+
+```ts
+interface LayerChrome {
+  centerX: number
+  centerY: number
+  rotationDeg: number
+  scaleX: number
+  scaleY: number
+  opacity: number
+  blendMode?: BlendMode | undefined
+  effects?: readonly Effect[] | undefined
+}
+```
+
+The resolved transform, opacity, blend mode, and effect stack an element layer composites through.
+
+### RenderBackend
+
+```ts
+interface RenderBackend {
+  readonly kind: 'canvas2d' | 'webgpu' | (string & {})
+  readonly width: number
+  readonly height: number
+  beginFrame(backgroundColor: string): void
+  endFrame(): void
+  acquireRaster(): Canvas2D
+  drawImageQuad(quad: ImageQuad, chrome: LayerChrome): void
+  pushRasterScope(): void
+  popRasterScope(): void
+}
+```
+
+The interface a compositing backend implements, with frame begin and end, raster access, image quad drawing, and raster scopes.
+
+### WebGPUBackendOptions
+
+```ts
+interface WebGPUBackendOptions {
+  canvas: HTMLCanvasElement | OffscreenCanvas
+  width: number
+  height: number
+  device?: GPUDevice
+}
+```
+
+Options for `WebGPUBackend.create`, the target canvas, its size, and an optional existing GPU device.
+
+### ColorOp
+
+```ts
+interface ColorOp {
+  kind: number
+  params: number[]
+}
+```
+
+One fused color operation with its shader kind and packed parameters.
+
+### EffectPass
+
+```ts
+type EffectPass =
+  | {
+      kind: 'color'
+      ops: ColorOp[]
+      curves: { r: Float32Array; g: Float32Array; b: Float32Array } | null
+    }
+  | { kind: 'blur'; radius: number }
+  | { kind: 'shadow'; offsetX: number; offsetY: number; blur: number; color: [number, number, number, number] }
+  | { kind: 'lut3d'; lutId: string; intensity: number }
+```
+
+A single GPU effect pass, either a fused color pass, a blur, a shadow, or a 3D lookup table.
+
+### EffectPlan
+
+```ts
+interface EffectPlan {
+  passes: EffectPass[]
+  unsupported: boolean
+}
+```
+
+The GPU passes for an effect stack and whether any effect was unsupported.
+
+### TransitionRenderContext
+
+```ts
+interface TransitionRenderContext {
+  ctx: Canvas2D
+  project: Project
+  pair: TransitionPair
+  timeMs: number
+  completion: number
+  drawLeft: () => void
+  drawRight: () => void
+}
+```
+
+What a transition renderer receives, the context, project, pair, time, completion, and callbacks that draw each side.
+
+### TransitionRenderer
+
+```ts
+type TransitionRenderer = (context: TransitionRenderContext) => void
+```
+
+A function that blends a transition pair into the context.
+
+### CaptionLayout
+
+```ts
+interface CaptionLayout {
+  lines: { words: CaptionWordBox[]; width: number }[]
+  font: string
+  lineHeight: number
+  spaceWidth: number
+}
+```
+
+Laid-out caption lines with their word boxes and widths, plus the font, line height, and space width.
+
+### CaptionWordBox
+
+```ts
+interface CaptionWordBox {
+  text: string
+  x: number
+  width: number
+  startMs?: number
+  endMs?: number
+}
+```
+
+One caption word's text, horizontal position, width, and optional timing.
+
+### MeasureFn
+
+```ts
+type MeasureFn = (text: string, font: string, letterSpacingPx?: number) => number
+```
+
+A function that returns the width of text drawn with a font and optional letter spacing.
+
+### TextBlockLayout
+
+```ts
+interface TextBlockLayout {
+  lines: { text: string; width: number; segments?: TextSegment[] }[]
+  font: string
+  lineHeight: number
+  padding: number
+  overflow: TextBox['overflow'] | null
+  width: number
+  height: number
+}
+```
+
+Laid-out text lines with widths and style segments, plus the font, line height, padding, overflow mode, and block size.
+
+### Canvas2D
+
+```ts
+type Canvas2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
+```
+
+A 2D rendering context, on screen or off screen.
+
+### ElementRenderContext
+
+```ts
+interface ElementRenderContext {
+  ctx: Canvas2D
+  backend: import('./backend').RenderBackend
+  project: Project
+  track: Track
+  timeMs: number
+  source: FrameSource | undefined
+}
+```
+
+What an element renderer receives, the 2D context, backend, project, track, time, and frame source.
+
+### ElementRenderer
+
+```ts
+type ElementRenderer<E extends TimelineElement = TimelineElement> = (
+  element: E,
+  context: ElementRenderContext,
+) => void
+```
+
+A function that draws one element into the render context.
+
+### FrameSource
+
+```ts
+interface FrameSource {
+  getFrame(assetId: AssetId, sourceTimeMs: number): CanvasImageSource | null
+}
+```
+
+Supplies the pixels of a media asset at a source time, approximately for preview and exactly for export.
+
+### RenderFrameOptions
+
+```ts
+interface RenderFrameOptions {
+  source?: FrameSource
+  backgroundColor?: string
+  skipElementIds?: ReadonlySet<string>
+  motionBlurSamples?: number
+  createScratchContext?: (width: number, height: number) => Canvas2D | null
+}
+```
+
+Options for rendering a frame, the frame source, background color, elements to skip, motion blur samples, and a scratch context factory.
