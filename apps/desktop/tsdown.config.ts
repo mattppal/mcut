@@ -2,7 +2,7 @@ import { defineConfig, type UserConfig } from 'tsdown'
 
 const shared: UserConfig = {
   platform: 'node',
-  external: ['electron'],
+  deps: { neverBundle: ['electron'], onlyBundle: false },
   fixedExtension: true,
   dts: false,
 }

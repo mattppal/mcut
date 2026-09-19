@@ -2,6 +2,7 @@
   "name": "mcut-desktop",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "license": "Apache-2.0",
   "description": "mcut Studio as a desktop app. Electron serves the Studio static export from app://studio and hosts the live MCP bridge.",
   "main": "dist/main.mjs",
