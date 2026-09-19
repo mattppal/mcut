@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+cd "$(dirname "$0")/../.."
 
 BUN_VERSION="${BUN_VERSION:-1.3.14}"
 NODE_VERSION="${NODE_VERSION:-24.13.0}"
@@ -30,6 +31,6 @@ command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get instal
 bun install --frozen-lockfile
 bun run build
 (cd apps/studio && bunx playwright install --with-deps chromium)
-[ -f scripts/fixtures/generate-media.ts ] && bun run fixtures
+if [ -f scripts/fixtures/generate-media.ts ]; then bun run fixtures; fi
 
-echo "cloud-env install ok: bun $(bun --version), node $(node --version), $(ffmpeg -version | head -1 | cut -d' ' -f1-3)"
+echo "cloud-env install ok: bun $(bun --version), node $(node --version), $(ls packages/timeline/dist | wc -l) timeline dist files"

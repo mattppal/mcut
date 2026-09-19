@@ -24,7 +24,10 @@ bash scripts/cloud-env/install.sh
 
 Every step checks for its artifact before downloading, so the script converges
 on a snapshot that already has the tools and only refreshes `node_modules` and
-`dist/`. The last line prints the tool versions it ended with.
+`dist/`. The last line prints the tool versions it ended with. The dashboard
+command starts with `set -euo pipefail` and `cd /agent/repos/mcut`. The
+environment holds two repositories, so the install shell does not start inside
+mcut, and without `set -e` a build reports success after every step failed.
 
 ## Prove the environment
 
