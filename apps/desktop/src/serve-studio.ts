@@ -11,7 +11,7 @@ export const STUDIO_ORIGIN = `${STUDIO_SCHEME}://${STUDIO_HOST}`
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
-  "connect-src 'self' ws://127.0.0.1:* http://127.0.0.1:* https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co",
+  "connect-src 'self' blob: ws://127.0.0.1:* http://127.0.0.1:* https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co",
   "img-src 'self' blob: data: http://127.0.0.1:*",
   "media-src 'self' blob: http://127.0.0.1:*",
   "worker-src 'self' blob:",
