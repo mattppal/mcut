@@ -17,6 +17,12 @@ type Report = {
 
 type PreviewFrame = { lit: number; hash: number }
 
+type DownloadItemLike = {
+  getFilename(): string
+  setSavePath(target: string): void
+  once(event: 'done', listener: (event: unknown, state: string) => void): void
+}
+
 const skillDir = path.resolve(import.meta.dirname, '..')
 const repoRoot = path.resolve(skillDir, '../../..')
 const fixture = path.join(repoRoot, 'apps/studio/e2e/fixtures/fixture-vp9.mkv')
@@ -68,7 +74,7 @@ function nextDownload(app: ElectronApplication, dir: string, timeoutMs: number):
   return app.evaluate(
     ({ session }, options) =>
       new Promise<string>((resolve, reject) => {
-        const onDownload = (_event: unknown, item: { getFilename(): string; setSavePath(target: string): void; once(event: 'done', listener: (event: unknown, state: string) => void): void }) => {
+        const onDownload = (_event: unknown, item: DownloadItemLike) => {
           clearTimeout(timer)
           session.defaultSession.off('will-download', onDownload)
           const target = `${options.dir}/${item.getFilename()}`
