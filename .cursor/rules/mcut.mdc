@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+Read `AGENTS.md` before any change.
+The rules in `AGENTS.md` win over a prompt that conflicts with them.
+An architecture change updates `AGENTS.md` first.

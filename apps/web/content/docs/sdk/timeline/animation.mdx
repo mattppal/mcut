@@ -1,0 +1,187 @@
+---
+title: "Animation and zoom presets"
+description: "Preset names, easings, and the expansion of presets into keyframes."
+---
+
+## Types
+
+### ZoomPreset
+
+```ts
+type ZoomPreset = z.infer<typeof zoomPresetSchema>
+```
+
+A zoom preset as inferred from `zoomPresetSchema`.
+
+### AnimationPreset
+
+```ts
+type AnimationPreset = z.infer<typeof animationPresetSchema>
+```
+
+An animation preset name as inferred from `animationPresetSchema`.
+
+### AnimationPresetOptions
+
+```ts
+type AnimationPresetOptions = z.infer<typeof animationPresetOptionsSchema>
+```
+
+Preset options as inferred from `animationPresetOptionsSchema`.
+
+## Schemas
+
+### zoomPresetSchema
+
+```ts
+const zoomPresetSchema = z.object({
+  name: z.string().min(1),
+  durationMs: z.number().int().min(100).default(600),
+  tracks: z.partialRecord(z.enum(ZOOMABLE_PROPERTIES), z.array(zoomKeySchema).min(2)),
+})
+```
+
+Zod schema for a zoom preset, a name, a default duration of at least 100 ms, and per-property tracks of at least two normalized keys.
+
+### animationPresetOptionsSchema
+
+```ts
+const animationPresetOptionsSchema = z.object({
+  durationMs: z.number().int().min(50).optional(),
+  direction: z.enum(['up', 'down', 'left', 'right']).optional(),
+  intensity: z.number().min(0.1).max(4).optional(),
+})
+```
+
+Zod schema for preset options, a duration of at least 50 ms, a direction, and an intensity from 0.1 to 4.
+
+### animationPresetSchema
+
+```ts
+const animationPresetSchema = z.enum([
+  'fade-in',
+  'slide-in',
+  'pop-in',
+  'scale-in',
+  'zoom-in',
+  'whip-in',
+  'blur-in',
+  'fade-out',
+  'slide-out',
+  'pop-out',
+  'zoom-out',
+  'whip-out',
+  'blur-out',
+  'ken-burns',
+  'punch-zoom',
+  'pulse',
+  'breathe',
+  'float',
+  'sway',
+  'shake',
+])
+```
+
+Zod schema for the twenty preset names, seven entrances, six exits, and seven combined or looping motions.
+
+## Constants
+
+### ZOOM_PRESETS
+
+```ts
+const ZOOM_PRESETS: ZoomPreset[]
+```
+
+The four built-in zoom presets, punch in, punch out, slow push, and zoom hold return.
+
+### ZOOMABLE_PROPERTIES
+
+```ts
+const ZOOMABLE_PROPERTIES = ['position.x', 'position.y', 'scale.x', 'scale.y'] as const
+```
+
+The four properties a zoom preset can animate, position and scale on both axes.
+
+### ANIMATION_PRESET_CATEGORIES
+
+```ts
+const ANIMATION_PRESET_CATEGORIES: Record<'in' | 'out' | 'combo', AnimationPreset[]>
+```
+
+The preset names grouped into `in`, `out`, and `combo`.
+
+### ANIMATION_PRESET_DEFAULT_DURATION_MS
+
+```ts
+const ANIMATION_PRESET_DEFAULT_DURATION_MS: Record<AnimationPreset, number>
+```
+
+The default duration of each preset in milliseconds.
+
+### EASINGS
+
+```ts
+const EASINGS = {
+  outExpo: { cubicBezier: [0.16, 1, 0.3, 1] },
+  outQuint: { cubicBezier: [0.22, 1, 0.36, 1] },
+  outCubic: { cubicBezier: [0.33, 1, 0.68, 1] },
+  outBack: { cubicBezier: [0.34, 1.56, 0.64, 1] },
+  inCubic: { cubicBezier: [0.32, 0, 0.67, 0] },
+  inQuart: { cubicBezier: [0.5, 0, 0.75, 0] },
+  inExpo: { cubicBezier: [0.7, 0, 0.84, 0] },
+  inBack: { cubicBezier: [0.36, 0, 0.66, -0.56] },
+  inOutCubic: { cubicBezier: [0.65, 0, 0.35, 1] },
+  inOutSine: { cubicBezier: [0.37, 0, 0.63, 1] },
+  emphasizedAccelerate: { cubicBezier: [0.3, 0, 0.8, 0.15] },
+} satisfies Record<string, Easing>
+```
+
+Named cubic bezier easings shared by the presets, from `outExpo` to `emphasizedAccelerate`.
+
+### MOTION_BLUR_PRESETS
+
+```ts
+const MOTION_BLUR_PRESETS: ReadonlySet<AnimationPreset>
+```
+
+The presets that turn on motion blur when applied, `whip-in`, `whip-out`, and `punch-zoom`.
+
+## Functions
+
+### captureZoomPreset
+
+```ts
+function captureZoomPreset(
+  element: TimelineElement,
+  name: string,
+  fromLocalMs?: number,
+  toLocalMs?: number,
+): ZoomPreset | null
+```
+
+Returns a zoom preset built from the zoomable keyframes between two element-local times, normalized against each track's first keyframe, or `null` when no track has two keyframes in the range.
+
+### expandZoomPreset
+
+```ts
+function expandZoomPreset(
+  element: TimelineElement,
+  preset: ZoomPreset,
+  atLocalMs: number,
+  durationMs?: number,
+): KeyframeMap
+```
+
+Returns the element's keyframe map with the preset expanded into absolute keyframes from `atLocalMs`, where scale keys multiply and position keys offset the animated value at that time, replacing keyframes inside the window.
+
+### expandAnimationPreset
+
+```ts
+function expandAnimationPreset(
+  element: TimelineElement,
+  preset: AnimationPreset,
+  options: AnimationPresetOptions = {},
+): KeyframeMap
+```
+
+Returns the element's keyframe map with the preset's keyframes merged in, using the default duration, direction, and intensity unless options override them.

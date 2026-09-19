@@ -1,0 +1,232 @@
+---
+title: "@mcut/react"
+description: "Editor provider, state hooks, preview canvas, and gesture math."
+---
+
+`@mcut/react` provides the editor engine to a React tree, exposes hooks over its state, and renders the preview canvas.
+
+## Install
+
+```sh
+bun add @mcut/react
+```
+
+## Types
+
+### EditorContextValue
+
+```ts
+interface EditorContextValue {
+  engine: EditorEngine
+  pool: PreviewMediaPool
+}
+```
+
+The value carried by the editor context, an engine and its preview media pool.
+
+### EditorProviderProps
+
+```ts
+interface EditorProviderProps {
+  engine?: EditorEngine
+  project?: Project
+  maxHistorySize?: number
+  children: ReactNode
+}
+```
+
+Props for `EditorProvider`, with an optional external engine or an initial project and history size for an internal one.
+
+### PlayerCanvasProps
+
+```ts
+interface PlayerCanvasProps {
+  className?: string
+  interactive?: boolean
+  background?: string
+  hiddenElementIds?: ReadonlySet<string>
+  onElementDoubleClick?: (elementId: ElementId) => void
+  quality?: PreviewQuality
+  renderer?: 'canvas2d' | 'webgpu'
+}
+```
+
+Props for `PlayerCanvas`, covering styling, interactivity, background, hidden elements, double-click handling, preview quality, and renderer choice.
+
+### PreviewQuality
+
+```ts
+type PreviewQuality = 'auto' | 'full' | number
+```
+
+Preview raster resolution, where `'auto'` follows the displayed size, a number caps the short side in pixels, and `'full'` uses the project resolution.
+
+### BoxResizeResult
+
+```ts
+interface BoxResizeResult {
+  transform: Transform
+  displayWidth: number
+  displayHeight: number
+}
+```
+
+The result of `applyBoxResize`, a transform plus the resulting display width and height.
+
+### GesturePoint
+
+```ts
+interface GesturePoint {
+  x: number
+  y: number
+}
+```
+
+A pointer position in canvas pixels.
+
+## Functions
+
+### applyMove
+
+```ts
+function applyMove(base: Transform, start: GesturePoint, current: GesturePoint): Transform
+```
+
+Returns a copy of the base transform offset by the pointer delta between the start and current points.
+
+### applyBoxResize
+
+```ts
+function applyBoxResize(
+  base: Transform,
+  obb: OBB,
+  handle: Exclude<HandleId, 'rotate'>,
+  current: GesturePoint,
+  minSize = MIN_BOX_SIZE,
+): BoxResizeResult
+```
+
+Moves one edge or corner of the element box to the pointer, keeps the box at least `minSize` on each axis, and returns the recentered transform with the new display size.
+
+### applyResize
+
+```ts
+function applyResize(
+  base: Transform,
+  obb: OBB,
+  handle: Exclude<HandleId, 'rotate'>,
+  start: GesturePoint,
+  current: GesturePoint,
+  preserveAspect = false,
+): Transform
+```
+
+Scales the base transform from a handle, uniformly for corners and along one axis for edges, with pointer positions mapped into the element's unrotated space.
+
+### applyRotate
+
+```ts
+function applyRotate(
+  base: Transform,
+  obb: OBB,
+  start: GesturePoint,
+  current: GesturePoint,
+): Transform
+```
+
+Returns the base transform rotated by the pointer angle change around the element center.
+
+## Hooks
+
+### useEditorContext
+
+```ts
+function useEditorContext(): EditorContextValue
+```
+
+Returns the engine and preview pool from the nearest `EditorProvider`, and throws when called outside one.
+
+### useEditor
+
+```ts
+function useEditor(): EditorEngine
+```
+
+Returns the `EditorEngine` from context for dispatching commands, undo and redo, and transport.
+
+### useEditorState
+
+```ts
+function useEditorState<TSelected = EditorState>(
+  selector?: (state: EditorState) => TSelected,
+  compare?: (a: TSelected, b: TSelected) => boolean,
+): TSelected
+```
+
+Subscribes to the engine store and returns the selected slice of `EditorState`, re-rendering when the compare function reports a change.
+
+### usePlayback
+
+```ts
+function usePlayback<TSelected = PlaybackState>(
+  selector?: (state: PlaybackState) => TSelected,
+  compare?: (a: TSelected, b: TSelected) => boolean,
+): TSelected
+```
+
+Subscribes to the engine playback store and returns the selected slice of `PlaybackState`.
+
+### useProject
+
+```ts
+function useProject(): Project
+```
+
+Returns the current `Project` from editor state.
+
+### useSelectedElement
+
+```ts
+function useSelectedElement(): ElementLocation | undefined
+```
+
+Returns the first selected element together with its track and track index, or `undefined` when nothing is selected.
+
+### useSelection
+
+```ts
+function useSelection(): SelectionState
+```
+
+Returns the current `SelectionState` from editor state.
+
+## Components
+
+### EditorProvider
+
+```ts
+function EditorProvider({
+  engine: externalEngine,
+  project,
+  maxHistorySize,
+  children,
+}: EditorProviderProps)
+```
+
+Creates or adopts an `EditorEngine` and a `PreviewMediaPool` and provides both to the React tree below it.
+
+### PlayerCanvas
+
+```ts
+function PlayerCanvas({
+  className,
+  interactive = true,
+  background,
+  quality = 'auto',
+  hiddenElementIds,
+  onElementDoubleClick,
+  renderer = 'webgpu',
+}: PlayerCanvasProps)
+```
+
+Renders the project at the current playback time onto a canvas and, when interactive, handles element selection, drag, resize, and rotate gestures.
