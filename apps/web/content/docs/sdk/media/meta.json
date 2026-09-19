@@ -1,0 +1,9 @@
+{
+  "title": "@mcut/media",
+  "pages": [
+    "index",
+    "types",
+    "functions",
+    "classes"
+  ]
+}

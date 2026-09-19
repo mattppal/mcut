@@ -1,9 +1,0 @@
-{
-  "title": "@mcut/react",
-  "pages": [
-    "index",
-    "...functions",
-    "...interfaces",
-    "...type-aliases"
-  ]
-}

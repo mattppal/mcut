@@ -70,24 +70,20 @@ Use Changesets in this repo to produce prerelease versions and
 publish with the `alpha` dist-tag. Promote to `latest` only when the public API,
 docs, examples, and migration story are ready.
 
-## How mcut Studio consumes SDK packages
+## Studio and SDK packages
 
-mcut Studio consumes local `@mcut/*` workspaces by default, so SDK changes show
-up in Studio without a switching step.
+Studio lives in `apps/studio` in this repo. It uses the local `@mcut/*`
+workspaces, so SDK changes show up without a publish step.
 
-To test a PR's package set outside this repo, use the pkg.pr.new preview builds
-CI publishes for package PRs: install the URLs from the PR comment into a
-scratch consumer, e.g. `bun add https://pkg.pr.new/@mcut/timeline@<pr-number>`.
-Install every `@mcut/*` package from the same PR number; do not mix a preview
+To test a PR's package set in a scratch app, use the pkg.pr.new preview builds
+CI publishes for package PRs. Install the URLs from the PR comment, for example
+`bun add https://pkg.pr.new/@mcut/timeline@<pr-number>`.
+Install every `@mcut/*` package from the same PR number. Do not mix a preview
 `@mcut/react` with a published `@mcut/timeline`.
 
-Upgrade flow:
-
-1. Release a new alpha from this repo.
-2. Install dependencies and commit the package manager lockfile if one is
-   generated.
-3. Run `bun run typecheck`, `bun run test`, and the relevant editor E2E tests.
-4. Fix any registry or Studio integration drift before merging.
+After a package change in this repo, run `bun run typecheck`, `bun run test`,
+and the relevant editor E2E tests. Fix any registry or Studio integration drift
+before merging.
 
 ## Boundary rules
 

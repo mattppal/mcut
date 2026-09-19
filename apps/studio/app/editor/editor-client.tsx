@@ -1,22 +1,32 @@
 "use client";
 
-import type { TranscriptResult } from "@mcut/transcription";
+import { transcriptResultSchema, type TranscriptResult } from "@mcut/transcription";
+import { z } from "zod";
 import { EditorShell } from "@/registry/mcut/editor-shell";
 import {
   isOnDeviceTranscriptionEnabled,
   transcribeOnDevice,
 } from "@/registry/mcut/local-transcription";
 
+const transcribeFailureSchema = z.object({ error: z.string() });
+
 /** Upload extracted audio to the demo's transcription route. */
 async function transcribeRemote(audio: Blob): Promise<TranscriptResult> {
   const form = new FormData();
   form.append("audio", audio, "audio.wav");
   const response = await fetch("/api/transcribe", { method: "POST", body: form });
-  const json = (await response.json()) as TranscriptResult & { error?: string };
+  const json: unknown = await response.json();
   if (!response.ok) {
-    throw new Error(json.error ?? `Transcription failed (${response.status})`);
+    const failure = transcribeFailureSchema.safeParse(json);
+    throw new Error(
+      failure.success ? failure.data.error : `Transcription failed (${response.status})`,
+    );
   }
-  return json;
+  const result = transcriptResultSchema.safeParse(json);
+  if (!result.success) {
+    throw new Error(`Transcription returned an unexpected response: ${z.prettifyError(result.error)}`);
+  }
+  return result.data;
 }
 
 /**
