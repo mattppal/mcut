@@ -1,18 +1,4 @@
-/**
- * WGSL for the WebGPU backend. All composite work happens in full-frame
- * passes over a ping-pong pair of offscreen textures: each pass samples the
- * accumulated frame (dst) and one prepared layer texture (src), maps the
- * fragment back into the layer's local space with the inverse chrome
- * transform, and blends by mode — one blend.wgsl with a mode switch,
- * correctness over micro-optimization.
- *
- * Layer textures hold PREMULTIPLIED alpha (canvas uploads premultiply;
- * VideoFrames are effectively opaque). Blend formulas operate on straight
- * color, so src/dst unpremultiply around the math.
- */
-
-/** Fullscreen triangle; uv covers [0,1]² across the target. */
-const FULLSCREEN_VERTEX = /* wgsl */ `
+const FULLSCREEN_VERTEX = `
 struct VertexOut {
   @builtin(position) position: vec4f,
   @location(0) uv: vec2f,
@@ -29,8 +15,7 @@ fn vs_main(@builtin(vertex_index) index: u32) -> VertexOut {
 }
 `
 
-/** Blend mode ids — keep in sync with BLEND_MODE_IDS below. */
-const BLEND_WGSL_HELPERS = /* wgsl */ `
+const BLEND_WGSL_HELPERS = `
 fn lum(c: vec3f) -> f32 {
   return dot(c, vec3f(0.3, 0.59, 0.11));
 }
@@ -150,11 +135,7 @@ fn blend_colors(mode: u32, src: vec3f, dst: vec3f) -> vec3f {
 }
 `
 
-/**
- * The composite pass: dst = blend(layer at inverse-transformed position,
- * dst). Pixels outside the layer's quad pass dst through untouched.
- */
-export const COMPOSITE_SHADER = /* wgsl */ `
+export const COMPOSITE_SHADER = `
 ${FULLSCREEN_VERTEX}
 
 struct CompositeUniforms {
@@ -230,8 +211,7 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
 }
 `
 
-/** Prepare pass: sample (and crop) the source image into a layer texture. */
-export const PREPARE_SHADER = (external: boolean): string => /* wgsl */ `
+export const PREPARE_SHADER = (external: boolean): string => `
 ${FULLSCREEN_VERTEX}
 
 struct PrepareUniforms {
@@ -255,12 +235,7 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
 }
 `
 
-/**
- * Fused color pass: applies the ordered op list (brightness/contrast/
- * saturate/grayscale/sepia/hue-rotate/invert/chroma-key/curves) in one
- * fragment invocation. Curves sample a 256×1 LUT texture.
- */
-export const COLOR_SHADER = /* wgsl */ `
+export const COLOR_SHADER = `
 ${FULLSCREEN_VERTEX}
 
 struct ColorOp {
@@ -373,8 +348,7 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
 }
 `
 
-/** Separable Gaussian blur, one direction per pass (weights in a storage buffer). */
-export const BLUR_SHADER = /* wgsl */ `
+export const BLUR_SHADER = `
 ${FULLSCREEN_VERTEX}
 
 struct BlurUniforms {
@@ -404,11 +378,7 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
 }
 `
 
-/**
- * Drop-shadow compose: out = layer over (shadowColor × blurredAlpha at
- * offset). Both textures are layer-sized; the offset arrives in layer UVs.
- */
-export const SHADOW_SHADER = /* wgsl */ `
+export const SHADOW_SHADER = `
 ${FULLSCREEN_VERTEX}
 
 struct ShadowUniforms {
@@ -435,11 +405,7 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
 }
 `
 
-/**
- * 3D LUT grade: trilinear sample of a size³ table flattened into a 2D
- * texture (slices side by side: width = size², height = size).
- */
-export const LUT3D_SHADER = /* wgsl */ `
+export const LUT3D_SHADER = `
 ${FULLSCREEN_VERTEX}
 
 struct LutUniforms {
@@ -478,8 +444,7 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
 }
 `
 
-/** Final present: stretch the accumulated frame onto the canvas texture. */
-export const PRESENT_SHADER = /* wgsl */ `
+export const PRESENT_SHADER = `
 ${FULLSCREEN_VERTEX}
 
 @group(0) @binding(0) var src: texture_2d<f32>;
@@ -491,7 +456,6 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
 }
 `
 
-/** Blend mode name → shader id (0 = normal). Keep in sync with blend_colors. */
 export const BLEND_MODE_IDS: Record<string, number> = {
   normal: 0,
   multiply: 1,

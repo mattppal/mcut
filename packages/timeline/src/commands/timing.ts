@@ -74,13 +74,11 @@ export const setTimeMap = defineCommand({
   },
 })
 
-/** The exactly-adjacent clip after `element` on its track, if any. */
 function adjacentNext(track: Track, element: TimelineElement): TimelineElement | undefined {
   const cutMs = element.startMs + element.durationMs
   return track.elements.find((e) => e.startMs === cutMs && e.id !== element.id)
 }
 
-/** The exactly-adjacent clip before `element` on its track, if any. */
 function adjacentPrevious(track: Track, element: TimelineElement): TimelineElement | undefined {
   return track.elements.find(
     (e) => e.startMs + e.durationMs === element.startMs && e.id !== element.id,
@@ -222,6 +220,11 @@ export const slideElement = defineCommand({
   },
 })
 
+function trimStartKeepingPosition(element: TimelineElement, deltaMs: number): TimelineElement {
+  const liftedClearOfTimelineZero = { ...element, startMs: element.startMs + Math.max(0, -deltaMs) }
+  return { ...applyEdgeTrim(liftedClearOfTimelineZero, 'start', deltaMs), startMs: element.startMs }
+}
+
 export const rippleTrim = defineCommand({
   type: 'rippleTrim',
   description:
@@ -237,16 +240,10 @@ export const rippleTrim = defineCommand({
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
     if (payload.deltaMs === 0) return project
-    // A start trim keeps the clip's position: the edge change is absorbed by
-    // rippling downstream instead, so lift the clip clear of the timeline-zero
-    // check and pin its start back afterwards.
-    const lifted =
-      payload.edge === 'start'
-        ? { ...element, startMs: element.startMs + Math.max(0, -payload.deltaMs) }
-        : element
-    const trimmedRaw = applyEdgeTrim(lifted, payload.edge, payload.deltaMs)
     const trimmed =
-      payload.edge === 'start' ? { ...trimmedRaw, startMs: element.startMs } : trimmedRaw
+      payload.edge === 'start'
+        ? trimStartKeepingPosition(element, payload.deltaMs)
+        : applyEdgeTrim(element, 'end', payload.deltaMs)
     const shiftMs = payload.edge === 'end' ? payload.deltaMs : -payload.deltaMs
     const boundaryMs =
       payload.edge === 'end' ? element.startMs + element.durationMs : element.startMs

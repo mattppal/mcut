@@ -57,13 +57,32 @@ describe('editMode: overwrite', () => {
     })
     expect(getElement(project, 'e-1')).toMatchObject({ startMs: 0, durationMs: 1000 })
     expect(getElement(project, 'e-new')).toMatchObject({ startMs: 1000, durationMs: 2500 })
-    // e-2 lost its head: starts at 3500, source advanced by 1500.
     expect(getElement(project, 'e-2')).toMatchObject({
       startMs: 3500,
       durationMs: 500,
       trimStartMs: 6500,
     })
     expect(getElement(project, 'e-3')).toMatchObject({ startMs: 4000, durationMs: 2000 })
+  })
+
+  test('a trimmed left neighbor loses its transition into the carved range', () => {
+    const withTransition = applyCommand(projectWithClips(), {
+      type: 'setTransition',
+      elementId: 'e-1',
+      transition: { type: 'dissolve', durationMs: 500 },
+    })
+    expect(getElement(withTransition, 'e-1')).toMatchObject({
+      transition: { type: 'dissolve', durationMs: 500 },
+    })
+    const project = applyCommand(withTransition, {
+      type: 'addElement',
+      trackId: TRACK,
+      element: text('e-new', 1500, 1000),
+      editMode: 'overwrite',
+    })
+    const carved = getElement(project, 'e-1')
+    expect(carved).toMatchObject({ startMs: 0, durationMs: 1500, trimStartMs: 5000 })
+    expect(carved).not.toHaveProperty('transition')
   })
 
   test('removes fully covered clips', () => {
@@ -100,7 +119,6 @@ describe('editMode: overwrite', () => {
       element: text('e-new', 5, 1995),
       editMode: 'overwrite',
     })
-    // e-1's 5ms head sliver is gone entirely.
     expect(getElement(project, 'e-1')).toBeUndefined()
     expect(getElement(project, 'e-new')).toMatchObject({ startMs: 5 })
   })
@@ -196,7 +214,6 @@ describe('magnetic tracks ignore edit modes', () => {
       editMode: 'overwrite',
     })
     const track = getTrack(project, TRACK)!
-    // Nothing was carved; the new clip took a slot and the track re-packed.
     expect(track.elements).toHaveLength(4)
     expect(track.elements.reduce((sum, e) => sum + e.durationMs, 0)).toBe(6500)
   })

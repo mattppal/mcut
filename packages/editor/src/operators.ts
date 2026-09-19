@@ -24,10 +24,6 @@ export interface OperatorDefinition<Input = unknown, Output = unknown> {
   description: string
   category: OperatorCategory
   inputSchema: z.ZodType<Input, unknown>
-  /**
-   * Whether this operator applies in the current editor state. Returning a
-   * reason lets agent transports explain why a user-level action is unavailable.
-   */
   enabled?(context: EditorOperatorContext, input: Input): EnabledResult
   run(context: EditorOperatorContext, input: Input): Output | Promise<Output>
 }

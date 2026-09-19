@@ -1,7 +1,5 @@
 import { describe, expect, test } from 'bun:test'
 import { elementSupportsProperty, getStaticValue, resolveAnimatedElement } from './keyframes'
-// Value import: loading model.ts registers the built-in element types
-// (a type-only import would skip registration and empty the keyframeable list).
 import { type TextElement } from './model'
 import './model'
 
@@ -45,7 +43,6 @@ describe('letterSpacing keyframes', () => {
     })
     expect(resolveAnimatedElement(element, 500).style.letterSpacing).toBe(20)
     expect(resolveAnimatedElement(element, 1000).style.letterSpacing).toBe(40)
-    // The original element is untouched (resolution is copy-on-write).
     expect(element.style.letterSpacing).toBe(2)
   })
 })

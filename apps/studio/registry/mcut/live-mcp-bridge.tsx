@@ -16,7 +16,7 @@ import {
   type AudioActivityOptions,
   type AudioActivityWindow,
 } from "@mcut/media";
-import { useEditor } from "@mcut/react";
+import { useEditor, useLatest } from "@mcut/react";
 import {
   CommandError,
   ProjectFormatError,
@@ -401,7 +401,7 @@ function bridgeConfig(): { port: string; token: string | null; quiet: boolean } 
 
 export function LiveMcpBridge() {
   const engine = useEditor();
-  const ui = useEditorUI();
+  const ui = useLatest(useEditorUI());
 
   useEffect(() => {
     const config = bridgeConfig();
@@ -455,7 +455,7 @@ export function LiveMcpBridge() {
           }
           const { request } = frame;
           try {
-            const result = await handleLiveMcpRequest(engine, ui, request);
+            const result = await handleLiveMcpRequest(engine, ui.current, request);
             socket?.send(JSON.stringify({ id: request.id, ok: true, result }));
           } catch (error) {
             socket?.send(JSON.stringify({ id: request.id, ok: false, error: serializeError(error) }));
@@ -480,7 +480,7 @@ export function LiveMcpBridge() {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       socket?.close();
     };
-  }, [engine, ui]);
+  }, [engine]);
 
   return null;
 }

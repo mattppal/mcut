@@ -8,20 +8,13 @@ export const DEFAULT_MIN_SOUND_MS = 120
 export const DEFAULT_MIN_SILENCE_MS = 120
 
 export interface AudioActivityOptions {
-  /** Source range. Defaults to the whole file for decoded media, or all samples for PCM input. */
   startMs?: number
   endMs?: number
-  /** Fixed analysis frame size. Default 30ms. */
   frameMs?: number
-  /** A frame is sound when RMS is greater than this threshold. Default 0.004. */
   threshold?: number
-  /** Active runs shorter than this are treated as silence. Default 120ms. */
   minSoundMs?: number
-  /** Silent runs shorter than this are treated as sound. Default 120ms. */
   minSilenceMs?: number
-  /** Trim this much from each returned silence window edge. Default 0ms. */
   paddingMs?: number
-  /** Optional compact max-amplitude waveform bucket count. */
   waveformBuckets?: number
 }
 
@@ -48,7 +41,6 @@ export interface AudioActivity {
   soundWindows: AudioActivityWindow[]
   silenceWindows: AudioActivityWindow[]
   summary: AudioActivitySummary
-  /** Max |sample| buckets, 0-1, only present when requested. */
   waveform?: number[]
 }
 
@@ -257,7 +249,6 @@ function summarizeWindows(
   }
 }
 
-/** Analyze mono PCM samples into compact sound/silence windows. */
 export function analyzeAudioSamples(
   samples: Float32Array,
   sampleRate: number,
@@ -292,11 +283,6 @@ export function analyzeAudioSamples(
   return activity
 }
 
-/**
- * Decode a media source's primary audio track and reduce it to semantic
- * sound/silence windows. Returns `null` when the file has no audio track.
- * Browser-only (WebCodecs decode via Mediabunny).
- */
 export async function analyzeAudioActivity(
   src: MediaSourceLike,
   options: AudioActivityOptions = {},

@@ -28,6 +28,22 @@ describe('EditorEngine', () => {
     expect(getTrack(engine.project, trackId)!.elements).toHaveLength(1)
   })
 
+  test('a dispatch that leaves the project unchanged records no history entry', () => {
+    const { engine, trackId } = engineWithText()
+    engine.dispatch({
+      type: 'addElement',
+      trackId,
+      element: { id: 'e-1', type: 'text', startMs: 0, durationMs: 1000, text: 'one' },
+    })
+    const before = engine.project
+    expect(engine.dispatch({ type: 'trimEdge', elementId: 'e-1', edge: 'end', deltaMs: 0 })).toBe(
+      before,
+    )
+    expect(engine.undo()).toBe(true)
+    expect(getTrack(engine.project, trackId)?.elements).toHaveLength(0)
+    expect(engine.canUndo()).toBe(false)
+  })
+
   test('new edits clear the redo stack', () => {
     const { engine, trackId } = engineWithText()
     engine.dispatch({
@@ -80,7 +96,6 @@ describe('EditorEngine', () => {
       startMs: 0,
       text: 'one',
     })
-    // Only the pre-transaction edit is undoable.
     expect(engine.undo()).toBe(true)
     expect(getTrack(engine.project, trackId)!.elements).toHaveLength(0)
     expect(engine.undo()).toBe(false)
@@ -155,7 +170,7 @@ describe('EditorEngine', () => {
       })
       engine.dispatch({ type: 'moveElement', elementId: 'e-1', startMs: 2000 })
     })
-    expect(notifications).toBeLessThanOrEqual(2) // batched: far fewer than one per dispatch
+    expect(notifications).toBeLessThanOrEqual(2)
     subscription.unsubscribe()
   })
 
@@ -223,10 +238,8 @@ describe('selection across undo/redo', () => {
     })
     engine.select(['e-a'])
     engine.dispatch({ type: 'trimElement', elementId: 'e-a', durationMs: 500 })
-    // The user clicks another clip after the edit...
     engine.select(['e-b'])
     engine.undo()
-    // ...and undoing the trim doesn't steal their selection back.
     expect(engine.selection.elementIds).toEqual(['e-b'])
   })
 
@@ -270,7 +283,6 @@ describe('selection across undo/redo', () => {
       element: { type: 'text', id: 'e-b', text: 'b', startMs: 2000, durationMs: 1000 },
     })
     engine.select(['e-b'])
-    // Undoing e-b's add removes it; the kept-alone selection prunes to empty.
     engine.undo()
     expect(engine.selection.elementIds).toEqual([])
   })
