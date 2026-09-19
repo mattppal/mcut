@@ -67,9 +67,9 @@ export function resolveFixture(id: string): Fixture {
   return fallbackFixture(id)
 }
 
-export function describeFixture(fixture: Fixture): string {
+export function describeFixture(fixture: Fixture, src: string): string {
   return (
-    `${fixture.id}: path ${fixture.path}, kind ${fixture.kind}, ` +
+    `${fixture.id}: src ${src}, kind ${fixture.kind}, ` +
     `${fixture.width}x${fixture.height}, ${fixture.fps} fps, ${fixture.durationMs} ms ` +
     `(source ${fixture.source})`
   )
