@@ -51,11 +51,11 @@ const EDIT_MODES: Array<{ id: TimelineEditMode; label: string; hint: string }> =
 ];
 
 const ASPECT_PRESETS = [
-  { label: "16:9 — Landscape", width: 1920, height: 1080 },
-  { label: "9:16 — Portrait", width: 1080, height: 1920 },
-  { label: "1:1 — Square", width: 1080, height: 1080 },
-  { label: "4:5 — Social", width: 1080, height: 1350 },
-  { label: "21:9 — Cinema", width: 2560, height: 1080 },
+  { label: "Landscape", ratio: "16:9", width: 1920, height: 1080 },
+  { label: "Portrait", ratio: "9:16", width: 1080, height: 1920 },
+  { label: "Square", ratio: "1:1", width: 1080, height: 1080 },
+  { label: "Social", ratio: "4:5", width: 1080, height: 1350 },
+  { label: "Cinema", ratio: "21:9", width: 2560, height: 1080 },
 ];
 
 /** Preview-only raster quality (export always renders full resolution). */
@@ -257,8 +257,8 @@ export function TransportBar() {
               }
             >
               {preset.label}
-              <span className="ml-auto pl-3 font-mono text-2xs text-muted-foreground">
-                {preset.width}×{preset.height}
+              <span className="ml-auto pl-4 font-mono text-2xs text-muted-foreground tabular-nums">
+                {preset.ratio} · {preset.width}×{preset.height}
               </span>
             </DropdownMenuItem>
           ))}
