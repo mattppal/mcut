@@ -17,23 +17,36 @@ creates the file when missing and writes it after successful edits.
 
 ## Static tools
 
+The published server registers sixteen static tools. The live bridge handles
+three more in the browser, `list_commands`, `apply_commands`, and
+`run_operator`, which together with the sixteen form the nineteen-tool agent
+profile served by Studio's `/tools.json`.
+
 | Tool | Purpose |
 | --- | --- |
 | `get_summary` | Compact project summary. Read this before editing. |
 | `get_project` | Full serializable project JSON. |
 | `get_media_context` | Project, playback, selection, asset, track, element, marker, and transcript metadata. |
-| `get_transcript` | Caption-derived transcript; never starts transcription. |
+| `get_audio_activity` | Live bridge only. Sound and silence windows for one video or audio clip in source time. |
+| `get_transcript` | Caption-derived transcript. Never starts transcription. |
 | `search_transcript` | Find spoken words or phrases with timeline times. |
-| `ensure_transcript` | Live bridge only: transcribe selected media in the browser and apply captions. |
+| `ensure_transcript` | Live bridge only. Transcribe the target clip in the browser and apply word-timed captions. |
+| `list_commands` | Live bridge only. Every raw timeline command schema. |
+| `apply_commands` | Live bridge only. Apply several commands in one undoable transaction. |
+| `apply_captions` | Turn a transcript into caption elements as one undoable edit. |
+| `apply_silence_cuts` | Cut transcript silence out of one clip as one undoable edit. |
+| `lint_project` | Cross-entity problems `parseProject` cannot reject, each with a severity and code. |
+| `list_presets` | Platform delivery presets with dimensions, fps, and safe areas. |
 | `list_operators` | List available UI-level editor operators. |
-| `list_actions` | Live bridge only: list browser editor actions. |
-| `run_action` | Live bridge only: run a browser editor action by id. |
+| `run_operator` | Live bridge only. Run an operator by id. |
+| `list_actions` | Live bridge only. List browser editor actions. |
+| `run_action` | Live bridge only. Run a browser editor action by id. |
 | `undo` | Undo the most recent edit. |
 | `redo` | Redo the most recently undone edit. |
 
 ## Generated operator tools
 
-Every registered editor operator becomes an MCP tool named:
+Every operator in the `@mcut/editor` operator table becomes an MCP tool named:
 
 ```text
 operator_<operator-id-with-non-tool-characters-replaced>
@@ -58,9 +71,9 @@ tools can perform.
 
 ## Generated command tools
 
-Every registered timeline command also becomes an MCP tool. The command
-description becomes the tool description and the zod payload schema becomes the
-MCP input schema.
+Every command in the `@mcut/timeline` command table also becomes an MCP tool.
+The command description becomes the tool description and the zod payload schema
+becomes the MCP input schema.
 
 Use command tools for exact project mutations when you already know the target
 ids and payload.

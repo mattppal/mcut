@@ -21,12 +21,15 @@ Every command is an object with a `type` plus command-specific payload fields.
 The engine validates payloads with zod and rejects edits that violate project
 invariants such as unknown ids, invalid element shapes, or track overlaps.
 
-## Registry
+## Command table
 
-The command registry exposes:
+Commands live in one closed table, `commandDefinitions` in
+`packages/timeline/src/commands.ts`, and `BuiltinCommand` is the union of every
+entry. The table backs:
 
 - `listCommands()` for command definitions.
 - `listToolDefinitions()` for MCP-shaped tool definitions.
+- `parseCommand(value)` for turning untrusted JSON into a `BuiltinCommand`.
 - `applyCommand(project, command)` for pure command application.
 - `EditorEngine.dispatch(command)` for engine-managed application with undo state.
 
@@ -45,11 +48,11 @@ Agents should inspect schemas instead of guessing payloads.
 
 | Group | Examples |
 | --- | --- |
-| Project and tracks | `updateProject`, `addTrack`, `removeTrack`, `renameTrack`, `updateTrack`, `moveTrack`, `compactTrack`, `compactTimeline` |
+| Project and tracks | `updateProject`, `addTrack`, `removeTrack`, `renameTrack`, `setTrackFlags`, `reorderTrack`, `compactTrackGaps`, `compactTimelineGaps` |
 | Assets | `addAsset`, `updateAsset`, `removeAsset` |
-| Elements | `addElement`, `removeElement`, `updateElement`, `moveElement`, `splitElement`, `rippleDelete` |
-| Captions | `addCaptions`, caption style and transcript-related commands |
-| Keyframes | `setKeyframe`, `removeKeyframe`, `moveKeyframe` |
+| Elements | `addElement`, `removeElement`, `updateElement`, `moveElement`, `trimElement`, `splitElement`, `rippleDelete` |
+| Captions and derived clips | `applyCaptions`, `detachAudio`, `applyThumbnail` |
+| Keyframes | `setKeyframe`, `removeKeyframe`, `moveKeyframe`, `setKeyframeEasing`, `clearKeyframes` |
 | Effects and presets | effect stack commands, animation presets, zoom presets, property presets |
 | Multicam | multicam creation, layout, cut, and source-selection commands |
 | Audio and markers | linked audio helpers, timeline marker add/update/remove commands |
