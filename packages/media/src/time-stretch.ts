@@ -1,5 +1,6 @@
 import type { TimeMap } from '@mcut/timeline'
 import { renderStretchOffline } from './signalsmith-offline'
+import { valueAt } from './value-at'
 
 /**
  * Pitch-preserving time-stretch for export audio.
@@ -29,8 +30,8 @@ export interface ConstantSpeed {
 
 /** The constant speed a timeMap encodes, or null when it's a ramp/freeze. */
 export function constantSpeedOf(timeMap: TimeMap | undefined): ConstantSpeed | null {
-  if (!timeMap || timeMap.length !== 2) return null
-  const [from, to] = [timeMap[0]!, timeMap[1]!]
+  const [from, to, ...rest] = timeMap ?? []
+  if (!from || !to || rest.length > 0) return null
   if (from.timeMs !== 0) return null
   if (from.easing !== undefined && from.easing !== 'linear') return null
   const sourceSpanMs = to.value - from.value
@@ -53,11 +54,11 @@ export interface StereoData {
 export async function stretchStereo(data: StereoData, tempo: number): Promise<StereoData> {
   const inputFrames = data.left.length
   const expectedFrames = Math.max(1, Math.round(inputFrames / tempo))
-  const [left, right] = await renderStretchOffline(
+  const rendered = await renderStretchOffline(
     [data.left, data.right],
     data.sampleRate,
     tempo,
     expectedFrames,
   )
-  return { left: left!, right: right!, sampleRate: data.sampleRate }
+  return { left: valueAt(rendered, 0), right: valueAt(rendered, 1), sampleRate: data.sampleRate }
 }

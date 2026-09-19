@@ -52,6 +52,29 @@ export function isWebGPUSupported(): boolean {
   return typeof navigator !== 'undefined' && 'gpu' in navigator && !!navigator.gpu
 }
 
+function webgpuContext(canvas: HTMLCanvasElement | OffscreenCanvas): GPUCanvasContext | null {
+  const context = canvas.getContext('webgpu')
+  if (typeof GPUCanvasContext !== 'undefined' && context instanceof GPUCanvasContext) return context
+  return null
+}
+
+function externalTextureSource(image: CanvasImageSource): HTMLVideoElement | VideoFrame | null {
+  if (typeof VideoFrame !== 'undefined' && image instanceof VideoFrame) return image
+  if (typeof HTMLVideoElement !== 'undefined' && image instanceof HTMLVideoElement) return image
+  return null
+}
+
+function curvesToRgba8(curves: { r: Float32Array; g: Float32Array; b: Float32Array }): Uint8Array {
+  const bytes = new Uint8Array(256 * 4)
+  for (const [channel, lut] of [curves.r, curves.g, curves.b].entries()) {
+    for (const [i, value] of lut.subarray(0, 256).entries()) {
+      bytes[i * 4 + channel] = Math.round(value * 255)
+    }
+  }
+  for (let i = 3; i < bytes.length; i += 4) bytes[i] = 255
+  return bytes
+}
+
 interface PooledTexture {
   texture: GPUTexture
   width: number
@@ -85,7 +108,7 @@ export class WebGPUBackend implements RenderBackend {
 
   // Ping-pong accumulation at project resolution.
   private acc: [GPUTexture, GPUTexture]
-  private accIndex = 0
+  private accIndex: 0 | 1 = 0
 
   // Raster surface for canvas2d content, composited lazily in z-order.
   private readonly rasterCanvas: OffscreenCanvas
@@ -126,7 +149,7 @@ export class WebGPUBackend implements RenderBackend {
     this.width = options.width
     this.height = options.height
 
-    const context = options.canvas.getContext('webgpu') as GPUCanvasContext | null
+    const context = webgpuContext(options.canvas)
     if (!context) throw new Error('Could not create a webgpu canvas context')
     this.context = context
     this.presentationFormat =
@@ -138,7 +161,7 @@ export class WebGPUBackend implements RenderBackend {
     this.rasterCanvas = new OffscreenCanvas(this.width, this.height)
     const rasterCtx = this.rasterCanvas.getContext('2d')
     if (!rasterCtx) throw new Error('Could not create the raster scratch context')
-    this.rasterCtx = rasterCtx as Canvas2D
+    this.rasterCtx = rasterCtx
 
     this.acc = [this.createAccTexture(), this.createAccTexture()]
     this.sampler = device.createSampler({
@@ -197,18 +220,14 @@ export class WebGPUBackend implements RenderBackend {
   registerLut3D(lutId: string, size: number, data: Float32Array): void {
     if (data.length < size * size * size * 3) throw new Error('LUT data is too short for its size')
     const width = size * size
-    const bytes = new Uint8Array(width * size * 4)
-    for (let b = 0; b < size; b++) {
-      for (let g = 0; g < size; g++) {
-        for (let r = 0; r < size; r++) {
-          const src = ((b * size + g) * size + r) * 3
-          const dst = (g * width + b * size + r) * 4
-          bytes[dst] = Math.round(Math.min(1, Math.max(0, data[src]!)) * 255)
-          bytes[dst + 1] = Math.round(Math.min(1, Math.max(0, data[src + 1]!)) * 255)
-          bytes[dst + 2] = Math.round(Math.min(1, Math.max(0, data[src + 2]!)) * 255)
-          bytes[dst + 3] = 255
-        }
-      }
+    const bytes = new Uint8Array(width * size * 4).fill(255)
+    for (const [i, value] of data.subarray(0, size * size * size * 3).entries()) {
+      const channel = i % 3
+      const triple = (i - channel) / 3
+      const r = triple % size
+      const g = Math.floor(triple / size) % size
+      const b = Math.floor(triple / (size * size))
+      bytes[(g * width + b * size + r) * 4 + channel] = Math.round(Math.min(1, Math.max(0, value)) * 255)
     }
     const texture = this.device.createTexture({
       size: { width, height: size },
@@ -236,7 +255,7 @@ export class WebGPUBackend implements RenderBackend {
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
-          view: this.acc[0]!.createView(),
+          view: this.acc[0].createView(),
           loadOp: 'clear',
           storeOp: 'store',
           clearValue: { r, g, b, a: 1 },
@@ -266,7 +285,7 @@ export class WebGPUBackend implements RenderBackend {
       this.device.createBindGroup({
         layout: this.pipelines.present.getBindGroupLayout(0),
         entries: [
-          { binding: 0, resource: this.acc[this.accIndex]!.createView() },
+          { binding: 0, resource: this.acc[this.accIndex].createView() },
           { binding: 1, resource: this.sampler },
         ],
       }),
@@ -323,8 +342,8 @@ export class WebGPUBackend implements RenderBackend {
     this.texturePool.length = 0
     for (const buffer of this.frameBuffers) buffer.destroy()
     this.frameBuffers = []
-    this.acc[0]!.destroy()
-    this.acc[1]!.destroy()
+    this.acc[0].destroy()
+    this.acc[1].destroy()
     this.identityCurves.destroy()
     for (const { texture } of this.luts.values()) texture.destroy()
     this.luts.clear()
@@ -442,11 +461,9 @@ export class WebGPUBackend implements RenderBackend {
     } else {
       uniforms.set([0, 0, 1, 1])
     }
-    const uniformBuffer = this.uniformBuffer(uniforms.buffer as ArrayBuffer)
+    const uniformBuffer = this.uniformBuffer(uniforms.buffer)
 
-    const isExternal =
-      (typeof VideoFrame !== 'undefined' && quad.image instanceof VideoFrame) ||
-      (typeof HTMLVideoElement !== 'undefined' && quad.image instanceof HTMLVideoElement)
+    const externalSource = externalTextureSource(quad.image)
 
     const encoder = this.device.createCommandEncoder()
     const pass = encoder.beginRenderPass({
@@ -455,10 +472,8 @@ export class WebGPUBackend implements RenderBackend {
       ],
     })
 
-    if (isExternal) {
-      const external = this.device.importExternalTexture({
-        source: quad.image as VideoFrame | HTMLVideoElement,
-      })
+    if (externalSource) {
+      const external = this.device.importExternalTexture({ source: externalSource })
       pass.setPipeline(this.pipelines.prepareExternal)
       pass.setBindGroup(
         0,
@@ -518,7 +533,7 @@ export class WebGPUBackend implements RenderBackend {
           { binding: 0, resource: layer.createView() },
           { binding: 1, resource: blurred.createView() },
           { binding: 2, resource: this.sampler },
-          { binding: 3, resource: { buffer: this.uniformBuffer(uniforms.buffer as ArrayBuffer) } },
+          { binding: 3, resource: { buffer: this.uniformBuffer(uniforms.buffer) } },
         ])
         this.releaseTexture(blurred)
         this.releaseTexture(layer)
@@ -534,7 +549,7 @@ export class WebGPUBackend implements RenderBackend {
           { binding: 0, resource: layer.createView() },
           { binding: 1, resource: this.sampler },
           { binding: 2, resource: lut.texture.createView() },
-          { binding: 3, resource: { buffer: this.uniformBuffer(uniforms.buffer as ArrayBuffer) } },
+          { binding: 3, resource: { buffer: this.uniformBuffer(uniforms.buffer) } },
         ])
         this.releaseTexture(layer)
         return out
@@ -555,28 +570,22 @@ export class WebGPUBackend implements RenderBackend {
     const buffer = new ArrayBuffer(16 + 16 * 48)
     const u32 = new Uint32Array(buffer)
     const f32 = new Float32Array(buffer)
-    u32[0] = Math.min(16, pass.ops.length)
-    for (let i = 0; i < Math.min(16, pass.ops.length); i++) {
+    const ops = pass.ops.slice(0, 16)
+    u32[0] = ops.length
+    for (const [i, op] of ops.entries()) {
       const base = (16 + i * 48) / 4
-      u32[base] = pass.ops[i]!.kind
+      u32[base] = op.kind
       for (let p = 0; p < 8; p++) {
-        f32[base + 4 + p] = pass.ops[i]!.params[p] ?? 0
+        f32[base + 4 + p] = op.params[p] ?? 0
       }
     }
 
     let curvesTexture = this.identityCurves
     if (pass.curves) {
       curvesTexture = this.acquireTexture(256, 1)
-      const bytes = new Uint8Array(256 * 4)
-      for (let i = 0; i < 256; i++) {
-        bytes[i * 4] = Math.round(pass.curves.r[i]! * 255)
-        bytes[i * 4 + 1] = Math.round(pass.curves.g[i]! * 255)
-        bytes[i * 4 + 2] = Math.round(pass.curves.b[i]! * 255)
-        bytes[i * 4 + 3] = 255
-      }
       this.device.queue.writeTexture(
         { texture: curvesTexture },
-        bytes,
+        curvesToRgba8(pass.curves),
         { bytesPerRow: 256 * 4 },
         { width: 256, height: 1 },
       )
@@ -648,8 +657,8 @@ export class WebGPUBackend implements RenderBackend {
       cornerRadius?: number
     },
   ): void {
-    const src = this.acc[this.accIndex]!
-    const dst = this.acc[1 - this.accIndex]!
+    const src = this.acc[this.accIndex]
+    const dst = this.acc[this.accIndex === 0 ? 1 : 0]
 
     const buffer = new ArrayBuffer(64)
     const f32 = new Float32Array(buffer)
@@ -676,7 +685,7 @@ export class WebGPUBackend implements RenderBackend {
       { binding: 2, resource: this.sampler },
       { binding: 3, resource: { buffer: this.uniformBuffer(buffer) } },
     ])
-    this.accIndex = 1 - this.accIndex
+    this.accIndex = this.accIndex === 0 ? 1 : 0
   }
 
   private renderFullscreen(
