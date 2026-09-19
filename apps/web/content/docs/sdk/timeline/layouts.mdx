@@ -202,13 +202,13 @@ function expandThumbnailTemplate(
 
 Returns text elements for the template's text items, scaled from 1080p template space to the project size and positioned from their normalized rects, and skips slot items.
 
-### findThumbnailTrack
+### findThumbnailTracks
 
 ```ts
-function findThumbnailTrack(project: Project)
+function findThumbnailTracks(project: Project): Track[]
 ```
 
-Returns the topmost track named `Thumbnail`, or `null`.
+Returns every track named `Thumbnail` in track order, one per text layer of the applied template.
 
 ### thumbnailDurationMs
 

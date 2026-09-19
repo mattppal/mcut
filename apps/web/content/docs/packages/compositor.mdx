@@ -1,12 +1,13 @@
 ---
 title: Compositor
-description: Frame rendering, hit testing, and renderer extension points.
+description: Frame rendering, hit testing, and the renderer tables.
 ---
 
 `@mcut/compositor` renders project frames. It includes the Canvas2D renderer,
-WebGPU backend support, hit-test geometry, text layout, and renderer registries.
+WebGPU backend support, hit-test geometry, text layout, and the `elementRenderers`
+and `transitionRenderers` tables.
 
-Use it when you need preview pixels, export frames, or custom renderers.
+Use it when you need preview pixels or export frames.
 
 ```sh
 bun add @mcut/compositor @mcut/timeline
