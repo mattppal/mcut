@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { isRecord } from '../../../timeline/src/fuzz/json-schema-gen'
 import type { FuzzTool } from '../../../timeline/src/fuzz/plan'
 import { parseProject, type Project } from '../../../timeline/src/model'
@@ -33,6 +34,10 @@ export class McpFuzzServer {
       stderrChunks.push(String(chunk))
       if (stderrChunks.length > 50) stderrChunks.splice(0, stderrChunks.length, stderrChunks.join('').slice(-STDERR_TAIL_CHARS))
     })
+    return McpFuzzServer.connect(transport, stderrChunks)
+  }
+
+  static async connect(transport: Transport, stderrChunks: string[] = []): Promise<McpFuzzServer> {
     const client = new Client({ name: 'mcut-fuzz', version: '0.0.0' })
     await client.connect(transport)
     return new McpFuzzServer(client, stderrChunks)
