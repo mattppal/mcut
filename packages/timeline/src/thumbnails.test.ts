@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand } from './commands'
-import { createProject, type TimelineElement } from './model'
+import { createProject, type Project, type TimelineElement } from './model'
+import { mustFind } from './test-helpers'
 import {
   captureThumbnailTemplate,
   expandThumbnailTemplate,
@@ -10,6 +11,8 @@ import {
 } from './thumbnails'
 
 const textOf = (element: TimelineElement) => (element.type === 'text' ? element.text : element.type)
+const template = (index: number) => mustFind(THUMBNAIL_TEMPLATES[index], `starter template ${index}`)
+const trackTexts = (project: Project) => project.tracks.map((track) => track.elements.map(textOf))
 
 describe('thumbnails', () => {
   test('cover spans exactly five frames, frame-quantized', () => {
@@ -36,30 +39,29 @@ describe('thumbnails', () => {
 
   test('applyThumbnail stacks one locked Thumbnail track per text layer on top', () => {
     let project = createProject({ fps: 30 })
-    project = applyCommand(project, { type: 'applyThumbnail', template: THUMBNAIL_TEMPLATES[0]! })
+    project = applyCommand(project, { type: 'applyThumbnail', template: template(0) })
     expect(project.tracks.map((t) => t.name)).toEqual(['Track 1', 'Thumbnail', 'Thumbnail'])
     const layers = findThumbnailTracks(project)
     expect(layers.map((t) => t.locked)).toEqual([true, true])
     expect(layers.map((t) => t.elements.map(textOf))).toEqual([['BIG TITLE'], ['episode label']])
-    expect(layers.map((t) => t.elements[0]!.startMs)).toEqual([0, 0])
-    expect(layers.map((t) => t.elements[0]!.durationMs)).toEqual([167, 167])
+    expect(layers.flatMap((t) => t.elements.map((e) => [e.startMs, e.durationMs]))).toEqual([[0, 167], [0, 167]])
   })
 
   test('a thumbnail headline stays editable after apply', () => {
     let project = createProject({ fps: 30 })
-    project = applyCommand(project, { type: 'applyThumbnail', template: THUMBNAIL_TEMPLATES[0]! })
-    const headline = project.tracks.flatMap((t) => t.elements).find((e) => textOf(e) === 'BIG TITLE')!
+    project = applyCommand(project, { type: 'applyThumbnail', template: template(0) })
+    const elements = (p: Project) => p.tracks.flatMap((t) => t.elements)
+    const headline = mustFind(elements(project).find((e) => textOf(e) === 'BIG TITLE'), 'headline')
     project = applyCommand(project, { type: 'updateElement', elementId: headline.id, patch: { text: 'NEW' } })
-    const edited = project.tracks.flatMap((t) => t.elements).find((e) => e.id === headline.id)!
-    expect(textOf(edited)).toBe('NEW')
+    expect(elements(project).filter((e) => e.id === headline.id).map(textOf)).toEqual(['NEW'])
   })
 
   test('re-applying a template replaces the text layers', () => {
     let project = createProject({ fps: 30 })
-    project = applyCommand(project, { type: 'applyThumbnail', template: THUMBNAIL_TEMPLATES[0]! })
-    project = applyCommand(project, { type: 'applyThumbnail', template: THUMBNAIL_TEMPLATES[2]! })
+    project = applyCommand(project, { type: 'applyThumbnail', template: template(0) })
+    project = applyCommand(project, { type: 'applyThumbnail', template: template(2) })
     expect(project.tracks.map((t) => t.name)).toEqual(['Track 1', 'Thumbnail'])
-    expect(project.tracks[1]!.elements.map(textOf)).toEqual(['ONE BIG WORD'])
+    expect(trackTexts(project)).toEqual([[], ['ONE BIG WORD']])
   })
 
   test('re-applying keeps an image layer placed on a Thumbnail track', () => {
@@ -74,12 +76,12 @@ describe('thumbnails', () => {
       trackId: 't-face',
       element: { id: 'e-face', type: 'image', assetId: 'a-face', startMs: 0, durationMs: 167 },
     })
-    project = applyCommand(project, { type: 'applyThumbnail', template: THUMBNAIL_TEMPLATES[0]! })
-    project = applyCommand(project, { type: 'applyThumbnail', template: THUMBNAIL_TEMPLATES[2]! })
+    project = applyCommand(project, { type: 'applyThumbnail', template: template(0) })
+    project = applyCommand(project, { type: 'applyThumbnail', template: template(2) })
     expect(project.tracks.map((t) => t.name)).toEqual(['Track 1', 'Thumbnail', 'Thumbnail'])
-    expect(project.tracks[1]!.elements.map((e) => e.id)).toEqual(['e-face'])
-    expect(project.tracks[2]!.elements.map(textOf)).toEqual(['ONE BIG WORD'])
-    expect(captureThumbnailTemplate(project, 'Mine')!.items.map((i) => i.kind)).toEqual(['slot', 'text'])
+    expect(trackTexts(project)).toEqual([[], ['image'], ['ONE BIG WORD']])
+    expect(project.tracks.flatMap((t) => t.elements.map((e) => e.id))).toContain('e-face')
+    expect(captureThumbnailTemplate(project, 'Mine')?.items.map((i) => i.kind)).toEqual(['slot', 'text'])
   })
 
   test('capture round-trips an applied cover', () => {

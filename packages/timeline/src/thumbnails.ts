@@ -13,11 +13,9 @@ import {
 
 /**
  * Thumbnails: a composition recipe for the video's FIRST FIVE FRAMES — real
- * elements on locked topmost "Thumbnail" tracks, one per layer (layers are
- * simultaneous, and a track never holds overlapping elements), so unlike
- * CapCut's cover (project metadata that vanishes on export) the cover is
- * baked into the exported video by construction, remains hand-editable on
- * the canvas, and can be re-captured as a reusable template.
+ * elements on locked topmost "Thumbnail" tracks, one per text layer since a
+ * track never holds overlapping elements. Unlike CapCut's cover (metadata
+ * that vanishes on export) it is baked in, hand-editable, and re-capturable.
  *
  * Template geometry is normalized (0..1 rects, font sizes relative to 1080p)
  * so one template fits any project size — louisville's draft pattern.
@@ -174,16 +172,10 @@ export function captureThumbnailTemplate(
 
 export const THUMBNAIL_TRACK_NAME = 'Thumbnail'
 
-/** Every Thumbnail track in paint order (bottom layer first). */
 export function findThumbnailTracks(project: Project): Track[] {
   return project.tracks.filter((track) => track.name === THUMBNAIL_TRACK_NAME)
 }
 
-/**
- * Replace the cover's text layers with a template: one locked Thumbnail
- * track per text item on top of the timeline. Image layers the UI placed
- * keep their tracks; a Thumbnail track left empty is dropped.
- */
 export function applyThumbnailTemplate(project: Project, template: ThumbnailTemplate): Project {
   const kept = project.tracks.flatMap((track) => {
     if (track.name !== THUMBNAIL_TRACK_NAME) return [track]
