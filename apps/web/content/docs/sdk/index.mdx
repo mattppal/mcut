@@ -1,30 +1,32 @@
 ---
 title: SDK Reference
-description: Generated TypeScript API docs for the public mcut packages.
+description: Hand-written TypeScript API reference for the public mcut packages.
 ---
 
-This section is generated from public TypeScript exports. Use it when you need
-exact function signatures, option fields, or type names.
+This section lists every export of the published packages with its signature
+and one sentence on what it does. It is the place for exact function
+signatures, option fields, and type names.
 
 For a shorter explanation of what to use, start with [Packages](/docs/packages/timeline)
 and [Package architecture](/docs/concepts/package-architecture).
 
 ## Packages
 
-- [`@mcut/timeline`](/docs/sdk/reference/timeline/src)
-- [`@mcut/editor`](/docs/sdk/reference/editor/src)
-- [`@mcut/react`](/docs/sdk/reference/react/src)
-- [`@mcut/compositor`](/docs/sdk/reference/compositor/src)
-- [`@mcut/media`](/docs/sdk/reference/media/src)
-- [`@mcut/transcription`](/docs/sdk/reference/transcription/src)
-- [`@mcut/transcription-ai-sdk`](/docs/sdk/reference/transcription-ai-sdk/src)
-- [`@mcut/transcription-assemblyai`](/docs/sdk/reference/transcription-assemblyai/src)
-- [`@mcut/transcription-local`](/docs/sdk/reference/transcription-local/src)
+- [`@mcut/timeline`](/docs/sdk/timeline)
+- [`@mcut/editor`](/docs/sdk/editor)
+- [`@mcut/react`](/docs/sdk/react)
+- [`@mcut/compositor`](/docs/sdk/compositor)
+- [`@mcut/media`](/docs/sdk/media)
+- [`@mcut/transcription`](/docs/sdk/transcription)
+- [`@mcut/transcription-ai-sdk`](/docs/sdk/transcription-ai-sdk)
+- [`@mcut/transcription-assemblyai`](/docs/sdk/transcription-assemblyai)
+- [`@mcut/transcription-local`](/docs/sdk/transcription-local)
 
-## Regenerate
+## Conventions
 
-```sh
-bun run docs:sdk
-```
+Each package page opens with a one-line purpose and an install command, then
+lists exports grouped as types, schemas, constants, functions, classes, hooks,
+and components. Signatures are copied from the package source. Larger
+packages split across several pages with an index that links them.
 
-The generated pages live under `apps/web/content/docs/sdk/reference`.
+The pages are maintained by hand alongside the source.

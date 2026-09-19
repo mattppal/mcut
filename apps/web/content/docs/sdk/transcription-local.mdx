@@ -1,0 +1,292 @@
+---
+title: "@mcut/transcription-local"
+description: "In-browser transcription provider with audio chunking and WAV helpers."
+---
+
+`@mcut/transcription-local` runs speech recognition in the browser with Transformers.js and prepares audio through chunking, voice activity detection, and WAV encoding.
+
+## Install
+
+```sh
+bun add @mcut/transcription-local
+```
+
+## Types
+
+### AudioChunk
+
+```ts
+interface AudioChunk {
+  startS: number
+  endS: number
+}
+```
+
+One window of audio with start and end in seconds.
+
+### ChunkResult
+
+```ts
+interface ChunkResult {
+  chunk: AudioChunk
+  words: TranscriptWord[]
+}
+```
+
+The timed words a model produced for one chunk.
+
+### ChunkSegmentResult
+
+```ts
+interface ChunkSegmentResult {
+  chunk: AudioChunk
+  segments: TranscriptSegment[]
+}
+```
+
+The timed segments a model produced for one chunk.
+
+### RepetitionOptions
+
+```ts
+interface RepetitionOptions {
+  maxNgram?: number
+  minRepeats?: number
+}
+```
+
+Limits for repetition detection, the longest n-gram checked and the consecutive repeats that count as a loop.
+
+### SpeechActivity
+
+```ts
+interface SpeechActivity {
+  activeFraction: number
+  peakRms: number
+}
+```
+
+Energy statistics for an audio window, the active frame fraction and the peak frame RMS.
+
+### DecodedAudio
+
+```ts
+interface DecodedAudio {
+  samples: Float32Array
+  sampleRate: number
+}
+```
+
+Mono audio samples with their sample rate.
+
+### WhisperDtype
+
+```ts
+type WhisperDtype = 'auto' | 'fp32' | 'fp16' | 'q8' | 'int8' | 'uint8' | 'q4' | 'q4f16'
+```
+
+Quantization levels the worker accepts, a subset of the Transformers.js data types.
+
+### WhisperWorkerConfig
+
+```ts
+interface WhisperWorkerConfig {
+  model: string
+  device: 'webgpu' | 'wasm'
+  dtype: WhisperDtype
+}
+```
+
+Model id, inference device, and quantization sent to the Whisper worker.
+
+### WhisperWorkerRequest
+
+```ts
+type WhisperWorkerRequest = WhisperTranscribeRequest
+```
+
+A message from the provider to the worker, currently only a transcribe request.
+
+### WhisperWorkerResponse
+
+```ts
+type WhisperWorkerResponse =
+  | { type: 'ready' }
+  | {
+      type: 'progress'
+      id: number
+      progress: number
+      phase: 'model' | 'transcribe'
+    }
+  | { type: 'result'; id: number; result: TranscriptResult }
+  | { type: 'error'; id: number; message: string }
+```
+
+A message from the worker to the provider, one of ready, progress, result, or error.
+
+### LocalWhisperProgress
+
+```ts
+interface LocalWhisperProgress {
+  phase: 'model' | 'transcribe'
+  progress: number
+}
+```
+
+A progress report with the current phase, model loading or transcription, and a 0 to 1 fraction within it.
+
+### CreateLocalWhisperProviderOptions
+
+```ts
+interface CreateLocalWhisperProviderOptions {
+  model?: keyof typeof WHISPER_MODELS | (string & {})
+  device?: 'webgpu' | 'wasm'
+  dtype?: WhisperDtype
+  onProgress?: (progress: LocalWhisperProgress) => void
+  createWorker?: () => Worker
+  id?: string
+}
+```
+
+Options for `createLocalWhisperProvider`, covering model, device, quantization, progress callback, worker factory, and provider id.
+
+## Constants
+
+### CHUNK_OVERLAP_S
+
+```ts
+const CHUNK_OVERLAP_S = 5
+```
+
+Default overlap between consecutive audio chunks, in seconds.
+
+### CHUNK_WINDOW_S
+
+```ts
+const CHUNK_WINDOW_S = 30
+```
+
+Default audio chunk length, in seconds.
+
+### WHISPER_SAMPLE_RATE
+
+```ts
+const WHISPER_SAMPLE_RATE = 16_000
+```
+
+The sample rate Whisper models expect, 16000 Hz.
+
+### WHISPER_MODELS
+
+```ts
+const WHISPER_MODELS = {
+  base: 'onnx-community/whisper-base',
+  'tiny.en': 'onnx-community/whisper-tiny.en',
+} as const
+```
+
+Built-in model ids, ONNX community builds of Whisper base and Whisper tiny English.
+
+## Functions
+
+### mergeChunkSegments
+
+```ts
+function mergeChunkSegments(results: ChunkSegmentResult[]): TranscriptSegment[]
+```
+
+Merges per-chunk segment lists with the same overlap cut strategy as `mergeChunkWords` and returns the segments sorted by start time.
+
+### mergeChunkWords
+
+```ts
+function mergeChunkWords(results: ChunkResult[]): TranscriptWord[]
+```
+
+Merges per-chunk word lists by cutting each overlap at the largest silence between the incoming chunk's words, keeping earlier words from the outgoing chunk and later words from the incoming one.
+
+### planChunks
+
+```ts
+function planChunks(
+  durationS: number,
+  windowS = CHUNK_WINDOW_S,
+  overlapS = CHUNK_OVERLAP_S,
+): AudioChunk[]
+```
+
+Splits a duration in seconds into overlapping windows, where the last window may be shorter.
+
+### hasRepetitionLoop
+
+```ts
+function hasRepetitionLoop(tokens: readonly string[], options: RepetitionOptions = {}): boolean
+```
+
+Returns `true` when the token stream repeats the same n-gram enough times in a row to count as a decoder loop.
+
+### textHasRepetitionLoop
+
+```ts
+function textHasRepetitionLoop(text: string, options?: RepetitionOptions): boolean
+```
+
+Splits text on whitespace and returns the `hasRepetitionLoop` result for the tokens.
+
+### hasSpeech
+
+```ts
+function hasSpeech(samples: Float32Array, sampleRate: number): boolean
+```
+
+Returns `true` when the peak frame energy and the fraction of active frames both clear the silence thresholds.
+
+### measureActivity
+
+```ts
+function measureActivity(samples: Float32Array, sampleRate: number): SpeechActivity
+```
+
+Splits samples into 30 ms frames and returns the fraction of frames above the energy threshold together with the peak frame RMS.
+
+### parseWav
+
+```ts
+function parseWav(buffer: ArrayBuffer): DecodedAudio | null
+```
+
+Decodes a PCM or float WAV buffer into mono samples and a sample rate, or returns `null` when the buffer is not a WAV file.
+
+### resampleTo
+
+```ts
+function resampleTo(audio: DecodedAudio, targetRate: number): Float32Array
+```
+
+Resamples decoded audio to the target rate with linear interpolation, returning the same samples when the rate already matches.
+
+### isLocalTranscriptionSupported
+
+```ts
+function isLocalTranscriptionSupported(): boolean
+```
+
+Returns `true` when workers and WebGPU are available and reported device memory is at least 4 GB or unreported.
+
+### pickDefaultModel
+
+```ts
+function pickDefaultModel(): string
+```
+
+Returns the tiny English model id when reported device memory is under 8 GB and the base model id otherwise.
+
+### createLocalWhisperProvider
+
+```ts
+function createLocalWhisperProvider(
+  options: CreateLocalWhisperProviderOptions = {},
+): TranscriptionProvider
+```
+
+Returns a `TranscriptionProvider` that decodes audio to 16 kHz mono and transcribes it in a dedicated Whisper worker that is reused across calls.
