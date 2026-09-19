@@ -1,0 +1,12 @@
+{
+  "name": "mcut-electron-local-mcp-spike",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "start": "electron . --no-sandbox"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0"
+  }
+}
