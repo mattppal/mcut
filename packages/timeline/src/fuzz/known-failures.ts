@@ -7,12 +7,7 @@ export interface KnownFailure {
   detail?: RegExp
 }
 
-const issues = 'https://github.com/mattppal/mcut/issues'
-const edgeTrims = ['trimEdge', 'rippleTrim', 'rollEdit', 'slideElement']
-
-export const knownFailures: readonly KnownFailure[] = [
-  { issue: `${issues}/45`, tools: edgeTrims, invariants: ['round-trip'], detail: /too_big/ },
-]
+export const knownFailures: readonly KnownFailure[] = []
 
 export function matchKnownFailure(
   tool: string,
