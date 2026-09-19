@@ -1,13 +1,5 @@
 import { defineConfig } from "@playwright/test";
 
-/**
- * Editor e2e smoke. Every parity batch ships with a spec here — keyboard
- * behavior regresses invisibly otherwise.
- *
- * Local: `bun run build && bunx playwright test` (set MCUT_CHROME_PATH to a
- * Chrome binary to skip the managed-browser download).
- * CI: the e2e job builds, installs chromium, and runs this.
- */
 export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,

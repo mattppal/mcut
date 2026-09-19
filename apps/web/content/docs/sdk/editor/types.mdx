@@ -1,0 +1,268 @@
+---
+title: "Types"
+description: "Types and Zod schemas exported by @mcut/editor."
+---
+
+## Types
+
+### EditorOperator
+
+```ts
+interface EditorOperator<Input = unknown, Output = unknown> {
+  id: string
+  label: string
+  description: string
+  category: OperatorCategory
+  inputSchema: z.ZodType<Input, unknown>
+  enabled?: (context: EditorOperatorContext, input: Input) => EnabledResult
+  run: (context: EditorOperatorContext, input: Input) => Output | Promise<Output>
+}
+```
+
+A named editor operation with a category, a Zod input schema, an optional enabled check, and a run function that receives the engine.
+
+### EditorOperatorContext
+
+```ts
+interface EditorOperatorContext {
+  engine: EditorEngine
+}
+```
+
+The context passed to operators, the `EditorEngine` to act on.
+
+### EnabledResult
+
+```ts
+type EnabledResult = boolean | { enabled: boolean; reason?: string }
+```
+
+The result of an operator's enabled check, a boolean or an object with an optional reason for being disabled.
+
+### ListedEditorOperator
+
+```ts
+interface ListedEditorOperator {
+  id: string
+  label: string
+  description: string
+  category: OperatorCategory
+  enabled: boolean
+  disabledReason?: string
+  inputSchema: z.ZodType<unknown, unknown>
+}
+```
+
+An operator as reported by `listAvailable`, with its enabled state and disabled reason resolved for a context.
+
+### OperatorCategory
+
+```ts
+type OperatorCategory =
+  | 'playback'
+  | 'selection'
+  | 'clipboard'
+  | 'edit'
+  | 'track'
+  | 'keyframes'
+  | 'markers'
+  | 'multicam'
+  | 'media'
+  | 'view'
+```
+
+The menu category an operator belongs to.
+
+### SequentialCollageLayout
+
+```ts
+type SequentialCollageLayout = 'horizontal' | 'vertical' | 'auto'
+```
+
+Slot arrangement for a collage, side by side, stacked, or `auto`, which stacks landscape videos and places portrait or square videos side by side.
+
+### SequentialVideoCollageOptions
+
+```ts
+interface SequentialVideoCollageOptions {
+  assets: readonly AssetRef[]
+  layout?: SequentialCollageLayout
+  zooms?: readonly number[]
+  replaceTimeline?: boolean
+  lockTracks?: boolean
+  magnetic?: boolean
+}
+```
+
+Options for `createSequentialVideoCollage`, the assets in playback order plus layout, per-video zoom, and track replacement, locking, and magnetic flags.
+
+### SequentialVideoCollageResult
+
+```ts
+interface SequentialVideoCollageResult {
+  layout: Exclude<SequentialCollageLayout, 'auto'>
+  totalDurationMs: number
+  groupIds: GroupId[]
+  visualTrackIds: `t-${string}`[]
+  activeVideoElementIds: `e-${string}`[]
+  freezeElementIds: `e-${string}`[]
+  audioElementIds: `e-${string}`[]
+  trackIds: `t-${string}`[]
+  videoElementIds: `e-${string}`[]
+}
+```
+
+The ids and layout produced by a collage build, including group, track, active video, freeze, and audio element ids.
+
+### TextPreset
+
+```ts
+interface TextPreset {
+  name: string
+  text: string
+  durationMs: number
+  style: Partial<TextStyle>
+  y?: number
+}
+```
+
+A named text style bundle with default text, duration, style overrides, and an optional vertical offset.
+
+### AutoCrossfadePlanInput
+
+```ts
+interface AutoCrossfadePlanInput {
+  elementId: ElementId
+  desiredStartMs: number
+  minAttemptedOverlapMs?: number
+  maxAttemptedOverlapMs?: number
+  minDurationMs?: number
+  maxDurationMs?: number
+  transitionType?: string
+}
+```
+
+Input for `planAutoCrossfade`, the dragged element, its desired start, overlap and duration limits, and the transition type.
+
+### ClipDragBase
+
+```ts
+interface ClipDragBase {
+  startMs: number
+  durationMs: number
+  trimStartMs?: number
+  reversed?: boolean
+  hasTimeMap?: boolean
+  trackIndex: number
+}
+```
+
+The state of one clip when a drag starts.
+
+### ClipDragMode
+
+```ts
+type ClipDragMode =
+  | 'move'
+  | 'trim-start'
+  | 'trim-end'
+  | 'ripple-start'
+  | 'ripple-end'
+  | 'roll-start'
+  | 'roll-end'
+  | 'slip'
+  | 'slide'
+```
+
+The drag tools a clip gesture can perform.
+
+### DuplicateClipsToNewTracksOptions
+
+```ts
+interface DuplicateClipsToNewTracksOptions {
+  createTrackId?: () => Track['id']
+  createElementId?: () => ElementId
+}
+```
+
+Optional id factories for the tracks and elements created by `planDuplicateClipsToNewTracks`.
+
+### DuplicateClipsToNewTracksPlan
+
+```ts
+interface DuplicateClipsToNewTracksPlan {
+  commands: AnyCommand[]
+  ids: ElementId[]
+  createdTrackIds: Track['id'][]
+}
+```
+
+The commands, new element ids, and new track ids produced by `planDuplicateClipsToNewTracks`.
+
+### ResolvedClipDragMode
+
+```ts
+interface ResolvedClipDragMode {
+  mode: ClipDragMode
+  rollTargetId: ElementId | null
+}
+```
+
+The drag mode after fallback, with the id of the clip whose edge rolls or `null`.
+
+### SilenceCutOptions
+
+```ts
+interface SilenceCutOptions {
+  minGapMs?: number
+  paddingMs?: number
+  minKeepMs?: number
+  trimEnds?: boolean
+}
+```
+
+Thresholds for `planSilenceCuts`, the minimum gap, padding around cuts, minimum kept speech, and whether to trim both ends.
+
+### SilenceCutPlan
+
+```ts
+interface SilenceCutPlan {
+  silences: SilenceWindow[]
+  commands: AnyCommand[]
+  removedMs: number
+  project: Project
+}
+```
+
+The silences cut, the commands applied in order, the total removed time, and the resulting project.
+
+### SilenceCutTranscript
+
+```ts
+interface SilenceCutTranscript {
+  words: Array<{ startMs: number; endMs: number }>
+}
+```
+
+The word timings `planSilenceCuts` reads, in source media time.
+
+### SilenceWindow
+
+```ts
+interface SilenceWindow {
+  startMs: number
+  endMs: number
+}
+```
+
+A span of source media time.
+
+## Schemas
+
+### emptyInputSchema
+
+```ts
+const emptyInputSchema = z.object({})
+```
+
+Zod schema for operators that take no input.

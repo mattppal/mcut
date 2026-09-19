@@ -1,0 +1,335 @@
+---
+title: "Functions"
+description: "Functions and constants exported by @mcut/media."
+---
+
+## Constants
+
+### DEFAULT_ACTIVITY_FRAME_MS
+
+```ts
+const DEFAULT_ACTIVITY_FRAME_MS = 30
+```
+
+Default analysis frame length for audio activity, 30 ms.
+
+### DEFAULT_ACTIVITY_THRESHOLD
+
+```ts
+const DEFAULT_ACTIVITY_THRESHOLD = 0.004
+```
+
+Default RMS level above which a frame counts as sound.
+
+### DEFAULT_MIN_SILENCE_MS
+
+```ts
+const DEFAULT_MIN_SILENCE_MS = 120
+```
+
+Default length below which a silent run is treated as sound, 120 ms.
+
+### DEFAULT_MIN_SOUND_MS
+
+```ts
+const DEFAULT_MIN_SOUND_MS = 120
+```
+
+Default length below which a sound run is treated as silence, 120 ms.
+
+### MAX_HASHABLE_BYTES
+
+```ts
+const MAX_HASHABLE_BYTES = 512 * 1024 * 1024
+```
+
+The largest blob size that `hashBlob` will digest, 512 MiB.
+
+## Functions
+
+### createAssetFromFile
+
+```ts
+async function createAssetFromFile(file: File): Promise<AssetRef>
+```
+
+Probes a picked or dropped file and returns an `AssetRef` with an object URL as `src` and a SHA-256 `hash` when the file is small enough to hash.
+
+### inputFor
+
+```ts
+function inputFor(src: MediaSourceLike): Input
+```
+
+Opens a Mediabunny `Input` over a blob or a blob or HTTP URL.
+
+### probeImage
+
+```ts
+function probeImage(src: string): Promise<{ width: number; height: number }>
+```
+
+Loads an image URL in the browser and resolves with its intrinsic width and height.
+
+### probeMedia
+
+```ts
+async function probeMedia(src: MediaSourceLike): Promise<MediaProbe>
+```
+
+Reads the duration, dimensions, track presence, and MIME type of an audio or video file.
+
+### getVideoThumbnail
+
+```ts
+async function getVideoThumbnail(
+  src: MediaSourceLike,
+  options: ThumbnailOptions = {},
+): Promise<HTMLCanvasElement | OffscreenCanvas | null>
+```
+
+Captures one poster frame from a video into a canvas, preferring native video capture and falling back to a Mediabunny canvas sink, or returns `null` for audio-only files.
+
+### getVideoThumbnailUrl
+
+```ts
+async function getVideoThumbnailUrl(
+  src: MediaSourceLike,
+  options: ThumbnailOptions = {},
+): Promise<string | null>
+```
+
+Returns a poster frame as a data URL, or `null` for audio-only files.
+
+### extractAudioToWav
+
+```ts
+async function extractAudioToWav(
+  src: MediaSourceLike,
+  options: ExtractAudioOptions = {},
+): Promise<Blob | null>
+```
+
+Decodes a file's audio track into a PCM WAV blob at 16 kHz mono by default, retrying without resampling when conversion fails, or returns `null` when there is no audio track.
+
+### ensureFallbackAudioEncoders
+
+```ts
+function ensureFallbackAudioEncoders(): Promise<void>
+```
+
+Registers the WASM AAC encoder once when the runtime cannot encode AAC natively, loading it on demand.
+
+### getActiveMediaItems
+
+```ts
+function getActiveMediaItems(project: Project, timeMs: number): ActiveMediaItem[]
+```
+
+Returns the video and audio items the preview pool keeps live at `timeMs`, with their source time, rate, volume, and reversal.
+
+### exportProject
+
+```ts
+async function exportProject(
+  project: Project,
+  options: ExportProjectOptions = {},
+): Promise<ExportResult>
+```
+
+Renders a project to a video file in the browser, mixing audio on the main thread and then decoding, compositing, encoding, and muxing frames in a worker when one is available.
+
+### getExportSupport
+
+```ts
+async function getExportSupport(format: ContainerFormatId = 'mp4'): Promise<{
+  video: boolean
+  audio: boolean
+}>
+```
+
+Resolves with whether the browser can encode video and audio for the given container format.
+
+### getContainerFormat
+
+```ts
+function getContainerFormat(id: string): ContainerFormatEntry | undefined
+```
+
+Returns the container format registered under the id, or `undefined`.
+
+### listContainerFormats
+
+```ts
+function listContainerFormats(): ContainerFormatEntry[]
+```
+
+Returns every registered container format in registration order, built-ins first.
+
+### registerContainerFormat
+
+```ts
+function registerContainerFormat(entry: ContainerFormatEntry): void
+```
+
+Registers a container format and throws when the id is already registered.
+
+### getFilmstrip
+
+```ts
+async function getFilmstrip(
+  src: MediaSourceLike,
+  options: FilmstripOptions,
+): Promise<Filmstrip | null>
+```
+
+Draws evenly spaced frames of a video side by side into one canvas, preferring native video capture and falling back to a Mediabunny canvas sink, or returns `null`.
+
+### canUseNativeVideoPreview
+
+```ts
+function canUseNativeVideoPreview(media: VideoPreviewCapability): boolean
+```
+
+Returns `true` when an asset plays through a native video element rather than decoded frames, based on its `nativePreview` flag, container, and `canPlayType`.
+
+### isMatroskaLike
+
+```ts
+function isMatroskaLike(media: VideoPreviewCapability): boolean
+```
+
+Returns `true` when the file name or MIME type indicates a Matroska container.
+
+### bucketPeaks
+
+```ts
+function bucketPeaks(samples: Float32Array, buckets: number): Float32Array
+```
+
+Folds samples into the given number of buckets, each holding the maximum absolute amplitude of its span.
+
+### extractAudioPeaks
+
+```ts
+async function extractAudioPeaks(
+  src: MediaSourceLike,
+  options: AudioPeaksOptions = {},
+): Promise<AudioPeaks | null>
+```
+
+Decodes a file's audio and reduces it to waveform peaks over the source range, or returns `null` when there is no audio track.
+
+### analyzeAudioActivity
+
+```ts
+async function analyzeAudioActivity(
+  src: MediaSourceLike,
+  options: AudioActivityOptions = {},
+): Promise<AudioActivity | null>
+```
+
+Decodes a media source's primary audio track and returns its sound and silence windows, or `null` when there is no audio track.
+
+### analyzeAudioSamples
+
+```ts
+function analyzeAudioSamples(
+  samples: Float32Array,
+  sampleRate: number,
+  options: AudioActivityOptions = {},
+): AudioActivity
+```
+
+Splits mono PCM samples into frames, classifies them by RMS, smooths short runs, and returns sound and silence windows with a summary.
+
+### hashBlob
+
+```ts
+async function hashBlob(blob: Blob): Promise<string | null>
+```
+
+Returns the SHA-256 hex digest of a blob, or `null` when the store is unsupported or the blob is too large.
+
+### isMediaStoreSupported
+
+```ts
+function isMediaStoreSupported(): boolean
+```
+
+Returns `true` when the origin private file system and WebCrypto are available.
+
+### loadMediaBlob
+
+```ts
+async function loadMediaBlob(hash: string): Promise<Blob | null>
+```
+
+Loads the blob stored under a hash from the origin private file system, or `null`.
+
+### pruneMediaBlobs
+
+```ts
+async function pruneMediaBlobs(keep: ReadonlySet<string>): Promise<number>
+```
+
+Deletes stored blobs whose hash is not in `keep` and returns how many were removed.
+
+### saveMediaBlob
+
+```ts
+async function saveMediaBlob(hash: string, blob: Blob): Promise<boolean>
+```
+
+Stores a blob under its hash in the origin private file system, skipping the write when it is already present, and returns whether it is stored.
+
+### constantSpeedOf
+
+```ts
+function constantSpeedOf(timeMap: TimeMap | undefined): ConstantSpeed | null
+```
+
+Returns the constant rate and source span a two-point linear time map encodes, or `null` for ramps and freezes.
+
+### stretchStereo
+
+```ts
+async function stretchStereo(data: StereoData, tempo: number): Promise<StereoData>
+```
+
+Stretches stereo PCM by `tempo` with pitch preserved, so a tempo of 2 yields half the length.
+
+### crossCorrelateEnvelopes
+
+```ts
+function crossCorrelateEnvelopes(
+  a: Float32Array,
+  b: Float32Array,
+  maxLagBuckets: number,
+): { lag: number; confidence: number }
+```
+
+Cross-correlates two zero-meaned envelopes over a bounded lag range and returns the lag in buckets that best aligns `b` to `a` together with a confidence score.
+
+### extractEnvelope
+
+```ts
+async function extractEnvelope(
+  src: MediaSourceLike,
+  { windowS = 60, rateHz = 100, signal }: AudioSyncOptions = {},
+): Promise<Float32Array | null>
+```
+
+Decodes the first `windowS` seconds of a source's audio into an RMS envelope at `rateHz` buckets per second, or `null` without audio.
+
+### findSyncOffsetMs
+
+```ts
+async function findSyncOffsetMs(
+  a: MediaSourceLike,
+  b: MediaSourceLike,
+  options: AudioSyncOptions = {},
+): Promise<SyncResult | null>
+```
+
+Returns how many milliseconds after recording `a` started recording `b` started, with a confidence score, or `null` when either has no audio.

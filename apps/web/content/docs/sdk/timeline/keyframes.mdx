@@ -1,0 +1,224 @@
+---
+title: "Keyframes"
+description: "Keyframe schemas, easing, track interpolation, and animated element resolution."
+---
+
+## Types
+
+### AnimatableProperty
+
+```ts
+type AnimatableProperty = z.infer<typeof animatablePropertySchema>
+```
+
+An animatable property name as inferred from `animatablePropertySchema`.
+
+### Easing
+
+```ts
+type Easing = z.infer<typeof easingSchema>
+```
+
+An easing as inferred from `easingSchema`.
+
+### Keyframe
+
+```ts
+type Keyframe = z.infer<typeof keyframeSchema>
+```
+
+A keyframe as inferred from `keyframeSchema`.
+
+### KeyframeMap
+
+```ts
+type KeyframeMap = z.infer<typeof keyframesSchema>
+```
+
+A keyframe map as inferred from `keyframesSchema`.
+
+## Schemas
+
+### ANIMATABLE_PROPERTIES
+
+```ts
+const ANIMATABLE_PROPERTIES = animatablePropertySchema.options
+```
+
+The options of `animatablePropertySchema` as a readonly array.
+
+### animatablePropertySchema
+
+```ts
+const animatablePropertySchema = z.enum([
+  'position.x',
+  'position.y',
+  'scale.x',
+  'scale.y',
+  'rotation',
+  'opacity',
+  'blur',
+  'volume',
+  'letterSpacing',
+])
+```
+
+Zod schema for the nine keyframeable properties, position, scale, rotation, opacity, blur, volume, and letter spacing.
+
+### easingSchema
+
+```ts
+const easingSchema = z.union([
+  z.enum(['linear', 'hold', 'easeIn', 'easeOut', 'easeInOut']),
+  z.object({ cubicBezier: z.tuple([z.number(), z.number(), z.number(), z.number()]) }),
+])
+```
+
+Zod schema for the interpolation toward the next keyframe, a named easing or a `cubicBezier` tuple, where `hold` steps.
+
+### keyframeSchema
+
+```ts
+const keyframeSchema = z.object({
+  timeMs: z.number().int().nonnegative(),
+  value: z.number(),
+  easing: easingSchema.optional(),
+})
+```
+
+Zod schema for one keyframe, an integer element-local time, a value, and an optional outgoing easing.
+
+### keyframesSchema
+
+```ts
+const keyframesSchema = z.partialRecord(animatablePropertySchema, z.array(keyframeSchema))
+```
+
+Zod schema for a keyframe map, one keyframe track per animatable property.
+
+## Functions
+
+### animatableProperties
+
+```ts
+function animatableProperties(element: TimelineElement): AnimatableProperty[]
+```
+
+Returns the animatable properties the element's registered type declares as keyframeable.
+
+### cubicBezierAt
+
+```ts
+function cubicBezierAt(points: readonly [number, number, number, number], x: number): number
+```
+
+Returns the y value of a CSS-style cubic bezier timing curve at progress `x`, solving for the curve parameter with Newton steps and a bisection fallback.
+
+### elementSupportsProperty
+
+```ts
+function elementSupportsProperty(
+  element: TimelineElement,
+  property: AnimatableProperty,
+): boolean
+```
+
+Returns `true` when the element's type declares the property as keyframeable.
+
+### evaluateEasing
+
+```ts
+function evaluateEasing(easing: Easing | undefined, t: number): number
+```
+
+Returns eased progress for linear progress `t`, where `linear` and `undefined` pass through, `hold` returns 0, and other easings evaluate their bezier.
+
+### getAnimatedValue
+
+```ts
+function getAnimatedValue(
+  element: TimelineElement,
+  property: AnimatableProperty,
+  timelineMs: number,
+): number
+```
+
+Returns the property value at a timeline time, interpolated from its keyframe track when one exists and static otherwise.
+
+### getKeyframes
+
+```ts
+function getKeyframes(
+  element: TimelineElement,
+  property: AnimatableProperty,
+): Keyframe[]
+```
+
+Returns the keyframe track for a property, or an empty array.
+
+### getStaticValue
+
+```ts
+function getStaticValue(element: TimelineElement, property: AnimatableProperty): number
+```
+
+Returns the unanimated value of a property from the element's fields, 0 for `blur`, or `NaN` when the element has no such field.
+
+### hasKeyframes
+
+```ts
+function hasKeyframes(element: TimelineElement, property?: AnimatableProperty): boolean
+```
+
+Returns `true` when the element has a non-empty track for the property, or for any property when none is given.
+
+### interpolateTrack
+
+```ts
+function interpolateTrack(track: readonly Keyframe[], localMs: number): number
+```
+
+Returns the value of a keyframe track at an element-local time, holding the first value before the track and the last value after it, or `NaN` for an empty track.
+
+### isOnKeyframe
+
+```ts
+function isOnKeyframe(
+  element: TimelineElement,
+  property: AnimatableProperty,
+  timelineMs: number,
+  toleranceMs = 1,
+): boolean
+```
+
+Returns `true` when a keyframe on the property lies within `toleranceMs` of the timeline time.
+
+### resolveAnimatedElement
+
+```ts
+function resolveAnimatedElement<E extends TimelineElement>(
+  element: E,
+  timelineMs: number,
+): E
+```
+
+Returns a copy of the element with every keyframed property resolved at the timeline time, appending an animated blur as an effect, or the same element when it has no keyframes.
+
+### splitKeyframes
+
+```ts
+function splitKeyframes(
+  keyframes: KeyframeMap | undefined,
+  offsetMs: number,
+): { left: KeyframeMap | undefined; right: KeyframeMap | undefined }
+```
+
+Splits a keyframe map at an element-local offset into maps for both halves, adding boundary keyframes with the interpolated value so motion stays continuous across the cut.
+
+### upsertKeyframe
+
+```ts
+function upsertKeyframe(track: readonly Keyframe[], keyframe: Keyframe): Keyframe[]
+```
+
+Returns the track with the keyframe inserted or replaced at its time, kept sorted.
