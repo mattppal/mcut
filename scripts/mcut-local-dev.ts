@@ -13,23 +13,11 @@ function integerEnv(name: string): number | undefined {
 }
 
 export function localStudioPort(): number {
-  return integerEnv('MCUT_STUDIO_PORT') ?? integerEnv('CONDUCTOR_PORT') ?? DEFAULT_STUDIO_PORT
+  return integerEnv('MCUT_STUDIO_PORT') ?? DEFAULT_STUDIO_PORT
 }
 
 export function localBridgePort(): number {
-  const configured = integerEnv('MCUT_BRIDGE_PORT')
-  if (configured !== undefined) return configured
-
-  const conductorPort = integerEnv('CONDUCTOR_PORT')
-  if (conductorPort !== undefined) {
-    const bridgePort = conductorPort + 1
-    if (bridgePort > 65535) {
-      throw new Error('CONDUCTOR_PORT is too high to derive MCUT_BRIDGE_PORT as CONDUCTOR_PORT + 1.')
-    }
-    return bridgePort
-  }
-
-  return DEFAULT_BRIDGE_PORT
+  return integerEnv('MCUT_BRIDGE_PORT') ?? DEFAULT_BRIDGE_PORT
 }
 
 export function localBridgeToken(): string {

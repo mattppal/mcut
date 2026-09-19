@@ -1,0 +1,338 @@
+---
+title: "Model types and ids"
+description: "TypeScript types for the project document and the branded id constructors."
+---
+
+## Types
+
+### AssetId
+
+```ts
+type AssetId = `a-${string}`
+```
+
+A branded asset id string with the `a-` prefix.
+
+### ElementId
+
+```ts
+type ElementId = `e-${string}`
+```
+
+A branded element id string with the `e-` prefix.
+
+### GroupId
+
+```ts
+type GroupId = `g-${string}`
+```
+
+A branded group id string with the `g-` prefix.
+
+### MarkerId
+
+```ts
+type MarkerId = `m-${string}`
+```
+
+A branded marker id string with the `m-` prefix.
+
+### TrackId
+
+```ts
+type TrackId = `t-${string}`
+```
+
+A branded track id string with the `t-` prefix.
+
+### AssetKind
+
+```ts
+type AssetKind = AssetRef['kind']
+```
+
+The media kind of an asset, video, audio, or image.
+
+### AssetRef
+
+```ts
+type AssetRef = z.infer<typeof assetRefSchema>
+```
+
+A project asset as inferred from `assetRefSchema`.
+
+### AudioElement
+
+```ts
+type AudioElement = z.infer<typeof audioElementSchema>
+```
+
+An audio element as inferred from `audioElementSchema`.
+
+### AngleCutRef
+
+```ts
+type AngleCutRef = MulticamElement['angles'][number]
+```
+
+One entry of a multicam element's `angles` list, the time a layout takes effect and the layout id.
+
+### CaptionElement
+
+```ts
+type CaptionElement = z.infer<typeof captionElementSchema>
+```
+
+A caption element as inferred from `captionElementSchema`.
+
+### CaptionStyle
+
+```ts
+type CaptionStyle = z.infer<typeof captionStyleSchema>
+```
+
+Caption styling as inferred from `captionStyleSchema`.
+
+### CaptionWord
+
+```ts
+type CaptionWord = z.infer<typeof captionWordSchema>
+```
+
+A timed caption word as inferred from `captionWordSchema`.
+
+### CreateProjectOptions
+
+```ts
+interface CreateProjectOptions {
+  id?: string
+  name?: string
+  width?: number
+  height?: number
+  fps?: number
+}
+```
+
+Optional id, name, size, and fps for `createProject`.
+
+### ElementTypeConfig
+
+```ts
+interface ElementTypeConfig {
+  type: string
+  shape: z.ZodRawShape
+  keyframeable?: readonly string[]
+  onSplit?: ElementTypeEntry['onSplit']
+  validate?: ElementTypeEntry['validate']
+  describe?: ElementTypeEntry['describe']
+  frameRequests?: ElementTypeEntry['frameRequests']
+}
+```
+
+The input to `registerTimelineElementType`, a type name, its own Zod field shape, keyframeable properties, and optional behavior hooks.
+
+### ImageElement
+
+```ts
+type ImageElement = z.infer<typeof imageElementSchema>
+```
+
+An image element as inferred from `imageElementSchema`.
+
+### Marker
+
+```ts
+type Marker = z.infer<typeof markerSchema>
+```
+
+A project marker as inferred from `markerSchema`.
+
+### MulticamElement
+
+```ts
+type MulticamElement = z.infer<typeof multicamElementSchema>
+```
+
+A multicam element as inferred from `multicamElementSchema`.
+
+### MulticamSource
+
+```ts
+type MulticamSource = z.infer<typeof multicamSourceSchema>
+```
+
+One synced source of a multicam element, a role key, an asset id, and a trim offset.
+
+### Project
+
+```ts
+type Project = z.infer<typeof projectSchema>
+```
+
+A project as inferred from `projectSchema`.
+
+### TextElement
+
+```ts
+type TextElement = z.infer<typeof textElementSchema>
+```
+
+A text element as inferred from `textElementSchema`.
+
+### TextBox
+
+```ts
+type TextBox = z.infer<typeof textBoxSchema>
+```
+
+A text box as inferred from `textBoxSchema`.
+
+### TextShadow
+
+```ts
+type TextShadow = z.infer<typeof textShadowSchema>
+```
+
+A text shadow as inferred from `textShadowSchema`.
+
+### TextStroke
+
+```ts
+type TextStroke = z.infer<typeof textStrokeSchema>
+```
+
+A text outline as inferred from `textStrokeSchema`.
+
+### TextStyle
+
+```ts
+type TextStyle = z.infer<typeof textStyleSchema>
+```
+
+Text styling as inferred from `textStyleSchema`.
+
+### TimelineElement
+
+```ts
+type TimelineElement =
+  | VideoElement
+  | AudioElement
+  | ImageElement
+  | TextElement
+  | CaptionElement
+  | MulticamElement
+```
+
+The union of the built-in element types, which custom registered types also surface as at runtime.
+
+### TimelineElementInput
+
+```ts
+type TimelineElementInput =
+  | InputOf<typeof videoElementSchema>
+  | InputOf<typeof audioElementSchema>
+  | InputOf<typeof imageElementSchema>
+  | InputOf<typeof textElementSchema>
+  | InputOf<typeof captionElementSchema>
+  | InputOf<typeof multicamElementSchema>
+```
+
+The union of the built-in element input shapes, where `id` is optional and defaulted fields may be omitted.
+
+### Track
+
+```ts
+type Track = z.infer<typeof trackSchema>
+```
+
+A track as inferred from `trackSchema`.
+
+### Transform
+
+```ts
+type Transform = z.infer<typeof transformSchema>
+```
+
+Position, scale, and rotation as inferred from `transformSchema`.
+
+### VideoElement
+
+```ts
+type VideoElement = z.infer<typeof videoElementSchema>
+```
+
+A video element as inferred from `videoElementSchema`.
+
+## Functions
+
+### createAssetId
+
+```ts
+const createAssetId = (): AssetId => `a-${randomSuffix()}`
+```
+
+Returns a new random `AssetId`.
+
+### createElementId
+
+```ts
+const createElementId = (): ElementId => `e-${randomSuffix()}`
+```
+
+Returns a new random `ElementId`.
+
+### createGroupId
+
+```ts
+const createGroupId = (): GroupId => `g-${randomSuffix()}`
+```
+
+Returns a new random `GroupId` shared by elements that move and edit as one item.
+
+### createLayoutId
+
+```ts
+const createLayoutId = (): string => `lay-${randomSuffix()}`
+```
+
+Returns a new random id for a multicam layout.
+
+### createLinkId
+
+```ts
+const createLinkId = (): string => `l-${randomSuffix()}`
+```
+
+Returns a new random link id shared by linked elements such as a video and its detached audio.
+
+### createMarkerId
+
+```ts
+const createMarkerId = (): MarkerId => `m-${randomSuffix()}`
+```
+
+Returns a new random `MarkerId`.
+
+### createPresetId
+
+```ts
+const createPresetId = (): string => `ps-${randomSuffix()}`
+```
+
+Returns a new random id for a property preset.
+
+### createProjectId
+
+```ts
+const createProjectId = (): string => `p-${randomSuffix()}`
+```
+
+Returns a new random project id.
+
+### createTrackId
+
+```ts
+const createTrackId = (): TrackId => `t-${randomSuffix()}`
+```
+
+Returns a new random `TrackId`.

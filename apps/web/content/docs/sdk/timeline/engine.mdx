@@ -1,0 +1,328 @@
+---
+title: "Engine, commands, and selectors"
+description: "The editor engine, the command registry, and read-only project selectors."
+---
+
+## Types
+
+### AnyCommand
+
+```ts
+type AnyCommand = { type: string } & Record<string, unknown>
+```
+
+A serializable command object, a `type` plus its payload fields.
+
+### CommandDefinition
+
+```ts
+interface CommandDefinition<TPayload = unknown> {
+  type: string
+  description: string
+  payloadSchema: z.ZodType<TPayload, unknown>
+  reduce: (project: Project, payload: TPayload) => Project
+}
+```
+
+A command's type, description, Zod payload schema, and pure reducer from project and payload to a new project.
+
+### ToolDefinition
+
+```ts
+interface ToolDefinition {
+  name: string
+  description: string
+  inputSchema: Record<string, unknown>
+}
+```
+
+An MCP tool entry with a name, description, and JSON Schema input, as produced by `listToolDefinitions`.
+
+### DispatchOptions
+
+```ts
+interface DispatchOptions {
+  history?: boolean
+  selection?: ElementId[]
+}
+```
+
+Per-dispatch options, whether to record undo history and the selection the edit produces.
+
+### EditorEngineOptions
+
+```ts
+interface EditorEngineOptions {
+  project?: Project
+  maxHistorySize?: number
+}
+```
+
+Options for a new engine, an initial project and the number of undo entries to keep.
+
+### EditorState
+
+```ts
+interface EditorState {
+  project: Project
+  selection: SelectionState
+  canUndo: boolean
+  canRedo: boolean
+}
+```
+
+The engine store state, the project, selection, and undo and redo availability.
+
+### PlaybackState
+
+```ts
+interface PlaybackState {
+  currentTimeMs: number
+  isPlaying: boolean
+  playbackRate: number
+  volume: number
+  muted: boolean
+}
+```
+
+The playback store state, current time, playing flag, rate, volume, and mute.
+
+### SelectionState
+
+```ts
+interface SelectionState {
+  elementIds: ElementId[]
+}
+```
+
+The selected element ids.
+
+### TransactionOptions
+
+```ts
+interface TransactionOptions {
+  selection?: ElementId[]
+}
+```
+
+Options for `transact`, the selection the whole gesture produces.
+
+### ActiveElement
+
+```ts
+interface ActiveElement {
+  track: Track
+  trackIndex: number
+  element: TimelineElement
+}
+```
+
+An element under the playhead with its track and track index.
+
+### ElementLocation
+
+```ts
+interface ElementLocation {
+  track: Track
+  trackIndex: number
+  element: TimelineElement
+  elementIndex: number
+}
+```
+
+An element with its track, track index, and index within the track.
+
+## Functions
+
+### applyCommand
+
+```ts
+function applyCommand(project: Project, command: AnyCommand): Project
+```
+
+Validates a command against its registered definition and returns the new project it produces, throwing `CommandError` on rejection.
+
+### getCommandDefinition
+
+```ts
+function getCommandDefinition(type: string): CommandDefinition<unknown> | undefined
+```
+
+Returns the registered definition for a command type, or `undefined`.
+
+### listCommands
+
+```ts
+function listCommands(): CommandDefinition<unknown>[]
+```
+
+Returns every registered command definition, built-in and custom.
+
+### listToolDefinitions
+
+```ts
+function listToolDefinitions(): ToolDefinition[]
+```
+
+Returns every registered command as an MCP-shaped tool definition with its payload schema converted to JSON Schema.
+
+### registerCommand
+
+```ts
+function registerCommand<TPayload>(definition: CommandDefinition<TPayload>): void
+```
+
+Registers a custom command definition and throws when its type is already registered.
+
+### canPlace
+
+```ts
+function canPlace(
+  track: Track,
+  startMs: number,
+  durationMs: number,
+  ignoreElementId?: ElementId,
+): boolean
+```
+
+Returns `true` when a clip at `startMs` with `durationMs` fits on the track without overlapping any element other than the ignored one.
+
+### findNearestFreeSlot
+
+```ts
+function findNearestFreeSlot(
+  track: Track,
+  desiredStartMs: number,
+  durationMs: number,
+  ignoreElementId?: ElementId,
+): number
+```
+
+Returns the start time nearest to `desiredStartMs` where a clip of `durationMs` fits on the track without overlap.
+
+### getActiveElements
+
+```ts
+function getActiveElements(project: Project, timeMs: number): ActiveElement[]
+```
+
+Returns the elements under `timeMs` on every track in paint order, bottom track first, including hidden and muted tracks.
+
+### getElement
+
+```ts
+function getElement(project: Project, elementId: ElementId): TimelineElement | undefined
+```
+
+Returns the element with the given id from any track, or `undefined`.
+
+### getElementLocation
+
+```ts
+function getElementLocation(
+  project: Project,
+  elementId: ElementId,
+): ElementLocation | undefined
+```
+
+Returns the element together with its track, track index, and index within the track, or `undefined`.
+
+### getGroupedElementIds
+
+```ts
+function getGroupedElementIds(project: Project, elementId: ElementId): ElementId[]
+```
+
+Returns the element id followed by every element sharing its `groupId`, or only the id when ungrouped.
+
+### getLinkedElementIds
+
+```ts
+function getLinkedElementIds(project: Project, elementId: ElementId): ElementId[]
+```
+
+Returns the element id followed by every element sharing its `linkId`, or only the id when unlinked.
+
+### getProjectDurationMs
+
+```ts
+function getProjectDurationMs(project: Project): number
+```
+
+Returns the end time of the last element across all tracks, or 0 for an empty project.
+
+### getTrack
+
+```ts
+function getTrack(project: Project, trackId: TrackId): Track | undefined
+```
+
+Returns the track with the given id, or `undefined`.
+
+### isElementActiveAt
+
+```ts
+function isElementActiveAt(element: TimelineElement, timeMs: number): boolean
+```
+
+Returns `true` when `timeMs` falls inside the element's half-open time range.
+
+### rangesOverlap
+
+```ts
+function rangesOverlap(
+  aStartMs: number,
+  aDurationMs: number,
+  bStartMs: number,
+  bDurationMs: number,
+): boolean
+```
+
+Returns `true` when two half-open time ranges overlap.
+
+## Classes
+
+### CommandError
+
+```ts
+class CommandError extends Error {
+  readonly code: string
+  constructor(code: string, message: string, options?: { cause?: unknown })
+}
+```
+
+Error thrown when a command is rejected for an unknown id, an invalid payload, or a violated invariant, with a machine-readable `code`.
+
+### EditorEngine
+
+```ts
+class EditorEngine {
+  readonly store: Store<EditorState>
+  readonly playback: Store<PlaybackState>
+  constructor(options: EditorEngineOptions = {})
+  get project(): Project
+  get selection(): SelectionState
+  dispatch(command: AnyCommand, options: DispatchOptions = {}): Project
+  transact(fn: () => void, options: TransactionOptions = {}): void
+  beginTransaction(): void
+  endTransaction(): void
+  cancelTransaction(): void
+  canUndo(): boolean
+  canRedo(): boolean
+  undo(): boolean
+  redo(): boolean
+  select(elementIds: ElementId[]): void
+  clearSelection(): void
+  loadProject(project: Project): void
+  toJSON(): Project
+  static fromJSON(data: unknown, options: Omit<EditorEngineOptions, 'project'> = {}): EditorEngine
+  seek(timeMs: number): void
+  play(): void
+  pause(): void
+  setVolume(volume: number): void
+  setMuted(muted: boolean): void
+  setPlaybackRate(playbackRate: number): void
+}
+```
+
+The headless editor that applies validated commands to a project with undo history and transactions, holds the selection, and keeps a playback store for transport state.

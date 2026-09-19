@@ -1,8 +1,0 @@
-#:schema https://conductor.build/schemas/settings.repo.schema.json
-"$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
-
-[scripts]
-setup = "bun install --frozen-lockfile && bun run setup"
-run = 'MCUT_STUDIO_PORT="$CONDUCTOR_PORT" MCUT_BRIDGE_PORT="$((CONDUCTOR_PORT + 1))" bun run dev'
-run_mode = "concurrent"
-archive = "true"

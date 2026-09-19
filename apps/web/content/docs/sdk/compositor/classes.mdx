@@ -1,0 +1,48 @@
+---
+title: "Classes"
+description: "Classes exported by @mcut/compositor."
+---
+
+## Classes
+
+### Canvas2DBackend
+
+```ts
+class Canvas2DBackend implements RenderBackend {
+  readonly kind = 'canvas2d'
+  constructor(
+    private readonly ctx: Canvas2D,
+    readonly width: number,
+    readonly height: number,
+  )
+  beginFrame(backgroundColor: string): void
+  endFrame(): void
+  acquireRaster(): Canvas2D
+  drawImageQuad(quad: ImageQuad, chrome: LayerChrome): void
+  pushRasterScope(): void
+  popRasterScope(): void
+}
+```
+
+The reference `RenderBackend` that draws directly into a 2D context.
+
+### WebGPUBackend
+
+```ts
+class WebGPUBackend implements RenderBackend {
+  readonly kind = 'webgpu'
+  readonly width: number
+  readonly height: number
+  static async create(options: WebGPUBackendOptions): Promise<WebGPUBackend>
+  registerLut3D(lutId: string, size: number, data: Float32Array): void
+  beginFrame(backgroundColor: string): void
+  endFrame(): void
+  acquireRaster(): Canvas2D
+  pushRasterScope(): void
+  popRasterScope(): void
+  drawImageQuad(quad: ImageQuad, chrome: LayerChrome): void
+  dispose(): void
+}
+```
+
+A `RenderBackend` that composites image quads as textured GPU passes with WGSL effects and uploads Canvas 2D raster content as texture layers.

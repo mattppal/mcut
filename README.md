@@ -5,9 +5,8 @@
 Open source video editing SDK for TypeScript apps.
 
 mcut provides a headless timeline engine, command system, renderer, media/export
-helpers, transcription adapters, React bindings, CLI tools, and MCP tools. The
-commercial mcut Studio GUI is built on top of these packages but is not part of
-this repository.
+helpers, transcription adapters, React bindings, CLI tools, and MCP tools.
+Studio lives in `apps/studio` and is Apache-2.0 like the packages.
 
 The first public packages are alpha releases. Expect API movement while the SDK
 is still hardening.
@@ -49,22 +48,13 @@ This is a Bun workspace monorepo managed with Turbo.
 
 ```sh
 bun install
-bun run setup   # once per worktree: Codex config + agent skill
-bun run dev     # Studio + local MCP bridge
+bun run dev
 ```
 
 By default, `bun run dev` starts Studio on `http://localhost:3000` and the local
-MCP bridge on port `44737`. In Conductor workspaces, Studio uses
-`CONDUCTOR_PORT` and the bridge uses `CONDUCTOR_PORT + 1`.
+MCP bridge on port `44737`.
 
-Open the connected editor URL printed by `bun run dev` or by
-`bun run scripts/mcut-local-dev.ts url`, then enable the `mcut-live` MCP server
-in Codex. Codex connects to the bridge's Streamable HTTP MCP endpoint; it does
-not start a second bridge. Print the MCP URL with
-`bun run scripts/mcut-local-dev.ts mcp-url`.
-
-The `@mcut/mcp-server` package README explains the HTTP bridge endpoint plus
-the compatibility stdio entrypoints.
+The MCP URL printed by `bun run dev` works with any MCP client and is documented in the `@mcut/mcp-server` README.
 
 ### Docs site only
 
