@@ -28,7 +28,8 @@
     "directory": "packages/transcription"
   },
   "dependencies": {
-    "@mcut/timeline": "workspace:*"
+    "@mcut/timeline": "workspace:*",
+    "zod": "4.4.3"
   },
   "publishConfig": {
     "access": "public",

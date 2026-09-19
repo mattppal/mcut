@@ -27,7 +27,8 @@
         "@base-ui/react",
         "color",
         "react-resizable-panels",
-        "@mcut/mcp-server"
+        "@mcut/mcp-server",
+        "zod"
       ],
       "registryDependencies": [
         "badge",
@@ -178,6 +179,11 @@
           "target": "components/mcut/editor-ui.tsx"
         },
         {
+          "path": "registry/mcut/editor-prefs.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/editor-prefs.ts"
+        },
+        {
           "path": "registry/mcut/editor-layout.ts",
           "type": "registry:lib",
           "target": "components/mcut/editor-layout.ts"
@@ -186,6 +192,11 @@
           "path": "registry/mcut/live-mcp-bridge.tsx",
           "type": "registry:component",
           "target": "components/mcut/live-mcp-bridge.tsx"
+        },
+        {
+          "path": "registry/mcut/bridge-request.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/bridge-request.ts"
         },
         {
           "path": "registry/mcut/live-mcp-transcript.ts",
@@ -396,11 +407,6 @@
           "path": "registry/mcut/project-file.ts",
           "type": "registry:lib",
           "target": "components/mcut/project-file.ts"
-        },
-        {
-          "path": "registry/mcut/guards.ts",
-          "type": "registry:lib",
-          "target": "components/mcut/guards.ts"
         }
       ],
       "cssVars": {
@@ -570,7 +576,8 @@
         "@hugeicons/core-free-icons",
         "unicode-animations@1.0.3",
         "@mcut/editor",
-        "@mcut/transcription"
+        "@mcut/transcription",
+        "zod"
       ],
       "registryDependencies": [
         "button",
@@ -603,6 +610,11 @@
           "path": "registry/mcut/editor-ui.tsx",
           "type": "registry:component",
           "target": "components/mcut/editor-ui.tsx"
+        },
+        {
+          "path": "registry/mcut/editor-prefs.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/editor-prefs.ts"
         },
         {
           "path": "registry/mcut/editor-actions.ts",
@@ -721,7 +733,8 @@
         "@hugeicons/core-free-icons",
         "unicode-animations@1.0.3",
         "@mcut/editor",
-        "sonner"
+        "sonner",
+        "zod"
       ],
       "registryDependencies": [
         "button",
@@ -766,6 +779,11 @@
           "path": "registry/mcut/editor-ui.tsx",
           "type": "registry:component",
           "target": "components/mcut/editor-ui.tsx"
+        },
+        {
+          "path": "registry/mcut/editor-prefs.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/editor-prefs.ts"
         },
         {
           "path": "registry/mcut/editor-actions.ts",
@@ -871,11 +889,6 @@
           "path": "registry/mcut/transcript-keywords.ts",
           "type": "registry:lib",
           "target": "components/mcut/transcript-keywords.ts"
-        },
-        {
-          "path": "registry/mcut/guards.ts",
-          "type": "registry:lib",
-          "target": "components/mcut/guards.ts"
         }
       ],
       "cssVars": {
@@ -1023,7 +1036,8 @@
         "@hugeicons/core-free-icons",
         "sonner",
         "unicode-animations@1.0.3",
-        "@mcut/editor"
+        "@mcut/editor",
+        "zod"
       ],
       "registryDependencies": [
         "badge",
@@ -1052,6 +1066,11 @@
           "path": "registry/mcut/editor-ui.tsx",
           "type": "registry:component",
           "target": "components/mcut/editor-ui.tsx"
+        },
+        {
+          "path": "registry/mcut/editor-prefs.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/editor-prefs.ts"
         },
         {
           "path": "registry/mcut/editor-actions.ts",
@@ -1120,7 +1139,8 @@
         "@mcut/compositor",
         "@mcut/media",
         "color",
-        "sonner"
+        "sonner",
+        "zod"
       ],
       "registryDependencies": [
         "button",
@@ -1221,6 +1241,11 @@
           "path": "registry/mcut/editor-ui.tsx",
           "type": "registry:component",
           "target": "components/mcut/editor-ui.tsx"
+        },
+        {
+          "path": "registry/mcut/editor-prefs.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/editor-prefs.ts"
         },
         {
           "path": "registry/mcut/font-css.ts",
@@ -1385,7 +1410,8 @@
         "@tanstack/react-query",
         "@hugeicons/react",
         "@hugeicons/core-free-icons",
-        "unicode-animations@1.0.3"
+        "unicode-animations@1.0.3",
+        "zod"
       ],
       "registryDependencies": [
         "button",
