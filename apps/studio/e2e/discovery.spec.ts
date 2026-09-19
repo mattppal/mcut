@@ -1,13 +1,6 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
-/**
- * Machine-discovery surfaces: the MCP tool manifest and the agent skill
- * hosted under the RFC 8615 well-known prefix. The digest assertion keeps
- * index.json honest when SKILL.md is edited — regenerate it with
- * `shasum -a 256 public/.well-known/agent-skills/mcut/SKILL.md`.
- */
-
 const AGENT_TOOL_NAMES = [
   "get_summary",
   "get_project",
@@ -18,6 +11,10 @@ const AGENT_TOOL_NAMES = [
   "ensure_transcript",
   "list_commands",
   "apply_commands",
+  "apply_captions",
+  "apply_silence_cuts",
+  "lint_project",
+  "list_presets",
   "list_operators",
   "run_operator",
   "list_actions",
@@ -26,7 +23,7 @@ const AGENT_TOOL_NAMES = [
   "redo",
 ];
 
-const FULL_TOOL_COUNT = 116;
+const FULL_TOOL_COUNT = 120;
 
 type Tool = { name: string; description: string; inputSchema: { type: string; properties: object } };
 
@@ -48,7 +45,7 @@ test("serves the curated agent profile at /tools.json and every command under ?p
   expect(full.profile).toBe("full");
   expect(
     full.tools.length,
-    "15 agent tools + 42 core editor operators + 59 timeline commands",
+    "19 agent tools (16 server static + 3 bridge only) + 42 editor operators + 59 timeline commands",
   ).toBe(FULL_TOOL_COUNT);
   const split = full.tools.find((tool) => tool.name === "splitElement");
   expect(split?.description).toContain("Split");
@@ -70,6 +67,7 @@ test("renders the human-readable tool catalog at /tools", async ({ page }) => {
   await expect(page.getByText("splitElement", { exact: true })).toBeVisible();
 });
 
+// The /.well-known/ prefix for site metadata is defined by RFC 8615. https://www.rfc-editor.org/rfc/rfc8615
 test("hosts the mcut agent skill under /.well-known/agent-skills", async ({ request }) => {
   const indexRes = await request.get("/.well-known/agent-skills/index.json");
   expect(indexRes.ok()).toBe(true);
@@ -84,5 +82,8 @@ test("hosts the mcut agent skill under /.well-known/agent-skills", async ({ requ
   expect(body.toString("utf8")).toContain("name: mcut");
 
   const digest = `sha256:${createHash("sha256").update(body).digest("hex")}`;
-  expect(digest).toBe(skill.digest);
+  expect(
+    digest,
+    "index.json digest is stale. Regenerate it with shasum -a 256 public/.well-known/agent-skills/mcut/SKILL.md",
+  ).toBe(skill.digest);
 });

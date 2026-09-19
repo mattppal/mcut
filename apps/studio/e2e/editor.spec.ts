@@ -10,11 +10,6 @@ import {
   previewPixels,
 } from "./helpers";
 
-/**
- * Baseline spec: freezes the editor's core behavior so refactors (action
- * registry, parity batches) can't silently regress it.
- */
-
 test("loads without console errors", async ({ page }) => {
   const errors = collectErrors(page);
   await openEditor(page);
@@ -27,8 +22,7 @@ test("text preset inserts a selected clip; undo removes it", async ({ page }) =>
   await openLeftTab(page, "text");
   await page.getByTitle(/Title — drag/).click();
   await expect(clip(page)).toHaveCount(1);
-  // Inspector shows the selected text element
-  await openLeftTab(page, "animate"); // any tab; inspector is right panel
+  await openLeftTab(page, "animate");
   await expect(page.locator("aside, [data-editor]").getByText("MOTION").first()).toBeVisible();
   await page.keyboard.press("ControlOrMeta+z");
   await expect(clip(page)).toHaveCount(0);
@@ -39,7 +33,6 @@ test("imported image drags onto a lane with a ghost preview", async ({ page }) =
   await importPng(page, "blue.png");
   await dragAssetToLane(page, /blue.png/, { offsetX: 300 });
   await expect(clip(page)).toHaveCount(1);
-  // Dropped on the existing track — no extra track created.
   await expect(page.locator("[data-mcut-lane]")).toHaveCount(1);
 });
 
@@ -88,9 +81,7 @@ test("fade-in preset animates opacity on the canvas", async ({ page }) => {
   await openLeftTab(page, "animate");
   await page.locator('[data-preset="fade-in"]').click();
   await expect(page.getByText(/fade in applied/)).toBeVisible();
-  // Keyframe diamonds on the selected clip
   expect(await page.locator("[data-mcut-clip] button[title*='Keyframe']").count()).toBeGreaterThan(0);
-  // Invisible at t=0, visible mid-fade-in
   await page.getByRole("button", { name: "Go to start" }).click();
   await page.waitForTimeout(300);
   const atStart = await previewPixels(page);
@@ -119,7 +110,6 @@ test("real video imports, drags, and shows a filmstrip", async ({ page }) => {
     .toBe(true);
   await dragAssetToLane(page, /demo.webm/, { offsetX: 120 });
   await expect(clip(page)).toHaveCount(1);
-  // Filmstrip canvas inside the clip eventually paints real pixels.
   await expect
     .poll(
       () =>

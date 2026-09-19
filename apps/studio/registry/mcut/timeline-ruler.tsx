@@ -1,7 +1,5 @@
 "use client";
 
-// Ruler + playhead: scrub-to-seek tick ruler, draggable marker flags and guide lines, the playhead, and the snap guide.
-
 import { useMemo, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import {
   useEditor,
@@ -18,14 +16,6 @@ import { formatRulerLabel } from "./format";
 import { RULER_HEIGHT } from "./timeline-drag";
 import { HEADER_WIDTH } from "./timeline-tracks";
 
-// ---------------------------------------------------------------------------
-// Ruler + playhead
-// ---------------------------------------------------------------------------
-
-/**
- * Marker flags on the ruler: click seeks, drag retimes (one undo per
- * gesture), ⌥-click removes. Add/navigate via M / ⇧M / ⌥M or the palette.
- */
 function RulerMarkers({ pxPerMs }: { pxPerMs: number }) {
   const engine = useEditor();
   const markers = useEditorState((s) => s.project.markers);
@@ -48,7 +38,6 @@ function RulerMarkers({ pxPerMs }: { pxPerMs: number }) {
               try {
                 engine.dispatch({ type: "removeMarker", markerId: marker.id });
               } catch {
-                // Marker vanished.
               }
               return;
             }
@@ -70,7 +59,6 @@ function RulerMarkers({ pxPerMs }: { pxPerMs: number }) {
             try {
               engine.dispatch({ type: "updateMarker", markerId: drag.id, timeMs: toMs });
             } catch {
-              // Marker vanished mid-drag.
             }
           }}
           onPointerUp={(event) => {
@@ -92,10 +80,6 @@ function RulerMarkers({ pxPerMs }: { pxPerMs: number }) {
   );
 }
 
-/**
- * Soft ticks for transcript keyword occurrences (persisted in the
- * transcript panel): hover names the keyword, click seeks to the word.
- */
 function KeywordTicks({ pxPerMs }: { pxPerMs: number }) {
   const engine = useEditor();
   const project = useProject();
@@ -126,7 +110,6 @@ function KeywordTicks({ pxPerMs }: { pxPerMs: number }) {
   );
 }
 
-/** Thin guide line under each marker, across the full track area. */
 export function MarkerLines({ pxPerMs, height }: { pxPerMs: number; height: number }) {
   const markers = useEditorState((s) => s.project.markers);
   return (
@@ -200,8 +183,6 @@ export function Playhead({ pxPerMs, height }: { pxPerMs: number; height: number 
   const currentTimeMs = usePlayback((s) => s.currentTimeMs);
   const { timelineScrollRef } = useEditorUI();
 
-  // Follow the playhead while playing (manual scrolling stays untouched
-  // when paused).
   useEngineSubscription(engine.playback, (playback) => {
     const scroller = timelineScrollRef.current;
     if (!playback.isPlaying || !scroller) return;

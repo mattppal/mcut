@@ -34,7 +34,7 @@ describe('constantSpeedOf', () => {
     expect(
       constantSpeedOf([
         { timeMs: 0, value: 0 },
-        { timeMs: 1000, value: 0 }, // pure freeze
+        { timeMs: 1000, value: 0 },
       ]),
     ).toBeNull()
   })
@@ -47,16 +47,13 @@ describe('stretchStereo', () => {
     return data
   }
 
-  // Bun has no OfflineAudioContext, so these exercise the WSOLA fallback
-  // path; the Signalsmith worklet path is covered by the browser repro.
   test('tempo 2 halves the duration (±10%), preserving content energy', async () => {
     const sampleRate = 44_100
-    const input = sine(sampleRate * 2, sampleRate, 440) // 2s of 440Hz
+    const input = sine(sampleRate * 2, sampleRate, 440)
     const { left, right } = await stretchStereo({ left: input, right: input, sampleRate }, 2)
     expect(left.length).toBe(right.length)
     expect(left.length).toBeGreaterThan(sampleRate * 0.9)
     expect(left.length).toBeLessThan(sampleRate * 1.1)
-    // The stretched signal is still a real waveform, not silence.
     let energy = 0
     for (const v of left) energy += v * v
     expect(energy / left.length).toBeGreaterThan(0.1)
@@ -64,7 +61,7 @@ describe('stretchStereo', () => {
 
   test('tempo 0.5 doubles the duration (±10%)', async () => {
     const sampleRate = 44_100
-    const input = sine(sampleRate, sampleRate, 220) // 1s
+    const input = sine(sampleRate, sampleRate, 220)
     const { left } = await stretchStereo({ left: input, right: input, sampleRate }, 0.5)
     expect(left.length).toBeGreaterThan(sampleRate * 1.8)
     expect(left.length).toBeLessThan(sampleRate * 2.2)

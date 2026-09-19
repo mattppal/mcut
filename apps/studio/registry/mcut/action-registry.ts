@@ -4,13 +4,6 @@ import type { EditorEngine } from "@mcut/timeline";
 import type { EditorUIValue } from "./editor-ui";
 import type { EditorClipboard } from "./editor-clipboard";
 
-/**
- * The editor's single action registry. Every user-facing operation is
- * declared ONCE here-ish (see editor-default-actions.ts); hotkeys, the ⌘K
- * palette, context menus, and the shortcuts dialog all DERIVE from it, so
- * they can never drift apart and a new behavior is a ~10-line declaration.
- */
-
 export interface ActionContext {
   engine: EditorEngine;
   ui: EditorUIValue;
@@ -20,9 +13,7 @@ export interface ActionContext {
 }
 
 export interface Shortcut {
-  /** KeyboardEvent.key, lowercased for letters (" " for space, "ArrowLeft", "[", …). */
   key: string;
-  /** ⌘ on macOS, Ctrl elsewhere (matches either). */
   meta?: boolean;
   shift?: boolean;
   alt?: boolean;
@@ -73,23 +64,14 @@ export const CATEGORY_LABELS: Record<ActionCategory, string> = {
 };
 
 export interface EditorAction {
-  /** Stable id, "category.verb" ("selection.select-all"). */
   id: string;
   label: string;
   description?: string;
   category: ActionCategory;
   shortcut?: Shortcut | Shortcut[];
-  /** Icon for the palette/menus (optional). */
   icon?: ComponentType<{ className?: string }>;
-  /** Show in the ⌘K palette. Default true. */
   palette?: boolean;
   inputSchema?: Record<string, unknown>;
-  /**
-   * Delegate behavior to a user-level operator (@mcut/editor) — the same
-   * definition agents call over MCP. `run`/`enabled` are synthesized from
-   * the operator unless explicitly overridden; `input` supplies the
-   * operator's payload (static or derived from the action context).
-   */
   operator?: {
     id: OperatorId;
     input?: Record<string, unknown> | ((context: ActionContext) => Record<string, unknown>);
@@ -144,7 +126,6 @@ export function isActionEnabled(action: EditorAction, context: ActionContext): b
   }
 }
 
-/** Run by id or reference; no-ops when missing or disabled. */
 export function runEditorAction(idOrAction: string | EditorAction, context: ActionContext): unknown {
   const action = typeof idOrAction === "string" ? registry.get(idOrAction) : idOrAction;
   if (!action || !isActionEnabled(action, context)) return;
@@ -155,7 +136,6 @@ export function runEditorAction(idOrAction: string | EditorAction, context: Acti
     }
   } catch (error) {
     if (context.throwOnError) throw error;
-    // Engine rejections (CommandError) are non-fatal in UI paths.
   }
 }
 
@@ -172,8 +152,6 @@ export function matchShortcut(
 ): boolean {
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
   const wantedKey = shortcut.key.length === 1 ? shortcut.key.toLowerCase() : shortcut.key;
-  // macOS Option+letter types a special character ("˚" for ⌥K), so alt
-  // shortcuts also match on the physical key code.
   const codeMatches =
     shortcut.alt &&
     /^[a-z]$/.test(wantedKey) &&
@@ -186,7 +164,6 @@ export function matchShortcut(
   return true;
 }
 
-/** Action matching a keyboard event (first match wins). */
 export function actionForEvent(
   event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">,
 ): EditorAction | undefined {
@@ -211,7 +188,6 @@ const KEY_GLYPHS: Record<string, string> = {
   End: "End",
 };
 
-/** "⇧⌘Z"-style display string (first shortcut when several). */
 export function formatShortcut(shortcut: Shortcut | Shortcut[] | undefined): string {
   if (!shortcut) return "";
   const first = Array.isArray(shortcut) ? shortcut[0] : shortcut;

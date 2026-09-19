@@ -50,7 +50,6 @@ function PresetCard({ preset }: { preset: TextPreset }) {
   );
 }
 
-/** Text tab: preset titles you can click or drag into the composition. */
 export function TextPanel({ className }: { className?: string }) {
   return (
     <div className={cn("grid grid-cols-2 gap-1.5 p-2", className)}>

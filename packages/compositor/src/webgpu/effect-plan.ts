@@ -1,16 +1,6 @@
 import { assertNever, type CurvePoint, type Effect } from '@mcut/timeline'
 import { parseCssColor } from './color'
 
-/**
- * Compile an element's effect stack into the GPU pass plan, preserving
- * stack order (CSS filter semantics: left to right — blur-then-brightness
- * is not brightness-then-blur). Consecutive color-space effects fuse into
- * ONE fragment pass that loops an ordered op list; blur, drop-shadow, and
- * 3D LUTs become their own passes. `css` (raw CSS filter strings) cannot
- * run on GPU — those layers fall back to the canvas2d raster path.
- */
-
-/** Op kinds, mirrored in COLOR_SHADER — keep the numbering in sync. */
 export const COLOR_OP = {
   brightness: 1,
   contrast: 2,
@@ -25,7 +15,6 @@ export const COLOR_OP = {
 
 export interface ColorOp {
   kind: number
-  /** Up to 8 packed params, op-specific (vec4 a + vec4 b in the shader). */
   params: number[]
 }
 
@@ -33,7 +22,6 @@ export type EffectPass =
   | {
       kind: 'color'
       ops: ColorOp[]
-      /** Per-channel 256-entry LUTs when a curves op is in this run. */
       curves: { r: Float32Array; g: Float32Array; b: Float32Array } | null
     }
   | { kind: 'blur'; radius: number }
@@ -42,16 +30,13 @@ export type EffectPass =
 
 export interface EffectPlan {
   passes: EffectPass[]
-  /** The stack contains effects only canvas2d can run (`css`/unknown). */
   unsupported: boolean
 }
 
-/** Shader-side cap: ops per fused color pass (matches the WGSL array size). */
-const MAX_COLOR_OPS = 16
+export const MAX_COLOR_OPS = 16
 
 const params = (...values: number[]): number[] => values
 
-/** Monotone-x piecewise-linear curve → 256-entry LUT (identity when empty). */
 export function curveToLut(points: readonly CurvePoint[] | undefined): Float32Array {
   const lut = new Float32Array(256)
   const [first, ...rest] = [...(points ?? [])].sort((a, b) => a.x - b.x)
@@ -173,7 +158,6 @@ export function planEffects(effects: readonly Effect[] | undefined): EffectPlan 
   return plan
 }
 
-/** True when this stack can only render through the canvas2d raster path. */
 export function hasUnsupportedEffects(effects: readonly Effect[] | undefined): boolean {
   if (!effects) return false
   return planEffects(effects).unsupported

@@ -27,9 +27,7 @@ export interface ClipDragBase {
   startMs: number
   durationMs: number
   trimStartMs?: number
-  /** Plays its source span backward, so edge trims consume the other end. */
   reversed?: boolean
-  /** Speed-mapped clips freeze edge growth at the map boundary. */
   hasTimeMap?: boolean
   trackIndex: number
 }
@@ -96,9 +94,6 @@ export function collectClipDragBases(
   return bases
 }
 
-/**
- * Tool gestures degrade gracefully when their structural requirements are not met.
- */
 export function resolveToolMode(
   project: Project,
   mode: ClipDragMode,
@@ -132,7 +127,6 @@ export function resolveToolMode(
   }
 }
 
-/** How far the gesture's slippable members can slip without running out of media. */
 export function computeSlipRange(
   project: Project,
   ids: readonly ElementId[],

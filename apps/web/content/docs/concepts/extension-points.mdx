@@ -1,25 +1,110 @@
 ---
 title: Extension points
-description: Public places where apps can add behavior.
+description: How element types, effects, transitions, commands, and operators are added to the closed tables.
 ---
 
-mcut has extension points, but they are still alpha. Use them when you need to
-ship a real integration, and keep the integration close to your app until the
-API stabilizes.
+mcut keeps its type tables closed. Element types, effects, transitions,
+commands, operators, renderers, and container formats each live in one literal
+table or union in source, and every consumer switches on that union
+exhaustively. There is no runtime `register*` call. Adding an arm means editing
+the table, and the compiler then lists every place that has to learn about it.
 
-## Available today
+## Why the tables are closed
 
-- timeline element types with `registerTimelineElementType`
-- effect types with `registerEffectType`
-- transition types with `registerTransitionType`
-- compositor element renderers with `registerElementRenderer`
-- compositor transition renderers with `registerTransitionRenderer`
-- container formats with `registerContainerFormat`
-- editor operators with `EditorOperatorRegistry.define`
-- transcription providers through the `TranscriptionProvider` interface
+A registry accepts anything at runtime, so a missing renderer or an unhandled
+`switch` arm only shows up once a project with the new type is loaded. A closed
+union fails at typecheck instead. After adding an arm, `bun run typecheck`
+reports every exhaustive `switch` that ends in `assertNever` and every mapped
+type keyed by the union, and the build stays red until each one is handled.
+
+The one open interface is `TranscriptionProvider` from `@mcut/transcription`. A
+provider is an object with an `id` and a `transcribe` method, and the provider
+packages implement it without touching any table.
+
+## Element types
+
+An element type is one Zod object in `elementSchema` and one arm in the
+`TimelineElement` union, both in `packages/timeline/src/model.ts`.
+
+1. Build the schema with `composeFull('name', shape)` and export its inferred type.
+2. Add the schema to the `z.discriminatedUnion('type', [...])` in `elementSchema` and the matching `composeInput` call in `elementInputSchema`.
+3. Add the type to the `TimelineElement`, `TimelineElementInput`, and `TimelineElementDraft` unions.
+
+`ElementType` is derived as `TimelineElement['type']`, so the new literal flows
+to every consumer. Typecheck then fails in `validateElement` and
+`splitElementAt` in `model.ts`, `animatableProperties` in `keyframes.ts`,
+`getFrameRequests` in `frame-requests.ts`, and `summarizeProject` in
+`summarize.ts`, because each `switch` on `element.type` ends in
+`assertNever(element)` and the new arm is not `never`. In `@mcut/compositor`,
+`elementRenderers` is typed `{ [K in ElementType]: ElementRenderer }`, so it
+fails until the table has a renderer for the new key.
+
+## Effects
+
+An effect is one `effectShape('name', shape)` entry in the
+`z.discriminatedUnion` that defines `effectSchema` in
+`packages/timeline/src/effects.ts`. `Effect`, `EffectType`, and `EFFECT_TYPES`
+are all derived from that schema, so the schema entry is the only source edit.
+
+Typecheck then fails in `effectToFilter` in `effects.ts` and in `planEffects`
+in `packages/compositor/src/webgpu/effect-plan.ts`, where the `switch` on
+`effect.type` ends in `assertNever(effect)`. Add the effect to `EFFECT_PARAMS`
+when the inspector should expose a slider for it. That table is optional per
+key, so leaving it out compiles.
+
+## Transitions
+
+A transition type is one string in the `z.enum` that defines
+`transitionTypeSchema` in `packages/timeline/src/transitions.ts`.
+`TransitionType` and `TRANSITION_TYPES` derive from it.
+
+Typecheck then fails in `transitionRenderers` in
+`packages/compositor/src/transition-renderers.ts`, which is typed
+`{ [K in TransitionType]: TransitionRenderer }` and needs a renderer for the
+new key.
+
+## Commands
+
+A command is a `defineCommand({ type, description, payloadSchema, reduce })`
+export in one of the domain files under `packages/timeline/src/commands/`, plus
+one entry in the `commandDefinitions` table in
+`packages/timeline/src/commands.ts`. That table is the canonical list.
+`CommandType`, `BuiltinCommand`, `CommandOfType`, `listCommands`,
+`listToolDefinitions`, `parseCommand`, and `applyCommand` all read from it, so
+the MCP tool list and `engine.dispatch` learn about the command from the same
+edit.
+
+The `commandTable` helper requires each entry's `type` literal to equal its
+key, so a mismatch fails at typecheck. A command that is defined but not
+listed compiles and is simply unreachable, which is why the MCP surface tests
+pin the tool count.
+
+## Operators
+
+An operator is one entry in the `operators` table in
+`packages/editor/src/core-operators.ts`, built with
+`defineOperator({ label, description, category, inputSchema, run })`. `OperatorId` is
+`keyof typeof operators`, and `operatorIds`, `parseOperatorId`,
+`listOperators`, and `runOperator` read from the table.
+
+The table is declared with `satisfies Record<string, OperatorDefinition>`, so
+a wrong `category` or a `run` whose input does not match `inputSchema` fails at
+typecheck. The MCP server and the Studio live bridge resolve incoming ids
+through `parseOperatorId`, so an id that is not a key of the table is rejected
+before it runs.
+
+## Container formats
+
+A container format is one entry in the `containerFormats` table in
+`packages/media/src/container-formats.ts`, declared with
+`satisfies Record<string, ContainerFormat>`. `ContainerFormatId` is
+`keyof typeof containerFormats`, so `listContainerFormats` and the export
+pipeline pick up the new id without further edits.
 
 ## What to avoid
 
-Do not patch project JSON with undocumented fields and expect the engine to keep
-them valid. Register the relevant type or keep app-specific data in metadata
-until the extension surface you need exists.
+Do not patch project JSON with undocumented fields and expect the engine to
+keep them. `elementSchema` is a discriminated union, so an unknown `type` fails
+`parseProject`, and the object schemas strip keys they do not declare, so an
+extra field does not survive a parse. Add the arm to the table instead, or keep
+app-specific data outside the project document.

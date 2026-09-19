@@ -51,7 +51,6 @@ describe('trimEdge', () => {
   test('reversed clip: shrinking the start keeps the remaining frames identical', () => {
     const before = projectWithVideo({ reversed: true })
     const original = el(before)
-    // Frame playing at timeline 2500 (local 1500) before the trim…
     const frameAt2500 = getSourceTimeMs(original, 1500)
     const project = applyCommand(before, {
       type: 'trimEdge',
@@ -62,9 +61,7 @@ describe('trimEdge', () => {
     const after = el(project)
     expect(after.startMs).toBe(1500)
     expect(after.durationMs).toBe(3500)
-    // …still plays at timeline 2500 (now local 1000) after it.
     expect(getSourceTimeMs(after, 1000)).toBe(frameAt2500)
-    // The clip's END (local = duration) still shows the trim-in frame.
     expect(getSourceTimeMs(after, 3500)).toBe(getSourceTimeMs(original, 4000))
   })
 
@@ -77,8 +74,7 @@ describe('trimEdge', () => {
     })
     const after = el(project)
     expect(after).toMatchObject({ durationMs: 5000, trimStartMs: 1000 })
-    // The frame at the (unchanged) start of the clip is the same one.
-    expect(getSourceTimeMs(after, 0)).toBe(6000) // trim 1000 + span 5000
+    expect(getSourceTimeMs(after, 0)).toBe(6000)
   })
 
   test('reversed clip: growing the end past the media start is rejected', () => {
@@ -87,7 +83,7 @@ describe('trimEdge', () => {
         type: 'trimEdge',
         elementId: 'e-v',
         edge: 'end',
-        deltaMs: 2500, // only 2000ms of pre-trim media exists
+        deltaMs: 2500,
       }),
     ).toThrow()
   })

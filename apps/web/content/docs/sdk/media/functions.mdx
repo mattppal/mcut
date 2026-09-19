@@ -45,6 +45,33 @@ const MAX_HASHABLE_BYTES = 512 * 1024 * 1024
 
 The largest blob size that `hashBlob` will digest, 512 MiB.
 
+### containerFormats
+
+```ts
+const containerFormats = {
+  mp4: {
+    label: 'MP4',
+    extension: 'mp4',
+    mimeType: 'video/mp4',
+    createOutputFormat: () => new Mp4OutputFormat(),
+  },
+  webm: {
+    label: 'WebM',
+    extension: 'webm',
+    mimeType: 'video/webm',
+    createOutputFormat: () => new WebMOutputFormat(),
+  },
+  mkv: {
+    label: 'MKV',
+    extension: 'mkv',
+    mimeType: 'video/x-matroska',
+    createOutputFormat: () => new MkvOutputFormat(),
+  },
+} satisfies Record<string, ContainerFormat>
+```
+
+The closed table of export containers, MP4, WebM, and MKV, each muxed by the matching Mediabunny output format.
+
 ## Functions
 
 ### createAssetFromFile
@@ -150,29 +177,13 @@ async function getExportSupport(format: ContainerFormatId = 'mp4'): Promise<{
 
 Resolves with whether the browser can encode video and audio for the given container format.
 
-### getContainerFormat
-
-```ts
-function getContainerFormat(id: string): ContainerFormatEntry | undefined
-```
-
-Returns the container format registered under the id, or `undefined`.
-
 ### listContainerFormats
 
 ```ts
 function listContainerFormats(): ContainerFormatEntry[]
 ```
 
-Returns every registered container format in registration order, built-ins first.
-
-### registerContainerFormat
-
-```ts
-function registerContainerFormat(entry: ContainerFormatEntry): void
-```
-
-Registers a container format and throws when the id is already registered.
+Returns every entry of the `containerFormats` table with its id, in table order.
 
 ### getFilmstrip
 

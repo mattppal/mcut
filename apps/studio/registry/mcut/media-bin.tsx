@@ -89,7 +89,6 @@ function collageStackItems(project: Project): Array<{
   });
 }
 
-/** Video tile that scrubs through cached filmstrip frames on hover. */
 function VideoScrubThumb({ asset, thumb }: { asset: AssetRef; thumb?: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [scrubbing, setScrubbing] = useState(false);
@@ -263,11 +262,6 @@ function AssetCard({
   );
 }
 
-/**
- * Media bin: dropzone + picker import (Mediabunny probing), searchable grid,
- * cards that drag onto the timeline (dnd-kit) or double-click to place at
- * the playhead.
- */
 export function MediaBin({
   className,
   onAssetImported,
@@ -281,11 +275,9 @@ export function MediaBin({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState("");
   const [isFileDragOver, setIsFileDragOver] = useState(false);
-  /** Click-selected asset ids, in click order. */
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [draggingCollageId, setDraggingCollageId] = useState<string | null>(null);
   const [draggingStackTrackId, setDraggingStackTrackId] = useState<TrackId | null>(null);
-  /** Pair signature ("idA+idB") whose screen/camera roles are flipped. */
   const [swappedPair, setSwappedPair] = useState("");
 
   const toggleSelect = (assetId: string) => {
@@ -320,11 +312,9 @@ export function MediaBin({
         toIndex,
       });
     } catch {
-      // Track vanished mid-drag.
     }
   };
 
-  // Two selected videos propose a multicam: wider asset starts as the screen.
   const selectedVideos = selectedIds
     .map((id) => project.assets[id])
     .filter((a): a is AssetRef => Boolean(a && a.kind === "video"));
@@ -350,7 +340,6 @@ export function MediaBin({
     const startMs = Math.round(engine.playback.state.currentTimeMs);
     try {
       engine.transact(() => {
-        // New tracks stack on top, so the screen goes in first (bottom layer).
         const screenId = insertElementOnNewTrack(engine, elementForAsset(engine, screen), startMs);
         const cameraId = insertElementOnNewTrack(engine, elementForAsset(engine, camera), startMs);
         engine.dispatch({ type: "createMulticam", elementIds: [screenId, cameraId] });
@@ -511,7 +500,6 @@ export function MediaBin({
           </div>
         </button>
       ) : (
-        // The grid scrolls under the pinned header/search, so a top fade is earned.
         <ScrollArea className="min-h-0 flex-1 scroll-mask-y">
           <div className="grid grid-cols-2 gap-1.5 p-2 pt-0.5">
             {assets.map((asset) => (

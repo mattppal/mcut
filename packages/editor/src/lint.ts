@@ -5,11 +5,6 @@ import {
   type Track,
 } from '@mcut/timeline'
 
-/**
- * Things `parseProject` cannot reject (it validates shape, not cross-entity
- * invariants) but that make a project render wrong or export badly. Commands
- * maintain these invariants; hand-edited or generated JSON may not.
- */
 export interface LintIssue {
   severity: 'error' | 'warning'
   code: string

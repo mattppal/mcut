@@ -1,7 +1,5 @@
 "use client";
 
-// Track rows: header controls, sortable clip lanes with dnd-kit drop targets, and the drop ghost overlay.
-
 import { createElement, memo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
@@ -40,19 +38,15 @@ import { Clip } from "./timeline-clip";
 
 export const HEADER_WIDTH = TIMELINE_HEADER_WIDTH;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function trackIcon(track: Track) {
   const first = track.elements[0]?.type;
   if (!first) return LayersIcon;
   return getElementUI(first).icon;
 }
 
-// ---------------------------------------------------------------------------
-// Track header + lane
-// ---------------------------------------------------------------------------
+function keepsTranscriptTimingSoNeverCompacts(track: Track): boolean {
+  return track.elements.length > 0 && track.elements.every((e) => e.type === "caption");
+}
 
 function TrackHeader({
   track,
@@ -65,8 +59,6 @@ function TrackHeader({
   const [renaming, setRenaming] = useState(false);
   const setFlag = (patch: Partial<Pick<Track, "muted" | "hidden" | "locked" | "magnetic">>) =>
     engine.dispatch({ type: "setTrackFlags", trackId: track.id, ...patch });
-  // Subscriptions, not engine.project reads: these depend on OTHER tracks'
-  // flags, which no longer reach this memoized row as props.
   const timelineMagnetEnabled = useEditorState((s) =>
     s.project.tracks.some((candidate) => candidate.magnetic),
   );
@@ -75,10 +67,7 @@ function TrackHeader({
     const tracks = [...engine.project.tracks];
     engine.transact(() => {
       for (const candidate of tracks) {
-        // Caption tracks keep transcript timing — never compact them.
-        const isCaptionTrack =
-          candidate.elements.length > 0 && candidate.elements.every((e) => e.type === "caption");
-        if (isCaptionTrack) continue;
+        if (keepsTranscriptTimingSoNeverCompacts(candidate)) continue;
         if (candidate.magnetic !== magnetic) {
           engine.dispatch({ type: "setTrackFlags", trackId: candidate.id, magnetic });
         }
@@ -94,7 +83,6 @@ function TrackHeader({
             className="group/header sticky left-0 z-50 flex shrink-0 items-center gap-1 border-r border-foreground/10 bg-card pr-2 pl-0.5"
             style={{ width: HEADER_WIDTH, height: TRACK_HEIGHT }}
             onClick={(event) => {
-              // Header click selects the track's clips (buttons handle themselves).
               if ((event.target as HTMLElement).closest("button, input")) return;
               selectTrackElements(engine, track.id);
             }}
@@ -203,7 +191,7 @@ function TrackHeader({
         <ContextMenuItem
           onClick={() => {
             const index = engine.project.tracks.findIndex((t) => t.id === track.id);
-            engine.dispatch({ type: "addTrack", index: index + 1 }); // above = later in paint order
+            engine.dispatch({ type: "addTrack", index: index + 1 });
           }}
         >
           Insert track above
@@ -228,11 +216,6 @@ function TrackHeader({
   );
 }
 
-/**
- * The lane's droppable lives in its own tiny child: dnd-kit re-renders every
- * useDroppable consumer whenever `over` changes (each lane crossing), and
- * isolating it here keeps those re-renders away from the Lane and its clips.
- */
 function LaneDropTarget({ trackId }: { trackId: string }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `lane-${trackId}`,
@@ -246,8 +229,6 @@ function LaneDropTarget({ trackId }: { trackId: string }) {
   );
 }
 
-// Memoized on track identity: the engine shares structure, so a dispatch
-// only changes the touched track — every other lane bails right here.
 const Lane = memo(function Lane({
   track,
   pxPerMs,
@@ -300,11 +281,6 @@ export const SortableRow = memo(function SortableRow({
   );
 });
 
-/**
- * Always mounted (the drop affordance just fades in while a drag is live):
- * mounting it on drag start used to shift every row down mid-gesture, which
- * both jolted the rows and forced dnd-kit to re-measure lanes on a timer.
- */
 export function NewTrackLane({ contentWidth, dragActive }: { contentWidth: number; dragActive: boolean }) {
   const { setNodeRef, isOver } = useDroppable({
     id: "lane-new-track",
@@ -333,12 +309,6 @@ export function NewTrackLane({ contentWidth, dragActive }: { contentWidth: numbe
   );
 }
 
-/**
- * The single drop ghost for media/text drags, rendered as one overlay over
- * the rows (per-lane ghost subscriptions would re-render every lane per
- * pointermove). Subscribes to the drop-preview store, so a drag move
- * re-renders exactly this component.
- */
 export function DropGhostOverlay({
   rows,
   pxPerMs,

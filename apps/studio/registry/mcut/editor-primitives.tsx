@@ -4,12 +4,6 @@ import * as React from "react";
 import { spinners } from "unicode-animations";
 import { cn } from "@/lib/utils";
 
-/**
- * Foundation primitives shared across the editor panels. Small, composable
- * pieces only — anything with behavior or a single call site stays local to
- * its panel.
- */
-
 export type SpinnerAnimation = keyof typeof spinners;
 
 interface FrameClock {
@@ -53,12 +47,6 @@ function serverFrame(): number {
   return 0;
 }
 
-/**
- * The editor's signature loader: a unicode glyph animation instead of a
- * spinning icon. Inherits color and size from the surrounding text, so it
- * drops in anywhere an icon-sized loader would go. Honors
- * `prefers-reduced-motion` by holding the first frame.
- */
 export function Spinner({
   animation = "braille",
   label = "Loading",
@@ -84,10 +72,6 @@ export function Spinner({
   );
 }
 
-/**
- * Centered placeholder for panels with nothing to show. `bordered` adds the
- * dashed outline used when the empty area is also a call to action.
- */
 export function EmptyState({
   icon: Icon,
   title,
@@ -120,7 +104,6 @@ export function EmptyState({
   );
 }
 
-/** A floating editor window on the chrome backdrop. */
 export function PanelCard({
   className,
   children,
@@ -135,7 +118,6 @@ export function PanelCard({
   );
 }
 
-/** The compact action row pinned to the top of a panel. */
 export function PanelHeader({
   className,
   children,
@@ -150,15 +132,9 @@ export function PanelHeader({
   );
 }
 
-/**
- * Class string for uppercase section labels inside panels. Exported separately
- * so interactive labels (e.g. collapsible triggers) can compose it onto a
- * button.
- */
 export const panelSectionLabelClass =
   "text-2xs font-semibold tracking-wide text-muted-foreground uppercase";
 
-/** Uppercase label for a section of panel content. */
 export function PanelSectionLabel({
   className,
   children,

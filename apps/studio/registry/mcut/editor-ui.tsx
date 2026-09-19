@@ -11,27 +11,17 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { useEditor, type PreviewQuality } from "@mcut/react";
+import { useEditor, useEditorState, type PreviewQuality } from "@mcut/react";
 import type { AnimatableProperty, ElementId } from "@mcut/timeline";
 import { parseEditorPrefs, type EditorPrefs } from "./editor-prefs";
 import { clamp } from "./math";
 
-/** A live drop ghost while dragging media over the timeline. */
 export interface DropPreview {
-  /** Target track id, or "new-track" for the phantom top lane. */
   trackId: string;
   startMs: number;
   durationMs: number;
   label: string;
 }
-
-// ---------------------------------------------------------------------------
-// Drag overlay stores
-// ---------------------------------------------------------------------------
-// Drop ghost and snap guide update on every pointermove during a drag. They
-// live in tiny external stores (not React context state) so a drag move
-// re-renders only the overlay components that subscribe via useDropPreview/
-// useSnapGuideMs — never the whole editor tree.
 
 interface OverlayStore<T> {
   get: () => T;
@@ -80,38 +70,31 @@ function useDragOverlayStores(): DragOverlayStores {
   return stores;
 }
 
-/** The live drop ghost, or null when no media drag is over the timeline. */
 export function useDropPreview(): DropPreview | null {
   const { dropPreview } = useDragOverlayStores();
   return useSyncExternalStore(dropPreview.subscribe, dropPreview.get, () => null);
 }
 
-/** The snap guide line (timeline ms), or null when nothing is snapping. */
 export function useSnapGuideMs(): number | null {
   const { snapGuide } = useDragOverlayStores();
   return useSyncExternalStore(snapGuide.subscribe, snapGuide.get, () => null);
 }
 
+export function useRerenderOnProjectEdits(): void {
+  useEditorState((s) => s.project);
+}
+
+export function useLiveActionEnabledStates(): void {
+  useRerenderOnProjectEdits();
+  useEditorState((s) => s.selection);
+}
+
 export type EditorTheme = "dark" | "light";
 
-/**
- * Editing modes are VIEWS, not document state: they re-emphasize affordances
- * (multicam = layout bank + 1–9 switching) over the same project.
- */
 export type EditorMode = "edit" | "multicam" | "collage";
 
-/**
- * Timeline pointer tools (Premiere's tool palette): select is the default
- * move/trim tool; ripple/roll change what the trim handles do; slip/slide
- * change what dragging the clip body does.
- */
 export type TimelineTool = "select" | "ripple" | "roll" | "slip" | "slide";
 
-/**
- * Placement mode for inserts and drops (Kdenlive's taxonomy): normal rejects
- * collisions, overwrite clears the landing range, insert ripples everything
- * after the point to the right.
- */
 export type TimelineEditMode = "normal" | "overwrite" | "insert";
 
 export type LeftTab = "media" | "text" | "animate" | "captions" | "transcript";
@@ -122,42 +105,27 @@ export interface CurveEditorTarget {
 }
 
 export interface EditorUIValue {
-  /** Editor color theme (warm grey light/dark; tokens in globals.css). */
   theme: EditorTheme;
   setTheme: (value: EditorTheme) => void;
-  /** Current editing mode (session-scoped; not persisted). */
   mode: EditorMode;
   setMode: (value: EditorMode) => void;
-  /** Layout whose slots are being edited on the canvas (multicam mode). */
   editingLayoutId: string | null;
   setEditingLayoutId: (value: string | null) => void;
-  /**
-   * Slot edit state: index of the slot (within the editing layout) whose
-   * properties the inspector shows. Shared so the canvas overlay and the
-   * properties panel select and style the same slot.
-   */
   editingSlotIndex: number | null;
   setEditingSlotIndex: (value: number | null) => void;
-  /** Text element being edited INLINE on the canvas (double-click to enter). */
   editingTextId: string | null;
   setEditingTextId: (value: string | null) => void;
-  /** Timeline zoom. */
   pxPerMs: number;
   setPxPerMs: (value: number) => void;
-  /** Zoom keeping `anchorMs` under the same screen x (used by ⌘+wheel). */
   zoomBy: (factor: number, anchorMs?: number) => void;
   snapEnabled: boolean;
   setSnapEnabled: (value: boolean) => void;
-  /** Active timeline pointer tool (session-scoped). */
   timelineTool: TimelineTool;
   setTimelineTool: (value: TimelineTool) => void;
-  /** Placement mode for inserts/drops (session-scoped). */
   editMode: TimelineEditMode;
   setEditMode: (value: TimelineEditMode) => void;
-  /** Drop a dissolve when a dragged clip is pushed flush against a neighbor. */
   autoCrossfade: boolean;
   setAutoCrossfade: (value: boolean) => void;
-  /** Preview raster resolution ('auto' fits the pane; numbers cap the short side). */
   previewQuality: PreviewQuality;
   setPreviewQuality: (value: PreviewQuality) => void;
   leftTab: LeftTab;
@@ -167,17 +135,13 @@ export interface EditorUIValue {
   resetLayout: () => void;
   curveEditorTarget: CurveEditorTarget | null;
   setCurveEditorTarget: (value: CurveEditorTarget | null) => void;
-  /** Publish the drop ghost (read it via useDropPreview — it's not in this context). */
   setDropPreview: (value: DropPreview | null) => void;
-  /** The timeline's horizontal scroll container (for zoom anchoring/auto-scroll). */
   timelineScrollRef: React.RefObject<HTMLDivElement | null>;
-  /** Publish the snap guide line (read it via useSnapGuideMs). */
   setSnapGuideMs: (value: number | null) => void;
 }
 
 export const MIN_PX_PER_MS = 0.004;
 export const MAX_PX_PER_MS = 0.6;
-/** Left header gutter width inside the timeline, px. */
 export const TIMELINE_HEADER_WIDTH = 288;
 
 const EditorUIContext = createContext<EditorUIValue | null>(null);
@@ -339,8 +303,6 @@ export function EditorUIProvider({
     writePrefs({ pxPerMs: next });
   }, []);
 
-  // Memoized so a provider re-render doesn't re-render every consumer; only
-  // actual value changes do.
   const value = useMemo<EditorUIValue>(
     () => ({
       theme: prefs.theme,

@@ -56,7 +56,7 @@ describe('applyRunStyle', () => {
 })
 
 describe('shiftRunsForEdit', () => {
-  const runs: TextRun[] = [{ start: 6, end: 11, style: bold }] // "world" in "hello world!"
+  const runs: TextRun[] = [{ start: 6, end: 11, style: bold }]
 
   test('insertion before the run shifts it', () => {
     expect(shiftRunsForEdit(runs, 'hello world!', 'hey hello world!')).toEqual([
@@ -65,7 +65,6 @@ describe('shiftRunsForEdit', () => {
   })
 
   test('typing inside the run grows it', () => {
-    // "wor|ld" → "worXYld"
     expect(shiftRunsForEdit(runs, 'hello world!', 'hello worXYld!')).toEqual([
       { start: 6, end: 13, style: bold },
     ])
@@ -78,7 +77,6 @@ describe('shiftRunsForEdit', () => {
   })
 
   test('deleting across the run boundary clamps it', () => {
-    // delete "o wo" (4 chars at 4..8)
     expect(shiftRunsForEdit(runs, 'hello world!', 'hellrld!')).toEqual([
       { start: 4, end: 7, style: bold },
     ])
@@ -93,7 +91,6 @@ describe('shiftRunsForEdit', () => {
       { start: 0, end: 5, style: bold },
       { start: 5, end: 10, style: red },
     ]
-    // insert "++" exactly at offset 5 — left run absorbs, right run shifts
     const next = shiftRunsForEdit(two, '0123456789', '01234++56789')
     expect(next).toEqual([
       { start: 0, end: 7, style: bold },
