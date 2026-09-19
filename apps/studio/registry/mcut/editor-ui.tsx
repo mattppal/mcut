@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import type { PreviewQuality } from "@mcut/react";
+import { parseEditorPrefs, type EditorPrefs } from "./editor-prefs";
 import { clamp } from "./math";
 
 /** A live drop ghost while dragging media over the timeline. */
@@ -168,16 +169,10 @@ const EditorUIContext = createContext<EditorUIValue | null>(null);
 
 const PREFS_KEY = "mcut:ui";
 
-function loadPrefs(): {
-  pxPerMs?: number;
-  snapEnabled?: boolean;
-  autoCrossfade?: boolean;
-  theme?: EditorTheme;
-  previewQuality?: PreviewQuality;
-} {
+function loadPrefs(): EditorPrefs {
   if (typeof window === "undefined") return {};
   try {
-    return JSON.parse(window.localStorage.getItem(PREFS_KEY) ?? "{}");
+    return parseEditorPrefs(window.localStorage.getItem(PREFS_KEY));
   } catch {
     return {};
   }

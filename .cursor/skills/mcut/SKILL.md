@@ -13,9 +13,8 @@ provides headless timeline editing, serializable commands, user-level editor
 operators, Canvas2D rendering, media and export helpers, transcription adapters,
 React bindings, CLI tools, and MCP tools.
 
-The commercial mcut Studio GUI is built on these packages but is not part of
-this repository. The public packages are alpha releases, so tell users to expect
-API movement while the SDK hardens.
+Studio lives at `apps/studio` in this repo. The public packages are alpha
+releases, so tell users to expect API movement while the SDK hardens.
 
 ## How to help
 

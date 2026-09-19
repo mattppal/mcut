@@ -1,10 +1,11 @@
-export type {
-  TranscribeInput,
-  TranscribeOptions,
-  TranscriptionProvider,
-  TranscriptResult,
-  TranscriptSegment,
-  TranscriptWord,
+export {
+  transcriptResultSchema,
+  type TranscribeInput,
+  type TranscribeOptions,
+  type TranscriptionProvider,
+  type TranscriptResult,
+  type TranscriptSegment,
+  type TranscriptWord,
 } from './types'
 
 export {
