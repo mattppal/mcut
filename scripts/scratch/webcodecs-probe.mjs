@@ -1,9 +1,18 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, net, protocol } from "electron";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const scratchDir = path.dirname(fileURLToPath(import.meta.url));
+const htmlPath = path.join(scratchDir, "probe.html");
 
 if (process.platform === "linux") {
   app.commandLine.appendSwitch("no-sandbox");
   app.commandLine.appendSwitch("disable-gpu");
 }
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: "probe", privileges: { standard: true, secure: true } },
+]);
 
 const rendererProbe = `(async () => {
   async function check(run) {
@@ -68,12 +77,41 @@ const rendererProbe = `(async () => {
       VideoDecoder.isConfigSupported({ codec: "hvc1.1.6.L93.B0" }),
     ),
     userAgent: navigator.userAgent,
+    "typeof VideoEncoder": typeof VideoEncoder,
+    isSecureContext: window.isSecureContext,
+    href: location.href,
   };
 })()`;
+
+function loadAndWait(win, startLoad) {
+  return new Promise((resolve, reject) => {
+    const onLoad = () => {
+      cleanup();
+      resolve();
+    };
+    const onFail = (_event, errorCode, errorDescription) => {
+      cleanup();
+      reject(new Error(errorDescription || String(errorCode)));
+    };
+    const cleanup = () => {
+      win.webContents.off("did-finish-load", onLoad);
+      win.webContents.off("did-fail-load", onFail);
+    };
+    win.webContents.once("did-finish-load", onLoad);
+    win.webContents.once("did-fail-load", onFail);
+    startLoad();
+  });
+}
 
 app.whenReady().then(async () => {
   console.log(`electron ${process.versions.electron}`);
   console.log(`chrome ${process.versions.chrome}`);
+
+  protocol.handle("probe", (request) => {
+    const { pathname } = new URL(request.url);
+    const name = pathname === "/" ? "probe.html" : path.basename(pathname);
+    return net.fetch(pathToFileURL(path.join(scratchDir, name)).href);
+  });
 
   const win = new BrowserWindow({
     show: false,
@@ -83,8 +121,18 @@ app.whenReady().then(async () => {
   });
 
   try {
-    await win.loadURL("about:blank");
-    const result = await win.webContents.executeJavaScript(rendererProbe);
+    await loadAndWait(win, () => {
+      void win.loadFile(htmlPath);
+    });
+    let result = await win.webContents.executeJavaScript(rendererProbe);
+
+    if (result.isSecureContext !== true) {
+      await loadAndWait(win, () => {
+        void win.loadURL("probe://app/probe.html");
+      });
+      result = await win.webContents.executeJavaScript(rendererProbe);
+    }
+
     console.log(`PROBE ${JSON.stringify(result)}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

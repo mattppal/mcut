@@ -14,12 +14,10 @@ jobs:
           node-version: 22
       - name: Install Electron
         working-directory: scripts/scratch
-        run: |
-          printf '%s\n' '{"type":"module"}' > package.json
-          npm install --no-save electron@latest
+        run: npm install
       - name: Probe WebCodecs
         working-directory: scripts/scratch
-        run: npx electron webcodecs-probe.mjs
+        run: node_modules/.bin/electron webcodecs-probe.mjs
 
   ubuntu-latest:
     runs-on: ubuntu-latest
@@ -33,9 +31,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
       - name: Install Electron
         working-directory: scripts/scratch
-        run: |
-          printf '%s\n' '{"type":"module"}' > package.json
-          npm install --no-save electron@latest
+        run: npm install
       - name: Probe WebCodecs
         working-directory: scripts/scratch
-        run: xvfb-run --auto-servernum -- npx electron --no-sandbox --disable-gpu webcodecs-probe.mjs
+        run: xvfb-run --auto-servernum -- node_modules/.bin/electron --no-sandbox --disable-gpu webcodecs-probe.mjs
