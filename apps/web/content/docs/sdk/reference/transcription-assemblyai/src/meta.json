@@ -1,8 +1,0 @@
-{
-  "title": "@mcut/transcription-assemblyai",
-  "pages": [
-    "index",
-    "...functions",
-    "...interfaces"
-  ]
-}

@@ -1,0 +1,312 @@
+---
+title: "Functions"
+description: "Functions and constants exported by @mcut/compositor."
+---
+
+## Constants
+
+### ROTATE_HANDLE_OFFSET
+
+```ts
+const ROTATE_HANDLE_OFFSET = 32
+```
+
+Distance in canvas pixels from the top edge of a box to its rotate handle.
+
+## Functions
+
+### degToRad
+
+```ts
+const degToRad = (deg: number): number => (deg * Math.PI) / 180
+```
+
+Converts degrees to radians.
+
+### fromCanvasPoint
+
+```ts
+function fromCanvasPoint(project: Project, x: number, y: number): { x: number; y: number }
+```
+
+Converts a canvas pixel position to center-origin element coordinates.
+
+### getElementDisplaySize
+
+```ts
+function getElementDisplaySize(
+  element: TimelineElement,
+  helpers: SizeHelpers = {},
+): ElementSize | null
+```
+
+Returns the element's natural size multiplied by the absolute transform scale, or `null` for elements without a transform or a known size.
+
+### getElementNaturalSize
+
+```ts
+function getElementNaturalSize(
+  element: TimelineElement,
+  helpers: SizeHelpers = {},
+): ElementSize | null
+```
+
+Returns the unscaled size of a text or media element from the helpers, reduced to the crop region when one is set, or `null` for audio, caption, and multicam elements.
+
+### getElementOBB
+
+```ts
+function getElementOBB(
+  project: Project,
+  element: TimelineElement,
+  helpers: SizeHelpers = {},
+): OBB | null
+```
+
+Returns the element's oriented bounding box in canvas pixels, or `null` for audio, caption, and multicam elements and for media whose size is unknown.
+
+### getFitScale
+
+```ts
+function getFitScale(project: Project, width: number, height: number): number
+```
+
+Returns the scale that fits a media size inside the project frame while keeping its aspect ratio, or 1 for an empty size.
+
+### getTransformForDisplaySize
+
+```ts
+function getTransformForDisplaySize(
+  transform: Transform,
+  natural: ElementSize,
+  patch: DisplaySizePatch,
+): Transform
+```
+
+Returns the transform whose scale yields the requested display width or height, keeping each axis's flip sign and matching the other axis when aspect is preserved.
+
+### getHandles
+
+```ts
+function getHandles(obb: OBB): Handle[]
+```
+
+Returns the eight resize handles and the rotate handle of a box in canvas space.
+
+### hitTestHandles
+
+```ts
+function hitTestHandles(obb: OBB, x: number, y: number, size = 12): HandleId | null
+```
+
+Returns the id of the handle whose square hit area of `size` pixels contains the point, or `null`.
+
+### hitTestOBB
+
+```ts
+function hitTestOBB(obb: OBB, x: number, y: number): boolean
+```
+
+Returns `true` when the canvas point lies inside the rotated box.
+
+### toCanvasPoint
+
+```ts
+function toCanvasPoint(project: Project, x: number, y: number): { x: number; y: number }
+```
+
+Converts center-origin element coordinates to canvas pixels.
+
+### renderFrame
+
+```ts
+function renderFrame(
+  ctx: Canvas2D,
+  project: Project,
+  timeMs: number,
+  options: RenderFrameOptions = {},
+): void
+```
+
+Renders one frame of the project at `timeMs` into a 2D context through the Canvas 2D backend.
+
+### renderFrameWith
+
+```ts
+function renderFrameWith(
+  backend: RenderBackend,
+  project: Project,
+  timeMs: number,
+  options: RenderFrameOptions = {},
+): void
+```
+
+Renders one frame through the given backend, walking tracks bottom up and elements in start order and blending clips joined by an active transition.
+
+### applyChrome
+
+```ts
+function applyChrome(ctx: Canvas2D, chrome: LayerChrome, draw: () => void): void
+```
+
+Runs a Canvas 2D draw inside the transform, opacity, effect filter, and blend mode described by the chrome, degrading to no filter where `ctx.filter` is unsupported.
+
+### createElementContext
+
+```ts
+function createElementContext(
+  backend: RenderBackend,
+  project: Project,
+  track: Track,
+  timeMs: number,
+  source: FrameSource | undefined,
+): ElementRenderContext
+```
+
+Builds the per-element render context for a backend, exposing `ctx` as a getter so the backend learns when raster drawing begins.
+
+### drawImageQuad2D
+
+```ts
+function drawImageQuad2D(ctx: Canvas2D, quad: ImageQuad): void
+```
+
+Draws an image quad into a 2D context in local coordinates, applying its crop and corner radius.
+
+### registerGpuEffectTypes
+
+```ts
+function registerGpuEffectTypes(): void
+```
+
+Registers the GPU-only `chroma-key`, `curves`, and `lut3d` effect types once with the timeline effect registry.
+
+### isWebGPUSupported
+
+```ts
+function isWebGPUSupported(): boolean
+```
+
+Returns `true` when the runtime exposes `navigator.gpu`.
+
+### curveToLut
+
+```ts
+function curveToLut(points: readonly CurvePoint[] | undefined): Float32Array
+```
+
+Converts curve points with increasing x into a 256-entry lookup table by linear interpolation, or an identity table when empty.
+
+### hasUnsupportedEffects
+
+```ts
+function hasUnsupportedEffects(effects: readonly Effect[] | undefined): boolean
+```
+
+Returns `true` when the effect stack contains an effect only the Canvas 2D raster path can render.
+
+### planEffects
+
+```ts
+function planEffects(effects: readonly Effect[] | undefined): EffectPlan
+```
+
+Converts an effect stack into GPU passes, fusing consecutive color operations into one pass and flagging unsupported effects.
+
+### getTransitionRenderer
+
+```ts
+function getTransitionRenderer(type: string): TransitionRenderer | undefined
+```
+
+Returns the renderer registered for a transition type, or `undefined` for a hard cut.
+
+### registerTransitionRenderer
+
+```ts
+function registerTransitionRenderer(type: string, renderer: TransitionRenderer): void
+```
+
+Registers or replaces the renderer for a transition type.
+
+### getElementRenderer
+
+```ts
+function getElementRenderer(type: string): ElementRenderer | undefined
+```
+
+Returns the renderer registered for an element type, or `undefined`.
+
+### getImageSize
+
+```ts
+function getImageSize(source: CanvasImageSource): { width: number; height: number }
+```
+
+Returns the pixel size of a video, image, bitmap, or canvas source.
+
+### measureWith
+
+```ts
+function measureWith(ctx: Canvas2D): MeasureFn
+```
+
+Returns a `MeasureFn` that measures text width with the context's `measureText` after setting the font and letter spacing.
+
+### registerElementRenderer
+
+```ts
+function registerElementRenderer<E extends TimelineElement>(
+  type: E['type'] | (string & {}),
+  renderer: ElementRenderer<E>,
+): void
+```
+
+Registers or replaces the renderer for an element type.
+
+### applyTextTransform
+
+```ts
+function applyTextTransform(text: string, transform: TextStyle['textTransform']): string
+```
+
+Returns the text in upper or lower case according to the transform, or unchanged.
+
+### buildFont
+
+```ts
+function buildFont(style: {
+  fontStyle?: 'normal' | 'italic'
+  fontWeight: number
+  fontSize: number
+  fontFamily: string
+}): string
+```
+
+Builds a CSS font shorthand string from style, weight, size, and family.
+
+### layoutCaption
+
+```ts
+function layoutCaption(
+  measure: MeasureFn,
+  element: { text: string; words?: { text: string; startMs: number; endMs: number }[] },
+  style: CaptionStyle,
+  maxWidth: number,
+): CaptionLayout
+```
+
+Wraps caption words into centered lines no wider than `maxWidth`, keeping each word's timing, and falls back to whitespace splitting without timings.
+
+### layoutTextBlock
+
+```ts
+function layoutTextBlock(
+  measure: MeasureFn,
+  text: string,
+  style: TextStyle,
+  options: TextBlockOptions = {},
+): TextBlockLayout
+```
+
+Lays out a text element into lines, breaking only at newlines unless a text box width is provided.
