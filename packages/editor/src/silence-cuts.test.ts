@@ -1,6 +1,15 @@
 import { describe, expect, test } from 'bun:test'
 import { EditorEngine, createProject, getElementLocation } from '@mcut/timeline'
 import { OperatorError } from './operators'
+
+function thrownBy(run: () => unknown): unknown {
+  try {
+    run()
+  } catch (error) {
+    return error
+  }
+  return undefined
+}
 import { planSilenceCuts, type SilenceCutTranscript } from './silence-cuts'
 
 function projectWithClip(options: { startMs?: number; durationMs?: number; trimStartMs?: number } = {}) {
@@ -107,24 +116,14 @@ describe('planSilenceCuts', () => {
   test('refuses elements with a time remap', () => {
     const engine = new EditorEngine({ project: projectWithClip() })
     engine.dispatch({ type: 'setElementSpeed', elementId: 'e-1', speed: 2 })
-    expect(() =>
-      planSilenceCuts(engine.project, 'e-1', transcript([[0, 1000]]), {}),
-    ).toThrow(/time remap/)
-    try {
-      planSilenceCuts(engine.project, 'e-1', transcript([[0, 1000]]), {})
-    } catch (error) {
-      expect((error as OperatorError).code).toBe('unsupported')
-    }
+    const thrown = thrownBy(() => planSilenceCuts(engine.project, 'e-1', transcript([[0, 1000]]), {}))
+    expect(thrown).toBeInstanceOf(OperatorError)
+    expect(thrown).toMatchObject({ code: 'unsupported', message: expect.stringMatching(/time remap/) })
   })
 
   test('refuses when the transcript has no words in the window', () => {
-    expect(() =>
-      planSilenceCuts(projectWithClip(), 'e-1', transcript([[20000, 21000]]), {}),
-    ).toThrow(/no words/)
-    try {
-      planSilenceCuts(projectWithClip(), 'e-1', transcript([[20000, 21000]]), {})
-    } catch (error) {
-      expect((error as OperatorError).code).toBe('invalid-payload')
-    }
+    const thrown = thrownBy(() => planSilenceCuts(projectWithClip(), 'e-1', transcript([[20000, 21000]]), {}))
+    expect(thrown).toBeInstanceOf(OperatorError)
+    expect(thrown).toMatchObject({ code: 'invalid-payload', message: expect.stringMatching(/no words/) })
   })
 })

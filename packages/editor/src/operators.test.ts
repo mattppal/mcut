@@ -57,14 +57,10 @@ describe('editor operators', () => {
     const engine = new EditorEngine()
     const registry = registerCoreOperators(createEditorOperatorRegistry())
 
-    await expect(registry.run('media.insertAssetAtPlayhead', { engine }, { assetId: 'a-missing' })).rejects.toThrow(
-      OperatorError,
-    )
-    try {
-      await registry.run('media.insertAssetAtPlayhead', { engine }, { assetId: 'a-missing' })
-    } catch (error) {
-      expect((error as OperatorError).code).toBe('unknown-asset')
-      expect((error as OperatorError).message).toBe('no asset "a-missing"')
-    }
+    const thrown = await registry
+      .run('media.insertAssetAtPlayhead', { engine }, { assetId: 'a-missing' })
+      .then(() => undefined, (error: unknown) => error)
+    expect(thrown).toBeInstanceOf(OperatorError)
+    expect(thrown).toMatchObject({ code: 'unknown-asset', message: 'no asset "a-missing"' })
   })
 })
