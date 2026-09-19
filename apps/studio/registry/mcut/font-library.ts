@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import type { ExportFontFaceInit } from "@mcut/media";
-import { useEditor, useEditorState } from "@mcut/react";
+import { useEditor, useEngineSync } from "@mcut/react";
 import type { Project } from "@mcut/timeline";
 import { z } from "zod";
 import { parseGoogleFontCss, weightDescriptorMatches } from "./font-css";
@@ -867,6 +867,13 @@ export function useFontLibrary(): FontLibraryState {
   return useSyncExternalStore(subscribeFontLibrary, getFontLibraryState, getFontLibraryServerState);
 }
 
+function projectFontKey(project: Project): string {
+  return collectProjectFontSpecs(project)
+    .map((spec) => `${spec.family}|${spec.weight}|${spec.italic ? "i" : "n"}`)
+    .sort()
+    .join(",");
+}
+
 /**
  * Keep `document.fonts` in sync with the project: boots the library, then
  * loads any font a text/caption element references whenever the set changes.
@@ -875,13 +882,11 @@ export function useFontLibrary(): FontLibraryState {
  */
 export function useProjectFontLoader(): void {
   const engine = useEditor();
-  const fontKey = useEditorState((s) =>
-    collectProjectFontSpecs(s.project)
-      .map((spec) => `${spec.family}|${spec.weight}|${spec.italic ? "i" : "n"}`)
-      .sort()
-      .join(","),
+  useEngineSync(
+    engine.store,
+    (state) => projectFontKey(state.project),
+    () => {
+      void initFontLibrary().then(() => ensureProjectFontsLoaded(engine.project));
+    },
   );
-  useEffect(() => {
-    void initFontLibrary().then(() => ensureProjectFontsLoaded(engine.project));
-  }, [fontKey, engine]);
 }
