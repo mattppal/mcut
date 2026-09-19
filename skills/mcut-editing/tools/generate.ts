@@ -6,7 +6,7 @@
  */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { PLATFORM_PRESETS } from '@mcut/cli'
+import { PLATFORM_PRESETS, type PlatformPreset } from '@mcut/cli'
 import { CAPTION_STYLE_PRESETS, listToolDefinitions } from '@mcut/timeline'
 import { RECIPES } from './recipes'
 import { TEMPLATES } from './templates'
@@ -24,23 +24,32 @@ async function write(relative: string, content: string): Promise<void> {
 
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`
 
+const BRACE_DELTA = new Map<string, number>([
+  ['{', 1],
+  ['}', -1],
+])
+
 function rewriteColonConnectors(text: string): string {
   let depth = 0
   let result = ''
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i]!
-    if (ch === '{') depth += 1
-    else if (ch === '}') depth = Math.max(0, depth - 1)
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text.at(i)
+    if (ch === undefined) return result
+    const delta = BRACE_DELTA.get(ch)
+    if (delta !== undefined) depth = Math.max(0, depth + delta)
+    const prev = text.at(i - 1)
+    const next = text.at(i + 1)
+    const letter = text.at(i + 2)
     if (
       depth === 0 &&
       ch === ':' &&
-      i > 0 &&
-      /\w/.test(text[i - 1]!) &&
-      text[i + 1] === ' ' &&
-      i + 2 < text.length &&
-      /[a-z]/.test(text[i + 2]!)
+      prev !== undefined &&
+      /\w/.test(prev) &&
+      next === ' ' &&
+      letter !== undefined &&
+      /[a-z]/.test(letter)
     ) {
-      result += `. ${text[i + 2]!.toUpperCase()}`
+      result += `. ${letter.toUpperCase()}`
       i += 2
       continue
     }
@@ -51,23 +60,15 @@ function rewriteColonConnectors(text: string): string {
 
 function plainProse(text: string): string {
   const withoutEn = text.replace(/\u2013/g, '-')
-  const withoutEm = withoutEn.replace(/\s*\u2014\s*([A-Za-z])?/g, (_m, letter: string | undefined) =>
-    letter ? `. ${letter.toUpperCase()}` : '.',
-  )
+  const withoutEm = withoutEn.replace(/\s*\u2014\s*([A-Za-z])?/g, (_match, letter: string | undefined) => {
+    if (letter === undefined) return '.'
+    return `. ${letter.toUpperCase()}`
+  })
   return rewriteColonConnectors(withoutEm)
 }
 
-function mapStringFields<T>(value: T, keys: Set<string>): T {
-  if (Array.isArray(value)) return value.map((item) => mapStringFields(item, keys)) as T
-  if (value && typeof value === 'object') {
-    const out: Record<string, unknown> = {}
-    for (const [key, inner] of Object.entries(value as Record<string, unknown>)) {
-      out[key] =
-        keys.has(key) && typeof inner === 'string' ? plainProse(inner) : mapStringFields(inner, keys)
-    }
-    return out as T
-  }
-  return value
+function sanitizePreset(preset: PlatformPreset): PlatformPreset {
+  return { ...preset, notes: plainProse(preset.notes) }
 }
 
 const EXCLUDED_COMMANDS = new Set([
@@ -155,7 +156,7 @@ function recipesMarkdown(): string {
 
 await write('references/commands.md', commandsMarkdown())
 await write('references/recipes.md', recipesMarkdown())
-await write('assets/platform-presets.json', json(mapStringFields(PLATFORM_PRESETS, new Set(['notes']))))
+await write('assets/platform-presets.json', json(PLATFORM_PRESETS.map(sanitizePreset)))
 await write('assets/caption-styles.json', json(CAPTION_STYLE_PRESETS))
 for (const template of TEMPLATES) {
   await write(`assets/templates/${template.id}.json`, json(template.build()))
