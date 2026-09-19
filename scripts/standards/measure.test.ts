@@ -89,3 +89,11 @@ describe('compare census metrics', () => {
     expect(compare(base, head)).toEqual({ kind: 'clean' })
   })
 })
+
+describe('effect home', () => {
+  test('an effect under packages/react/src/sync is not counted', () => {
+    const src = "useEffect(() => sync(), [])\n"
+    expect(measureFile('packages/react/src/sync/use-window-event.ts', src).get('useEffect') ?? 0).toBe(0)
+    expect(measureFile('apps/studio/registry/mcut/editor-shell.tsx', src).get('useEffect') ?? 0).toBe(1)
+  })
+})

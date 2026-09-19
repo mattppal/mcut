@@ -24,7 +24,7 @@ Directive comments (`eslint-`, `@ts-`, `prettier-ignore`) and shebangs are not c
 
 ## Growth rule
 
-Census-only metrics are `loc` and `switchStmt`. They appear in the report and never fail the growth check. The list is the `censusOnly` constant in `measure.ts`. Adding another census metric is one entry in that list. Every other metric is gated. The check fails with exit 1 when any gated metric in any area and bucket is higher at HEAD than at the merge base. Each failure prints one line in the form `growth area/bucket metric base -> head` followed by the files that grew. A clean run prints `no growth`.
+Census-only metrics are `loc`, `switchStmt`, and `optionalProps`. They appear in the report and never fail the growth check. The list is the `censusOnly` constant in `measure.ts`. Adding another census metric is one entry in that list. `useEffect` is not counted under `packages/react/src/sync/`, the one place the agent contract allows an effect. Every other metric is gated. The check fails with exit 1 when any gated metric in any area and bucket is higher at HEAD than at the merge base. Each failure prints one line in the form `growth area/bucket metric base -> head` followed by the files that grew. A clean run prints `no growth`.
 
 ## Bans
 

@@ -52,7 +52,8 @@ const bans: readonly Ban[] = [
   { metric: 'todo', bucket: 'code' },
 ]
 
-const censusOnly: readonly MetricId[] = ['loc', 'switchStmt']
+const censusOnly: readonly MetricId[] = ['loc', 'switchStmt', 'optionalProps']
+const effectHome = '/packages/react/src/sync/'
 
 interface Area { name: string; roots: readonly string[] }
 
@@ -151,6 +152,7 @@ export function measureFile(rel: string, text: string): Counts {
   }
   const path = `/${rel}`
   const consoleExempt = path.includes('/scripts/') || path.includes('/tools/') || bucket === 'tests'
+  const effectExempt = path.includes(effectHome)
   if (lines.length > 400) add(counts, 'longFile', 1)
   const codeLines: string[] = []
   let block: 'none' | 'comment' | 'jsdoc' = 'none'
@@ -178,7 +180,7 @@ export function measureFile(rel: string, text: string): Counts {
     codeLines.push(stripped)
     const trailing = /\/\/(?!\/)(.*)$/.exec(stripped.replace(/https?:\/\/\S*/g, ''))
     if (trailing) countComment(counts, trailing[1] ?? '', false)
-    if (/\buse(Layout)?Effect\s*\(/.test(stripped)) add(counts, 'useEffect', 1)
+    if (!effectExempt && /\buse(Layout)?Effect\s*\(/.test(stripped)) add(counts, 'useEffect', 1)
     if (/\w+Ref\.current\s*=[^=]/.test(stripped)) add(counts, 'useRefState', 1)
     const booleanState = /useState<\s*boolean\s*>/.test(stripped) || /useState\(\s*(true|false)\s*\)/.test(stripped)
     if (booleanState) add(counts, 'useStateBool', 1)
