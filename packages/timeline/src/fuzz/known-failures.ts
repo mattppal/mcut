@@ -8,11 +8,9 @@ export interface KnownFailure {
 }
 
 const issues = 'https://github.com/mattppal/mcut/issues'
-const splitters = ['addElement', 'splitElement', 'trimEdge', 'rippleTrim', 'rollEdit', 'slideElement']
 const edgeTrims = ['trimEdge', 'rippleTrim', 'rollEdit', 'slideElement']
 
 export const knownFailures: readonly KnownFailure[] = [
-  { issue: `${issues}/44`, tools: splitters, invariants: ['integer-ms', 'round-trip'], detail: /trimStartMs/ },
   { issue: `${issues}/45`, tools: edgeTrims, invariants: ['round-trip'], detail: /too_big/ },
 ]
 
