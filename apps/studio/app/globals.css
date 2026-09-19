@@ -233,6 +233,12 @@
   --clip-multicam: oklch(25.7% 0.09 281.288 / 90%);
 }
 
+/* The command palette is a keyboard toggle. It opens and closes with no motion. */
+[data-slot="dialog-overlay"]:has(~ [data-slot="dialog-content"][data-command-palette]) {
+  animation-duration: 0s;
+  transition-duration: 0s;
+}
+
 [data-editor] ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
