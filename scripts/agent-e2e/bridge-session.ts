@@ -3,11 +3,13 @@ import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node
 import { join } from 'node:path'
 import { chromium, type Browser, type BrowserContext } from '@playwright/test'
 import { z } from 'zod'
+import { startFixtureServer, type FixtureServer } from './fixture-server'
 import { repoRoot } from './fixtures'
 
 export interface BridgeSession {
   mcpUrl: string
   editorUrl: string
+  mediaOrigin: string
   bridgePort: number
   token: string
   close(): Promise<void>
@@ -59,7 +61,7 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 const remainingMs = (deadline: Deadline): number => Math.max(0, deadline.endsAt - Date.now())
 
-async function tapLines(stream: ReadableStream<Uint8Array>, onLine: (line: string) => void): Promise<void> {
+export async function tapLines(stream: ReadableStream<Uint8Array>, onLine: (line: string) => void): Promise<void> {
   const decoder = new TextDecoder()
   let buffered = ''
   for await (const chunk of stream) {
@@ -243,6 +245,7 @@ export async function openBridgeSession(options: BridgeSessionOptions): Promise<
 
   const token = randomBytes(16).toString('hex')
   const group = new ProcessGroup(options.logDir, log)
+  let fixtures: FixtureServer | undefined
   let browser: Browser | undefined
   let context: BrowserContext | undefined
   let closed = false
@@ -261,6 +264,7 @@ export async function openBridgeSession(options: BridgeSessionOptions): Promise<
     await browser?.close().catch((error: unknown) => {
       log(`browser close failed: ${error instanceof Error ? error.message : String(error)}`)
     })
+    await fixtures?.stop()
     await group.shutdown()
   }
   const onSignal = (signal: NodeJS.Signals): void => {
@@ -272,6 +276,7 @@ export async function openBridgeSession(options: BridgeSessionOptions): Promise<
   process.on('exit', group.killAllSync)
 
   try {
+    fixtures = startFixtureServer()
     const studio = group.spawn('studio', [node, NEXT_BIN, 'start', '--port', '0', '--hostname', '127.0.0.1'], STUDIO_DIR)
     const bridge = group.spawn('bridge', [process.execPath, BRIDGE_CLI, 'start', '--port', '0', '--token', token], repoRoot)
     const bridgeLine = await group.waitForLine(bridge, 'ready', (line) => BRIDGE_READY.test(line), deadline)
@@ -279,7 +284,7 @@ export async function openBridgeSession(options: BridgeSessionOptions): Promise<
     const studioLine = await group.waitForLine(studio, 'Local URL', (line) => STUDIO_LOCAL.test(line), deadline)
     const studioPort = portFrom(studioLine, STUDIO_LOCAL, 'studio')
     await group.waitForLine(studio, 'Ready', (line) => STUDIO_READY.test(line), deadline)
-    log(`bridge listening on ${bridgePort}, studio listening on ${studioPort}`)
+    log(`bridge listening on ${bridgePort}, studio listening on ${studioPort}, fixtures served from ${fixtures.origin}`)
 
     const editorUrl = new URL(`http://127.0.0.1:${studioPort}/editor`)
     editorUrl.searchParams.set('mcpBridge', String(bridgePort))
@@ -291,7 +296,7 @@ export async function openBridgeSession(options: BridgeSessionOptions): Promise<
 
     const mcpUrl = new URL(`http://127.0.0.1:${bridgePort}/mcp`)
     mcpUrl.searchParams.set('token', token)
-    return { mcpUrl: mcpUrl.toString(), editorUrl: editorUrl.toString(), bridgePort, token, close }
+    return { mcpUrl: mcpUrl.toString(), editorUrl: editorUrl.toString(), mediaOrigin: fixtures.origin, bridgePort, token, close }
   } catch (error) {
     await close()
     const message = error instanceof Error ? error.message : String(error)

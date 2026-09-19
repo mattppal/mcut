@@ -29,16 +29,18 @@ const SYSTEM_PROMPT = [
 const truncate = (text: string, limit: number): string =>
   text.length <= limit ? text : `${text.slice(0, limit)}\n[truncated ${text.length - limit} chars]`
 
+export const transcriptText = (text: string): string => truncate(text, TRANSCRIPT_RESULT_CHARS)
+
 const addTokens = (total: TokenUsage, turn: TokenUsage): void => {
   total.input += turn.input
   total.output += turn.output
 }
 
 export function buildPrompt(task: E2ETask, summary: string): Prompt {
-  const fixtures = task.fixtures.map((id) => describeFixture(resolveFixture(id)))
+  const fixtures = task.fixtures.map((fixture) => describeFixture(resolveFixture(fixture.id), fixture.src))
   const user = [
     `Task. ${task.prompt}`,
-    `Media fixtures (paths are relative to the repository root).\n${fixtures.join('\n')}`,
+    `Media fixtures (use each src value verbatim as the asset src).\n${fixtures.join('\n')}`,
     `Current project state.\n${summary}`,
   ].join('\n\n')
   return { system: SYSTEM_PROMPT, user }
@@ -58,7 +60,7 @@ async function executeCall(session: McpSession, call: FunctionCall): Promise<Exe
   const record: ToolCall = {
     name: call.name,
     args: parsed.ok ? parsed.value : {},
-    result: truncate(result.text, TRANSCRIPT_RESULT_CHARS),
+    result: transcriptText(result.text),
     isError: result.isError,
     durationMs: Math.round(performance.now() - startedAt),
   }
@@ -72,7 +74,7 @@ interface LoopState {
   tokens: TokenUsage
 }
 
-interface Stop {
+export interface Stop {
   stoppedBy: StopReason
   detail: string
 }
@@ -105,18 +107,22 @@ async function drive(
   return { stoppedBy: 'model', detail: turn.text }
 }
 
-function judge(task: E2ETask, project: Project, state: LoopState, stop: Stop): Verdict {
-  const verdict = task.score(project, state.toolCalls)
+export function judge(task: E2ETask, project: Project, transcript: ToolCall[], stop: Stop): Verdict {
+  const verdict = task.score(project, transcript)
   if (stop.stoppedBy === 'model') return verdict
   return { pass: false, reasons: [`run stopped early (${stop.stoppedBy}). ${stop.detail}`, ...verdict.reasons] }
 }
 
-export async function runTask(task: E2ETask, session: McpSession, model: ModelClient, caps: Caps): Promise<TaskRun> {
-  const startedAt = Date.now()
+export async function prepareTask(task: E2ETask, session: McpSession): Promise<Prompt> {
   await resetProject(session)
   for (const command of task.setup) await session.dispatch(command)
   const summary = await session.callTool('get_summary', {})
-  const prompt = buildPrompt(task, summary.text)
+  return buildPrompt(task, summary.text)
+}
+
+export async function runTask(task: E2ETask, session: McpSession, model: ModelClient, caps: Caps): Promise<TaskRun> {
+  const startedAt = Date.now()
+  const prompt = await prepareTask(task, session)
 
   const state: LoopState = { toolCalls: [], steps: 0, tokens: { input: 0, output: 0 } }
   const stop = await drive(session, model, prompt, caps, startedAt, state).catch(
@@ -134,7 +140,7 @@ export async function runTask(task: E2ETask, session: McpSession, model: ModelCl
     steps: state.steps,
     durationMs: Date.now() - startedAt,
     tokens: state.tokens,
-    verdict: judge(task, project, state, stop),
+    verdict: judge(task, project, state.toolCalls, stop),
     stoppedBy: stop.stoppedBy,
     finalMessage: stop.stoppedBy === 'model' ? stop.detail : '',
   }
