@@ -1,4 +1,4 @@
-import type { AnyCommand } from '@mcut/timeline'
+import type { BuiltinCommand } from '@mcut/timeline'
 import { resolveFixture, type Fixture } from './fixtures'
 import type { ScriptedCall } from './model'
 import {
@@ -27,12 +27,12 @@ const TITLE = 'Hello mcut'
 const clip = resolveFixture('talking-head')
 const D = clip.durationMs
 
-const call = (command: AnyCommand): ScriptedCall => {
+const call = (command: BuiltinCommand): ScriptedCall => {
   const { type, ...args } = command
   return { name: type, args }
 }
 
-const registerAsset = (fixture: Fixture): AnyCommand => ({
+const registerAsset = (fixture: Fixture): BuiltinCommand => ({
   type: 'addAsset',
   asset: {
     id: ASSET_ID,
@@ -45,9 +45,9 @@ const registerAsset = (fixture: Fixture): AnyCommand => ({
   },
 })
 
-const addVideoTrack: AnyCommand = { type: 'addTrack', id: TRACK_ID, name: 'Video' }
+const addVideoTrack: BuiltinCommand = { type: 'addTrack', id: TRACK_ID, name: 'Video' }
 
-const placeClip = (fixture: Fixture): AnyCommand => ({
+const placeClip = (fixture: Fixture): BuiltinCommand => ({
   type: 'addElement',
   trackId: TRACK_ID,
   element: {
@@ -59,13 +59,13 @@ const placeClip = (fixture: Fixture): AnyCommand => ({
   },
 })
 
-const placedClip = (fixture: Fixture): AnyCommand[] => [
+const placedClip = (fixture: Fixture): BuiltinCommand[] => [
   registerAsset(fixture),
   addVideoTrack,
   placeClip(fixture),
 ]
 
-const captionsFor = (speech: SpeechScript): AnyCommand => ({
+const captionsFor = (speech: SpeechScript): BuiltinCommand => ({
   type: 'applyCaptions',
   captions: speech.groups.map((group) => ({
     startMs: group.startMs,

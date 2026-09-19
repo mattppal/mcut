@@ -3,7 +3,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import { parseProject, type AnyCommand, type Project } from '@mcut/timeline'
+import { parseProject, type BuiltinCommand, type Project } from '@mcut/timeline'
 import { z } from 'zod'
 import { repoRoot } from './fixtures'
 import { jsonObjectSchema, type JsonObject } from './json'
@@ -39,7 +39,7 @@ const toolResultSchema = z.object({
 export interface McpSession {
   listTools(): Promise<ToolDefinition[]>
   callTool(name: string, args: JsonObject): Promise<ToolResult>
-  dispatch(command: AnyCommand): Promise<ToolResult>
+  dispatch(command: BuiltinCommand): Promise<ToolResult>
   getProject(): Promise<Project>
   close(): Promise<void>
 }
@@ -73,7 +73,7 @@ export async function connectMcp(transport: Transport): Promise<McpSession> {
     return { text, isError: result.isError }
   }
 
-  const dispatch = async (command: AnyCommand): Promise<ToolResult> => {
+  const dispatch = async (command: BuiltinCommand): Promise<ToolResult> => {
     const { type, ...args } = command
     const result = await callTool(type, args)
     if (result.isError) throw new Error(`setup command ${type} failed. ${result.text}`)
@@ -98,8 +98,8 @@ export async function resetProject(session: McpSession): Promise<void> {
   for (const track of project.tracks) {
     await session.dispatch({ type: 'removeTrack', trackId: track.id })
   }
-  for (const assetId of Object.keys(project.assets)) {
-    await session.dispatch({ type: 'removeAsset', assetId })
+  for (const asset of Object.values(project.assets)) {
+    await session.dispatch({ type: 'removeAsset', assetId: asset.id })
   }
   await session.dispatch({ type: 'updateProject', name: 'agent-e2e', width: 1920, height: 1080, fps: 30 })
 }

@@ -1,4 +1,4 @@
-import type { AnyCommand, Project } from '@mcut/timeline'
+import type { BuiltinCommand, Project } from '@mcut/timeline'
 import type { JsonObject } from './json'
 import type { ScriptedCall, TokenUsage } from './model'
 
@@ -20,7 +20,7 @@ export interface E2ETask {
   title: string
   prompt: string
   fixtures: string[]
-  setup: AnyCommand[]
+  setup: BuiltinCommand[]
   scripted: ScriptedCall[]
   score: (project: Project, transcript: ToolCall[]) => Verdict
 }
