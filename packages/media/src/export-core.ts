@@ -14,22 +14,11 @@ import {
   type VideoSample,
 } from 'mediabunny'
 import { renderFrame, type FrameSource } from '@mcut/compositor'
-import {
-  getFrameRequests,
-  getProjectDurationMs,
-  getRenderableElements,
-  type AssetId,
-  type Project,
-} from '@mcut/timeline'
+import { getFrameRequests, getProjectDurationMs, getRenderableElements, type AssetId, type Project } from '@mcut/timeline'
 import { containerFormats, type ContainerFormat } from './container-formats'
 import { ensureFallbackAudioEncoders } from './encoders'
 import { inputFor } from './probe'
-import {
-  AUDIO_SAMPLE_RATE,
-  type ContainerFormatId,
-  type ExportProgress,
-  type MixedAudioData,
-} from './export-types'
+import { AUDIO_SAMPLE_RATE, type ContainerFormatId, type ExportProgress, type MixedAudioData } from './export-types'
 
 export function resolveContainerFormat(id: ContainerFormatId = 'mp4'): ContainerFormat {
   return containerFormats[id]
@@ -87,10 +76,7 @@ export function* planarAudioChunks(
   }
 }
 
-export async function runExportPipeline(
-  project: Project,
-  options: ExportPipelineOptions,
-): Promise<ExportPipelineResult> {
+export async function runExportPipeline(project: Project, options: ExportPipelineOptions): Promise<ExportPipelineResult> {
   const { onProgress, signal, mixedAudio } = options
   const durationMs = getProjectDurationMs(project)
   if (durationMs <= 0) throw new Error('Cannot export an empty project')
@@ -184,8 +170,7 @@ export async function runExportPipeline(
   }
 }
 
-const frameKey = (assetId: string, sourceTimeMs: number): string =>
-  `${assetId}@${Math.round(sourceTimeMs * 1000)}`
+const frameKey = (assetId: string, sourceTimeMs: number): string => `${assetId}@${Math.round(sourceTimeMs * 1000)}`
 
 interface ElementVideoState {
   iterator: AsyncGenerator<VideoSample, void, unknown>
@@ -213,11 +198,7 @@ class ExportFrameSource implements FrameSource {
         if (bitmap) this.frameCache.set(frameKey(element.assetId, 0), bitmap)
       } else if (element.type === 'video' || element.type === 'multicam') {
         for (const request of getFrameRequests(this.project, element, timeMs)) {
-          const sample = await this.advance(
-            `${element.id}:${request.assetId}`,
-            request.assetId as AssetId,
-            request.sourceTimeMs / 1000,
-          )
+          const sample = await this.advance(`${element.id}:${request.assetId}`, request.assetId as AssetId, request.sourceTimeMs / 1000)
           if (sample) {
             const image = await createImageBitmap(sample.toCanvasImageSource())
             this.temporaries.push(image)

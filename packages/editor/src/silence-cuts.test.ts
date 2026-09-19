@@ -42,10 +42,18 @@ function transcript(words: Array<[number, number]>): SilenceCutTranscript {
 describe('planSilenceCuts', () => {
   test('cuts an interior gap with padding and ripples later content left', () => {
     const project = projectWithClip()
-    const plan = planSilenceCuts(project, 'e-1', transcript([[0, 3000], [7000, 10000]]), {
-      minGapMs: 600,
-      paddingMs: 120,
-    })
+    const plan = planSilenceCuts(
+      project,
+      'e-1',
+      transcript([
+        [0, 3000],
+        [7000, 10000],
+      ]),
+      {
+        minGapMs: 600,
+        paddingMs: 120,
+      },
+    )
     expect(plan.silences).toEqual([{ startMs: 3120, endMs: 6880 }])
     expect(plan.removedMs).toBe(3760)
     const track = plan.project.tracks[0]!
@@ -73,10 +81,18 @@ describe('planSilenceCuts', () => {
 
   test('respects trimStartMs offsets because transcript times are source time', () => {
     const project = projectWithClip({ startMs: 1000, trimStartMs: 5000, durationMs: 10000 })
-    const plan = planSilenceCuts(project, 'e-1', transcript([[5000, 9000], [12000, 15000]]), {
-      paddingMs: 0,
-      trimEnds: false,
-    })
+    const plan = planSilenceCuts(
+      project,
+      'e-1',
+      transcript([
+        [5000, 9000],
+        [12000, 15000],
+      ]),
+      {
+        paddingMs: 0,
+        trimEnds: false,
+      },
+    )
     expect(plan.silences).toEqual([{ startMs: 9000, endMs: 12000 }])
     const track = plan.project.tracks[0]!
     expect(track.elements[0]).toMatchObject({ id: 'e-1', startMs: 1000, durationMs: 4000 })
@@ -88,7 +104,11 @@ describe('planSilenceCuts', () => {
     const plan = planSilenceCuts(
       project,
       'e-1',
-      transcript([[0, 2000], [4000, 4100], [6000, 10000]]),
+      transcript([
+        [0, 2000],
+        [4000, 4100],
+        [6000, 10000],
+      ]),
       { paddingMs: 0, minKeepMs: 250 },
     )
     expect(plan.silences).toEqual([{ startMs: 2000, endMs: 6000 }])
@@ -99,7 +119,11 @@ describe('planSilenceCuts', () => {
     const plan = planSilenceCuts(
       project,
       'e-1',
-      transcript([[0, 2000], [4000, 6000], [8000, 12000]]),
+      transcript([
+        [0, 2000],
+        [4000, 6000],
+        [8000, 12000],
+      ]),
       { paddingMs: 0 },
     )
     expect(plan.silences).toHaveLength(2)

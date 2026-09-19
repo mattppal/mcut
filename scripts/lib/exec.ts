@@ -30,15 +30,7 @@ function spawn(command: string[], options: RunOptions): RunResult {
 export function run(command: string[], options: RunOptions = {}): string {
   const result = spawn(command, options)
   if (!result.success) {
-    throw new Error(
-      [
-        `Command failed in ${options.cwd ?? process.cwd()}: ${command.join(' ')}`,
-        result.stdout,
-        result.stderr,
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    )
+    throw new Error([`Command failed in ${options.cwd ?? process.cwd()}: ${command.join(' ')}`, result.stdout, result.stderr].filter(Boolean).join('\n'))
   }
   return result.stdout
 }

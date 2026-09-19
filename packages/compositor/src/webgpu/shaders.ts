@@ -226,11 +226,7 @@ struct PrepareUniforms {
 @fragment
 fn fs_main(in: VertexOut) -> @location(0) vec4f {
   let uv = u.cropOrigin + in.uv * u.cropSize;
-  ${
-    external
-      ? 'let color = textureSampleBaseClampToEdge(src, srcSampler, uv);'
-      : 'let color = textureSampleLevel(src, srcSampler, uv, 0.0);'
-  }
+  ${external ? 'let color = textureSampleBaseClampToEdge(src, srcSampler, uv);' : 'let color = textureSampleLevel(src, srcSampler, uv, 0.0);'}
   return color;
 }
 `

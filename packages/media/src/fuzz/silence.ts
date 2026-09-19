@@ -11,26 +11,17 @@ export async function decodeMonoPcm(path: string, sampleRate: number): Promise<F
   const args = ['ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-i', path]
   args.push('-f', 'f32le', '-ac', '1', '-ar', String(sampleRate), '-')
   const proc = Bun.spawn(args, { stdout: 'pipe', stderr: 'pipe', stdin: 'ignore' })
-  const [pcm, stderr, code] = await Promise.all([
-    new Response(proc.stdout).arrayBuffer(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ])
+  const [pcm, stderr, code] = await Promise.all([new Response(proc.stdout).arrayBuffer(), new Response(proc.stderr).text(), proc.exited])
   if (code !== 0) throw new Error(`ffmpeg could not decode ${path}\n${stderr}`)
   return new Float32Array(pcm)
 }
 
-const spans = (windows: readonly SilenceWindow[]): string =>
-  windows.map((window) => `${window.startMs} to ${window.endMs}`).join(', ') || 'none'
+const spans = (windows: readonly SilenceWindow[]): string => windows.map((window) => `${window.startMs} to ${window.endMs}`).join(', ') || 'none'
 
 const within = (window: SilenceWindow, gap: SilenceWindow): boolean =>
   Math.abs(window.startMs - gap.startMs) <= GAP_TOLERANCE_MS && Math.abs(window.endMs - gap.endMs) <= GAP_TOLERANCE_MS
 
-export function missingGaps(
-  gaps: readonly SilenceWindow[],
-  windows: readonly SilenceWindow[],
-  invariant: string,
-): Violation[] {
+export function missingGaps(gaps: readonly SilenceWindow[], windows: readonly SilenceWindow[], invariant: string): Violation[] {
   return gaps
     .filter((gap) => !windows.some((window) => within(window, gap)))
     .map((gap) => ({

@@ -1,11 +1,4 @@
-import {
-  buildFilterString,
-  toCompositeOperation,
-  type BlendMode,
-  type Effect,
-  type Project,
-  type Track,
-} from '@mcut/timeline'
+import { buildFilterString, toCompositeOperation, type BlendMode, type Effect, type Project, type Track } from '@mcut/timeline'
 import type { Canvas2D, ElementRenderContext, FrameSource } from './types'
 
 export interface LayerChrome {
@@ -60,17 +53,7 @@ export function drawImageQuad2D(ctx: Canvas2D, quad: ImageQuad): void {
     ctx.clip()
   }
   if (quad.src) {
-    ctx.drawImage(
-      quad.image,
-      quad.src.sx,
-      quad.src.sy,
-      quad.src.sw,
-      quad.src.sh,
-      -quad.dw / 2,
-      -quad.dh / 2,
-      quad.dw,
-      quad.dh,
-    )
+    ctx.drawImage(quad.image, quad.src.sx, quad.src.sy, quad.src.sw, quad.src.sh, -quad.dw / 2, -quad.dh / 2, quad.dw, quad.dh)
   } else {
     ctx.drawImage(quad.image, -quad.dw / 2, -quad.dh / 2, quad.dw, quad.dh)
   }

@@ -5,9 +5,15 @@ import { listFiles, repoRoot } from './measure'
 
 const keptPrefixes = ['eslint-', '@ts-', 'prettier-ignore', 'biome-ignore', '#__PURE__']
 
-interface Span { start: number; end: number }
+interface Span {
+  start: number
+  end: number
+}
 type Deletion = Span & { kind: 'lines' | 'inline' }
-interface StripResult { text: string; removed: number }
+interface StripResult {
+  text: string
+  removed: number
+}
 
 function isKept(comment: string): boolean {
   if (comment.includes('https://') || comment.startsWith('///')) return true
@@ -16,8 +22,7 @@ function isKept(comment: string): boolean {
   return keptPrefixes.some((prefix) => text.startsWith(prefix))
 }
 
-const isJsDocNode = (node: ts.Node): boolean =>
-  node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode
+const isJsDocNode = (node: ts.Node): boolean => node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode
 
 function commentOnlyContainer(next: ts.Node, comment: string, source: ts.SourceFile): Span | undefined {
   const parent = next.parent

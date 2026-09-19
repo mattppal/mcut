@@ -118,9 +118,7 @@ describe('splitting reversed clips', () => {
     })
     engine.dispatch({ type: 'splitElement', elementId: 'e-ramp', atMs: 2943 })
     const halves = (project: Project) =>
-      project.tracks.flatMap((track) =>
-        track.elements.flatMap((e) => (e.type === 'video' ? [[e.startMs, e.durationMs, e.trimStartMs]] : [])),
-      )
+      project.tracks.flatMap((track) => track.elements.flatMap((e) => (e.type === 'video' ? [[e.startMs, e.durationMs, e.trimStartMs]] : [])))
     expect(halves(engine.project)).toEqual([
       [2862, 81, 3111],
       [2943, 2938, 0],
@@ -132,8 +130,6 @@ describe('splitting reversed clips', () => {
   })
 
   test('reversed clips stay inside their asset', () => {
-    expect(() =>
-      projectWithVideo({ trimStartMs: 7000, durationMs: 4000 }),
-    ).toThrow(/plays past the end/)
+    expect(() => projectWithVideo({ trimStartMs: 7000, durationMs: 4000 })).toThrow(/plays past the end/)
   })
 })

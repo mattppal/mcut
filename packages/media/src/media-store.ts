@@ -7,12 +7,7 @@ function isNotFound(error: unknown): boolean {
 }
 
 export function isMediaStoreSupported(): boolean {
-  return (
-    typeof navigator !== 'undefined' &&
-    typeof navigator.storage?.getDirectory === 'function' &&
-    typeof crypto !== 'undefined' &&
-    !!crypto.subtle
-  )
+  return typeof navigator !== 'undefined' && typeof navigator.storage?.getDirectory === 'function' && typeof crypto !== 'undefined' && !!crypto.subtle
 }
 
 export async function hashBlob(blob: Blob): Promise<string | null> {

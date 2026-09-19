@@ -21,11 +21,7 @@ export interface ProbeFuzzOptions {
   onEntry?: (entry: FuzzEntry, outcome: ProbeOutcome, violations: readonly Violation[]) => void
 }
 
-export async function runProbeFuzz(
-  entries: readonly FuzzEntry[],
-  runner: ProbeRunner,
-  options: ProbeFuzzOptions = {},
-): Promise<ProbeFuzzResult> {
+export async function runProbeFuzz(entries: readonly FuzzEntry[], runner: ProbeRunner, options: ProbeFuzzOptions = {}): Promise<ProbeFuzzResult> {
   const known = options.known ?? []
   const knownFailures = new Map<string, number>()
   let probed = 0

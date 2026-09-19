@@ -32,8 +32,7 @@ function projectWithClips(): Project {
   return project
 }
 
-const text = (id: string, startMs: number, durationMs: number) =>
-  ({ id, type: 'text', text: id, startMs, durationMs }) as const
+const text = (id: string, startMs: number, durationMs: number) => ({ id, type: 'text', text: id, startMs, durationMs }) as const
 
 describe('editMode: normal (default)', () => {
   test('rejects collisions, as before', () => {
@@ -106,9 +105,7 @@ describe('editMode: overwrite', () => {
     const track = getTrack(project, TRACK)!
     expect(getElement(project, 'e-1')).toMatchObject({ startMs: 0, durationMs: 500 })
     expect(getElement(project, 'e-new')).toMatchObject({ startMs: 500, durationMs: 1000 })
-    const tail = track.elements.find(
-      (e) => e.startMs === 1500 && e.id !== 'e-new' && e.id !== 'e-1',
-    )
+    const tail = track.elements.find((e) => e.startMs === 1500 && e.id !== 'e-new' && e.id !== 'e-1')
     expect(tail).toMatchObject({ durationMs: 500, trimStartMs: 6500 })
   })
 

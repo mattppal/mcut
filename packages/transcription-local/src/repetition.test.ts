@@ -3,9 +3,7 @@ import { hasRepetitionLoop, textHasRepetitionLoop } from './repetition'
 
 describe('hasRepetitionLoop', () => {
   test('normal speech is clean', () => {
-    expect(
-      textHasRepetitionLoop('the quick brown fox jumps over the lazy dog and keeps going'),
-    ).toBe(false)
+    expect(textHasRepetitionLoop('the quick brown fox jumps over the lazy dog and keeps going')).toBe(false)
   })
 
   test('detects single-token loops', () => {
@@ -17,9 +15,7 @@ describe('hasRepetitionLoop', () => {
   })
 
   test('detects phrase loops (the whisper silence failure)', () => {
-    expect(textHasRepetitionLoop('thanks for watching thanks for watching thanks for watching')).toBe(
-      true,
-    )
+    expect(textHasRepetitionLoop('thanks for watching thanks for watching thanks for watching')).toBe(true)
   })
 
   test('punctuation and case do not hide the loop', () => {

@@ -28,11 +28,6 @@ export interface StereoData {
 export async function stretchStereo(data: StereoData, tempo: number): Promise<StereoData> {
   const inputFrames = data.left.length
   const expectedFrames = Math.max(1, Math.round(inputFrames / tempo))
-  const rendered = await renderStretchOffline(
-    [data.left, data.right],
-    data.sampleRate,
-    tempo,
-    expectedFrames,
-  )
+  const rendered = await renderStretchOffline([data.left, data.right], data.sampleRate, tempo, expectedFrames)
   return { left: valueAt(rendered, 0), right: valueAt(rendered, 1), sampleRate: data.sampleRate }
 }

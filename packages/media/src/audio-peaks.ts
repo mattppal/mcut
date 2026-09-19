@@ -25,10 +25,7 @@ export function bucketPeaks(samples: Float32Array, buckets: number): Float32Arra
   return peaks
 }
 
-export async function extractAudioPeaks(
-  src: MediaSourceLike,
-  options: AudioPeaksOptions = {},
-): Promise<AudioPeaks | null> {
+export async function extractAudioPeaks(src: MediaSourceLike, options: AudioPeaksOptions = {}): Promise<AudioPeaks | null> {
   const bucketCount = options.buckets ?? 256
   const input = inputFor(src)
   try {
