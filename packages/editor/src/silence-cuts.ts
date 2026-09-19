@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import {
   EditorEngine,
   MIN_ELEMENT_DURATION_MS,
@@ -20,16 +21,29 @@ export interface SilenceCutTranscript {
   words: Array<{ startMs: number; endMs: number }>
 }
 
-export interface SilenceCutOptions {
-  /** Word gaps shorter than this are speech rhythm, not silence. Default 600. */
-  minGapMs?: number
-  /** Breathing room kept on each side of a cut. Default 120. */
-  paddingMs?: number
-  /** Speech chunks shorter than this merge into the surrounding cut. Default 250. */
-  minKeepMs?: number
-  /** Also cut silence before the first and after the last word. Default true. */
-  trimEnds?: boolean
-}
+export const silenceCutOptionsSchema = z.object({
+  minGapMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Word gaps shorter than this are speech rhythm, not silence. Default 600.'),
+  paddingMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Breathing room kept on each side of a cut. Default 120.'),
+  minKeepMs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Speech chunks shorter than this merge into the surrounding cut. Default 250.'),
+  trimEnds: z
+    .boolean()
+    .optional()
+    .describe('Also cut silence before the first and after the last word. Default true.'),
+})
+
+export type SilenceCutOptions = z.infer<typeof silenceCutOptionsSchema>
 
 /** A window of source-media time (same clock as the transcript). */
 export interface SilenceWindow {

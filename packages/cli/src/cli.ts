@@ -17,7 +17,9 @@ import {
   summarizeProject,
   type BuiltinCommand,
 } from '@mcut/timeline'
-import { buildCaptionsCommand } from './captions'
+import { applyCommands } from '@mcut/editor'
+import { z } from 'zod'
+import { buildCaptionsCommand, captionsCommandOptionsSchema } from './captions'
 import { readProjectFile, readTranscriptFile, writeProjectFile } from './io'
 import { lintProject } from './lint'
 import { PLATFORM_PRESETS, getPlatformPreset } from './presets'
@@ -136,9 +138,7 @@ async function cmdApply(argv: string[]): Promise<void> {
   const raw = source && source !== '-' ? await readFile(source, 'utf8') : await readStdin()
   const commands = parseCommandBatch(raw)
   const engine = new EditorEngine({ project: await readProjectFile(file) })
-  engine.transact(() => {
-    for (const command of commands) engine.dispatch(command)
-  })
+  applyCommands(engine, commands)
   if (!values['dry-run']) await writeProjectFile(file, engine.project)
   console.log(
     `${values['dry-run'] ? '(dry run) ' : ''}Applied ${commands.length} command(s) to ${file}\n`,
@@ -163,12 +163,14 @@ async function cmdCaptions(argv: string[]): Promise<void> {
   if (!values.transcript) fail('captions needs --transcript <file>')
   const project = await readProjectFile(file)
   const transcript = await readTranscriptFile(values.transcript)
-  const command = buildCaptionsCommand(project, transcript, {
+  const options = captionsCommandOptionsSchema.safeParse({
     ...(values.element ? { elementId: values.element } : {}),
     ...(values.style ? { styleId: values.style } : {}),
     ...(values['max-chars'] ? { maxChars: Number(values['max-chars']) } : {}),
     replace: values.replace,
   })
+  if (!options.success) fail(z.prettifyError(options.error))
+  const command = buildCaptionsCommand(project, transcript, options.data)
   if (values['dry-run']) {
     console.log(JSON.stringify(command, null, 2))
     return

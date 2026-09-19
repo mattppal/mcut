@@ -50,7 +50,7 @@ async function packPackages(destination: string): Promise<PackedPackage[]> {
 function smokeProgram(): string {
   return `
 import { createProject, EditorEngine, parseProject } from '@mcut/timeline'
-import { createEditorOperatorRegistry, registerCoreOperators } from '@mcut/editor'
+import { operatorIds } from '@mcut/editor'
 import { renderFrame } from '@mcut/compositor'
 import { listContainerFormats } from '@mcut/media'
 import { EditorProvider, PlayerCanvas } from '@mcut/react'
@@ -64,8 +64,7 @@ import { MCP_AGENT_TOOL_DEFINITIONS } from '@mcut/mcp-server/contract'
 
 const project = parseProject(createProject())
 const engine = new EditorEngine(project)
-const operators = registerCoreOperators(createEditorOperatorRegistry())
-if (operators.list().length === 0) throw new Error('no editor operators registered')
+if (operatorIds.length === 0) throw new Error('editor operator table is empty')
 if (typeof renderFrame !== 'function') throw new Error('renderFrame missing')
 if (listContainerFormats().length === 0) throw new Error('container formats missing')
 if (typeof EditorProvider !== 'function' || typeof PlayerCanvas !== 'function') throw new Error('react exports missing')
