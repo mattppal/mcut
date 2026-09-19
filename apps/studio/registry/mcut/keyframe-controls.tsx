@@ -19,6 +19,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useEditorUI } from "./editor-ui";
 
 export const EASING_PRESETS: Array<{ label: string; value: Easing }> = [
   { label: "Linear", value: "linear" },
@@ -72,6 +73,7 @@ export function KeyframeRowControls({
   property: AnimatableProperty;
 }) {
   const engine = useEditor();
+  const { setCurveEditorTarget } = useEditorUI();
   const armed = hasKeyframes(element, property);
   const playheadMs = usePlayback((s) => Math.round(s.currentTimeMs));
   const localMs = localPlayheadMs(element, playheadMs);
@@ -202,13 +204,7 @@ export function KeyframeRowControls({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Interpolation</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => {
-                window.dispatchEvent(
-                  new CustomEvent("mcut:open-curve-editor", {
-                    detail: { elementId: element.id, property },
-                  }),
-                );
-              }}
+              onClick={() => setCurveEditorTarget({ elementId: element.id, property })}
             >
               Curve editor…
               <span className="ml-auto pl-3 font-mono text-2xs text-muted-foreground">∿</span>

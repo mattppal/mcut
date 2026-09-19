@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useEditor, useEditorState, usePlayback } from "@mcut/react";
+import { useCallback, useRef, useState } from "react";
+import { useDocumentEvent, useEditor, useEditorState, usePlayback } from "@mcut/react";
 import {
   applyRunStyle,
   getRunStyleAt,
@@ -131,100 +131,78 @@ function rangeHas(
   return true;
 }
 
+interface TextSession {
+  text: string;
+  runs: TextRun[];
+}
+
+interface ToolbarSelection {
+  start: number;
+  end: number;
+  x: number;
+  y: number;
+}
+
 export function TextEditOverlay() {
-  const engine = useEditor();
-  const { editingTextId, setEditingTextId } = useEditorUI();
-  const element = useEditorState((s) => {
+  const { editingTextId } = useEditorUI();
+  const element = useEditorState((s): TextElement | null => {
     if (!editingTextId) return null;
     for (const track of s.project.tracks) {
       const found = track.elements.find((e) => e.id === editingTextId);
       if (found && found.type === "text") return found;
     }
     return null;
-  }) as TextElement | null;
-  const projectSize = useEditorState((s) => ({ width: s.project.width, height: s.project.height }));
+  });
+  if (!element) return null;
+  return <TextEditor key={element.id} element={element} />;
+}
+
+function TextEditor({ element }: { element: TextElement }) {
+  const engine = useEditor();
+  const { setEditingTextId } = useEditorUI();
+  const projectWidth = useEditorState((s) => s.project.width);
+  const projectHeight = useEditorState((s) => s.project.height);
   const timeMs = usePlayback((s) => Math.round(s.currentTimeMs));
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const editableRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState(0);
-  // The editing session's source of truth (DOM ↔ model sync). Handlers
-  // read/write the ref; `runs` mirrors into state for render (toolbar
-  // active flags, color swatch) so render never touches the ref.
-  const sessionRef = useRef<{ text: string; runs: TextRun[] } | null>(null);
-  const [runs, setRuns] = useState<TextRun[]>([]);
-  const [selection, setSelection] = useState<{
-    start: number;
-    end: number;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [editable, setEditable] = useState<HTMLDivElement | null>(null);
+  const [initial] = useState<TextSession>(() => ({
+    text: element.text,
+    runs: [...(element.runs ?? [])],
+  }));
+  const [session, setSession] = useState(initial);
+  const [selection, setSelection] = useState<ToolbarSelection | null>(null);
 
-  // Track the container's px scale (project px → screen px).
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const update = () =>
-      setScale(container.clientWidth > 0 ? container.clientWidth / projectSize.width : 0);
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [projectSize.width, editingTextId]);
-
-  // Session lifecycle: one transaction per editing session; mount renders
-  // the runs as spans and selects everything (Figma's double-click).
-  useEffect(() => {
-    if (!editingTextId) return;
-    const current = engine.project;
-    let original: TextElement | null = null;
-    for (const track of current.tracks) {
-      const found = track.elements.find((e) => e.id === editingTextId);
-      if (found?.type === "text") original = found;
-    }
-    if (!original) return;
-    sessionRef.current = { text: original.text, runs: [...(original.runs ?? [])] };
-    setRuns(sessionRef.current.runs);
-    engine.beginTransaction();
-    const editable = editableRef.current;
-    if (editable) {
-      renderSpans(editable, original.text, original.runs ?? []);
-      editable.focus();
-      setSelectionOffsets(editable, 0, original.text.length);
-    }
-    return () => {
-      sessionRef.current = null;
-      engine.endTransaction();
-    };
-  }, [editingTextId, engine]);
+  const attachEditable = useCallback(
+    (node: HTMLDivElement | null) => {
+      setEditable(node);
+      if (!node) return;
+      renderSpans(node, initial.text, initial.runs);
+      node.focus();
+      setSelectionOffsets(node, 0, initial.text.length);
+    },
+    [initial],
+  );
 
   // Selection → toolbar position (container-relative).
-  useEffect(() => {
-    if (!editingTextId) return;
-    const onSelectionChange = () => {
-      const editable = editableRef.current;
-      const container = containerRef.current;
-      if (!editable || !container) return;
-      const offsets = selectionOffsets(editable);
-      const sel = window.getSelection();
-      if (!offsets || !sel || sel.rangeCount === 0) {
-        setSelection(null);
-        return;
-      }
-      const rect = sel.getRangeAt(0).getBoundingClientRect();
-      const host = container.getBoundingClientRect();
-      const anchor = rect.width > 0 || rect.height > 0 ? rect : editable.getBoundingClientRect();
-      setSelection({
-        ...offsets,
-        x: anchor.left + anchor.width / 2 - host.left,
-        y: anchor.top - host.top,
-      });
-    };
-    document.addEventListener("selectionchange", onSelectionChange);
-    return () => document.removeEventListener("selectionchange", onSelectionChange);
-  }, [editingTextId]);
-
-  if (!editingTextId || !element || scale < 0) return null;
+  useDocumentEvent("selectionchange", () => {
+    const container = containerRef.current;
+    if (!editable || !container) return;
+    const offsets = selectionOffsets(editable);
+    const sel = window.getSelection();
+    if (!offsets || !sel || sel.rangeCount === 0) {
+      setSelection(null);
+      return;
+    }
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    const host = container.getBoundingClientRect();
+    const anchor = rect.width > 0 || rect.height > 0 ? rect : editable.getBoundingClientRect();
+    setSelection({
+      ...offsets,
+      x: anchor.left + anchor.width / 2 - host.left,
+      y: anchor.top - host.top,
+    });
+  });
 
   const dispatchLive = (patch: Record<string, unknown>) => {
     try {
@@ -238,8 +216,7 @@ export function TextEditOverlay() {
   };
 
   const commit = () => {
-    const session = sessionRef.current;
-    if (session && session.text.trim() === "") {
+    if (session.text.trim() === "") {
       // Empty text exits as a delete (the transaction collapses it all).
       try {
         engine.dispatch({ type: "removeElement", elementId: element.id });
@@ -247,39 +224,34 @@ export function TextEditOverlay() {
         // Already gone.
       }
     }
-    setEditingTextId(null); // unmount effect ends the transaction
-    setSelection(null);
+    setEditingTextId(null);
   };
 
   const onInput = () => {
-    const editable = editableRef.current;
-    const session = sessionRef.current;
-    if (!editable || !session) return;
-    const newText = readEditableText(editable);
-    session.runs = shiftRunsForEdit(session.runs, session.text, newText);
-    session.text = newText;
-    setRuns(session.runs);
-    dispatchLive({ text: newText, runs: session.runs.length > 0 ? session.runs : undefined });
+    if (!editable) return;
+    const text = readEditableText(editable);
+    const runs = shiftRunsForEdit(session.runs, session.text, text);
+    setSession({ text, runs });
+    dispatchLive({ text, runs: runs.length > 0 ? runs : undefined });
   };
 
   const applyToSelection = (patch: TextRunStylePatch) => {
-    const editable = editableRef.current;
-    const session = sessionRef.current;
-    if (!editable || !session || !selection || selection.end <= selection.start) return;
-    session.runs = applyRunStyle(
+    if (!editable || !selection || selection.end <= selection.start) return;
+    const runs = applyRunStyle(
       session.runs,
       selection.start,
       selection.end,
       patch,
       session.text.length,
     );
-    setRuns(session.runs);
-    renderSpans(editable, session.text, session.runs);
+    setSession({ text: session.text, runs });
+    renderSpans(editable, session.text, runs);
     setSelectionOffsets(editable, selection.start, selection.end);
     editable.focus();
-    dispatchLive({ runs: session.runs.length > 0 ? session.runs : undefined });
+    dispatchLive({ runs: runs.length > 0 ? runs : undefined });
   };
 
+  const { runs } = session;
   const baseBold = element.style.fontWeight >= 600;
   const baseItalic = element.style.fontStyle === "italic";
   const selBold =
@@ -294,24 +266,21 @@ export function TextEditOverlay() {
       (s) => (s.fontStyle ?? element.style.fontStyle ?? "normal") === "italic",
     );
 
-  // WYSIWYG placement: the element's resolved frame, in container px.
+  const cqw = (projectPx: number) => `${(projectPx / projectWidth) * 100}cqw`;
   const resolved = resolveAnimatedElement(element, timeMs);
   const style = resolved.style;
-  const scaleX = Math.abs(resolved.transform.scaleX) * scale;
-  const scaleY = Math.abs(resolved.transform.scaleY) * scale;
-  const fontPx = style.fontSize * scaleY;
-  const padPx = style.backgroundColor ? style.fontSize * 0.25 * scaleY : 0;
-  const centerX = (projectSize.width / 2 + resolved.transform.x) * scale;
-  const centerY = (projectSize.height / 2 + resolved.transform.y) * scale;
+  const scaleX = Math.abs(resolved.transform.scaleX);
+  const scaleY = Math.abs(resolved.transform.scaleY);
+  const fontSize = style.fontSize * scaleY;
   // Box width drives wrapping; measure-derived width keeps free text stable.
-  const boxWidthPx = element.box ? element.box.width * scaleX : null;
+  const boxWidth = element.box ? element.box.width * scaleX : null;
 
   return (
-    <div ref={containerRef} className="absolute inset-0 z-20">
+    <div ref={containerRef} className="absolute inset-0 z-20 [container-type:inline-size]">
       {/* Click-away backdrop: commits (Figma semantics). */}
       <div className="absolute inset-0" onPointerDown={commit} />
       <div
-        ref={editableRef}
+        ref={attachEditable}
         contentEditable
         suppressContentEditableWarning
         role="textbox"
@@ -320,36 +289,36 @@ export function TextEditOverlay() {
         spellCheck={false}
         className="absolute outline-2 outline-dashed outline-primary/70"
         style={{
-          left: centerX,
-          top: centerY,
+          left: cqw(projectWidth / 2 + resolved.transform.x),
+          top: cqw(projectHeight / 2 + resolved.transform.y),
           transform: `translate(-50%, -50%)${
             resolved.transform.rotation ? ` rotate(${resolved.transform.rotation}deg)` : ""
           }`,
-          width: boxWidthPx ? `${boxWidthPx}px` : "max-content",
-          minWidth: fontPx,
-          whiteSpace: boxWidthPx ? "pre-wrap" : "pre",
-          overflowWrap: boxWidthPx ? "break-word" : undefined,
+          width: boxWidth ? cqw(boxWidth) : "max-content",
+          minWidth: cqw(fontSize),
+          whiteSpace: boxWidth ? "pre-wrap" : "pre",
+          overflowWrap: boxWidth ? "break-word" : undefined,
           fontFamily: style.fontFamily,
           fontWeight: style.fontWeight,
           fontStyle: style.fontStyle,
-          fontSize: `${fontPx}px`,
+          fontSize: cqw(fontSize),
           lineHeight: style.lineHeight ?? 1.25,
-          letterSpacing: `${(style.letterSpacing ?? 0) * scaleY}px`,
+          letterSpacing: cqw((style.letterSpacing ?? 0) * scaleY),
           textAlign: style.align,
           textTransform: style.textTransform === "none" ? undefined : style.textTransform,
           color: style.color,
           caretColor: style.color,
           backgroundColor: style.backgroundColor || undefined,
-          padding: padPx ? `${padPx}px` : undefined,
-          borderRadius: style.backgroundColor ? `${style.fontSize * 0.15 * scaleY}px` : undefined,
+          padding: style.backgroundColor ? cqw(style.fontSize * 0.25 * scaleY) : undefined,
+          borderRadius: style.backgroundColor ? cqw(style.fontSize * 0.15 * scaleY) : undefined,
           WebkitTextStroke:
             style.stroke && style.stroke.width > 0
-              ? `${style.stroke.width * scaleY}px ${style.stroke.color}`
+              ? `${cqw(style.stroke.width * scaleY)} ${style.stroke.color}`
               : undefined,
           textShadow: style.shadow
-            ? `${style.shadow.offsetX * scaleY}px ${style.shadow.offsetY * scaleY}px ${
-                style.shadow.blur * scaleY
-              }px ${style.shadow.color}`
+            ? `${cqw(style.shadow.offsetX * scaleY)} ${cqw(style.shadow.offsetY * scaleY)} ${cqw(
+                style.shadow.blur * scaleY,
+              )} ${style.shadow.color}`
             : undefined,
         }}
         onInput={onInput}

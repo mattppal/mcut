@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -13,7 +12,7 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
 } from "@/lib/hugeicons";
-import { useEditor, useEditorState, usePlayback, useProject } from "@mcut/react";
+import { useEditor, useEditorState, useElementEvent, usePlayback, useProject } from "@mcut/react";
 import {
   getProjectDurationMs,
   rangesOverlap,
@@ -84,20 +83,20 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
   const totalHeight = RULER_HEIGHT + NEW_TRACK_LANE_HEIGHT + rows.length * TRACK_HEIGHT;
 
   // ⌘/ctrl+wheel zoom anchored at the pointer (non-passive listener).
-  useEffect(() => {
-    const scroller = timelineScrollRef.current;
-    if (!scroller) return;
-    const onWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey && !event.metaKey) return;
+  useElementEvent(
+    timelineScrollRef,
+    "wheel",
+    (event) => {
+      const scroller = timelineScrollRef.current;
+      if (!scroller || (!event.ctrlKey && !event.metaKey)) return;
       event.preventDefault();
       const rect = scroller.getBoundingClientRect();
       const anchorMs =
         (scroller.scrollLeft + (event.clientX - rect.left) - HEADER_WIDTH) / pxPerMs;
       zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12, Math.max(0, anchorMs));
-    };
-    scroller.addEventListener("wheel", onWheel, { passive: false });
-    return () => scroller.removeEventListener("wheel", onWheel);
-  }, [pxPerMs, zoomBy, timelineScrollRef]);
+    },
+    { passive: false },
+  );
 
   const fitToView = () => {
     const scroller = timelineScrollRef.current;
