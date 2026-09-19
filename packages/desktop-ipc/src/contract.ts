@@ -51,7 +51,3 @@ export type DesktopResult<T> = { ok: true; value: T } | { ok: false; error: Desk
 export function invokeResultSchema<T>(output: z.ZodType<T>): z.ZodType<DesktopResult<T>> {
   return z.discriminatedUnion('ok', [z.object({ ok: z.literal(true), value: output }), z.object({ ok: z.literal(false), error: desktopErrorSchema })])
 }
-
-export function isDesktopInvokeChannel(value: string): value is DesktopInvokeChannel {
-  return Object.hasOwn(DESKTOP_INVOKES, value)
-}

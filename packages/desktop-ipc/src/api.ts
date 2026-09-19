@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { DesktopInfo, DesktopResult, InvokeInput, InvokeOutput } from './contract'
 
-export const menuActionSchema = z.enum(['project.open', 'project.save', 'project.saveAs'])
+const menuActionSchema = z.enum(['project.open', 'project.save', 'project.saveAs'])
 
 export type MenuAction = z.infer<typeof menuActionSchema>
 

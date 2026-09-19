@@ -1,4 +1,4 @@
-export { DESKTOP_INVOKES, DesktopError, desktopErrorSchema, desktopInfoSchema, invokeResultSchema, isDesktopInvokeChannel } from './contract'
+export { DESKTOP_INVOKES, DesktopError, desktopErrorSchema, desktopInfoSchema, invokeResultSchema } from './contract'
 export type {
   DesktopErrorCode,
   DesktopErrorShape,
@@ -9,5 +9,5 @@ export type {
   InvokeInput,
   InvokeOutput,
 } from './contract'
-export { menuActionSchema, menuMessageSchema, readDesktopApi } from './api'
+export { menuMessageSchema, readDesktopApi } from './api'
 export type { DesktopApi, MenuAction } from './api'
