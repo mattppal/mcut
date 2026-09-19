@@ -1,12 +1,13 @@
 import { mkdir, stat, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import path from 'node:path'
-import type { Browser, Page } from '@playwright/test'
+import { _electron, type ElectronApplication, type Page } from '@playwright/test'
 
 type StepRecord = { step: string; screenshot: string; observed: string }
 
 type Report = {
   status: 'PASS' | 'ISSUES' | 'FAIL'
-  editorUrl: string
+  electron: string
   fixture: string
   steps: StepRecord[]
   issues: string[]
@@ -16,24 +17,24 @@ type Report = {
 
 type PreviewFrame = { lit: number; hash: number }
 
-const skillDir = path.resolve(import.meta.dir, '..')
+const skillDir = path.resolve(import.meta.dirname, '..')
 const repoRoot = path.resolve(skillDir, '../../..')
-const studioDir = path.join(repoRoot, 'apps/studio')
-const fixture = path.join(studioDir, 'e2e/fixtures/fixture-vp9.mkv')
+const fixture = path.join(repoRoot, 'apps/studio/e2e/fixtures/fixture-vp9.mkv')
 const fixtureName = path.basename(fixture)
 const projectName = 'verify-studio'
 
-function editorUrl(): string {
-  const configured = process.env.MCUT_EDITOR_URL
-  if (configured) return configured
-  const port = process.env.MCUT_STUDIO_PORT ?? '3000'
-  return `http://localhost:${port}/editor`
+function electronTarget(): { executablePath: string; args: string[] } {
+  const packaged = process.env.MCUT_ELECTRON_PATH
+  if (packaged) return { executablePath: path.resolve(repoRoot, packaged), args: ['--port', '0'] }
+  const electron: unknown = createRequire(path.join(repoRoot, 'apps/desktop/package.json'))('electron')
+  if (typeof electron !== 'string') throw new Error('the electron package did not resolve to a binary path')
+  return { executablePath: electron, args: ['apps/desktop', '--port', '0'] }
 }
 
 function outDir(): string {
   const arg = process.argv[2]
   if (!arg) {
-    console.error('usage: bun .cursor/skills/verify-studio/scripts/drive.ts <outdir>')
+    console.error('usage: node .cursor/skills/verify-studio/scripts/drive.ts <outdir>')
     process.exit(2)
   }
   return path.resolve(arg)
@@ -54,12 +55,34 @@ async function poll<T>(read: () => Promise<T>, accept: (value: T) => boolean, ti
   return last
 }
 
-async function launch(): Promise<Browser> {
-  const playwright = (await import(Bun.resolveSync('@playwright/test', studioDir))) as typeof import('@playwright/test')
-  return playwright.chromium.launch({
-    headless: process.env.MCUT_VERIFY_HEADED !== '1',
-    executablePath: process.env.MCUT_CHROME_PATH,
-  })
+async function launch(target: { executablePath: string; args: string[] }, configHome: string): Promise<ElectronApplication> {
+  const env: Record<string, string> = {}
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined && key !== 'ELECTRON_RUN_AS_NODE') env[key] = value
+  }
+  env.XDG_CONFIG_HOME = configHome
+  return _electron.launch({ ...target, cwd: repoRoot, env, chromiumSandbox: true })
+}
+
+function nextDownload(app: ElectronApplication, dir: string, timeoutMs: number): Promise<string> {
+  return app.evaluate(
+    ({ session }, options) =>
+      new Promise<string>((resolve, reject) => {
+        const onDownload = (_event: unknown, item: { getFilename(): string; setSavePath(target: string): void; once(event: 'done', listener: (event: unknown, state: string) => void): void }) => {
+          clearTimeout(timer)
+          session.defaultSession.off('will-download', onDownload)
+          const target = `${options.dir}/${item.getFilename()}`
+          item.setSavePath(target)
+          item.once('done', (_done, state) => (state === 'completed' ? resolve(target) : reject(new Error(`download ${state}`))))
+        }
+        const timer = setTimeout(() => {
+          session.defaultSession.off('will-download', onDownload)
+          reject(new Error(`no download started within ${options.timeoutMs} ms`))
+        }, options.timeoutMs)
+        session.defaultSession.on('will-download', onDownload)
+      }),
+    { dir, timeoutMs },
+  )
 }
 
 const timecode = (page: Page) => page.locator('[data-mcut-timeline] .text-primary').first().innerText()
@@ -126,10 +149,12 @@ async function scrubInsideClip(page: Page): Promise<void> {
 
 async function main(): Promise<void> {
   const dir = outDir()
-  await mkdir(dir, { recursive: true })
+  const configHome = path.join(dir, 'config')
+  await mkdir(configHome, { recursive: true })
+  const target = electronTarget()
   const report: Report = {
     status: 'PASS',
-    editorUrl: editorUrl(),
+    electron: target.executablePath,
     fixture,
     steps: [],
     issues: [],
@@ -137,9 +162,11 @@ async function main(): Promise<void> {
     pageErrors: [],
   }
 
-  const browser = await launch()
-  const context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, acceptDownloads: true })
-  const page = await context.newPage()
+  const app = await launch(target, configHome)
+  const page = await app.firstWindow()
+  await page.waitForURL(/^app:\/\/studio\/editor\?/)
+  const editorUrl = page.url()
+  await (await app.browserWindow(page)).evaluate((browserWindow) => browserWindow.setContentSize(1600, 1000))
   page.on('pageerror', (error) => report.pageErrors.push(error.message))
 
   let index = 0
@@ -162,7 +189,7 @@ async function main(): Promise<void> {
 
   try {
     await step('open-editor', async () => {
-      await page.goto(report.editorUrl, { waitUntil: 'networkidle' })
+      await page.goto(editorUrl, { waitUntil: 'networkidle' })
       await page.getByRole('button', { name: 'Go to start' }).waitFor({ state: 'visible', timeout: 30_000 })
       await page
         .getByRole('button', { name: 'Discard' })
@@ -240,16 +267,14 @@ async function main(): Promise<void> {
         report.issues.push(`export unsupported in this browser: ${text}`)
         return `dialog shows "${text}"`
       }
-      const downloadPromise = page.waitForEvent('download', { timeout: 120_000 })
+      const downloadPromise = nextDownload(app, dir, 120_000)
       await page.getByRole('button', { name: 'Export WebM' }).click()
-      const download = await downloadPromise
-      const target = path.join(dir, download.suggestedFilename())
-      await download.saveAs(target)
-      const bytes = (await stat(target)).size
-      report.download = { path: target, bytes }
+      const file = await downloadPromise
+      const bytes = (await stat(file)).size
+      report.download = { path: file, bytes }
       const mode = await page.evaluate(() => (globalThis as { __mcutLastExportMode?: string }).__mcutLastExportMode)
       await page.getByRole('button', { name: 'Export WebM' }).waitFor({ state: 'visible', timeout: 10_000 })
-      return check(bytes > 0, `downloaded ${download.suggestedFilename()} with ${bytes} bytes, export mode ${mode ?? 'unknown'}`)
+      return check(bytes > 0, `downloaded ${path.basename(file)} with ${bytes} bytes, export mode ${mode ?? 'unknown'}`)
     })
 
     await step('close-export-dialog', async () => {
@@ -261,7 +286,7 @@ async function main(): Promise<void> {
   } catch {
     report.status = 'FAIL'
   } finally {
-    await browser.close()
+    await app.close()
   }
 
   if (report.status !== 'FAIL' && (report.issues.length > 0 || report.pageErrors.length > 0)) report.status = 'ISSUES'
