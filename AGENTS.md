@@ -35,6 +35,7 @@ app.
 | 3 | `@mcut/cli`, `@mcut/mcp-server` | The `mcut` binary and the MCP server, both tools over commands and operators |
 | 4 | `@mcut/react` | `EditorProvider`, hooks, `PlayerCanvas`, gestures. Logic stays in the packages below |
 | app | `apps/studio`, `apps/web`, `examples/*` | Studio, the docs site, and runnable integrations over the packages |
+| app | `apps/desktop` | The Electron shell. Serves the Studio static export from `app://studio` and hosts `LiveMcutBridge` in the main process |
 
 Every project mutation is a command in `@mcut/timeline`. A command is
 serializable, validated by zod, and undoable. Operators and apps change project
@@ -54,6 +55,7 @@ watch builds running.
 | A media codec or container | `packages/media` |
 | A React hook that touches the DOM or a subscription | `packages/react/src/sync/` |
 | Studio UI | `apps/studio/registry/mcut` |
+| Desktop main process code | `apps/desktop/src` |
 | A docs page | `apps/web/content/docs` |
 
 ## Commands

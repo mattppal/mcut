@@ -1,0 +1,16 @@
+appId: com.mcut.desktop
+directories:
+  output: release
+files:
+  - dist/**
+  - studio/**
+  - package.json
+npmRebuild: false
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  grantFileProtocolExtraPrivileges: false
+  enableNodeCliInspectArguments: true
+linux:
+  target:
+    - dir

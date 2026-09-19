@@ -13,6 +13,16 @@
         "!.next/cache/**"
       ]
     },
+    "mcut-desktop#build": {
+      "dependsOn": [
+        "^build",
+        "mcut-studio-web#build"
+      ],
+      "outputs": [
+        "dist/**",
+        "studio/**"
+      ]
+    },
     "mcut-editing-skill#build": {
       "dependsOn": [
         "^build"

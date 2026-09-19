@@ -54,6 +54,7 @@ function parsePort(value: string | null): number | null {
 
 function isAllowedOrigin(origin: string | undefined, allowedOrigins: readonly string[]): boolean {
   if (!origin) return true
+  if (allowedOrigins.includes(origin)) return true
   let parsed: URL
   try {
     parsed = new URL(origin)
@@ -61,7 +62,6 @@ function isAllowedOrigin(origin: string | undefined, allowedOrigins: readonly st
     return false
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
-  if (allowedOrigins.includes(origin)) return true
   return parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1'
 }
 
@@ -228,8 +228,6 @@ export class LiveMcutBridge {
         return {
           connected: this.isConnected(),
           tab: this.tabInfo,
-          mcpUrl: this.getMcpUrl(),
-          openEditorUrl: this.getOpenEditorUrl(),
         }
       default:
         return await this.request(type, payload)

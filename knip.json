@@ -7,6 +7,9 @@
       "project": ["scripts/**/*.ts"],
       "ignoreDependencies": ["@arethetypeswrong/cli"]
     },
+    "apps/desktop": {
+      "entry": ["src/*.test.ts", "scripts/*.ts"]
+    },
     "apps/studio": {
       "entry": ["registry/mcut/**/*.{ts,tsx}"],
       "ignore": ["components/ui/**", "components/kibo-ui/**"],

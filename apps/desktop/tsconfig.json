@@ -1,0 +1,4 @@
+{
+  "extends": "../../tsconfig.bun.json",
+  "include": ["src", "scripts", "tsdown.config.ts"]
+}
