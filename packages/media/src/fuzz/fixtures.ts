@@ -1,11 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import {
-  parseManifest,
-  type FixtureManifest,
-  type ManifestFixture,
-  type ManifestMutation,
-} from '../../../../scripts/fixtures/manifest'
+import { parseManifest, type FixtureManifest, type ManifestFixture, type ManifestMutation } from '../../../../scripts/fixtures/manifest'
 
 export type { FixtureManifest, ManifestFixture, ManifestMutation }
 

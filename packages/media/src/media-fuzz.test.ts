@@ -22,12 +22,9 @@ if (manifest === null) {
 }
 
 const entries = manifest === null ? [] : fuzzEntries(manifest, dir).filter((entry) => selected(entry.id))
-const gapFixtures = (manifest?.fixtures ?? []).filter(
-  (fixture) => fixture.skipped === null && fixture.recipe.silenceGaps.length > 0 && selected(fixture.id),
-)
+const gapFixtures = (manifest?.fixtures ?? []).filter((fixture) => fixture.skipped === null && fixture.recipe.silenceGaps.length > 0 && selected(fixture.id))
 
-const spans = (windows: ReadonlyArray<{ startMs: number; endMs: number }>) =>
-  windows.map((window) => `${window.startMs}-${window.endMs}`).join(' ') || 'none'
+const spans = (windows: ReadonlyArray<{ startMs: number; endMs: number }>) => windows.map((window) => `${window.startMs}-${window.endMs}`).join(' ') || 'none'
 
 function assertStillFailing(relevant: readonly KnownFailure[], hits: ReadonlyMap<string, number>): void {
   for (const entry of relevant) console.log(`known failure ${entry.issue} hit ${hits.get(entry.issue) ?? 0} times`)
@@ -70,8 +67,7 @@ test.skipIf(gapFixtures.length === 0)(
       const samples = await decodeMonoPcm(join(dir, fixture.file), sampleRate)
       const score = scoreSilence(fixture, samples, sampleRate)
       console.log(
-        `${fixture.id.padEnd(20)} gaps ${spans(fixture.recipe.silenceGaps)}  ` +
-          `silence ${spans(score.activity.silenceWindows)}  cuts ${spans(score.cuts)}`,
+        `${fixture.id.padEnd(20)} gaps ${spans(fixture.recipe.silenceGaps)}  ` + `silence ${spans(score.activity.silenceWindows)}  cuts ${spans(score.cuts)}`,
       )
       if (score.violations.length === 0) continue
       const match = matchKnownFailure(fixture.id, score.violations, known)
