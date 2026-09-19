@@ -28,10 +28,14 @@ export function buildReport(runs: TaskRun[], model: string, target: string, dryR
   }
 }
 
-export function writeReport(report: Report, baseDir = join(repoRoot, REPORTS_DIR)): string {
-  const stamp = report.generatedAt.replace(/[:.]/g, '-')
-  const dir = join(baseDir, stamp)
+export function createRunDir(label: string, baseDir = join(repoRoot, REPORTS_DIR)): string {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const dir = join(baseDir, `${stamp}-${label}`)
   mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+export function writeReport(report: Report, dir: string): string {
   const file = join(dir, 'report.json')
   writeFileSync(file, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
   return file

@@ -20,6 +20,9 @@ const firstTask = (): E2ETask => {
   return task
 }
 
+const headlessTasks = TASKS.filter((task) => task.target === 'any')
+const bridgeTasks = TASKS.filter((task) => task.target === 'bridge')
+
 const repeating = (turn: ModelTurn): ModelClient => ({
   model: 'repeating',
   start: async () => turn,
@@ -40,7 +43,8 @@ describe('agent e2e task registry', () => {
   test('task ids are unique and every task ships a scripted solution', () => {
     const ids = new Set(TASKS.map((task) => task.id))
     expect(ids.size).toBe(TASKS.length)
-    expect(TASKS.length).toBeGreaterThanOrEqual(6)
+    expect(headlessTasks.length).toBeGreaterThanOrEqual(6)
+    expect(bridgeTasks.length).toBeGreaterThanOrEqual(2)
     for (const task of TASKS) expect(task.scripted.length).toBeGreaterThan(0)
   })
 
@@ -52,13 +56,22 @@ describe('agent e2e task registry', () => {
     }
   })
 
-  test('each scripted solution passes its own scorer', async () => {
-    for (const task of TASKS) {
+  test('each headless scripted solution passes its own scorer', async () => {
+    for (const task of headlessTasks) {
       const run = await runTask(task, session, createScriptedModel(task.scripted), DEFAULT_CAPS)
       expect({ id: task.id, ...run.verdict }).toEqual({ id: task.id, pass: true, reasons: [] })
       expect(run.stoppedBy).toBe('model')
       expect(run.toolCalls.every((call) => !call.isError)).toBe(true)
       expect(run.steps).toBe(task.scripted.length)
+    }
+  })
+
+  test('bridge tasks need the live tab, so the headless server rejects their run_action calls', async () => {
+    for (const task of bridgeTasks) {
+      expect(task.scripted.map((call) => call.name)).toContain('run_action')
+      const run = await runTask(task, session, createScriptedModel(task.scripted), DEFAULT_CAPS)
+      expect(run.verdict.pass).toBe(false)
+      expect(run.toolCalls.some((call) => call.name === 'run_action' && call.isError)).toBe(true)
     }
   })
 

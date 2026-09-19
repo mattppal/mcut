@@ -15,11 +15,19 @@ export interface Verdict {
   reasons: string[]
 }
 
+export type TaskTarget = 'any' | 'bridge'
+
+export interface TaskFixture {
+  id: string
+  src: string
+}
+
 export interface E2ETask {
   id: string
   title: string
   prompt: string
-  fixtures: string[]
+  target: TaskTarget
+  fixtures: TaskFixture[]
   setup: BuiltinCommand[]
   scripted: ScriptedCall[]
   score: (project: Project, transcript: ToolCall[]) => Verdict
