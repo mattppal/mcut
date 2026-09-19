@@ -105,6 +105,17 @@ interface EngineStore<T> {
 
 The store shape `useEngineSubscription` reads, matched by `EditorEngine.store` and `EditorEngine.playback`.
 
+### WebSocketHandlers
+
+```ts
+interface WebSocketHandlers {
+  onOpen: (socket: WebSocket) => void
+  onMessage: (socket: WebSocket, event: MessageEvent) => void
+}
+```
+
+The callbacks `useWebSocket` runs when a connection opens and when a frame arrives, each handed the socket to reply on.
+
 ## Functions
 
 ### applyMove
@@ -277,6 +288,26 @@ function useEngineSubscription<T>(
 ```
 
 Subscribes to an engine store outside React rendering and calls `onChange` with the new and previous state, coalescing bursts into one call when `debounceMs` is set.
+
+### useEngineSync
+
+```ts
+function useEngineSync<T, S>(
+  store: EngineStore<T>,
+  select: (state: T) => S,
+  sync: (selected: S) => void,
+): void
+```
+
+Runs `sync` once on mount with the selected slice of the store and again whenever the selected value changes by `Object.is`, for keeping something outside React in step with engine state.
+
+### useWebSocket
+
+```ts
+useWebSocket(url, { onOpen, onMessage }, { reconnectDelayMs: 1000 })
+```
+
+Opens a `WebSocket` to the string `url` for the life of the component, reconnects `reconnectDelayMs` milliseconds after every close, and closes the socket on unmount. The latest `WebSocketHandlers` run without reopening the connection, and a `null` url opens nothing.
 
 ### useDocumentRootClass
 
