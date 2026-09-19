@@ -35,3 +35,7 @@ To promote a metric, add one entry to `bans`, for example `{ metric: 'commentLin
 ## Stripping comments
 
 `strip-comments.ts` walks `.ts` and `.tsx` files under the given paths with the same skips and deletes every comment except a shebang, a comment containing `https://`, a triple-slash reference, and directives starting with `eslint-`, `@ts-`, `prettier-ignore`, `biome-ignore`, or `#__PURE__`. A comment that was alone on its line takes the line with it, and blank-line runs created by the deletion collapse to one. `--check` prints per-file counts and writes nothing. Running it twice deletes nothing the second time.
+
+## Formatting and lint
+
+The tree has one formatter. `bun run format` rewrites files with oxfmt. `bun run check:format` fails when a file is unformatted. `release:check` runs that check. `bun run lint:oxlint` runs oxlint with `--deny-warnings` beside the existing eslint job. Generated and vendored paths stay out of both tools.
