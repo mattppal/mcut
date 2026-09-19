@@ -67,6 +67,7 @@ test("renders the human-readable tool catalog at /tools", async ({ page }) => {
   await expect(page.getByText("splitElement", { exact: true })).toBeVisible();
 });
 
+// The /.well-known/ prefix for site metadata is defined by RFC 8615. https://www.rfc-editor.org/rfc/rfc8615
 test("hosts the mcut agent skill under /.well-known/agent-skills", async ({ request }) => {
   const indexRes = await request.get("/.well-known/agent-skills/index.json");
   expect(indexRes.ok()).toBe(true);
@@ -83,6 +84,6 @@ test("hosts the mcut agent skill under /.well-known/agent-skills", async ({ requ
   const digest = `sha256:${createHash("sha256").update(body).digest("hex")}`;
   expect(
     digest,
-    "index.json digest is stale; regenerate with: shasum -a 256 public/.well-known/agent-skills/mcut/SKILL.md",
+    "index.json digest is stale. Regenerate it with shasum -a 256 public/.well-known/agent-skills/mcut/SKILL.md",
   ).toBe(skill.digest);
 });

@@ -97,10 +97,7 @@ export function KeyframeRowControls({
           });
         }
       } else {
-        const value = armed
-          ?
-            undefined
-          : getStaticValue(element, property);
+        const value = armed ? undefined : getStaticValue(element, property);
         engine.dispatch({
           type: "setKeyframe",
           elementId: element.id,
