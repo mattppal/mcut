@@ -491,8 +491,7 @@ export const operators = {
         for (const elementId of ids) {
           try {
             engine.dispatch({ type: 'slipElement', elementId, deltaMs })
-          } catch {
-          }
+          } catch {}
         }
       })
     },

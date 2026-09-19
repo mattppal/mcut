@@ -64,7 +64,7 @@ interface PooledTexture {
 
 const FORMAT: GPUTextureFormat = 'rgba8unorm'
 
-// Flag values from https://www.w3.org/TR/webgpu/#namespacedef-gputextureusage and https://www.w3.org/TR/webgpu/#namespacedef-gpubufferusage
+// Flag values from https://developer.mozilla.org/en-US/docs/Web/API/GPUTexture/usage and https://developer.mozilla.org/en-US/docs/Web/API/GPUBuffer/usage
 const TEXTURE_USAGE = {
   COPY_DST: 0x02,
   TEXTURE_BINDING: 0x04,

@@ -12,8 +12,7 @@ export class ProjectFormatError extends Error {
 
 type ProjectDoc = Record<string, unknown>
 
-const MIGRATIONS: Record<number, (doc: ProjectDoc) => ProjectDoc> = {
-}
+const MIGRATIONS: Record<number, (doc: ProjectDoc) => ProjectDoc> = {}
 
 export function migrateProject(data: unknown): unknown {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {

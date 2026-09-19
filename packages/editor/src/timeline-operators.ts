@@ -624,8 +624,7 @@ export function removeSelection(engine: EditorEngine): void {
       for (const elementId of ids) {
         try {
           engine.dispatch({ type: 'removeElement', elementId })
-        } catch {
-        }
+        } catch {}
       }
     },
     { selection: [] },
@@ -808,8 +807,7 @@ export function duplicateSelection(engine: EditorEngine): void {
           { selection: [...duplicated, newId] },
         )
         duplicated.push(newId)
-      } catch {
-      }
+      } catch {}
     }
   })
 }
@@ -890,8 +888,7 @@ export function trimSelectionToPlayhead(engine: EditorEngine, edge: 'start' | 'e
             ...('trimStartMs' in element ? { trimStartMs: element.trimStartMs + shiftMs } : {}),
           })
         }
-      } catch {
-      }
+      } catch {}
     }
   })
 }
@@ -905,8 +902,7 @@ export function splitAllAtPlayhead(engine: EditorEngine): void {
       if (!hit) continue
       try {
         engine.dispatch({ type: 'splitElement', elementId: hit.id, atMs })
-      } catch {
-      }
+      } catch {}
     }
   })
 }
@@ -938,8 +934,7 @@ export function toggleMasterKeyframe(engine: EditorEngine): void {
         if (!isOnKeyframe(element, property, now)) continue
         try {
           engine.dispatch({ type: 'removeKeyframe', elementId: id, property, timeMs: localMs })
-        } catch {
-        }
+        } catch {}
       }
     } else {
       const targets = armed.length > 0 ? armed : masterProperties
@@ -971,8 +966,7 @@ export function moveKeyframesAtTime(
       if (!getKeyframes(element, property).some((k) => k.timeMs === fromTimeMs)) continue
       try {
         engine.dispatch({ type: 'moveKeyframe', elementId, property, fromTimeMs, toTimeMs })
-      } catch {
-      }
+      } catch {}
     }
   })
 }
@@ -991,8 +985,7 @@ export function removeKeyframesAtTime(
       if (!getKeyframes(element, property).some((k) => k.timeMs === timeMs)) continue
       try {
         engine.dispatch({ type: 'removeKeyframe', elementId, property, timeMs })
-      } catch {
-      }
+      } catch {}
     }
   })
 }

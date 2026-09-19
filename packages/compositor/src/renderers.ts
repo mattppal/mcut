@@ -28,7 +28,7 @@ import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
 
 type ElementByType = { [K in ElementType]: Extract<TimelineElement, { type: K }> }
 
-// Canvas letterSpacing is not implemented in every engine: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/letterSpacing#browser_compatibility
+// Canvas letterSpacing is not implemented in every engine, see https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/letterSpacing#browser_compatibility
 function setLetterSpacing(ctx: Canvas2D, px: number): void {
   if ('letterSpacing' in ctx) {
     ctx.letterSpacing = `${px}px`
