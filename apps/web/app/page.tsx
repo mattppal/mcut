@@ -38,7 +38,7 @@ export default function Home() {
   const release = desktopRelease
 
   return (
-    <div className="flex flex-1 flex-col bg-background text-foreground">
+    <div className="flex flex-1 flex-col overflow-x-clip bg-background text-foreground">
       <SiteHeader />
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6">

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useEditor, useEngineSubscription, useWindowEvent } from '@mcut/react'
-import { getElementLocation, type EditorEngine, type ElementId } from '@mcut/timeline'
+import { getElementLocation, getProjectDurationMs, type EditorEngine, type ElementId } from '@mcut/timeline'
 import { elementForAsset, insertElementAtPlayhead } from './editor-actions'
 import { parentMessageSchema, postToParent, type EmbedOptions, type ParentMessage } from './embed'
 import { importMediaFiles } from './media-import'
@@ -56,7 +56,7 @@ function applyParentMessage(engine: EditorEngine, message: ParentMessage, onLayo
   }
 }
 
-export function EmbedBootstrap({ options, onLayout }: { options: EmbedOptions; onLayout: (compact: boolean) => void }) {
+export function EmbedBootstrap({ options, loop, onLayout }: { options: EmbedOptions; loop: boolean; onLayout: (compact: boolean) => void }) {
   const engine = useEditor()
   const bootstrap = useQuery({
     queryKey: ['mcut', 'embed', options.clip],
@@ -67,7 +67,14 @@ export function EmbedBootstrap({ options, onLayout }: { options: EmbedOptions; o
   })
 
   useEngineSubscription(engine.playback, (state, previous) => {
-    if (state.isPlaying !== previous.isPlaying) postToParent({ type: 'mcut:embed:playing', playing: state.isPlaying })
+    if (state.isPlaying === previous.isPlaying) return
+    const atEnd = state.currentTimeMs >= getProjectDurationMs(engine.project)
+    if (loop && previous.isPlaying && atEnd) {
+      engine.seek(0)
+      engine.play()
+      return
+    }
+    postToParent({ type: 'mcut:embed:playing', playing: state.isPlaying })
   })
 
   useWindowEvent('message', (event) => {

@@ -28,7 +28,7 @@ export function EmbedShell({ options, children }: { options: EmbedOptions; child
   const [layout, setLayout] = useState<EmbedLayout>('compact')
   return (
     <>
-      <EmbedBootstrap options={options} onLayout={(compact) => setLayout(compact ? 'compact' : 'full')} />
+      <EmbedBootstrap options={options} loop={layout === 'compact'} onLayout={(compact) => setLayout(compact ? 'compact' : 'full')} />
       {layout === 'compact' ? <CompactWorkspace /> : children}
     </>
   )
