@@ -27,8 +27,6 @@ log('created project', { name: engine.project.name, tracks: engine.project.track
 
 // ---------------------------------------------------------------------------
 // 2. Register an asset and lay out two tracks
-//    (In a browser, @mcut/media's createAssetFromFile() probes real files;
-//    headless, we declare the metadata ourselves.)
 // ---------------------------------------------------------------------------
 
 const assetId = createAssetId()

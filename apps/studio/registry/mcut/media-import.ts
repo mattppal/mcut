@@ -1,7 +1,7 @@
 'use client'
 
 import { toast } from 'sonner'
-import { createAssetFromFile } from '@mcut/media'
+import { createAsset } from '@mcut/media'
 import type { EditorEngine } from '@mcut/timeline'
 import type { AssetRef } from '@mcut/timeline'
 
@@ -11,7 +11,7 @@ export async function importMediaFiles(engine: EditorEngine, files: File[], onAs
   const imported: AssetRef[] = []
   for (const file of files) {
     try {
-      const asset = await createAssetFromFile(file)
+      const asset = await createAsset({ kind: 'blob', blob: file, name: file.name })
       engine.dispatch({ type: 'addAsset', asset }, { history: false })
       imported.push(asset)
       onAssetImported?.(asset, file)

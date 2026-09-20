@@ -1,11 +1,15 @@
 export {
-  createAssetFromFile,
+  createAsset,
   inputFor,
+  mediabunnyProber,
   MediaProbeError,
   probeImage,
   probeMedia,
+  type MediaOrigin,
   type MediaProbe,
   type MediaProbeErrorCode,
+  type MediaProber,
+  type MediaProberId,
   type MediaSourceLike,
 } from './probe'
 

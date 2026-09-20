@@ -21,6 +21,15 @@ export interface MediaProbe {
   mimeType?: string
 }
 
+export type MediaOrigin = { kind: 'blob'; blob: Blob; name: string }
+
+export type MediaProberId = 'mediabunny'
+
+export interface MediaProber {
+  id: MediaProberId
+  probe(origin: MediaOrigin, signal?: AbortSignal): Promise<MediaProbe>
+}
+
 export type MediaProbeErrorCode = 'unreadable' | 'no-tracks' | 'no-duration'
 
 export class MediaProbeError extends Error {
@@ -118,9 +127,9 @@ async function probeNativeMedia(src: MediaSourceLike): Promise<MediaProbe | null
   }
 }
 
-function canDecodeNatively(file: File): Promise<boolean> {
+function canDecodeNatively(blob: Blob): Promise<boolean> {
   return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
+    const url = URL.createObjectURL(blob)
     const video = document.createElement('video')
     const settle = (result: boolean) => {
       video.removeAttribute('src')
@@ -144,13 +153,14 @@ function canDecodeNatively(file: File): Promise<boolean> {
   })
 }
 
-async function hasNativeVideoPreview(file: File, mimeType?: string): Promise<boolean> {
-  if (isMatroskaLike({ name: file.name, mimeType: mimeType || file.type })) return false
+async function hasNativeVideoPreview(origin: MediaOrigin, mimeType?: string): Promise<boolean> {
+  const { blob, name } = origin
+  if (isMatroskaLike({ name, mimeType: mimeType || blob.type })) return false
   if (typeof document === 'undefined') return true
-  const type = mimeType || file.type
+  const type = mimeType || blob.type
   if (!type) return true
   if (document.createElement('video').canPlayType(type) !== '') return true
-  return canDecodeNatively(file)
+  return canDecodeNatively(blob)
 }
 
 async function probeDurationSeconds(input: Input): Promise<number> {
@@ -197,27 +207,33 @@ export function probeImage(src: string): Promise<{ width: number; height: number
   })
 }
 
-export async function createAssetFromFile(file: File): Promise<AssetRef> {
-  const src = URL.createObjectURL(file)
-  const hash = await hashBlob(file).catch(() => null)
+export const mediabunnyProber: MediaProber = {
+  id: 'mediabunny',
+  probe: (origin) => probeMedia(origin.blob),
+}
+
+export async function createAsset(origin: MediaOrigin, prober: MediaProber = mediabunnyProber): Promise<AssetRef> {
+  const { blob, name } = origin
+  const src = URL.createObjectURL(blob)
+  const hash = await hashBlob(blob).catch(() => null)
   const base = {
     id: createAssetId(),
     src,
     ...(hash ? { hash } : {}),
-    name: file.name,
-    mimeType: file.type || undefined,
+    name,
+    mimeType: blob.type || undefined,
   }
   try {
-    if (file.type.startsWith('image/')) {
+    if (blob.type.startsWith('image/')) {
       const { width, height } = await probeImage(src)
       return { ...base, kind: 'image', width, height }
     }
-    const probe = await probeMedia(file)
+    const probe = await prober.probe(origin)
     if (!probe.hasVideo && !probe.hasAudio) {
-      throw new MediaProbeError('no-tracks', `"${file.name}" has no playable audio or video tracks`)
+      throw new MediaProbeError('no-tracks', `"${name}" has no playable audio or video tracks`)
     }
     if (probe.durationMs <= 0) {
-      throw new MediaProbeError('no-duration', `"${file.name}" declares tracks but no playable media (duration 0 ms)`)
+      throw new MediaProbeError('no-duration', `"${name}" declares tracks but no playable media (duration 0 ms)`)
     }
     if (probe.hasVideo) {
       return {
@@ -226,7 +242,7 @@ export async function createAssetFromFile(file: File): Promise<AssetRef> {
         durationMs: probe.durationMs,
         width: probe.width,
         height: probe.height,
-        nativePreview: await hasNativeVideoPreview(file, probe.mimeType),
+        nativePreview: await hasNativeVideoPreview(origin, probe.mimeType),
       }
     }
     return { ...base, kind: 'audio', durationMs: probe.durationMs }

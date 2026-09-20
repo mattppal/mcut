@@ -15,9 +15,9 @@ bun add @mcut/media @mcut/timeline @mcut/compositor
 ```
 
 ```ts
-import { createAssetFromFile, exportProject } from "@mcut/media"
+import { createAsset, exportProject } from "@mcut/media"
 
-const asset = await createAssetFromFile(file)
+const asset = await createAsset({ kind: "blob", blob: file, name: file.name })
 const result = await exportProject(project)
 ```
 
