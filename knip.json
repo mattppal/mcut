@@ -8,7 +8,8 @@
       "ignoreDependencies": ["@arethetypeswrong/cli"]
     },
     "apps/desktop": {
-      "entry": ["src/*.test.ts", "scripts/*.ts", "electron-builder.ts"]
+      "entry": ["src/*.test.ts", "scripts/*.ts", "electron-builder.ts"],
+      "ignoreBinaries": ["codesign"]
     },
     "apps/studio": {
       "entry": ["registry/mcut/**/*.{ts,tsx}"],
