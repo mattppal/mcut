@@ -81,6 +81,51 @@ AppImage to GitHub Releases. There is no web deployment of Studio. The docs site
 at `apps/web` hosts the shadcn registry under `/r` and the agent skill index
 under `/.well-known/agent-skills`.
 
+## Release the desktop app
+
+The desktop app is the private workspace package `mcut-desktop` in
+`apps/desktop`. Its version moves through changesets like the SDK packages, and
+`.changeset/config.json` sets `privatePackages.tag` so `changeset publish` also
+creates a git tag `mcut-desktop@<version>` for it. Because the repo is in
+changesets pre mode, a patch changeset on `0.1.0` produces `0.1.1-alpha.0`.
+
+1. Run `bunx changeset`, pick `mcut-desktop`, choose the bump, and merge the
+   pull request that carries the changeset.
+2. Merge the `Version packages` pull request that the release workflow opens.
+   It bumps `apps/desktop/package.json` and writes `apps/desktop/CHANGELOG.md`.
+3. On that merge the release workflow runs `changeset publish`, which tags
+   `mcut-desktop@<version>` and pushes the tag. A tag pushed with the
+   workflow's `GITHUB_TOKEN` does not start another workflow, so dispatch
+   `desktop.yml` from `main` with the `version` input set to the new version.
+   A tag pushed by hand, `git push origin mcut-desktop@<version>`, starts
+   `desktop.yml` on its own.
+4. `desktop.yml` builds the Linux AppImage and both macOS disk images, smokes
+   them, then the `release` job creates or updates the GitHub Release
+   `mcut-desktop@<version>` with the three files attached. Versions under
+   `1.0.0` and prerelease versions are marked as prereleases.
+
+The Release lands at
+`https://github.com/mattppal/mcut/releases/tag/mcut-desktop@<version>` with
+these assets.
+
+```txt
+mcut-studio-<version>-linux-x86_64.AppImage
+mcut-studio-<version>-mac-arm64.dmg
+mcut-studio-<version>-mac-x64.dmg
+```
+
+The asset names contain no spaces because GitHub rewrites special characters in
+release asset names, as documented in
+[Upload a release asset](https://docs.github.com/en/rest/releases/assets#upload-a-release-asset).
+
+The first `changeset publish` after `privatePackages.tag` lands tags every
+private workspace package at its current version, so expect one tag each for
+`mcut-studio`, `mcut-web`, the examples, and the skill alongside
+`mcut-desktop`. Later runs only tag versions that changed.
+
+The macOS builds are signed ad hoc and not notarized. There is no auto-update,
+no Windows build, and no signing service.
+
 To test a PR's package set in a scratch app, use the pkg.pr.new preview builds
 CI publishes for package PRs. Install the URLs from the PR comment, for example
 `bun add https://pkg.pr.new/@mcut/timeline@<pr-number>`.
