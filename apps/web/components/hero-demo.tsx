@@ -133,29 +133,41 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
     <div
       ref={attachContainer}
       className={cn(
-        'relative overflow-hidden bg-black transition-[height] duration-300',
+        'flex flex-col overflow-hidden bg-black transition-[height] duration-300',
         state.expanded ? 'mx-[calc(50%-50vw)] h-[calc(100dvh-5rem)] w-screen' : 'aspect-video w-full rounded-xl border',
       )}
     >
-      {state.phase !== 'poster' && <iframe ref={attachFrame} src={src} title="mcut Studio" allow="autoplay" className="absolute inset-0 size-full border-0" />}
-      {state.phase !== 'live' && (
-        <img
-          src={clip.poster}
-          alt=""
-          width={clip.width}
-          height={clip.height}
-          fetchPriority="high"
-          decoding="async"
-          className={cn('absolute inset-0 size-full object-cover transition-opacity duration-300', state.phase === 'fading' && 'opacity-0')}
-        />
+      {state.expanded && (
+        <div className="flex h-8 shrink-0 items-center justify-end bg-background px-3">
+          <Button size="icon-sm" variant="secondary" aria-label="Collapse the editor" onClick={collapse}>
+            <XIcon />
+          </Button>
+        </div>
       )}
-      {state.expanded ? (
-        <Button size="icon-sm" variant="secondary" aria-label="Collapse the editor" className="absolute top-3 right-3 z-10" onClick={collapse}>
-          <XIcon />
-        </Button>
-      ) : (
-        <button type="button" aria-label="Open the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />
-      )}
+      <div className="relative min-h-0 flex-1 bg-black">
+        {state.phase !== 'poster' && (
+          <iframe
+            ref={attachFrame}
+            src={src}
+            title="mcut Studio"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+            className="absolute inset-0 size-full border-0"
+          />
+        )}
+        {state.phase !== 'live' && (
+          <img
+            src={clip.poster}
+            alt=""
+            width={clip.width}
+            height={clip.height}
+            fetchPriority="high"
+            decoding="async"
+            className={cn('absolute inset-0 size-full object-cover transition-opacity duration-300', state.phase === 'fading' && 'opacity-0')}
+          />
+        )}
+        {!state.expanded && <button type="button" aria-label="Open the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />}
+      </div>
     </div>
   )
 }

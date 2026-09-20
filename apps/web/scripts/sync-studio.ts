@@ -41,15 +41,16 @@ async function listFiles(dir: string): Promise<string[]> {
   return files
 }
 
+function isSyncedPage(name: string): boolean {
+  return EMBED_PAGES.includes(name) || name === 'tools' || name.startsWith('tools.')
+}
+
 async function copyPages(): Promise<number> {
-  let copied = 0
-  for (const name of EMBED_PAGES) {
-    const source = path.join(studioOut, name)
-    if (!(await fileExists(source))) continue
-    await cp(source, path.join(webOut, name))
-    copied += 1
+  const names = (await readdir(studioOut)).filter(isSyncedPage)
+  for (const name of names) {
+    await cp(path.join(studioOut, name), path.join(webOut, name), { recursive: true })
   }
-  return copied
+  return names.length
 }
 
 async function mergeStatic(): Promise<number> {

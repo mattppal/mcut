@@ -26,7 +26,7 @@ import { SessionPersistence, usePersistedLayout } from './editor-session'
 import { EditorToolbar } from './editor-toolbar'
 import { CurveEditorHost } from './easing-editor'
 import { EditorUIProvider, useEditorUI, type EditorTheme, type LeftTab } from './editor-ui'
-import type { EmbedOptions } from './embed'
+import { EMBED_OMISSIONS, type EmbedOmission, type EmbedOptions } from './embed'
 import { EmbedShell } from './embed-shell'
 import { useProjectFontLoader } from './font-library'
 import { LiveMcpBridge } from './live-mcp-bridge'
@@ -49,7 +49,7 @@ function ProjectFontLoader() {
   return null
 }
 
-function EditorHotkeys({ persist }: { persist: boolean }) {
+function EditorHotkeys({ omitted }: { omitted: ReadonlySet<EmbedOmission> }) {
   const engine = useEditor()
   const ui = useEditorUI()
   useWindowEvent('keydown', (event) => {
@@ -63,7 +63,7 @@ function EditorHotkeys({ persist }: { persist: boolean }) {
     }
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 's') {
       event.preventDefault()
-      if (persist) toast('Autosaved — projects persist in this browser')
+      if (!omitted.has('session-persistence')) toast('Autosaved — projects persist in this browser')
       return
     }
     const action = actionForEvent(event)
@@ -132,11 +132,11 @@ function ChromeRail({ tab, collapsed, onSelect }: { tab: LeftTab; collapsed: boo
   )
 }
 
-function LeftPanel({ tab, transcribe, persist }: { tab: LeftTab; persist: boolean } & Pick<EditorShellProps, 'transcribe'>) {
+function LeftPanel({ tab, transcribe, omitted }: { tab: LeftTab; omitted: ReadonlySet<EmbedOmission> } & Pick<EditorShellProps, 'transcribe'>) {
   if (tab === 'media') {
     return (
       <PanelCard>
-        <MediaBin {...(persist ? { onAssetImported: (asset, file) => void saveAssetBlob(asset, file) } : {})} />
+        <MediaBin {...(!omitted.has('session-persistence') ? { onAssetImported: (asset, file) => void saveAssetBlob(asset, file) } : {})} />
       </PanelCard>
     )
   }
@@ -180,15 +180,16 @@ export interface EditorShellProps {
 function Workspace({
   transcribe,
   leftPanelRef,
-  persist,
+  omitted,
 }: Pick<EditorShellProps, 'transcribe'> & {
   leftPanelRef: RefObject<PanelImperativeHandle | null>
-  persist: boolean
+  omitted: ReadonlySet<EmbedOmission>
 }) {
   const { leftTab: tab, setLeftTab: setTab, layoutResetToken } = useEditorUI()
   const panelsReady = useHasHydrated()
-  const verticalLayout = usePersistedLayout(EDITOR_LAYOUT_KEYS.vertical, layoutResetToken, persist)
-  const horizontalLayout = usePersistedLayout(EDITOR_LAYOUT_KEYS.horizontal, layoutResetToken, persist)
+  const persistLayout = !omitted.has('session-persistence')
+  const verticalLayout = usePersistedLayout(EDITOR_LAYOUT_KEYS.vertical, layoutResetToken, persistLayout)
+  const horizontalLayout = usePersistedLayout(EDITOR_LAYOUT_KEYS.horizontal, layoutResetToken, persistLayout)
   const [leftCollapsed, setLeftCollapsed] = useState(false)
 
   const onRailSelect = (next: LeftTab) => {
@@ -207,7 +208,7 @@ function Workspace({
 
   return (
     <>
-      <EditorToolbar embedded={!persist} />
+      <EditorToolbar />
       <div className="flex min-h-0 flex-1">
         <ChromeRail tab={tab} collapsed={leftCollapsed} onSelect={onRailSelect} />
         {panelsReady ? (
@@ -223,7 +224,7 @@ function Workspace({
                     panelRef={leftPanelRef}
                     onResize={(size) => setLeftCollapsed(size.asPercentage === 0)}
                   >
-                    <LeftPanel tab={tab} transcribe={transcribe} persist={persist} />
+                    <LeftPanel tab={tab} transcribe={transcribe} omitted={omitted} />
                   </ResizablePanel>
                   <ResizableHandle className={leftCollapsed ? 'hidden' : undefined} />
                   <ResizablePanel id="preview" defaultSize="56%" minSize="30%">
@@ -259,12 +260,12 @@ function Workspace({
   )
 }
 
-function Shell({ persist, children }: { persist: boolean; children: ReactNode }) {
+function Shell({ omitted, children }: { omitted: ReadonlySet<EmbedOmission>; children: ReactNode }) {
   const { theme } = useEditorUI()
   return (
     <div data-editor="" className={cn('flex h-dvh flex-col overflow-hidden bg-background text-foreground', theme === 'dark' && 'dark')}>
       <EditorDocumentTheme theme={theme} />
-      <EditorHotkeys persist={persist} />
+      <EditorHotkeys omitted={omitted} />
       <CommandPalette />
       <CurveEditorHost />
       <ProjectFontLoader />
@@ -278,23 +279,17 @@ function Shell({ persist, children }: { persist: boolean; children: ReactNode })
 export function EditorShell({ project, transcribe, embed }: EditorShellProps) {
   const [queryClient] = useState(() => new QueryClient())
   const leftPanelRef = usePanelRef()
-  const persist = embed === undefined
-  const workspace = <Workspace transcribe={transcribe} leftPanelRef={leftPanelRef} persist={persist} />
+  const omitted: ReadonlySet<EmbedOmission> = new Set(embed ? EMBED_OMISSIONS.map((omission) => omission.id) : [])
+  const workspace = <Workspace transcribe={transcribe} leftPanelRef={leftPanelRef} omitted={omitted} />
   return (
     <QueryClientProvider client={queryClient}>
       <EditorProvider {...(project ? { project } : {})}>
         <EditorUIProvider leftPanelRef={leftPanelRef}>
           <TooltipProvider>
-            <Shell persist={persist}>
-              {embed ? (
-                <EmbedShell options={embed}>{workspace}</EmbedShell>
-              ) : (
-                <>
-                  <SessionPersistence />
-                  <LiveMcpBridge />
-                  {workspace}
-                </>
-              )}
+            <Shell omitted={omitted}>
+              {!omitted.has('session-persistence') && <SessionPersistence />}
+              {!omitted.has('live-mcp-bridge') && <LiveMcpBridge />}
+              {embed ? <EmbedShell options={embed}>{workspace}</EmbedShell> : workspace}
             </Shell>
           </TooltipProvider>
         </EditorUIProvider>

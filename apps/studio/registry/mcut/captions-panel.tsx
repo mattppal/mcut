@@ -151,7 +151,7 @@ function TranscriptionKeyField({ settings }: { settings: TranscriptionSettings }
   })
   const isConfigured = configured.data === true
   return (
-    <div className="flex flex-col gap-1.5">
+    <div data-slot="transcription-key-field" className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>AssemblyAI API key</span>
         {isConfigured && <span className="text-2xs font-medium text-foreground">Configured</span>}
