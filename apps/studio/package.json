@@ -4,8 +4,8 @@
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "shadcn build && next build",
+    "dev": "bun scripts/copy-ort-wasm.ts && next dev",
+    "build": "bun scripts/copy-ort-wasm.ts && shadcn build && next build",
     "lint": "shadcn registry validate && eslint",
     "typecheck": "tsc --noEmit",
     "test": "bun test registry/mcut",
