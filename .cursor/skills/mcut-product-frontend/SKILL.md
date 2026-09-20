@@ -10,9 +10,10 @@ Studio consumes the workspace packages.
 
 ## First principles
 
-- `apps/studio` owns the product UI, Next.js routes, API route wiring,
-  persistence, registry composition, product workflows, and integration with
-  the workspace `@mcut/*` packages.
+- `apps/studio` owns the product UI, the static Next export the desktop app
+  serves from `app://studio`, registry composition, product workflows, and
+  integration with the workspace `@mcut/*` packages. Native concerns such as
+  file dialogs and the bridge host live in `apps/desktop`.
 - If the behavior can run headless in Bun with no React, DOM, or browser
   globals, put it in a workspace package, not in `apps/studio`.
 - The shadcn registry at `apps/studio/registry/mcut/` powers the in-repo
@@ -44,12 +45,14 @@ Inside `apps/studio/registry/mcut/*`:
 - Do not use Next.js-only APIs in components that ship through `shadcn add`.
 
 After you edit registry files, run `bun run build` in `apps/studio`. That
-command runs `shadcn build` and regenerates `public/r`.
+command runs `shadcn build` and regenerates `public/r`. The docs site copies
+`public/r` at build time and serves it at `https://mcut.com/r`.
 
 ## Product UX debugging
 
-Reproduce the user's path in the running editor before changing engine-facing
-code. Many editor bugs are missing empty states, unclear selection, invisible
+Run `bun dev` from the repository root. It starts `next dev` and opens the
+Electron window on it with hot reload. Reproduce the user's path in that window
+before changing engine-facing code. Many editor bugs are missing empty states, unclear selection, invisible
 disabled states, hidden palette actions, or weak timeline hints.
 
 If the engine result is correct but users cannot discover the path, fix the

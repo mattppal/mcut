@@ -1,0 +1,8 @@
+{
+  "title": "Studio",
+  "defaultOpen": true,
+  "pages": [
+    "install",
+    "connect-cursor"
+  ]
+}

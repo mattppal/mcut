@@ -19,9 +19,9 @@ reports/
 release-out/
 *.env
 
-# Generated docs
 apps/web/public/docs/
 apps/web/public/docs.md
+apps/web/public/r/
 
 # Desktop build inputs and packages
 apps/desktop/studio/

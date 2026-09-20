@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "id": "p-talking-head",
+  "name": "Talking head",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "tracks": [
+    {
+      "id": "t-music",
+      "name": "Music",
+      "muted": false,
+      "hidden": false,
+      "locked": false,
+      "magnetic": false,
+      "elements": [
+        {
+          "id": "e-music",
+          "type": "audio",
+          "startMs": 0,
+          "durationMs": 90000,
+          "assetId": "a-music",
+          "trimStartMs": 0,
+          "volume": 0.2,
+          "muted": false
+        }
+      ]
+    },
+    {
+      "id": "t-default",
+      "name": "A-roll",
+      "muted": false,
+      "hidden": false,
+      "locked": false,
+      "magnetic": false,
+      "elements": [
+        {
+          "id": "e-camera",
+          "type": "video",
+          "startMs": 0,
+          "durationMs": 90000,
+          "assetId": "a-camera",
+          "trimStartMs": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "rotation": 0
+          },
+          "opacity": 1,
+          "volume": 1,
+          "muted": false
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "a-camera": {
+      "id": "a-camera",
+      "kind": "video",
+      "src": "media/camera.mp4",
+      "name": "camera.mp4",
+      "mimeType": "video/mp4",
+      "durationMs": 90000,
+      "width": 1920,
+      "height": 1080
+    },
+    "a-music": {
+      "id": "a-music",
+      "kind": "audio",
+      "src": "media/music.mp3",
+      "name": "music.mp3",
+      "mimeType": "audio/mpeg",
+      "durationMs": 120000
+    }
+  },
+  "layouts": [],
+  "presets": [],
+  "markers": []
+}

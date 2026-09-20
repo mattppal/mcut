@@ -4,13 +4,13 @@
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
-    "dev": "bun run sync:docs-md && next dev",
-    "build": "bun run sync:docs-md && bun run source:docs && next build",
-    "start": "next start",
+    "dev": "bun run sync:docs-md && bun run sync:registry && next dev",
+    "build": "bun run sync:docs-md && bun run sync:registry && bun run source:docs && next build",
     "lint": "eslint",
     "typecheck": "bun run source:docs && tsc --noEmit",
     "source:docs": "fumadocs-mdx",
-    "sync:docs-md": "bun run scripts/sync-docs-markdown.ts"
+    "sync:docs-md": "bun run scripts/sync-docs-markdown.ts",
+    "sync:registry": "bun run scripts/sync-registry.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.5.0",

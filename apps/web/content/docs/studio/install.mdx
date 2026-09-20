@@ -1,0 +1,69 @@
+---
+title: Install Studio
+description: Download mcut Studio for macOS or Linux, launch it the first time, and find the bridge token it writes.
+---
+
+mcut Studio is a desktop app. It bundles the editor and the live MCP bridge in
+one process, so an agent connects to the running app without a separate server.
+Builds for macOS and Linux are published on the
+[GitHub Releases page](https://github.com/mattppal/mcut/releases). Windows is
+not supported in the first release.
+
+## macOS
+
+1. Download `mcut Studio-<version>-mac-<arch>.dmg` for your chip. Apple silicon
+   Macs take `arm64`, Intel Macs take `x64`.
+2. Open the disk image and drag mcut Studio into Applications.
+3. The app is signed ad hoc and not notarized, so the first launch needs one
+   extra step. Right-click the app in Applications, choose Open, then confirm
+   in the dialog. Apple documents the flow in
+   [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac).
+   Later launches open with a double-click.
+
+## Linux
+
+1. Download `mcut Studio-<version>-linux-x86_64.AppImage`.
+2. Make it executable and run it.
+
+```sh
+chmod +x "mcut Studio-<version>-linux-x86_64.AppImage"
+./"mcut Studio-<version>-linux-x86_64.AppImage"
+```
+
+An AppImage mounts itself with FUSE. On a machine without FUSE, run it with
+`--appimage-extract-and-run`, as described in the
+[AppImage FUSE troubleshooting guide](https://docs.appimage.org/user-guide/troubleshooting/fuse.html).
+
+## First launch
+
+The window opens on the editor. The app starts the live MCP bridge on port
+`44737` and prints two lines on standard output when it is up.
+
+```text
+BRIDGE_READY ws://127.0.0.1:44737/mcut-mcp
+MCP_URL http://127.0.0.1:44737/mcp?token=<token>
+```
+
+The MCP menu in the app has Copy MCP URL and Add to Cursor. See
+[Connect Cursor](/docs/studio/connect-cursor) for the client side.
+
+## The bridge token
+
+The app generates a token on first launch and keeps it in its user data
+directory, so the MCP URL stays the same across restarts.
+
+| Platform | Token file |
+| --- | --- |
+| macOS | `~/Library/Application Support/mcut-desktop/bridge-token` |
+| Linux | `~/.config/mcut-desktop/bridge-token` |
+
+The file holds one line of 64 hex characters. Delete it to rotate the token.
+The next launch writes a new one, and every client that stored the old URL has
+to be reconnected.
+
+## Local projects
+
+Studio saves projects as `.mcut.json` files through the native save dialog.
+Any project file the [CLI](/docs/reference/cli) or the
+[stdio MCP server](/docs/reference/mcp-server) produces opens in Studio through
+File, Open project.

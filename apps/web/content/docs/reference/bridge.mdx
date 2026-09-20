@@ -1,28 +1,46 @@
 ---
 title: Local bridge
-description: Connect MCP clients and local scripts to a live browser editor tab.
+description: The live bridge inside mcut Studio, and the standalone bridge process for a browser tab.
 ---
 
-The local bridge keeps the browser editor tab as the source of truth while agents
-or scripts edit through MCP-style tools.
+The live bridge keeps the open editor as the source of truth while agents or
+scripts edit through MCP-style tools. It listens on localhost for a WebSocket
+from the editor at `/mcut-mcp`, Streamable HTTP MCP at `/mcp`, and a local RPC
+endpoint for the CLI commands below.
 
-## Live MCP server
+## The bridge in Studio
+
+mcut Studio runs the bridge in its main process on port `44737` with a
+persisted token. Nothing else needs to start. Open the app and connect a client
+to the URL from the MCP menu, see [Connect Cursor](/docs/studio/connect-cursor).
+The commands on this page reach that bridge with `--port 44737`.
+
+## Standalone bridge for a browser tab
+
+Developers working on Studio itself, or on an app that embeds the editor, can
+run the bridge as its own process and connect a browser tab to it. This is the
+developer path, the desktop app is the user path.
+
+### Live MCP server
 
 ```sh
-bunx -p @mcut/mcp-server mcut-mcp-live --port 54319 --editor-url http://localhost:3000/editor
+bunx -p @mcut/mcp-server mcut-mcp-live --port 54319
 ```
 
 This starts a stdio MCP server and a localhost WebSocket bridge. It prints an
-editor URL with bridge parameters. Open that URL so the browser tab connects.
+editor URL with bridge parameters, `--editor-url` overrides the editor origin.
+Open that URL so the browser tab connects.
 
-## Bridge server
+### Bridge server
 
 ```sh
-bunx -p @mcut/mcp-server mcut-bridge start --port 44737 --editor-url http://localhost:3000/editor
+bunx -p @mcut/mcp-server mcut-bridge start --port 44737
 ```
 
 The bridge server exposes local HTTP RPC and WebSocket endpoints for a connected
-editor tab. Keep the process running while agents or scripts edit.
+editor tab. Keep the process running while agents or scripts edit. In the
+repository, `bun run scripts/mcut-local-dev.ts bridge` starts it with the fixed
+token `mcut-local-dev`.
 
 ## Bridge MCP adapter
 
@@ -30,7 +48,7 @@ editor tab. Keep the process running while agents or scripts edit.
 bunx -p @mcut/mcp-server mcut-bridge mcp --port 44737
 ```
 
-This exposes the running bridge as an MCP stdio server.
+This exposes a running bridge, in Studio or standalone, as an MCP stdio server.
 
 ## Utility commands
 
@@ -43,9 +61,9 @@ This exposes the running bridge as an MCP stdio server.
 | `get-media-context` | Print live media and selection context. |
 | `get-transcript` | Print caption-derived transcript data. |
 | `search-transcript` | Search transcript text. |
-| `ensure-transcript` | Trigger local browser transcription when available. |
-| `list-actions` | List live browser editor actions. |
-| `action` | Run a browser action by id. |
+| `ensure-transcript` | Trigger transcription in the editor when available. |
+| `list-actions` | List live editor actions. |
+| `action` | Run an editor action by id. |
 | `dispatch` | Dispatch a raw command. |
 | `operator` | Run an editor operator by id. |
 | `undo` | Undo in the live editor. |
@@ -53,8 +71,8 @@ This exposes the running bridge as an MCP stdio server.
 
 ## When to use the bridge
 
-Use the bridge when an edit needs browser-only capabilities, live editor state,
-local Whisper transcription, or exact parity with a running editor tab. Use the
+Use the bridge when an edit needs editor-only capabilities, live editor state,
+local Whisper transcription, or exact parity with what is on screen. Use the
 stdio project server when a project JSON file is enough.
 
 For agent editing, use the high-level live actions before raw commands:

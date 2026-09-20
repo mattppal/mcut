@@ -1,6 +1,14 @@
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+
 export const DEFAULT_STUDIO_PORT = 3000
 export const DEFAULT_BRIDGE_PORT = 44737
 export const DEFAULT_BRIDGE_TOKEN = 'mcut-local-dev'
+
+const REPO_ROOT = join(import.meta.dir, '..')
+const DESKTOP_DIR = join(REPO_ROOT, 'apps/desktop')
+const ELECTRON_BINARIES = [join(DESKTOP_DIR, 'node_modules/.bin/electron'), join(REPO_ROOT, 'node_modules/.bin/electron')]
+const DEV_SERVER_TIMEOUT_MS = 120_000
 
 function integerEnv(name: string): number | undefined {
   const value = process.env[name]
@@ -41,13 +49,19 @@ export function localMcpUrl(): string {
   return url.toString()
 }
 
-function spawnProcess(name: string, cmd: string[]): Bun.Subprocess {
+interface SpawnOptions {
+  cwd?: string
+  env?: NodeJS.ProcessEnv
+  stdout?: 'inherit' | 'pipe'
+}
+
+function spawnProcess(name: string, cmd: string[], options: SpawnOptions = {}): Bun.Subprocess {
   console.error(`[mcut dev] starting ${name}: ${cmd.join(' ')}`)
   return Bun.spawn(cmd, {
-    cwd: process.cwd(),
-    env: process.env,
+    cwd: options.cwd ?? process.cwd(),
+    env: options.env ?? process.env,
     stdin: 'inherit',
-    stdout: 'inherit',
+    stdout: options.stdout ?? 'inherit',
     stderr: 'inherit',
   })
 }
@@ -56,23 +70,32 @@ function bunBin(): string {
   return process.execPath
 }
 
-async function prepareDevPackages(filters: string[]): Promise<void> {
-  const cmd = [bunBin(), 'run', 'turbo', 'run', 'build', ...filters.map((filter) => `--filter=${filter}`)]
-  console.error(`[mcut dev] preparing package builds: ${cmd.join(' ')}`)
-  const child = spawnProcess('package builds', cmd)
+async function runToCompletion(name: string, cmd: string[], cwd?: string): Promise<void> {
+  const child = spawnProcess(name, cmd, { cwd })
   const code = await child.exited
   if (code !== 0) {
-    throw new Error(`Package build preparation failed with exit code ${code ?? 'unknown'}.`)
+    throw new Error(`${name} failed with exit code ${code ?? 'unknown'}.`)
   }
 }
 
-async function waitForFirstExit(children: Bun.Subprocess[]): Promise<number> {
-  const code = await Promise.race(children.map((child) => child.exited))
+async function prepareDevPackages(filters: string[]): Promise<void> {
+  await runToCompletion('package builds', [bunBin(), 'run', 'turbo', 'run', 'build', ...filters.map((filter) => `--filter=${filter}`)])
+}
+
+async function waitForFirstExit(children: { name: string; proc: Bun.Subprocess }[], expected: () => boolean): Promise<number> {
+  const first = await Promise.race(
+    children.map(async (child) => ({
+      name: child.name,
+      code: await child.proc.exited,
+    })),
+  )
   for (const child of children) {
-    if (child.exitCode === null) child.kill()
+    if (child.proc.exitCode === null) child.proc.kill()
   }
-  await Promise.allSettled(children.map((child) => child.exited))
-  return code ?? 0
+  await Promise.allSettled(children.map((child) => child.proc.exited))
+  if (expected()) return 0
+  console.error(`[mcut dev] ${first.name} exited with code ${first.code ?? 'unknown'}`)
+  return 1
 }
 
 async function runBridge(): Promise<void> {
@@ -91,42 +114,82 @@ async function runBridge(): Promise<void> {
   process.exitCode = await child.exited
 }
 
+function electronBinary(): string {
+  const found = ELECTRON_BINARIES.find(existsSync)
+  if (found === undefined) throw new Error(`No electron binary at ${ELECTRON_BINARIES.join(' or ')}. Run \`bun install\` first.`)
+  return found
+}
+
+function electronEnv(devUrl: string): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env, MCUT_DEV_URL: devUrl }
+  delete env.ELECTRON_RUN_AS_NODE
+  return env
+}
+
+async function waitForDevServer(url: string, server: Bun.Subprocess): Promise<void> {
+  const deadline = Date.now() + DEV_SERVER_TIMEOUT_MS
+  while (Date.now() < deadline) {
+    if (server.exitCode !== null) throw new Error(`The Next dev server exited with code ${server.exitCode} before it accepted connections.`)
+    try {
+      await fetch(url, { method: 'HEAD' })
+      return
+    } catch {
+      await Bun.sleep(250)
+    }
+  }
+  throw new Error(`The Next dev server did not accept connections at ${url} within ${DEV_SERVER_TIMEOUT_MS / 1000} seconds.`)
+}
+
+async function echoAppOutput(stdout: ReadableStream<Uint8Array>): Promise<void> {
+  let buffered = ''
+  for await (const chunk of stdout) {
+    buffered += new TextDecoder().decode(chunk)
+    let newline = buffered.indexOf('\n')
+    while (newline !== -1) {
+      const line = buffered.slice(0, newline)
+      buffered = buffered.slice(newline + 1)
+      if (line.startsWith('MCP_URL ')) console.error(`[mcut dev] MCP: ${line.slice('MCP_URL '.length)}`)
+      console.log(line)
+      newline = buffered.indexOf('\n')
+    }
+  }
+}
+
 async function runDev(): Promise<void> {
   const studioPort = localStudioPort()
-  const bridgePort = localBridgePort()
+  const devUrl = `http://localhost:${studioPort}`
 
-  await prepareDevPackages(['mcut-studio-web^...'])
+  await prepareDevPackages(['mcut-studio^...', 'mcut-desktop^...'])
+  await runToCompletion('desktop main build', [bunBin(), 'x', 'tsdown'], DESKTOP_DIR)
 
-  console.error(`[mcut dev] Studio: http://localhost:${studioPort}`)
-  console.error(`[mcut dev] Bridge: ws://127.0.0.1:${bridgePort}/mcut-mcp`)
-  console.error(`[mcut dev] MCP: ${localMcpUrl()}`)
-  console.error(`[mcut dev] Open editor: ${localEditorBridgeUrl()}`)
+  console.error(`[mcut dev] Studio dev server: ${devUrl}`)
 
-  const children = [
-    spawnProcess('studio', [bunBin(), 'run', '--cwd', 'apps/studio', 'dev', '--', '--port', String(studioPort)]),
-    spawnProcess('mcp bridge', [
-      bunBin(),
-      'packages/mcp-server/src/bridge-cli.ts',
-      'start',
-      '--port',
-      String(bridgePort),
-      '--token',
-      localBridgeToken(),
-      '--editor-url',
-      localEditorUrl(),
-    ]),
-  ]
+  const studio = spawnProcess('next dev', [bunBin(), 'run', '--cwd', 'apps/studio', 'dev', '--', '--port', String(studioPort)])
+  const children = [{ name: 'next dev', proc: studio }]
+  let shuttingDown = false
 
   const stop = () => {
+    shuttingDown = true
     for (const child of children) {
-      if (child.exitCode === null) child.kill()
+      if (child.proc.exitCode === null) child.proc.kill()
     }
   }
   process.once('SIGINT', stop)
   process.once('SIGTERM', stop)
   process.once('SIGHUP', stop)
 
-  process.exitCode = await waitForFirstExit(children)
+  try {
+    await waitForDevServer(devUrl, studio)
+  } catch (error) {
+    stop()
+    throw error
+  }
+
+  const app = spawnProcess('electron', [electronBinary(), DESKTOP_DIR], { env: electronEnv(devUrl), stdout: 'pipe' })
+  children.push({ name: 'electron', proc: app })
+  if (app.stdout instanceof ReadableStream) void echoAppOutput(app.stdout)
+
+  process.exitCode = await waitForFirstExit(children, () => shuttingDown)
 }
 
 async function main(): Promise<void> {

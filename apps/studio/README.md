@@ -1,7 +1,9 @@
 # mcut Studio app
 
-This workspace is the reference Next.js editor and the source for the hosted
-shadcn registry at `apps/studio/registry/mcut/`.
+This workspace is the Studio renderer, a static Next export that the Electron
+shell in `apps/desktop` serves from `app://studio`, and the source for the
+shadcn registry at `apps/studio/registry/mcut/`. The docs site copies
+`public/r` at build time and serves it at `https://mcut.com/r`.
 
 ## Boundary
 
@@ -38,34 +40,22 @@ bunx shadcn build
 From the repo root:
 
 ```sh
-bun run dev
+bun dev
 ```
 
-Local defaults are Studio on `http://localhost:3000` and the bridge on port
-`44737`. The bridge exposes browser sync at `/mcut-mcp` and Streamable HTTP MCP
-at `/mcp`. The MCP URL includes a `token` query parameter. `bun run dev` prints
-that URL. Print it again with
-`bun run scripts/mcut-local-dev.ts mcp-url`.
+`bun dev` starts `next dev` on port `3000` and opens the Electron app on it. The
+app hosts the bridge on port `44737`, with editor sync at `/mcut-mcp` and
+Streamable HTTP MCP at `/mcp`, and prints its `MCP_URL` line. Point any MCP
+client that supports Streamable HTTP at that URL, or use Add to Cursor from the
+app's MCP menu.
 
-Point any MCP client that supports Streamable HTTP at that URL. In Cursor, add
-it to `mcp.json`.
-
-```json
-{
-  "mcpServers": {
-    "mcut": {
-      "url": "http://127.0.0.1:44737/mcp?token=mcut-local-dev"
-    }
-  }
-}
-```
-
-Open the connected editor URL printed by `bun run dev`, or print it again with
+To work in a browser tab instead, run `bun run scripts/mcut-local-dev.ts bridge`
+and `bun run --cwd apps/studio dev` in two terminals, then open the URL from
 `bun run scripts/mcut-local-dev.ts url`.
 
 Studio checks:
 
 ```sh
-bun run --filter=mcut-studio-web typecheck
-bun run --filter=mcut-studio-web test
+bun run --filter=mcut-studio typecheck
+bun run --filter=mcut-studio test
 ```

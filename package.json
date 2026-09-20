@@ -22,7 +22,7 @@
     "smoke:packages": "bun run scripts/smoke-packages.ts",
     "fixtures": "bun scripts/fixtures/generate-media.ts --mutate",
     "fuzz:media": "bun run fixtures && bun run --filter @mcut/media fuzz:media",
-    "fuzz:media:e2e": "bun run fixtures && bun run --filter mcut-studio-web fuzz:media",
+    "fuzz:media:e2e": "bun run fixtures && bun run --filter mcut-studio fuzz:media",
     "fuzz:mcp:bridge": "bun scripts/agent-e2e/fuzz-bridge.ts",
     "changeset": "changeset",
     "version-packages": "changeset version",

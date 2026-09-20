@@ -8,11 +8,15 @@ repo is strongest at project documents, headless timeline edits, editor
 operators, React preview surfaces, browser media helpers, captions, CLI
 workflows, and MCP tools.
 
-The visual editor and commercial mcut Studio app are separate from these docs.
+mcut Studio, the desktop editor built on these packages, ships for macOS and
+Linux from [GitHub Releases](https://github.com/mattppal/mcut/releases) and
+hosts the live MCP bridge that agents connect to.
 
 ## Intro
 
 - [Quickstart](/docs/quickstart): create a project document and inspect it with the CLI.
+- [Install Studio](/docs/studio/install) covers downloading the desktop app and launching it the first time.
+- [Connect Cursor](/docs/studio/connect-cursor) covers pointing an MCP client at the bridge inside Studio.
 - [Project model](/docs/concepts/project-model): understand the JSON document mcut edits.
 - [Package architecture](/docs/concepts/package-architecture): choose the package that owns your task.
 - [SDK Reference](/docs/sdk): generated TypeScript API docs for public exports.
@@ -26,4 +30,5 @@ check the generated SDK reference when you need exact signatures.
 ## For agents
 
 Use [Agent instructions](/docs/agent-instructions) when an AI agent edits an
-mcut project through CLI, MCP, or the browser bridge.
+mcut project through the CLI, the stdio MCP server, or the live bridge in
+Studio.
