@@ -62,7 +62,7 @@ async function main(): Promise<void> {
   reportSafeStorageBackend()
   const settings = openSettings(path.join(app.getPath('userData'), 'settings.json'))
   serveStudio({ transcribe: (request) => handleTranscribeRequest(request, settings) })
-  hardenSession()
+  hardenSession(allowedOrigins(options))
   routeDownloadsToSaveDialog()
   const token = resolveToken(options.tokenSource, path.join(app.getPath('userData'), 'bridge-token'))
   const port = options.bridgePort === 'ephemeral' ? 0 : options.bridgePort

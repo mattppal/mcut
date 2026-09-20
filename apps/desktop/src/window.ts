@@ -12,8 +12,14 @@ function isAllowedNavigation(url: string, allowedOrigins: readonly string[]): bo
   return allowedOrigins.some((origin) => url === origin || url.startsWith(`${origin}/`))
 }
 
-export function hardenSession(): void {
-  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
+const STUDIO_PERMISSIONS: ReadonlySet<string> = new Set(['clipboard-read', 'clipboard-sanitized-write'])
+
+export function hardenSession(allowedOrigins: readonly string[]): void {
+  const isStudioPermission = (permission: string, url: string) => STUDIO_PERMISSIONS.has(permission) && isAllowedNavigation(url, allowedOrigins)
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback, details) =>
+    callback(isStudioPermission(permission, details.requestingUrl)),
+  )
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => isStudioPermission(permission, requestingOrigin))
 }
 
 export async function openEditorWindow(options: EditorWindowOptions): Promise<BrowserWindow> {
