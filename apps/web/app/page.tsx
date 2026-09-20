@@ -4,21 +4,11 @@ import { SignupForm } from '@/components/signup-form'
 import { SiteFooter, SiteHeader } from '@/components/site-chrome'
 import { DEMO_CLIP } from '@/lib/demo-clip'
 import { desktopRelease } from '@/lib/desktop-release.generated'
-import Link from 'next/link'
 
-const POINTS: [string, React.ReactNode][] = [
+const POINTS: [string, string][] = [
   ['SDK available', 'Use the TypeScript packages for timelines, previews, media/export, captions, React interfaces, and CLI workflows.'],
   ['Built for agents', 'Compose edits through serializable commands, editor operators, CLI tools, and MCP server packages.'],
-  [
-    'Studio',
-    <>
-      The desktop editor uses the same engine for cutting, captioning, exporting, and agent-assisted video work.{' '}
-      <Link className="text-foreground underline underline-offset-4" href="/downloads">
-        Download it
-      </Link>{' '}
-      for macOS or Linux.
-    </>,
-  ],
+  ['Studio', 'The desktop editor uses the same engine for cutting, captioning, exporting, and agent-assisted video work.'],
 ]
 
 function Serif({ children }: { children: React.ReactNode }) {
@@ -52,15 +42,9 @@ export default function Home() {
           {release === null ? (
             <p className="max-w-md leading-relaxed text-muted-foreground">The full mcut editor is coming soon. Join the waitlist for early access.</p>
           ) : (
-            <>
-              <p className="max-w-md leading-relaxed text-muted-foreground">
-                mcut Studio {release.version} is out for macOS and Linux.{' '}
-                <Link className="text-foreground underline underline-offset-4" href="/downloads">
-                  Download
-                </Link>
-              </p>
-              <p className="max-w-md leading-relaxed text-muted-foreground">Join the waitlist for updates.</p>
-            </>
+            <p className="max-w-md leading-relaxed text-muted-foreground">
+              mcut Studio {release.version} is out for macOS and Linux. Join the waitlist for updates.
+            </p>
           )}
           <SignupForm />
         </section>
