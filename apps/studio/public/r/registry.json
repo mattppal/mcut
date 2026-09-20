@@ -59,6 +59,31 @@
           "target": "components/mcut/editor-shell.tsx"
         },
         {
+          "path": "registry/mcut/editor-session.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/editor-session.tsx"
+        },
+        {
+          "path": "registry/mcut/preview-area.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/preview-area.tsx"
+        },
+        {
+          "path": "registry/mcut/embed.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/embed.ts"
+        },
+        {
+          "path": "registry/mcut/embed-bootstrap.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/embed-bootstrap.tsx"
+        },
+        {
+          "path": "registry/mcut/embed-shell.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/embed-shell.tsx"
+        },
+        {
           "path": "registry/mcut/editor-toolbar.tsx",
           "type": "registry:component",
           "target": "components/mcut/editor-toolbar.tsx"
