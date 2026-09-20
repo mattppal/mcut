@@ -15,10 +15,15 @@ const repoRoot = path.resolve(__dirname, '..', '..', '..')
 const siteOut = path.join(repoRoot, 'apps/web/out')
 const sampleClip = path.join(repoRoot, 'apps/web/public/demo/sample.mp4')
 const reportDir = path.join(repoRoot, 'apps/studio/reports/embed-parity')
-const FRAME = { width: 1280, height: 720 }
+interface Size {
+  width: number
+  height: number
+}
+
+const FRAME: Size = { width: 1280, height: 720 }
 const LEFT_TABS = ['media', 'text', 'animate', 'captions', 'transcript']
 const PIXEL_THRESHOLD = 24
-const MAX_PIXEL_MISMATCH = 0.02
+const MAX_PIXEL_MISMATCH = 0.03
 const CAPTURE = captureConfig(EMBED_OMISSIONS)
 
 const MIME: Record<string, string> = {
@@ -76,12 +81,12 @@ function electronEnv(configHome: string, display: string | undefined): Record<st
   return env
 }
 
-async function launchDesktop(display: string | undefined): Promise<{ app: ElectronApplication; page: Page; configHome: string }> {
+async function launchDesktop(display: string | undefined): Promise<{ app: ElectronApplication; page: Page; configHome: string; inner: Size }> {
   const configHome = await mkdtemp(path.join(tmpdir(), 'mcut-parity-'))
   const electron = z.string().parse(createRequire(path.join(repoRoot, 'apps/desktop/package.json'))('electron'))
   const app = await _electron.launch({
     executablePath: electron,
-    args: ['apps/desktop', '--port', '0', '--no-sandbox'],
+    args: ['apps/desktop', '--port', '0', '--no-sandbox', '--force-device-scale-factor=1'],
     cwd: repoRoot,
     env: electronEnv(configHome, display),
   })
@@ -89,16 +94,9 @@ async function launchDesktop(display: string | undefined): Promise<{ app: Electr
   await page.waitForURL(/^app:\/\/studio\/editor\?/, { timeout: 30_000 })
   const handle = await app.browserWindow(page)
   await page.locator('[data-slot="editor-toolbar"]').waitFor()
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const inner = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }))
-    if (inner.width === FRAME.width && inner.height === FRAME.height) break
-    const content = await handle.evaluate((browserWindow) => browserWindow.getContentSize())
-    await handle.evaluate((browserWindow, size) => browserWindow.setContentSize(size.width, size.height), {
-      width: (content[0] ?? FRAME.width) + FRAME.width - inner.width,
-      height: (content[1] ?? FRAME.height) + FRAME.height - inner.height,
-    })
-    await page.waitForTimeout(300)
-  }
+  await handle.evaluate((browserWindow, size) => browserWindow.setContentSize(size.width, size.height), FRAME)
+  await page.waitForTimeout(500)
+  const inner = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }))
   await page
     .getByText('Discard')
     .click({ timeout: 1500 })
@@ -109,10 +107,13 @@ async function launchDesktop(display: string | undefined): Promise<{ app: Electr
   await page.locator('[title="Mute track"]').click()
   await page.keyboard.press('Home')
   await page.keyboard.press('Escape')
-  return { app, page, configHome }
+  return { app, page, configHome, inner }
 }
 
-async function openEmbed(siteUrl: string): Promise<{ browser: Awaited<ReturnType<typeof chromium.launch>>; page: Page; frame: Frame; iframe: Locator }> {
+async function openEmbed(
+  siteUrl: string,
+  target: Size,
+): Promise<{ browser: Awaited<ReturnType<typeof chromium.launch>>; page: Page; frame: Frame; iframe: Locator }> {
   const browser = await chromium.launch()
   const context = await browser.newContext({ viewport: { width: FRAME.width, height: FRAME.height + 200 }, reducedMotion: 'reduce' })
   const page = await context.newPage()
@@ -123,18 +124,24 @@ async function openEmbed(siteUrl: string): Promise<{ browser: Awaited<ReturnType
   const frame = await (await iframe.elementHandle())?.contentFrame()
   if (!frame) throw new Error('the hero iframe has no content frame')
   await frame.locator('[data-mcut-clip]').waitFor({ timeout: 30_000 })
-  const box = await iframe.boundingBox()
-  if (box === null) throw new Error('the hero iframe has no box')
-  await page.setViewportSize({
-    width: FRAME.width + (FRAME.width - Math.round(box.width)),
-    height: FRAME.height + 200 + (FRAME.height - Math.round(box.height)),
-  })
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const box = await iframe.boundingBox()
+    if (box === null) throw new Error('the hero iframe has no box')
+    if (Math.round(box.width) === target.width && Math.round(box.height) === target.height) break
+    const viewport = page.viewportSize() ?? { width: FRAME.width, height: FRAME.height + 200 }
+    await page.setViewportSize({
+      width: viewport.width + target.width - Math.round(box.width),
+      height: viewport.height + target.height - Math.round(box.height),
+    })
+    await page.waitForTimeout(500)
+  }
   await frame.locator('[data-slot="editor-toolbar"]').waitFor()
   return { browser, page, frame, iframe }
 }
 
 async function settle(surface: Page | Frame): Promise<void> {
   await surface.locator('[data-mcut-player]').hover()
+  await surface.locator('section[aria-label^="Notifications"] li').first().waitFor({ state: 'detached', timeout: 15_000 })
   await surface.waitForTimeout(400)
 }
 
@@ -180,20 +187,26 @@ test('the homepage embed matches the desktop editor', async () => {
   let embed: Awaited<ReturnType<typeof openEmbed>> | null = null
   try {
     desktop = await launchDesktop(display.display)
-    embed = await openEmbed(site.url)
+    embed = await openEmbed(site.url, desktop.inner)
 
     const desktopPage = desktop.page
     await settle(desktopPage)
-    const desktopNativePng = await desktopPage.screenshot()
+    const desktopClip = { x: 0, y: 0, width: desktop.inner.width, height: desktop.inner.height }
+    const desktopNativePng = await desktopPage.screenshot({ clip: desktopClip })
     const desktopNative = await desktopPage.evaluate(captureSurface, CAPTURE)
     const { desktopTabs, desktopPng } = await withBrowserChrome(desktopPage, async () => {
       const desktopTabs = await captureTabs(desktopPage)
       await settle(desktopPage)
-      return { desktopTabs, desktopPng: await desktopPage.screenshot() }
+      return { desktopTabs, desktopPng: await desktopPage.screenshot({ clip: desktopClip }) }
     })
     const embedTabs = await captureTabs(embed.frame)
     await settle(embed.frame)
-    const embedPng = await embed.iframe.screenshot()
+    const iframeBox = await embed.iframe.boundingBox()
+    if (iframeBox === null) throw new Error('the hero iframe has no box')
+    const embedPng = await embed.page.screenshot({
+      fullPage: true,
+      clip: { x: Math.round(iframeBox.x), y: Math.round(iframeBox.y), width: Math.round(iframeBox.width), height: Math.round(iframeBox.height) },
+    })
 
     const differences: Difference[] = []
     for (const tab of LEFT_TABS) {

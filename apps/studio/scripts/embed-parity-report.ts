@@ -31,13 +31,15 @@ function lineDiff(a: string[], b: string[]): { removed: string[]; added: string[
     if (a[i] === b[j]) {
       i += 1
       j += 1
-    } else if ((table[i + 1]?.[j] ?? 0) >= (table[i]?.[j + 1] ?? 0)) {
+      continue
+    }
+    if ((table[i + 1]?.[j] ?? 0) >= (table[i]?.[j + 1] ?? 0)) {
       removed.push(a[i] ?? '')
       i += 1
-    } else {
-      added.push(b[j] ?? '')
-      j += 1
+      continue
     }
+    added.push(b[j] ?? '')
+    j += 1
   }
   removed.push(...a.slice(i))
   added.push(...b.slice(j))

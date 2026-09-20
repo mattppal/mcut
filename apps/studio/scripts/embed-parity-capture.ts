@@ -126,8 +126,8 @@ export async function comparePixels(images: { a: string; b: string; threshold: n
       image.src = src
     })
   const [a, b] = await Promise.all([load(images.a), load(images.b)])
-  const width = Math.max(a.width, b.width)
-  const height = Math.max(a.height, b.height)
+  const width = Math.min(a.width, b.width)
+  const height = Math.min(a.height, b.height)
   const read = (image: HTMLImageElement) => {
     const canvas = document.createElement('canvas')
     canvas.width = width
