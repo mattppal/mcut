@@ -22,6 +22,7 @@ release-out/
 apps/web/public/docs/
 apps/web/public/docs.md
 apps/web/public/r/
+apps/studio/public/ort/
 apps/web/lib/desktop-release.generated.ts
 
 # Desktop build inputs and packages

@@ -56,6 +56,7 @@ export interface CreateLocalWhisperProviderOptions {
   model?: keyof typeof WHISPER_MODELS | (string & {})
   device?: 'webgpu' | 'wasm'
   dtype?: WhisperDtype
+  ortWasmPaths?: { mjs: string; wasm: string }
   onProgress?: (progress: LocalWhisperProgress) => void
   createWorker?: () => Worker
   id?: string
@@ -124,7 +125,7 @@ export function createLocalWhisperProvider(options: CreateLocalWhisperProviderOp
         const request: WhisperWorkerRequest = {
           type: 'transcribe',
           id,
-          config: { model, device, dtype },
+          config: { model, device, dtype, ...(options.ortWasmPaths ? { ortWasmPaths: options.ortWasmPaths } : {}) },
           audio,
           ...(transcribeOptions?.language ? { language: transcribeOptions.language } : {}),
         }

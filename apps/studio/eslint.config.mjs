@@ -67,6 +67,7 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     // Vendored third-party registry components (Kibo UI).
     'components/kibo-ui/**',
+    'public/ort/**',
   ]),
 ])
 

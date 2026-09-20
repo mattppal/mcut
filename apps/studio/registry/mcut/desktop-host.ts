@@ -1,10 +1,10 @@
 'use client'
 
 import { toast } from 'sonner'
-import { readDesktopApi, type DesktopErrorShape, type MenuAction } from '@mcut/desktop-ipc'
+import { readDesktopApi, type DesktopApi, type DesktopErrorShape, type DesktopResult, type MenuAction, type UpdateState } from '@mcut/desktop-ipc'
 import { loadMediaBlob } from '@mcut/media'
 import type { Project } from '@mcut/timeline'
-import type { StudioHost } from './studio-host'
+import type { DesktopUpdates, StudioHost } from './studio-host'
 
 declare global {
   interface WindowEventMap {
@@ -34,6 +34,34 @@ async function relinkAssets(project: Project): Promise<{ project: Project; missi
     if (asset.src.startsWith('blob:')) missing += 1
   }
   return { project: { ...project, assets }, missing }
+}
+
+function createDesktopUpdates(api: DesktopApi): DesktopUpdates {
+  let state: UpdateState = { phase: 'idle' }
+  const listeners = new Set<() => void>()
+  const assign = (next: UpdateState): void => {
+    state = next
+    for (const listener of listeners) listener()
+  }
+  api.update.onState(assign)
+
+  const apply = async (result: Promise<DesktopResult<UpdateState>>): Promise<void> => {
+    const outcome = await result
+    if (!outcome.ok) return reportFailure(outcome.error)
+    assign(outcome.value)
+  }
+
+  return {
+    get: () => state,
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+    download: () => apply(api.update.download()),
+    install: () => apply(api.update.install()),
+  }
 }
 
 export function createDesktopHost(): StudioHost | null {
@@ -82,5 +110,6 @@ export function createDesktopHost(): StudioHost | null {
       },
     },
     windowChrome: api.platform === 'darwin' ? 'mac' : 'linux',
+    updates: createDesktopUpdates(api),
   }
 }

@@ -94,10 +94,11 @@ interface WhisperWorkerConfig {
   model: string
   device: 'webgpu' | 'wasm'
   dtype: WhisperDtype
+  ortWasmPaths?: Record<'mjs' | 'wasm', string>
 }
 ```
 
-Model id, inference device, and quantization sent to the Whisper worker.
+Model id, inference device, quantization, and optional onnxruntime-web WASM locations sent to the Whisper worker.
 
 ### WhisperWorkerRequest
 
@@ -142,13 +143,16 @@ interface CreateLocalWhisperProviderOptions {
   model?: keyof typeof WHISPER_MODELS | (string & {})
   device?: 'webgpu' | 'wasm'
   dtype?: WhisperDtype
+  ortWasmPaths?: Record<'mjs' | 'wasm', string>
   onProgress?: (progress: LocalWhisperProgress) => void
   createWorker?: () => Worker
   id?: string
 }
 ```
 
-Options for `createLocalWhisperProvider`, covering model, device, quantization, progress callback, worker factory, and provider id.
+Options for `createLocalWhisperProvider`, covering model, device, quantization, onnxruntime-web WASM locations, progress callback, worker factory, and provider id.
+
+`ortWasmPaths` names the `ort-wasm-simd-threaded.asyncify.mjs` and `.wasm` files the worker loads. By default Transformers.js loads them from the jsDelivr CDN and caches them with the Cache API, so a page with a strict `connect-src` either allows `https://cdn.jsdelivr.net` or serves the two files itself and passes their URLs here. With `ortWasmPaths` set the worker imports the files directly and skips the Cache API, which rejects non-http schemes such as Electron's `app://`.
 
 ## Constants
 

@@ -452,6 +452,11 @@
           "path": "registry/mcut/desktop-host.ts",
           "type": "registry:lib",
           "target": "components/mcut/desktop-host.ts"
+        },
+        {
+          "path": "registry/mcut/update-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/update-dialog.tsx"
         }
       ],
       "cssVars": {

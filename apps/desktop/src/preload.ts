@@ -2,10 +2,12 @@ import {
   DESKTOP_INVOKES,
   invokeResultSchema,
   menuMessageSchema,
+  updateStateSchema,
   type DesktopApi,
   type DesktopInvokeChannel,
   type DesktopResult,
   type MenuAction,
+  type UpdateState,
 } from '@mcut/desktop-ipc'
 import { contextBridge, ipcRenderer } from 'electron'
 import { z } from 'zod'
@@ -24,6 +26,15 @@ ipcRenderer.on('menu', (_event, payload: unknown) => {
   for (const listener of menuListeners) listener(action)
 })
 
+const updateListeners = new Set<(state: UpdateState) => void>()
+let lastUpdateState: UpdateState | undefined
+
+ipcRenderer.on('update', (_event, payload: unknown) => {
+  const state = updateStateSchema.parse(payload)
+  lastUpdateState = state
+  for (const listener of updateListeners) listener(state)
+})
+
 const api: DesktopApi = {
   version: 1,
   platform: process.platform === 'darwin' ? 'darwin' : 'linux',
@@ -35,6 +46,14 @@ const api: DesktopApi = {
   },
   onMenu: (callback) => {
     menuListeners.add(callback)
+  },
+  update: {
+    download: () => invoke('update.download', DESKTOP_INVOKES['update.download'].output, undefined),
+    install: () => invoke('update.install', DESKTOP_INVOKES['update.install'].output, undefined),
+    onState: (callback) => {
+      updateListeners.add(callback)
+      if (lastUpdateState !== undefined) callback(lastUpdateState)
+    },
   },
 }
 

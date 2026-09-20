@@ -37,6 +37,7 @@ import { PropertiesPanel } from './properties-panel'
 import { host } from './studio-host'
 import { TextPanel } from './text-panel'
 import { TimelinePanel } from './timeline-panel'
+import { UpdateDialog } from './update-dialog'
 
 function isTypingTarget(target: EventTarget | null): target is HTMLElement {
   if (!(target instanceof HTMLElement)) return false
@@ -269,6 +270,7 @@ function Shell({ persist, children }: { persist: boolean; children: ReactNode })
       <ProjectFontLoader />
       {children}
       <Toaster position="bottom-right" />
+      {host.updates === null ? null : <UpdateDialog updates={host.updates} />}
     </div>
   )
 }
