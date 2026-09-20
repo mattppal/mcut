@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { SparklesIcon } from '@/lib/icons'
 import { useEditor, useSelectedElement } from '@mcut/react'
 import { ANIMATION_PRESET_CATEGORIES, animatableProperties, captureZoomPreset, type AnimationPreset, type ZoomPreset } from '@mcut/timeline'
 import { Button } from '@/components/ui/button'
 import { EmptyState, PanelSectionLabel } from './editor-primitives'
+import { NameDialog } from './name-dialog'
 import { removeTemplate, saveTemplate, useTemplates } from './template-store'
 import { cn } from '@/lib/utils'
 import { applyStudioAnimationPreset } from './animation-presets'
@@ -71,6 +73,7 @@ function ZoomsSection() {
   const engine = useEditor()
   const selected = useSelectedElement()
   const userZooms = useTemplates<ZoomPreset>('zoom')
+  const [zoomDraft, setZoomDraft] = useState<string | null>(null)
   const element = selected?.element
   const zoomable = element && (element.type === 'video' || element.type === 'image' || element.type === 'text' || element.type === 'multicam')
 
@@ -86,10 +89,9 @@ function ZoomsSection() {
     }
   }
 
-  const save = () => {
+  const save = (name: string) => {
+    setZoomDraft(null)
     if (!element) return
-    const name = window.prompt('Name this zoom', 'My zoom')
-    if (!name) return
     const preset = captureZoomPreset(element, name)
     if (!preset) {
       toast.error('Add scale/position keyframes first, then save them as a zoom.')
@@ -108,9 +110,16 @@ function ZoomsSection() {
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center px-1">
         <PanelSectionLabel className="flex-1">Zooms</PanelSectionLabel>
-        <Button variant="ghost" size="xs" disabled={!element} onClick={save} title="Capture the selected clip's scale/position keyframes as a reusable zoom">
+        <Button
+          variant="ghost"
+          size="xs"
+          disabled={!element}
+          onClick={() => setZoomDraft('My zoom')}
+          title="Capture the selected clip's scale/position keyframes as a reusable zoom"
+        >
           Save zoom
         </Button>
+        <NameDialog draft={zoomDraft} title="Name this zoom" onSubmit={save} onCancel={() => setZoomDraft(null)} />
       </div>
       <div className="grid grid-cols-2 gap-1.5">
         {zooms.map(({ preset, templateId }, i) => (
