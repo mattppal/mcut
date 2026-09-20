@@ -12,7 +12,7 @@
       "ignoreBinaries": ["codesign"]
     },
     "apps/studio": {
-      "entry": ["registry/mcut/**/*.{ts,tsx}"],
+      "entry": ["registry/mcut/**/*.{ts,tsx}", "scripts/*.ts"],
       "ignore": ["components/ui/**", "components/kibo-ui/**"],
       "ignoreDependencies": ["@types/color", "mcut-editing-skill"],
       "ignoreBinaries": ["ffmpeg"]
