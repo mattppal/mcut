@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to Studio main",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "restart": true,
+      "outFiles": ["${workspaceFolder}/apps/desktop/dist/**/*.mjs", "${workspaceFolder}/apps/desktop/dist/**/*.cjs"]
+    },
+    {
+      "name": "Attach to Studio renderer",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}/apps/studio",
+      "urlFilter": "http://localhost:3000/*"
+    }
+  ],
+  "compounds": [{ "name": "Attach to Studio", "configurations": ["Attach to Studio main", "Attach to Studio renderer"] }]
+}

@@ -49,6 +49,19 @@ prints its `MCP_URL` line, which `bun dev` echoes. Paste that URL into any
 Streamable HTTP MCP client, or use Add to Cursor from the app's MCP menu.
 Ctrl-C stops both processes.
 
+`bun dev` watches `apps/desktop/src` and `packages/desktop-ipc/src`. It rebuilds
+with tsdown, retypechecks `apps/desktop` on a contract change, and relaunches
+the Electron window. A main or preload edit reaches the window without a
+restart. Renderer edits still hot reload through the Next dev server.
+
+Main runs with `--inspect=9229` and the renderer with
+`--remote-debugging-port=9222`. `dist/main.mjs` and `dist/preload.cjs` carry
+source maps. `.vscode/launch.json` has `Attach to Studio`, which attaches to
+both while `bun dev` runs.
+
+`bun run desktop:check` is the one command that builds, typechecks, lints,
+packages, and smokes the desktop app.
+
 The token comes from the app's user data directory, see
 [Install Studio](/docs/studio/install#the-bridge-token). `MCUT_STUDIO_PORT`
 and `MCUT_BRIDGE_PORT` change the two ports.
