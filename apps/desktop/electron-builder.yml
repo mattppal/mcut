@@ -1,16 +1,34 @@
-appId: com.mcut.desktop
+appId: com.mcut.studio
+productName: mcut Studio
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 directories:
   output: release
+  buildResources: build
+asar: true
 files:
   - dist/**
   - studio/**
   - package.json
+  - THIRD_PARTY_NOTICES.md
 npmRebuild: false
 electronFuses:
   runAsNode: false
   enableNodeOptionsEnvironmentVariable: false
   grantFileProtocolExtraPrivileges: false
   enableNodeCliInspectArguments: true
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  identity: '-'
+  hardenedRuntime: false
+  category: public.app-category.video
 linux:
   target:
-    - dir
+    - target: AppImage
+      arch:
+        - x64
+  executableName: mcut-studio
+  category: AudioVideo
