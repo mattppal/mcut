@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './electron-fixture'
 import { clip, openEditor, openLeftTab } from './helpers'
 
 async function addTitleAtPlayhead(page: Page) {
@@ -6,8 +6,8 @@ async function addTitleAtPlayhead(page: Page) {
   await page.getByTitle(/Title — drag/).click()
 }
 
-test('⇧⌫ ripple delete closes the gap', async ({ page }) => {
-  await openEditor(page)
+test('⇧⌫ ripple delete closes the gap', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await addTitleAtPlayhead(page)
   for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowRight')
   await page.getByTitle(/Subtitle — drag/).click()
@@ -22,8 +22,8 @@ test('⇧⌫ ripple delete closes the gap', async ({ page }) => {
   expect(before.x - after.x).toBeGreaterThan(80)
 })
 
-test('Q and W trim the selected clip to the playhead', async ({ page }) => {
-  await openEditor(page)
+test('Q and W trim the selected clip to the playhead', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await addTitleAtPlayhead(page)
   const before = (await clip(page).first().boundingBox())!
   await page.keyboard.press('Shift+ArrowRight')
@@ -42,8 +42,8 @@ test('Q and W trim the selected clip to the playhead', async ({ page }) => {
   expect(afterQ.width).toBeLessThan(beforeQ.width - 20)
 })
 
-test('⇧S splits every track under the playhead', async ({ page }) => {
-  await openEditor(page)
+test('⇧S splits every track under the playhead', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await addTitleAtPlayhead(page)
   await page.getByTitle(/Subtitle — drag/).click()
   await expect(page.locator('[data-mcut-lane]')).toHaveCount(2)
@@ -53,8 +53,8 @@ test('⇧S splits every track under the playhead', async ({ page }) => {
   await expect(clip(page)).toHaveCount(4)
 })
 
-test('⌘= zooms in and ⇧Z fits', async ({ page }) => {
-  await openEditor(page)
+test('⌘= zooms in and ⇧Z fits', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await addTitleAtPlayhead(page)
   const before = (await clip(page).first().boundingBox())!
   await page.keyboard.press('ControlOrMeta+=')
@@ -66,8 +66,8 @@ test('⌘= zooms in and ⇧Z fits', async ({ page }) => {
   expect(fitted.width).toBeGreaterThan(800)
 })
 
-test('⌘S is intercepted with an autosave toast', async ({ page }) => {
-  await openEditor(page)
+test('⌘S is intercepted with an autosave toast', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await page.keyboard.press('ControlOrMeta+s')
   await expect(page.getByText(/Autosaved — projects persist/)).toBeVisible()
 })

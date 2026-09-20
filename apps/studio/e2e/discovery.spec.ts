@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
-import { expect, test } from '@playwright/test'
+import { z } from 'zod'
+import { expect, test, type Page } from './electron-fixture'
 
 const AGENT_TOOL_NAMES = [
   'get_summary',
@@ -24,22 +25,54 @@ const AGENT_TOOL_NAMES = [
 ]
 
 const FULL_TOOL_COUNT = 120
+const STUDIO_ORIGIN = 'app://studio'
 
-type Tool = { name: string; description: string; inputSchema: { type: string; properties: object } }
+const toolCatalogSchema = z.object({
+  profile: z.string(),
+  tools: z.array(
+    z.object({
+      name: z.string(),
+      description: z.string(),
+      inputSchema: z.object({ type: z.string(), properties: z.record(z.string(), z.unknown()) }),
+    }),
+  ),
+})
 
-test('serves the curated agent profile at /tools.json and every command under ?profile=full', async ({ request }) => {
-  const res = await request.get('/tools.agent.json')
-  expect(res.ok()).toBe(true)
-  const agent: { profile: string; tools: Tool[] } = await res.json()
+const skillIndexSchema = z.object({
+  skills: z.array(z.object({ name: z.string(), type: z.string(), url: z.string(), digest: z.string() })),
+})
+
+function fetchJson(page: Page, pathname: string): Promise<{ ok: boolean; body: unknown }> {
+  return page.evaluate(async (url): Promise<{ ok: boolean; body: unknown }> => {
+    const response = await fetch(url)
+    return { ok: response.ok, body: await response.json() }
+  }, `${STUDIO_ORIGIN}${pathname}`)
+}
+
+async function fetchBytes(page: Page, pathname: string): Promise<{ ok: boolean; body: Buffer }> {
+  const { ok, base64 } = await page.evaluate(async (url) => {
+    const response = await fetch(url)
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    let binary = ''
+    for (const byte of bytes) binary += String.fromCharCode(byte)
+    return { ok: response.ok, base64: btoa(binary) }
+  }, `${STUDIO_ORIGIN}${pathname}`)
+  return { ok, body: Buffer.from(base64, 'base64') }
+}
+
+test('serves the curated agent profile at /tools.json and every command under ?profile=full', async ({ page }) => {
+  const res = await fetchJson(page, '/tools.agent.json')
+  expect(res.ok).toBe(true)
+  const agent = toolCatalogSchema.parse(res.body)
   expect(agent.profile).toBe('agent')
   expect(
     agent.tools.map((tool) => tool.name),
     'MCP_AGENT_TOOL_NAMES in @mcut/mcp-server/contract',
   ).toEqual(AGENT_TOOL_NAMES)
 
-  const fullRes = await request.get('/tools.full.json')
-  expect(fullRes.ok()).toBe(true)
-  const full: { profile: string; tools: Tool[] } = await fullRes.json()
+  const fullRes = await fetchJson(page, '/tools.full.json')
+  expect(fullRes.ok).toBe(true)
+  const full = toolCatalogSchema.parse(fullRes.body)
   expect(full.profile).toBe('full')
   expect(full.tools.length, '19 agent tools (16 server static + 3 bridge only) + 42 editor operators + 59 timeline commands').toBe(FULL_TOOL_COUNT)
   const split = full.tools.find((tool) => tool.name === 'splitElement')
@@ -49,27 +82,27 @@ test('serves the curated agent profile at /tools.json and every command under ?p
 })
 
 test('renders the human-readable tool catalog at /tools', async ({ page }) => {
-  await page.goto('/tools')
+  await page.goto(`${STUDIO_ORIGIN}/tools`)
   await expect(page.getByRole('heading', { name: /MCP tools/ })).toHaveText(new RegExp(`\\(${AGENT_TOOL_NAMES.length}\\)`))
   await expect(page.getByText('apply_commands', { exact: true })).toBeVisible()
 
-  await page.goto('/tools?profile=full')
+  await page.goto(`${STUDIO_ORIGIN}/tools?profile=full`)
   await expect(page.getByRole('heading', { name: /MCP tools/ })).toHaveText(new RegExp(`\\(${FULL_TOOL_COUNT}\\)`))
   await expect(page.getByText('splitElement', { exact: true })).toBeVisible()
 })
 
 // The /.well-known/ prefix for site metadata is defined by RFC 8615. https://www.rfc-editor.org/rfc/rfc8615
-test('hosts the mcut agent skill under /.well-known/agent-skills', async ({ request }) => {
-  const indexRes = await request.get('/.well-known/agent-skills/index.json')
-  expect(indexRes.ok()).toBe(true)
-  const index = await indexRes.json()
-  const skill = index.skills.find((s: { name: string }) => s.name === 'mcut')
-  expect(skill).toBeDefined()
+test('hosts the mcut agent skill under /.well-known/agent-skills', async ({ page }) => {
+  const indexRes = await fetchJson(page, '/.well-known/agent-skills/index.json')
+  expect(indexRes.ok).toBe(true)
+  const index = skillIndexSchema.parse(indexRes.body)
+  const skill = index.skills.find((entry) => entry.name === 'mcut')
+  if (!skill) throw new Error(`index.json lists no skill named mcut, only ${index.skills.map((entry) => entry.name).join(', ')}`)
   expect(skill.type).toBe('skill-md')
 
-  const skillRes = await request.get(skill.url)
-  expect(skillRes.ok()).toBe(true)
-  const body = await skillRes.body()
+  const skillRes = await fetchBytes(page, skill.url)
+  expect(skillRes.ok).toBe(true)
+  const body = skillRes.body
   expect(body.toString('utf8')).toContain('name: mcut')
 
   const digest = `sha256:${createHash('sha256').update(body).digest('hex')}`

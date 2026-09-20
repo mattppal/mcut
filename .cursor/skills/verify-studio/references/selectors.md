@@ -2,6 +2,8 @@
 
 Every locator below is either a `data-mcut-*` attribute the editor exposes for tests or an accessible role and name. Source paths are relative to `apps/studio`. The `e2e/*.spec.ts` files are the Playwright specs that already rely on the locator; a `registry/mcut/*.tsx` path means the locator comes straight from the component because no spec uses it yet.
 
+The specs and `scripts/drive.ts` run inside the Electron desktop app from `apps/desktop`, not in a browser against a dev server. `e2e/electron-fixture.ts` launches one app per worker with Playwright's `_electron`, and every editor URL is `app://studio/editor` with the bridge port and token the app chose. Run the suite with `xvfb-run --auto-servernum --server-args="-screen 0 1600x1000x24" -- bun run e2e` from `apps/studio`, and the script with `node` under the same `xvfb-run` prefix. Both need `ELECTRON_RUN_AS_NODE` unset.
+
 ## Editor shell
 
 | Element | Locator | Source |

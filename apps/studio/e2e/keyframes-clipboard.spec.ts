@@ -1,10 +1,10 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './electron-fixture'
 import { clip, openEditor, openLeftTab } from './helpers'
 
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
 
-test('⌥K master keyframe toggles diamonds across visual properties', async ({ page }) => {
-  await openEditor(page)
+test('⌥K master keyframe toggles diamonds across visual properties', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await openLeftTab(page, 'text')
   await page.getByTitle(/Title — drag/).click()
   await page.keyboard.press('Alt+k')
@@ -16,8 +16,8 @@ test('⌥K master keyframe toggles diamonds across visual properties', async ({ 
   await expect(page.locator("[data-mcut-clip] button[title*='Keyframe']")).toHaveCount(1)
 })
 
-test('copy survives a reload via the OS clipboard envelope', async ({ page }) => {
-  await openEditor(page)
+test('copy survives a reload via the OS clipboard envelope', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await openLeftTab(page, 'text')
   await page.getByTitle(/Title — drag/).click()
   await page.keyboard.press('ControlOrMeta+c')

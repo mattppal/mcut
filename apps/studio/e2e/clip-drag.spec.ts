@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './electron-fixture'
 import { collectErrors, openEditor, openLeftTab } from './helpers'
 
 async function addTwoTitles(page: Page) {
@@ -11,9 +11,9 @@ async function addTwoTitles(page: Page) {
 
 const laneClips = (page: Page, lane: number) => page.locator('[data-mcut-lane]').nth(lane).locator('[data-mcut-clip]')
 
-test('dragging a clip up a lane moves it across tracks; one undo restores it', async ({ page }) => {
+test('dragging a clip up a lane moves it across tracks; one undo restores it', async ({ page, editorUrl }) => {
   const errors = collectErrors(page)
-  await openEditor(page)
+  await openEditor(page, editorUrl)
   await addTwoTitles(page)
 
   const box = (await laneClips(page, 1).first().boundingBox())!
@@ -33,8 +33,8 @@ test('dragging a clip up a lane moves it across tracks; one undo restores it', a
   expect(errors).toEqual([])
 })
 
-test('escape cancels a drag in flight and restores the clip', async ({ page }) => {
-  await openEditor(page)
+test('escape cancels a drag in flight and restores the clip', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await addTwoTitles(page)
 
   const before = (await laneClips(page, 1).first().boundingBox())!
@@ -52,8 +52,8 @@ test('escape cancels a drag in flight and restores the clip', async ({ page }) =
   expect(Math.abs(after.x - before.x)).toBeLessThan(2)
 })
 
-test('dragging above the top lane spawns a new track', async ({ page }) => {
-  await openEditor(page)
+test('dragging above the top lane spawns a new track', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await addTwoTitles(page)
 
   const box = (await laneClips(page, 1).first().boundingBox())!
@@ -72,8 +72,8 @@ test('dragging above the top lane spawns a new track', async ({ page }) => {
   await expect(laneClips(page, 1)).toHaveCount(1)
 })
 
-test('a release lost outside the window ends the drag instead of stranding it', async ({ page }) => {
-  await openEditor(page)
+test('a release lost outside the window ends the drag instead of stranding it', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await addTwoTitles(page)
 
   const box = (await laneClips(page, 1).first().boundingBox())!
@@ -106,8 +106,8 @@ test('a release lost outside the window ends the drag instead of stranding it', 
   expect(Math.abs(restored.x - box.x)).toBeLessThan(2)
 })
 
-test('plain click still selects without starting a drag transaction', async ({ page }) => {
-  await openEditor(page)
+test('plain click still selects without starting a drag transaction', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await addTwoTitles(page)
 
   const target = laneClips(page, 1).first()

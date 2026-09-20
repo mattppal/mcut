@@ -1,9 +1,9 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './electron-fixture'
 import { clip, collectErrors, dragAssetToLane, importWebm, openEditor, previewPixels } from './helpers'
 
-test('multicam: create from selection, style a slot shadow without crashing', async ({ page }) => {
+test('multicam: create from selection, style a slot shadow without crashing', async ({ page, editorUrl }) => {
   const errors = collectErrors(page)
-  await openEditor(page)
+  await openEditor(page, editorUrl)
   await importWebm(page, 'screen.webm')
   await importWebm(page, 'cam.webm')
   await dragAssetToLane(page, /screen.webm/, { offsetX: 120 })
@@ -87,9 +87,9 @@ function mainThreadFps(page: Page): Promise<number> {
   )
 }
 
-test('multicam from the media bin: pick roles, swap, create', async ({ page }) => {
+test('multicam from the media bin: pick roles, swap, create', async ({ page, editorUrl }) => {
   const errors = collectErrors(page)
-  await openEditor(page)
+  await openEditor(page, editorUrl)
   await importWebm(page, 'screen.webm')
   await importWebm(page, 'cam.webm')
 
@@ -125,8 +125,8 @@ test('multicam from the media bin: pick roles, swap, create', async ({ page }) =
   expect(await previewPixels(page), 'preview after blended cut').toBeGreaterThan(0)
 })
 
-test('multicam inspector settings are scoped to multicam mode', async ({ page }) => {
-  await openEditor(page)
+test('multicam inspector settings are scoped to multicam mode', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await importWebm(page, 'screen.webm')
   await importWebm(page, 'cam.webm')
 
