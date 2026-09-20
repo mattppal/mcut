@@ -23,6 +23,17 @@
         "studio/**"
       ]
     },
+    "mcut-web#build": {
+      "dependsOn": [
+        "^build",
+        "mcut-studio#build"
+      ],
+      "outputs": [
+        "out/**",
+        ".next/**",
+        "!.next/cache/**"
+      ]
+    },
     "mcut-editing-skill#build": {
       "dependsOn": [
         "^build"
