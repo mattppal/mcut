@@ -1,5 +1,13 @@
 import { z } from 'zod'
-import { desktopPlatformSchema, type DesktopInfo, type DesktopPlatform, type DesktopResult, type InvokeInput, type InvokeOutput } from './contract'
+import {
+  desktopPlatformSchema,
+  type DesktopInfo,
+  type DesktopPlatform,
+  type DesktopResult,
+  type InvokeInput,
+  type InvokeOutput,
+  type UpdateState,
+} from './contract'
 
 const menuActionSchema = z.enum(['project.open', 'project.save', 'project.saveAs'])
 
@@ -17,6 +25,11 @@ export interface DesktopApi {
     save(input: InvokeInput<'project.save'>): Promise<DesktopResult<InvokeOutput<'project.save'>>>
   }
   onMenu(callback: (action: MenuAction) => void): void
+  update: {
+    download(): Promise<DesktopResult<UpdateState>>
+    install(): Promise<DesktopResult<UpdateState>>
+    onState(callback: (state: UpdateState) => void): void
+  }
 }
 
 const exposedFunction = <F>() => z.custom<F>((value) => typeof value === 'function')
@@ -31,6 +44,11 @@ const desktopApiSchema = z.object({
     save: exposedFunction<DesktopApi['projects']['save']>(),
   }),
   onMenu: exposedFunction<DesktopApi['onMenu']>(),
+  update: z.object({
+    download: exposedFunction<DesktopApi['update']['download']>(),
+    install: exposedFunction<DesktopApi['update']['install']>(),
+    onState: exposedFunction<DesktopApi['update']['onState']>(),
+  }),
 })
 
 export function readDesktopApi(): DesktopApi | null {
