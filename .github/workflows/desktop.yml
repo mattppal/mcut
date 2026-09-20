@@ -1,0 +1,87 @@
+name: desktop
+
+on:
+  pull_request:
+    paths:
+      - apps/desktop/**
+      - .github/workflows/desktop.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bunx turbo run build --filter=mcut-desktop
+      - run: bun run --cwd apps/desktop dist:linux
+      - run: sudo apt-get install -y xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
+      # Ubuntu 24.04 restricts unprivileged user namespaces through AppArmor, which blocks the Chromium sandbox. https://github.com/microsoft/playwright/issues/34251
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Smoke the AppImage
+        # The runner image ships no libfuse2, so the AppImage runtime extracts itself instead of mounting. https://github.com/AppImage/AppImageKit/wiki/FUSE
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1600x1000x24" -- node apps/desktop/scripts/smoke-packaged.ts apps/desktop/release/*.AppImage
+      - name: Record artifact sizes
+        run: |
+          echo '### Linux artifacts' >> "$GITHUB_STEP_SUMMARY"
+          du -m apps/desktop/release/*.AppImage | awk '{ $1 = $1 " MB"; print "- " $0 }' | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mcut-studio-linux
+          path: apps/desktop/release/*.AppImage
+          retention-days: 14
+
+  mac:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bunx turbo run build --filter=mcut-desktop
+      - run: bun run --cwd apps/desktop dist:mac
+        # electron-builder skips macOS signing on pull request builds unless this is set. Ad-hoc signing uses no certificate, so nothing secret is exposed. https://github.com/electron-userland/electron-builder/blob/master/packages/app-builder-lib/src/codeSign/mac/macCodeSign.ts
+        env:
+          CSC_FOR_PULL_REQUEST: 'true'
+      - name: Verify the ad-hoc signature
+        run: |
+          codesign -dv --verbose=2 "apps/desktop/release/mac-arm64/mcut Studio.app" 2>&1 | tee "$RUNNER_TEMP/codesign.txt"
+          grep -q 'Signature=adhoc' "$RUNNER_TEMP/codesign.txt"
+          grep -q 'Identifier=com.mcut.studio' "$RUNNER_TEMP/codesign.txt"
+      - name: Smoke the app for the runner architecture
+        run: |
+          case "$(uname -m)" in
+            arm64) app="apps/desktop/release/mac-arm64/mcut Studio.app" ;;
+            *) app="apps/desktop/release/mac/mcut Studio.app" ;;
+          esac
+          node apps/desktop/scripts/smoke-packaged.ts "$app/Contents/MacOS/mcut Studio"
+      - name: Record artifact sizes
+        run: |
+          echo '### macOS artifacts' >> "$GITHUB_STEP_SUMMARY"
+          du -m apps/desktop/release/*.dmg | awk '{ $1 = $1 " MB"; print "- " $0 }' | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mcut-studio-mac
+          path: apps/desktop/release/*.dmg
+          retention-days: 14

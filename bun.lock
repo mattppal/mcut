@@ -33,6 +33,7 @@
         "@mcut/timeline": "workspace:*",
         "@mcut/transcription-assemblyai": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.21.0",
+        "@playwright/test": "1.60.0",
         "electron": "44.4.3",
         "electron-builder": "26.15.3",
         "tsdown": "0.22.2",
