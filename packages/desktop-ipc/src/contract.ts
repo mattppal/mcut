@@ -20,9 +20,13 @@ export class DesktopError extends Error {
   }
 }
 
+export const desktopPlatformSchema = z.enum(['darwin', 'linux'])
+
+export type DesktopPlatform = z.infer<typeof desktopPlatformSchema>
+
 export const desktopInfoSchema = z.object({
   appVersion: z.string(),
-  platform: z.enum(['darwin', 'linux']),
+  platform: desktopPlatformSchema,
   mcp: z.object({ url: z.url(), cursorInstallUrl: z.url() }),
   transcription: z.object({ configured: z.boolean() }),
 })

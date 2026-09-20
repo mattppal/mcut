@@ -8,4 +8,5 @@ export const browserHost: StudioHost = {
   saveProject: async (project) => saveProjectToFile(project),
   saveProjectAs: async (project) => saveProjectToFile(project),
   transcriptionSettings: null,
+  windowChrome: 'browser',
 }
