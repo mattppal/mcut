@@ -208,6 +208,17 @@ test('the homepage embed matches the desktop editor', async () => {
       clip: { x: Math.round(iframeBox.x), y: Math.round(iframeBox.y), width: Math.round(iframeBox.width), height: Math.round(iframeBox.height) },
     })
 
+    const desktopMedia = desktopTabs.media
+    if (desktopMedia === undefined) throw new Error('missing desktop media capture')
+    for (const needle of ['aria-label="Main menu"', 'title="Export video"']) {
+      expect(
+        desktopMedia.tree.some((line) => line.includes(needle)),
+        `desktop renders ${needle}`,
+      ).toBe(true)
+    }
+    expect(desktopMedia.regions.player, 'desktop renders the player').not.toBeNull()
+    expect(desktopMedia.tree.filter((line) => line.includes('data-slot="resizable-panel"')).length, 'desktop panel count').toBe(5)
+
     const differences: Difference[] = []
     for (const tab of LEFT_TABS) {
       const a = desktopTabs[tab]
