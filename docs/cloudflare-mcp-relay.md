@@ -1,5 +1,10 @@
 # Cloudflare MCP relay architecture
 
+Status. Studio ships as a desktop app from GitHub Releases and has no web
+deployment, so the hosted editor this design assumes does not exist. The bridge
+runs inside the app on port `44737`. The document stays as design history for
+a remote relay.
+
 ## Goal
 
 Simplify live bridge startup for hosted mcut Studio.
@@ -137,17 +142,18 @@ keeps the privacy model aligned with browser-source editing.
 
 ## Fallbacks
 
-Keep the current local bridge flows:
+Keep the current local bridge flows. mcut Studio hosts the bridge in the desktop
+app on port `44737`, and the standalone process serves a browser tab:
 
 ```sh
-bunx -p @mcut/mcp-server mcut-mcp-live --editor-url http://localhost:3000/editor
-bunx -p @mcut/mcp-server mcut-bridge start --editor-url http://localhost:3000/editor
+bunx -p @mcut/mcp-server mcut-mcp-live
+bunx -p @mcut/mcp-server mcut-bridge start
 bunx -p @mcut/mcp-server mcut-bridge mcp
 ```
 
 Use these for:
 
-- Local development.
+- The desktop app and local development.
 - Offline workflows.
 - Self-hosted editors without the hosted relay.
 - Debugging remote relay issues.

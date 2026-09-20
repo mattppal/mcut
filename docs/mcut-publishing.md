@@ -72,8 +72,14 @@ docs, examples, and migration story are ready.
 
 ## Studio and SDK packages
 
-Studio lives in `apps/studio` in this repo. It uses the local `@mcut/*`
-workspaces, so SDK changes show up without a publish step.
+Studio lives in `apps/studio` and `apps/desktop` in this repo. It uses the local
+`@mcut/*` workspaces, so SDK changes show up without a publish step.
+
+Studio ships as a desktop app. The `desktop.yml` workflow packages the Electron
+shell with the Studio static export and publishes a macOS disk image and a Linux
+AppImage to GitHub Releases. There is no web deployment of Studio. The docs site
+at `apps/web` hosts the shadcn registry under `/r` and the agent skill index
+under `/.well-known/agent-skills`.
 
 To test a PR's package set in a scratch app, use the pkg.pr.new preview builds
 CI publishes for package PRs. Install the URLs from the PR comment, for example
@@ -90,8 +96,8 @@ before merging.
 - Reusable project data, commands, invariants, selectors, operators, media
   utilities, compositor code, transcription providers, React runtime helpers,
   CLI code, and MCP server code belong in `packages/*`.
-- The Studio app owns product UI, persistence, API route wiring, deployment
-  config, and app-specific workflows.
+- The Studio renderer owns product UI and app-specific workflows. The desktop
+  shell owns persistence, native dialogs, the bridge host, and packaging.
 - The shadcn registry in `apps/studio/registry/mcut` can compose UI and depend on
   public `@mcut/*` APIs, but it must not rely on private package internals.
 - Public packages must not import from apps, examples, or skills.

@@ -15,9 +15,11 @@ JSON surgery when an mcut MCP tool or action exists.
 
 **MCP server** access is the normal agent path.
 
-For real media, transcription, silence removal, audio activity, browser export,
-or current editor state, use the live browser bridge, not the file-only stdio
-server.
+For real media, transcription, silence removal, audio activity, in-editor
+export, or current editor state, use the live bridge, not the file-only stdio
+server. mcut Studio hosts the bridge at `http://127.0.0.1:44737/mcp` with the
+token from the app's MCP menu. Developers running the editor as a browser tab
+start the same bridge with `mcut-bridge start`.
 
 Minimum loop:
 

@@ -1,0 +1,70 @@
+---
+title: Connect Cursor
+description: Point Cursor, or any Streamable HTTP MCP client, at the live bridge inside mcut Studio.
+---
+
+The live bridge runs inside mcut Studio. Once the app is open, an MCP client
+connects to `http://127.0.0.1:44737/mcp` with the token the app generated, and
+every tool call edits the project on screen.
+
+## Add to Cursor from the app menu
+
+Open the MCP menu in Studio and choose Add to Cursor. The app opens a
+`cursor://anysphere.cursor-deeplink/mcp/install` link with the server name
+`mcut` and the MCP URL already filled in. Cursor asks you to confirm, then
+lists `mcut` under MCP servers.
+
+## Add the URL by hand
+
+Choose Copy MCP URL from the same menu, then add the entry to `mcp.json`. Cursor
+reads `.cursor/mcp.json` in the project and `~/.cursor/mcp.json` for every
+project, per the [Cursor MCP docs](https://cursor.com/docs/context/mcp).
+
+```json
+{
+  "mcpServers": {
+    "mcut": {
+      "url": "http://127.0.0.1:44737/mcp?token=<token from the app>"
+    }
+  }
+}
+```
+
+The same URL works for any client that speaks Streamable HTTP MCP. For a stdio
+only client, run `bunx -p @mcut/mcp-server mcut-bridge mcp --port 44737` as the
+server command. It forwards to the running app.
+
+## The fixed port
+
+Studio listens on `44737` every time it starts, so a stored client entry keeps
+working across restarts. The token is the only secret in the URL. It lives in
+the app's user data directory, see
+[Install Studio](/docs/studio/install#the-bridge-token).
+
+Check the connection from a terminal.
+
+```sh
+curl -s http://127.0.0.1:44737/status
+```
+
+The answer is `{"ok":true,"result":{"connected":true,"tab":{...}}}` once the
+editor has loaded. `connected` is `false` for the first moments after launch,
+before the editor window has attached to the bridge. Closing the window quits
+the app and the bridge with it.
+
+## When 44737 is busy
+
+Another process on the port, or a second copy of Studio, makes the app fall
+back to a random free port. It writes the reason to standard error, puts the
+new MCP URL in the window title, and Copy MCP URL and Add to Cursor use the
+new URL. A client entry that still names `44737` fails until you add the
+server again from the menu, or quit the other process and restart Studio.
+
+## What the agent can do
+
+Every tool in the [MCP server reference](/docs/reference/mcp-server) is
+available, including the live bridge only tools. `ensure_transcript` runs
+transcription in the app, `run_action` reaches the editor actions such as
+`transcript.remove-silence`, and `get_summary` reads the project that is open
+in the window. The [agent instructions](/docs/agent-instructions) page is the
+prompt-side companion to this setup.

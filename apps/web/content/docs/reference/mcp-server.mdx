@@ -4,7 +4,17 @@ description: Expose mcut project state, editor operators, and command tools to M
 ---
 
 `@mcut/mcp-server` exposes mcut editing to any MCP client. It can target a local
-project JSON file or a live browser editor tab.
+project JSON file or the editor running in mcut Studio.
+
+## Live bridge in Studio
+
+The desktop app hosts the live bridge. Open Studio, then connect a client to the
+MCP URL from the app's MCP menu, `http://127.0.0.1:44737/mcp?token=<token>`.
+[Connect Cursor](/docs/studio/connect-cursor) covers the menu, the `mcp.json`
+entry, and the fixed port. Every tool below marked live bridge only works
+through this URL. A browser tab connected to a standalone
+[bridge](/docs/reference/bridge) process serves the same tools for developers
+working on Studio itself.
 
 ## Stdio project server
 
@@ -18,11 +28,13 @@ creates the file when missing and writes it after successful edits.
 ## Static tools
 
 The published server registers sixteen static tools. The live bridge handles
-three more in the browser, `list_commands`, `apply_commands`, and
+three more in the editor, `list_commands`, `apply_commands`, and
 `run_operator`, which together with the sixteen form the nineteen-tool agent
-profile served by Studio's `/tools.json` and `/tools.agent.json`. The full
-profile is at `/tools.full.json` and the raw command profile at
-`/tools.commands.json`.
+profile. Studio serves the profiles inside the desktop app, with a catalog at
+`app://studio/tools`, at `app://studio/tools.json` and
+`app://studio/tools.agent.json`. The full profile
+is at `app://studio/tools.full.json` and the raw command profile at
+`app://studio/tools.commands.json`.
 
 | Tool | Purpose |
 | --- | --- |
@@ -32,7 +44,7 @@ profile is at `/tools.full.json` and the raw command profile at
 | `get_audio_activity` | Live bridge only. Sound and silence windows for one video or audio clip in source time. |
 | `get_transcript` | Caption-derived transcript. Never starts transcription. |
 | `search_transcript` | Find spoken words or phrases with timeline times. |
-| `ensure_transcript` | Live bridge only. Transcribe the target clip in the browser and apply word-timed captions. |
+| `ensure_transcript` | Live bridge only. Transcribe the target clip in the editor and apply word-timed captions. |
 | `list_commands` | Live bridge only. Every raw timeline command schema. |
 | `apply_commands` | Live bridge only. Apply several commands in one undoable transaction. |
 | `apply_captions` | Turn a transcript into caption elements as one undoable edit. |
@@ -41,8 +53,8 @@ profile is at `/tools.full.json` and the raw command profile at
 | `list_presets` | Platform delivery presets with dimensions, fps, and safe areas. |
 | `list_operators` | List available UI-level editor operators. |
 | `run_operator` | Live bridge only. Run an operator by id. |
-| `list_actions` | Live bridge only. List browser editor actions. |
-| `run_action` | Live bridge only. Run a browser editor action by id. |
+| `list_actions` | Live bridge only. List editor actions. |
+| `run_action` | Live bridge only. Run an editor action by id. |
 | `undo` | Undo the most recent edit. |
 | `redo` | Redo the most recently undone edit. |
 

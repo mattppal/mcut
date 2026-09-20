@@ -299,13 +299,7 @@ export class LiveMcutBridge {
   }
 
   private browserNotConnectedError(): LiveBridgeError {
-    const openEditorUrl = this.getOpenEditorUrl()
-    return new LiveBridgeError(
-      'browser-not-connected',
-      openEditorUrl
-        ? `No mcut editor tab is connected to the live bridge. Open ${openEditorUrl}, or run \`bun run dev\` and use the printed MCP URL.`
-        : 'No mcut editor tab is connected to the live bridge. Open the connected editor URL, or run `bun run dev` and use the printed MCP URL.',
-    )
+    return new LiveBridgeError('browser-not-connected', 'No mcut editor is connected to the live bridge. Open mcut Studio, or run `bun dev` in the repository.')
   }
 
   private async waitForSocket(timeoutMs: number): Promise<WebSocket> {

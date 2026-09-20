@@ -27,37 +27,45 @@ bun install --frozen-lockfile
 
 - `packages/*`: publishable `@mcut/*` SDK packages.
 - `examples/*`: runnable examples for headless editing and MCP workflows.
-- `apps/studio`: the local editor and shadcn registry source.
+- `apps/studio`: the Studio renderer, a static Next export, and the shadcn registry source.
+- `apps/desktop`: the Electron shell that serves the export and hosts the live bridge.
 - `apps/web`: the marketing site and `/docs` implementation.
 - `docs/`: maintainer and release process notes for the repository.
 
 ## Run locally
 
-### Editor + MCP bridge
+### Studio in the desktop window
 
 Run this from the repo root:
 
 ```sh
-bun run dev
+bun dev
 ```
 
-`bun run dev` starts:
+`bun dev` builds the packages, starts `next dev` on port `3000`, and opens the
+Electron app with `MCUT_DEV_URL=http://localhost:3000` so the window loads the
+dev server with hot reload. The app hosts the live bridge on port `44737` and
+prints its `MCP_URL` line, which `bun dev` echoes. Paste that URL into any
+Streamable HTTP MCP client, or use Add to Cursor from the app's MCP menu.
+Ctrl-C stops both processes.
 
-- Studio at `http://localhost:3000` by default
-- the local bridge on port `44737` by default, with WebSocket browser sync at
-  `/mcut-mcp` and Streamable HTTP MCP at `/mcp`
+The token comes from the app's user data directory, see
+[Install Studio](/docs/studio/install#the-bridge-token). `MCUT_STUDIO_PORT`
+and `MCUT_BRIDGE_PORT` change the two ports.
 
-Open the connected editor URL printed by `bun run dev`. To print it again:
+### Browser bridge without Electron
+
+The standalone bridge is the developer path for a browser tab, the same process
+`bunx -p @mcut/mcp-server mcut-bridge start` runs outside the repository:
 
 ```sh
-bun run scripts/mcut-local-dev.ts url
+bun run scripts/mcut-local-dev.ts bridge
 ```
 
-The MCP URL printed by `bun run dev` works with any MCP client. To print the MCP URL:
-
-```sh
-bun run scripts/mcut-local-dev.ts mcp-url
-```
+It listens on `44737` with the fixed token `mcut-local-dev`. Start
+`bun run --cwd apps/studio dev` in another terminal and open the URL from
+`bun run scripts/mcut-local-dev.ts url`. `bun run scripts/mcut-local-dev.ts mcp-url`
+prints the matching MCP URL.
 
 The package also exposes compatibility stdio entrypoints: `mcut-mcp` for
 file-backed projects, `mcut-mcp-live` for clients that should start their own
@@ -94,7 +102,9 @@ checks, and validates package metadata.
 ## Website docs
 
 The website docs are written in `apps/web/content/docs`. The web app generates
-Fumadocs sources and static Markdown mirrors during build:
+Fumadocs sources and static Markdown mirrors during build, and copies the
+shadcn registry from `apps/studio/public/r` into `public/r` so
+`https://mcut.com/r/<item>.json` serves the committed registry:
 
 ```sh
 bun run --filter=mcut-web build

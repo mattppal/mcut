@@ -6,7 +6,10 @@ Open source video editing SDK for TypeScript apps.
 
 mcut provides a headless timeline engine, command system, renderer, media/export
 helpers, transcription adapters, React bindings, CLI tools, and MCP tools.
-Studio lives in `apps/studio` and is Apache-2.0 like the packages.
+Studio, the desktop editor, is Apache-2.0 like the packages. Its renderer lives
+in `apps/studio` and its Electron shell in `apps/desktop`. Studio ships for
+macOS and Linux from [GitHub Releases](https://github.com/mattppal/mcut/releases)
+through the `desktop.yml` workflow and has no web deployment.
 
 The first public packages are alpha releases. Expect API movement while the SDK
 is still hardening.
@@ -38,23 +41,23 @@ bunx @mcut/cli --help
 - Quickstart: <https://mcut.com/docs/quickstart>
 - Agent instructions: <https://mcut.com/docs/agent-instructions>
 - Contributor docs: <https://mcut.com/docs/contributing/devenv>
+- Install Studio: <https://mcut.com/docs/studio/install>
 - Local package READMEs live beside each package in `packages/*/README.md`.
 
 ## Develop
 
 This is a Bun workspace monorepo managed with Turbo.
 
-### Local editor + MCP
+### Studio in the desktop window
 
 ```sh
 bun install
-bun run dev
+bun dev
 ```
 
-By default, `bun run dev` starts Studio on `http://localhost:3000` and the local
-MCP bridge on port `44737`.
-
-The MCP URL printed by `bun run dev` works with any MCP client and is documented in the `@mcut/mcp-server` README.
+`bun dev` starts `next dev` on port `3000` and opens the Electron app on it. The
+app hosts the live MCP bridge on port `44737` and prints its `MCP_URL` line,
+which works with any Streamable HTTP MCP client. Ctrl-C stops both.
 
 ### Docs site only
 

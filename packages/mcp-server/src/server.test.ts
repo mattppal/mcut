@@ -531,7 +531,9 @@ describe('createMcutMcpServer', () => {
     const port = await bridge.listen(0)
 
     try {
-      await expect(bridge.createTarget().getSummary()).rejects.toThrow(`http://localhost:3000/editor?mcpBridge=${port}&mcpToken=missing-tab-token`)
+      await expect(bridge.createTarget().getSummary()).rejects.toThrow(
+        'No mcut editor is connected to the live bridge. Open mcut Studio, or run `bun dev` in the repository.',
+      )
       const body = await (await fetch(`http://127.0.0.1:${port}/status`)).json()
       expect(body).toEqual({ ok: true, result: { connected: false, tab: null } })
     } finally {

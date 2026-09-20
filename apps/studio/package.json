@@ -1,12 +1,11 @@
 {
-  "name": "mcut-studio-web",
+  "name": "mcut-studio",
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
     "dev": "next dev",
     "build": "shadcn build && next build",
-    "start": "next start",
     "lint": "shadcn registry validate && eslint",
     "typecheck": "tsc --noEmit",
     "test": "bun test registry/mcut",

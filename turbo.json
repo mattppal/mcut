@@ -16,7 +16,7 @@
     "mcut-desktop#build": {
       "dependsOn": [
         "^build",
-        "mcut-studio-web#build"
+        "mcut-studio#build"
       ],
       "outputs": [
         "dist/**",

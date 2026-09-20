@@ -42,23 +42,23 @@ agents receive from `get_summary`.
 The stdio MCP server creates the project file when missing and rewrites it after
 successful edits.
 
-## Connect to a live browser editor
+## Connect to the editor in Studio
 
-Use the live bridge when the browser tab should remain the source of truth:
+Use the live bridge when the open editor should remain the source of truth.
+[Install Studio](/docs/studio/install), open it, and choose Add to Cursor or
+Copy MCP URL from the MCP menu. The URL is
+`http://127.0.0.1:44737/mcp?token=<token>`, see
+[Connect Cursor](/docs/studio/connect-cursor).
 
-```sh
-bunx -p @mcut/mcp-server mcut-mcp-live --editor-url http://localhost:3000/editor
-```
-
-The command prints an editor URL with bridge query parameters and an MCP client
-configuration block. Keep the process running while the agent edits.
-
-For lower-level local bridge control, use:
+For a stdio only client, expose the running app's bridge as a stdio server:
 
 ```sh
-bunx -p @mcut/mcp-server mcut-bridge start --editor-url http://localhost:3000/editor
-bunx -p @mcut/mcp-server mcut-bridge mcp
+bunx -p @mcut/mcp-server mcut-bridge mcp --port 44737
 ```
+
+Developers who run the editor as a browser tab start the bridge themselves with
+`mcut-mcp-live` or `mcut-bridge start`, see the
+[local bridge reference](/docs/reference/bridge).
 
 ## Next steps
 
