@@ -7,5 +7,6 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["mcut-web"]
+  "ignore": ["mcut-web"],
+  "privatePackages": { "version": true, "tag": true }
 }
