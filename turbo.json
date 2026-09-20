@@ -34,6 +34,12 @@
         "!.next/cache/**"
       ]
     },
+    "mcut-web#test": {
+      "dependsOn": [
+        "mcut-web#build",
+        "mcut-desktop#build"
+      ]
+    },
     "mcut-editing-skill#build": {
       "dependsOn": [
         "^build"

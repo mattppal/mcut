@@ -26,6 +26,9 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - run: bun install --frozen-lockfile
       - run: bun run fixtures
+      - run: sudo apt-get install -y -qq xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
+      - run: bunx playwright install chromium
+        working-directory: apps/studio
       - run: bun run release:check
       - run: bun run knip
       - run: git diff --exit-code
