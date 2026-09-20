@@ -43,6 +43,8 @@ export function registerDesktopIpc(handlers: InvokeHandlers, options: DesktopIpc
       register('app.setTranscriptionKey', DESKTOP_INVOKES['app.setTranscriptionKey'].input, handlers['app.setTranscriptionKey'], options),
     'project.open': () => register('project.open', DESKTOP_INVOKES['project.open'].input, handlers['project.open'], options),
     'project.save': () => register('project.save', DESKTOP_INVOKES['project.save'].input, handlers['project.save'], options),
+    'update.download': () => register('update.download', DESKTOP_INVOKES['update.download'].input, handlers['update.download'], options),
+    'update.install': () => register('update.install', DESKTOP_INVOKES['update.install'].input, handlers['update.install'], options),
   }
   for (const start of Object.values(registrations)) start()
 }
