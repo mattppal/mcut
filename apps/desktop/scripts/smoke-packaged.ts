@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 const USAGE = 'usage: node apps/desktop/scripts/smoke-packaged.ts <packaged binary>   (or set MCUT_ELECTRON_PATH)'
 const QUIT_TIMEOUT_MS = 5_000
+const WATCHDOG_MS = 120_000
 
 const desktopDir = path.resolve(import.meta.dirname, '..')
 const repoRoot = path.resolve(desktopDir, '../..')
@@ -21,6 +22,8 @@ type DownloadItemLike = {
   setSavePath(target: string): void
   once(event: 'done', listener: (event: unknown, state: string) => void): void
 }
+
+let electronPid: number | undefined
 
 function binaryPath(): string {
   const candidate = process.argv[2] ?? process.env.MCUT_ELECTRON_PATH
@@ -39,6 +42,44 @@ function check(condition: boolean, observed: string): void {
   if (!condition) throw new Error(`assertion failed: ${observed}`)
   ok(observed)
 }
+
+function isGone(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code === 'ESRCH'
+}
+
+function killElectron(pid: number | undefined): void {
+  if (pid === undefined) return
+  try {
+    process.kill(pid, 'SIGKILL')
+  } catch (error: unknown) {
+    if (!isGone(error)) throw error
+  }
+}
+
+function raceBound<T>(work: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      killElectron(electronPid)
+      reject(new Error(`${label} timed out after ${ms} ms`))
+    }, ms)
+    work.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error: unknown) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
+setTimeout(() => {
+  killElectron(electronPid)
+  console.error(`assertion failed: smoke still running after ${WATCHDOG_MS} ms`)
+  process.exit(1)
+}, WATCHDOG_MS).unref()
 
 async function poll<T>(read: () => Promise<T>, accept: (value: T) => boolean, timeoutMs: number): Promise<T> {
   const deadline = Date.now() + timeoutMs
@@ -72,23 +113,27 @@ async function readStatus(port: number): Promise<boolean> {
 }
 
 function nextDownload(app: ElectronApplication, dir: string, timeoutMs: number): Promise<string> {
-  return app.evaluate(
-    ({ session }, options) =>
-      new Promise<string>((resolve, reject) => {
-        const onDownload = (_event: unknown, item: DownloadItemLike) => {
-          clearTimeout(timer)
-          session.defaultSession.off('will-download', onDownload)
-          const target = `${options.dir}/${item.getFilename()}`
-          item.setSavePath(target)
-          item.once('done', (_done, state) => (state === 'completed' ? resolve(target) : reject(new Error(`download ${state}`))))
-        }
-        const timer = setTimeout(() => {
-          session.defaultSession.off('will-download', onDownload)
-          reject(new Error(`no download started within ${options.timeoutMs} ms`))
-        }, options.timeoutMs)
-        session.defaultSession.on('will-download', onDownload)
-      }),
-    { dir, timeoutMs },
+  return raceBound(
+    app.evaluate(
+      ({ session }, options) =>
+        new Promise<string>((resolve, reject) => {
+          const onDownload = (_event: unknown, item: DownloadItemLike) => {
+            clearTimeout(timer)
+            session.defaultSession.off('will-download', onDownload)
+            const target = `${options.dir}/${item.getFilename()}`
+            item.setSavePath(target)
+            item.once('done', (_done, state) => (state === 'completed' ? resolve(target) : reject(new Error(`download ${state}`))))
+          }
+          const timer = setTimeout(() => {
+            session.defaultSession.off('will-download', onDownload)
+            reject(new Error(`no download started within ${options.timeoutMs} ms`))
+          }, options.timeoutMs)
+          session.defaultSession.on('will-download', onDownload)
+        }),
+      { dir, timeoutMs },
+    ),
+    timeoutMs,
+    'download',
   )
 }
 
@@ -130,11 +175,11 @@ async function quitCleanly(app: ElectronApplication): Promise<void> {
       () => null,
       (error: unknown) => (error instanceof Error ? error.message : String(error)),
     )
-  const outcome = await Promise.race([exited, timeout])
+  const outcome = await Promise.race([Promise.all([quitRequest, exited]).then(([, code]) => code), timeout])
   if (outcome === 'timeout') {
-    const failure = await quitRequest
-    child.kill('SIGKILL')
-    throw new Error(`process still alive ${QUIT_TIMEOUT_MS} ms after app.quit()${failure === null ? '' : ` (${failure})`}`)
+    killElectron(electronPid ?? child.pid)
+    console.error(`assertion failed: process still alive ${QUIT_TIMEOUT_MS} ms after app.quit()`)
+    process.exit(1)
   }
   ok(`process exited with code ${outcome} ${Math.round(performance.now() - started)} ms after app.quit()`)
 }
@@ -146,16 +191,21 @@ async function main(): Promise<void> {
   const configHome = path.join(dir, 'config')
 
   const launchStarted = performance.now()
-  const app = await _electron.launch({
-    executablePath,
-    args: ['--port', '0'],
-    cwd: repoRoot,
-    env: launchEnvironment(configHome),
-    chromiumSandbox: true,
-  })
+  const app = await raceBound(
+    _electron.launch({
+      executablePath,
+      args: ['--port', '0'],
+      cwd: repoRoot,
+      env: launchEnvironment(configHome),
+      chromiumSandbox: true,
+    }),
+    60_000,
+    'electron.launch',
+  )
+  electronPid = app.process().pid
   let quit = false
   try {
-    const page = await app.firstWindow()
+    const page = await raceBound(app.firstWindow(), 60_000, 'firstWindow')
     await page.waitForURL(/^app:\/\/studio\/editor\?/)
     await page.getByRole('button', { name: 'Go to start' }).waitFor({ state: 'visible', timeout: 60_000 })
     const launchMs = Math.round(performance.now() - launchStarted)
@@ -178,7 +228,13 @@ async function main(): Promise<void> {
 
     await importAndExport(app, page, dir)
 
-    const facts = appFactsSchema.parse(await app.evaluate(({ app: electronApp }) => ({ version: electronApp.getVersion(), packaged: electronApp.isPackaged })))
+    const facts = appFactsSchema.parse(
+      await raceBound(
+        app.evaluate(({ app: electronApp }) => ({ version: electronApp.getVersion(), packaged: electronApp.isPackaged })),
+        15_000,
+        'app.evaluate',
+      ),
+    )
     check(facts.version === expectedVersion, `app.getVersion() is ${facts.version}, package.json says ${expectedVersion}`)
     check(facts.packaged, `app.isPackaged is ${facts.packaged}`)
 
@@ -186,11 +242,12 @@ async function main(): Promise<void> {
     quit = true
     console.log('RESULT PASS')
   } finally {
-    if (!quit) await app.close()
+    if (!quit) await raceBound(app.close(), QUIT_TIMEOUT_MS, 'app.close()')
   }
 }
 
 main().catch((error: unknown) => {
+  killElectron(electronPid)
   console.error(error instanceof Error ? (error.stack ?? error.message) : String(error))
   console.log('RESULT FAIL')
   process.exit(1)
