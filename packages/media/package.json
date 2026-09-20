@@ -1,6 +1,6 @@
 {
   "name": "@mcut/media",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "Media I/O for mcut on Mediabunny: probing, thumbnails, audio extraction, frame sources, client-side export with a pluggable container-format registry (MP4/WebM/MKV built in)",
   "license": "Apache-2.0",
   "type": "module",

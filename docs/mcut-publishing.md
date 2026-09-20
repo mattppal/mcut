@@ -91,9 +91,9 @@ changesets pre mode, a patch changeset on `0.1.0` produces `0.1.1-alpha.0`.
 
 1. Run `bunx changeset`, pick `mcut-desktop`, choose the bump, and merge the
    pull request that carries the changeset.
-2. Merge the `Version packages` pull request that the release workflow opens.
-   It bumps `apps/desktop/package.json` and writes `apps/desktop/CHANGELOG.md`.
-3. On that merge the release workflow runs `changeset publish`, which tags
+2. The release workflow commits the version bump to `main`. It bumps
+   `apps/desktop/package.json` and writes `apps/desktop/CHANGELOG.md`.
+3. The same run then runs `changeset publish`, which tags
    `mcut-desktop@<version>` and pushes the tag. A tag pushed with the
    workflow's `GITHUB_TOKEN` does not start another workflow, so dispatch
    `desktop.yml` from `main` with the `version` input set to the new version.

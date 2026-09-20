@@ -38,14 +38,26 @@ jobs:
           registry-url: https://registry.npmjs.org
       - run: bun install --frozen-lockfile
       - run: bun run release:check
+      - name: Version packages on main
+        # The repository blocks GITHUB_TOKEN from opening pull requests, so the version bump is committed to main directly. A push made with GITHUB_TOKEN starts no other workflow. https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bunx changeset version
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No pending changesets"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(release): version packages"
+          git push origin HEAD:${{ github.ref_name }}
       - uses: changesets/action@v1
         id: changesets
         with:
-          version: bunx changeset version
           publish: bun run release:publish
           createGithubReleases: true
-          commit: "Version packages"
-          title: "Version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

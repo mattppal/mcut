@@ -5,6 +5,7 @@ const shared: UserConfig = {
   deps: { neverBundle: ['electron'], onlyBundle: false },
   fixedExtension: true,
   dts: false,
+  sourcemap: true,
 }
 
 export default defineConfig([

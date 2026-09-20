@@ -71,7 +71,7 @@ export function EditorToolbar({ embedded = false }: { embedded?: boolean }) {
   const canRedo = useEditorState((s) => s.canRedo)
 
   return (
-    <div className={cn('flex h-11 shrink-0 items-center gap-3 px-3', embedded && 'pr-12')}>
+    <div data-slot="editor-toolbar" className={cn('flex h-10 shrink-0 items-center gap-2 px-2 [-webkit-app-region:drag]', embedded && 'pr-12')}>
       {embedded ? null : <MainMenu />}
       <Tooltip>
         <TooltipTrigger render={<Button variant="ghost" size="icon-sm" disabled={!canUndo} onClick={() => engine.undo()} aria-label="Undo" />}>
@@ -90,7 +90,7 @@ export function EditorToolbar({ embedded = false }: { embedded?: boolean }) {
         </TooltipContent>
       </Tooltip>
 
-      <div className="flex flex-1 items-center justify-center gap-3">
+      <div className="flex flex-1 items-center justify-center gap-2">
         <ProjectName />
         <ModeSwitch />
       </div>

@@ -75,6 +75,9 @@ Run from the repository root unless the line says otherwise.
   fails on growth. The script is `scripts/standards/measure.ts`.
 - `bun run e2e` in `apps/studio` runs the Playwright suite. CI runs it nightly,
   not per pull request.
+- `bun run desktop:check` builds, typechecks, and lints the desktop app,
+  packages it with `electron-builder --dir`, and runs `smoke-packaged.ts`
+  against the result.
 - `bunx changeset` adds a changeset. Every change under `packages/*` needs one
   in the same pull request.
 

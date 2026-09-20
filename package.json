@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "bun run scripts/mcut-local-dev.ts dev",
     "dev:web": "turbo run dev --filter=mcut-web",
+    "desktop:check": "bun run scripts/desktop-check.ts",
     "build": "turbo run build",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
@@ -32,7 +33,7 @@
     "package:json-lint": "npmPkgJsonLint --configFile .npmpackagejsonlintrc.json packages --quiet",
     "package:lint": "bun run package:metadata && bun run package:json-lint && bun run scripts/package-lint.ts",
     "release:check": "bun run build && bun run typecheck && bun run test && bun run lint && bun run smoke:packages && bun run package:lint && bun run standards && bun run docs:coverage && bun run check:format",
-    "release:publish": "changeset publish --tag alpha",
+    "release:publish": "changeset publish",
     "standards": "bun scripts/standards/measure.ts --base origin/main --quiet",
     "standards:strip": "bun scripts/standards/strip-comments.ts",
     "docs:coverage": "bun scripts/standards/docs-coverage.ts",
