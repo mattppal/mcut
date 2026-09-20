@@ -268,6 +268,24 @@
   background: transparent;
 }
 
+[data-slot='editor-toolbar'] :is(button, input, a, [role='button']) {
+  -webkit-app-region: no-drag;
+}
+[data-window-chrome='mac'] [data-slot='editor-toolbar'] {
+  padding-left: 5rem;
+}
+[data-window-chrome='linux'] [data-slot='editor-toolbar'] {
+  padding-right: calc(100% - env(titlebar-area-width, 100%));
+}
+[data-window-chrome='mac'] *,
+[data-window-chrome='linux'] * {
+  scrollbar-width: none;
+}
+[data-window-chrome='mac'] ::-webkit-scrollbar,
+[data-window-chrome='linux'] ::-webkit-scrollbar {
+  display: none;
+}
+
 /* ---------------------------------------------------------------------------
  * Scroll-edge fade masks (after https://twilson.net/scroll-mask)
  *

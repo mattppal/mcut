@@ -407,7 +407,7 @@ export function MediaBin({ className, onAssetImported }: { className?: string; o
           </div>
         </button>
       ) : (
-        <ScrollArea className="min-h-0 flex-1 scroll-mask-y">
+        <ScrollArea className="min-h-0 flex-1 scroll-mask-b">
           <div className="grid grid-cols-2 gap-1.5 p-2 pt-0.5">
             {assets.map((asset) => (
               <AssetCard
