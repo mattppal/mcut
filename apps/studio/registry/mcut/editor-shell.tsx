@@ -1,25 +1,14 @@
 'use client'
 
-import { useCallback, useMemo, useState, useSyncExternalStore, type RefObject } from 'react'
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
-import { usePanelRef, type GroupProps, type PanelImperativeHandle } from 'react-resizable-panels'
+import { useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { usePanelRef, type PanelImperativeHandle } from 'react-resizable-panels'
 import { CaptionsIcon, FolderOpenIcon, SearchIcon, SparklesIcon, TypeIcon } from '@/lib/icons'
 import { toast } from 'sonner'
-import { isWebGPUSupported } from '@mcut/compositor'
-import {
-  EditorProvider,
-  PlayerCanvas,
-  useDocumentRootAttribute,
-  useDocumentRootClass,
-  useEditor,
-  useEditorState,
-  useEngineSubscription,
-  useWindowEvent,
-} from '@mcut/react'
-import { getElement, type Project } from '@mcut/timeline'
+import { EditorProvider, useDocumentRootAttribute, useDocumentRootClass, useEditor, useWindowEvent } from '@mcut/react'
+import type { Project } from '@mcut/timeline'
 import type { TranscriptResult } from '@mcut/transcription'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Toaster } from '@/components/ui/sonner'
@@ -31,24 +20,23 @@ import { AnimationsPanel } from './animations-panel'
 import { CaptionsPanel } from './captions-panel'
 import { TranscriptPanel } from './transcript-panel'
 import { CommandPalette } from './command-palette'
-import { EditorDnd } from './editor-dnd'
 import { EDITOR_LAYOUT_KEYS } from './editor-layout'
 import { PanelCard, PanelHeader, PanelSectionLabel } from './editor-primitives'
+import { SessionPersistence, usePersistedLayout } from './editor-session'
 import { EditorToolbar } from './editor-toolbar'
 import { CurveEditorHost } from './easing-editor'
 import { EditorUIProvider, useEditorUI, type EditorTheme, type LeftTab } from './editor-ui'
+import type { EmbedOptions } from './embed'
+import { EmbedShell } from './embed-shell'
 import { useProjectFontLoader } from './font-library'
-import { LayoutBank } from './layout-bank'
-import { LayoutSlotEditor } from './layout-slot-editor'
 import { LiveMcpBridge } from './live-mcp-bridge'
-import { TextEditOverlay } from './text-edit-overlay'
 import { MediaBin } from './media-bin'
-import { clearSavedSession, loadSavedSession, requestPersistentStorage, saveAssetBlob, saveProjectSnapshot } from './persistence'
+import { saveAssetBlob } from './persistence'
+import { PreviewArea, TrackSorter } from './preview-area'
 import { PropertiesPanel } from './properties-panel'
 import { host } from './studio-host'
 import { TextPanel } from './text-panel'
 import { TimelinePanel } from './timeline-panel'
-import { TransportBar } from './transport-bar'
 import { UpdateDialog } from './update-dialog'
 
 function isTypingTarget(target: EventTarget | null): target is HTMLElement {
@@ -61,7 +49,7 @@ function ProjectFontLoader() {
   return null
 }
 
-function EditorHotkeys() {
+function EditorHotkeys({ persist }: { persist: boolean }) {
   const engine = useEditor()
   const ui = useEditorUI()
   useWindowEvent('keydown', (event) => {
@@ -75,7 +63,7 @@ function EditorHotkeys() {
     }
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 's') {
       event.preventDefault()
-      toast('Autosaved — projects persist in this browser')
+      if (persist) toast('Autosaved — projects persist in this browser')
       return
     }
     const action = actionForEvent(event)
@@ -88,98 +76,6 @@ function EditorHotkeys() {
     runEditorAction(event.detail, { engine, ui, clipboard: editorClipboard })
   })
   return null
-}
-
-let persistenceRequested = false
-
-function isProjectEmpty(project: Project): boolean {
-  return Object.keys(project.assets).length === 0 && project.tracks.every((track) => track.elements.length === 0)
-}
-
-function SessionPersistence() {
-  const engine = useEditor()
-  const projectEmpty = useEditorState((s) => isProjectEmpty(s.project))
-  const [dismissed, setDismissed] = useState(false)
-  const saved = useQuery({
-    queryKey: ['mcut', 'saved-session'],
-    queryFn: loadSavedSession,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    retry: false,
-  })
-
-  useEngineSubscription(
-    engine.store,
-    () => {
-      if (!persistenceRequested) {
-        persistenceRequested = true
-        void requestPersistentStorage()
-      }
-      saveProjectSnapshot(engine.project).catch(() => {})
-    },
-    { debounceMs: 800 },
-  )
-
-  const session = saved.data
-  if (dismissed || !projectEmpty || !session) return null
-  return (
-    <div
-      role="dialog"
-      aria-label="Restore previous session"
-      className="fixed right-4 bottom-4 z-50 flex items-center gap-3 rounded-lg border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg"
-    >
-      <span>Restore previous session?</span>
-      <Button
-        size="xs"
-        onClick={() => {
-          engine.loadProject(session.project)
-          if (session.missingAssetIds.length > 0) {
-            toast.warning(`${session.missingAssetIds.length} media file(s) could not be restored — re-import them.`)
-          }
-          setDismissed(true)
-        }}
-      >
-        Restore
-      </Button>
-      <Button
-        size="xs"
-        variant="ghost"
-        onClick={() => {
-          void clearSavedSession()
-          setDismissed(true)
-        }}
-      >
-        Discard
-      </Button>
-    </div>
-  )
-}
-
-function readPersistedLayout(key: string, resetToken: number): GroupProps['defaultLayout'] | undefined {
-  void resetToken
-  if (typeof window === 'undefined') return undefined
-  try {
-    const raw = window.localStorage.getItem(key)
-    return raw ? (JSON.parse(raw) as GroupProps['defaultLayout']) : undefined
-  } catch {
-    return undefined
-  }
-}
-
-function usePersistedLayout(key: string, resetToken: number): Pick<GroupProps, 'defaultLayout' | 'onLayoutChanged'> {
-  const defaultLayout = useMemo(() => readPersistedLayout(key, resetToken), [key, resetToken])
-  const onLayoutChanged = useCallback(
-    (layout: Parameters<NonNullable<GroupProps['onLayoutChanged']>>[0]) => {
-      try {
-        window.localStorage.setItem(key, JSON.stringify(layout))
-      } catch {}
-    },
-    [key],
-  )
-  return {
-    ...(defaultLayout ? { defaultLayout } : {}),
-    onLayoutChanged,
-  }
 }
 
 function subscribeHydration(onStoreChange: () => void): () => void {
@@ -195,7 +91,7 @@ function serverHydrationSnapshot(): boolean {
   return false
 }
 
-function useHasHydrated(): boolean {
+export function useHasHydrated(): boolean {
   return useSyncExternalStore(subscribeHydration, clientHydrationSnapshot, serverHydrationSnapshot)
 }
 
@@ -236,11 +132,11 @@ function ChromeRail({ tab, collapsed, onSelect }: { tab: LeftTab; collapsed: boo
   )
 }
 
-function LeftPanel({ tab, transcribe }: { tab: LeftTab } & Pick<EditorShellProps, 'transcribe'>) {
+function LeftPanel({ tab, transcribe, persist }: { tab: LeftTab; persist: boolean } & Pick<EditorShellProps, 'transcribe'>) {
   if (tab === 'media') {
     return (
       <PanelCard>
-        <MediaBin onAssetImported={(asset, file) => void saveAssetBlob(asset, file)} />
+        <MediaBin {...(persist ? { onAssetImported: (asset, file) => void saveAssetBlob(asset, file) } : {})} />
       </PanelCard>
     )
   }
@@ -268,22 +164,6 @@ function LeftPanel({ tab, transcribe }: { tab: LeftTab } & Pick<EditorShellProps
   )
 }
 
-function usePreviewRenderer(): 'canvas2d' | 'webgpu' {
-  const [renderer] = useState<'canvas2d' | 'webgpu'>(() => {
-    if (typeof window === 'undefined') return 'canvas2d'
-    const requested = new URLSearchParams(window.location.search).get('renderer')
-    if (requested !== 'webgpu') return 'canvas2d'
-    if (!isWebGPUSupported()) {
-      setTimeout(() => {
-        toast.error('This browser has no WebGPU (needs Chrome 113+, Safari 26+, or Firefox 141+) — using the canvas2d renderer.')
-      }, 0)
-      return 'canvas2d'
-    }
-    return 'webgpu'
-  })
-  return renderer
-}
-
 function EditorDocumentTheme({ theme }: { theme: EditorTheme }) {
   useDocumentRootAttribute('data-editor', '')
   useDocumentRootAttribute('data-window-chrome', host.windowChrome)
@@ -291,80 +171,24 @@ function EditorDocumentTheme({ theme }: { theme: EditorTheme }) {
   return null
 }
 
-function PreviewArea() {
-  const engine = useEditor()
-  const width = useEditorState((s) => s.project.width)
-  const height = useEditorState((s) => s.project.height)
-  const { mode, previewQuality, editingTextId, setEditingTextId } = useEditorUI()
-  const renderer = usePreviewRenderer()
-  return (
-    <PanelCard className="flex flex-col">
-      <div className="flex min-h-0 flex-1">
-        {mode === 'multicam' && <LayoutBank />}
-        <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden p-4 [container-type:size]">
-          <div
-            className="relative w-full"
-            style={{
-              maxWidth: `min(100%, calc(100cqh * ${width / height} - ${(24 * width) / height}px))`,
-              ['--mcut-aspect' as string]: `${width} / ${height}`,
-            }}
-          >
-            <PlayerCanvas
-              quality={previewQuality}
-              renderer={renderer}
-              className="overflow-hidden rounded-lg shadow-xl ring-1 ring-foreground/10"
-              {...(editingTextId ? { hiddenElementIds: new Set([editingTextId]) } : {})}
-              onElementDoubleClick={(elementId) => {
-                const element = getElement(engine.project, elementId)
-                if (element?.type === 'text') setEditingTextId(elementId)
-              }}
-            />
-            {mode === 'multicam' && <LayoutSlotEditor />}
-            <TextEditOverlay />
-          </div>
-        </div>
-      </div>
-      <TransportBar />
-    </PanelCard>
-  )
-}
-
-function TrackSorter({ children }: { children: React.ReactNode }) {
-  const engine = useEditor()
-  return (
-    <EditorDnd
-      onTrackSort={(activeTrackId, overTrackId) => {
-        const toIndex = engine.project.tracks.findIndex((t) => t.id === overTrackId)
-        if (toIndex === -1) return
-        try {
-          engine.dispatch({
-            type: 'reorderTrack',
-            trackId: activeTrackId as `t-${string}`,
-            toIndex,
-          })
-        } catch {}
-      }}
-    >
-      {children}
-    </EditorDnd>
-  )
-}
-
 export interface EditorShellProps {
   project?: Project
   transcribe?: (audio: Blob) => Promise<TranscriptResult>
+  embed?: EmbedOptions
 }
 
-function Shell({
+function Workspace({
   transcribe,
   leftPanelRef,
+  persist,
 }: Pick<EditorShellProps, 'transcribe'> & {
   leftPanelRef: RefObject<PanelImperativeHandle | null>
+  persist: boolean
 }) {
-  const { theme, leftTab: tab, setLeftTab: setTab, layoutResetToken } = useEditorUI()
+  const { leftTab: tab, setLeftTab: setTab, layoutResetToken } = useEditorUI()
   const panelsReady = useHasHydrated()
-  const verticalLayout = usePersistedLayout(EDITOR_LAYOUT_KEYS.vertical, layoutResetToken)
-  const horizontalLayout = usePersistedLayout(EDITOR_LAYOUT_KEYS.horizontal, layoutResetToken)
+  const verticalLayout = usePersistedLayout(EDITOR_LAYOUT_KEYS.vertical, layoutResetToken, persist)
+  const horizontalLayout = usePersistedLayout(EDITOR_LAYOUT_KEYS.horizontal, layoutResetToken, persist)
   const [leftCollapsed, setLeftCollapsed] = useState(false)
 
   const onRailSelect = (next: LeftTab) => {
@@ -382,15 +206,8 @@ function Shell({
   }
 
   return (
-    <div data-editor="" className={cn('flex h-dvh flex-col overflow-hidden bg-background text-foreground', theme === 'dark' && 'dark')}>
-      <EditorDocumentTheme theme={theme} />
-      <EditorHotkeys />
-      <CommandPalette />
-      <CurveEditorHost />
-      <SessionPersistence />
-      <ProjectFontLoader />
-      <LiveMcpBridge />
-      <EditorToolbar />
+    <>
+      <EditorToolbar embedded={!persist} />
       <div className="flex min-h-0 flex-1">
         <ChromeRail tab={tab} collapsed={leftCollapsed} onSelect={onRailSelect} />
         {panelsReady ? (
@@ -406,7 +223,7 @@ function Shell({
                     panelRef={leftPanelRef}
                     onResize={(size) => setLeftCollapsed(size.asPercentage === 0)}
                   >
-                    <LeftPanel tab={tab} transcribe={transcribe} />
+                    <LeftPanel tab={tab} transcribe={transcribe} persist={persist} />
                   </ResizablePanel>
                   <ResizableHandle className={leftCollapsed ? 'hidden' : undefined} />
                   <ResizablePanel id="preview" defaultSize="56%" minSize="30%">
@@ -438,21 +255,47 @@ function Shell({
           </div>
         )}
       </div>
+    </>
+  )
+}
+
+function Shell({ persist, children }: { persist: boolean; children: ReactNode }) {
+  const { theme } = useEditorUI()
+  return (
+    <div data-editor="" className={cn('flex h-dvh flex-col overflow-hidden bg-background text-foreground', theme === 'dark' && 'dark')}>
+      <EditorDocumentTheme theme={theme} />
+      <EditorHotkeys persist={persist} />
+      <CommandPalette />
+      <CurveEditorHost />
+      <ProjectFontLoader />
+      {children}
       <Toaster position="bottom-right" />
       {host.updates === null ? null : <UpdateDialog updates={host.updates} />}
     </div>
   )
 }
 
-export function EditorShell({ project, transcribe }: EditorShellProps) {
+export function EditorShell({ project, transcribe, embed }: EditorShellProps) {
   const [queryClient] = useState(() => new QueryClient())
   const leftPanelRef = usePanelRef()
+  const persist = embed === undefined
+  const workspace = <Workspace transcribe={transcribe} leftPanelRef={leftPanelRef} persist={persist} />
   return (
     <QueryClientProvider client={queryClient}>
       <EditorProvider {...(project ? { project } : {})}>
         <EditorUIProvider leftPanelRef={leftPanelRef}>
           <TooltipProvider>
-            <Shell transcribe={transcribe} leftPanelRef={leftPanelRef} />
+            <Shell persist={persist}>
+              {embed ? (
+                <EmbedShell options={embed}>{workspace}</EmbedShell>
+              ) : (
+                <>
+                  <SessionPersistence />
+                  <LiveMcpBridge />
+                  {workspace}
+                </>
+              )}
+            </Shell>
           </TooltipProvider>
         </EditorUIProvider>
       </EditorProvider>

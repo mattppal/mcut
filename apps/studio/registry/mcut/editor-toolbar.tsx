@@ -65,14 +65,14 @@ function ModeSwitch() {
   )
 }
 
-export function EditorToolbar() {
+export function EditorToolbar({ embedded = false }: { embedded?: boolean }) {
   const engine = useEditor()
   const canUndo = useEditorState((s) => s.canUndo)
   const canRedo = useEditorState((s) => s.canRedo)
 
   return (
-    <div data-slot="editor-toolbar" className="flex h-10 shrink-0 items-center gap-2 px-2 [-webkit-app-region:drag]">
-      <MainMenu />
+    <div data-slot="editor-toolbar" className={cn('flex h-10 shrink-0 items-center gap-2 px-2 [-webkit-app-region:drag]', embedded && 'pr-12')}>
+      {embedded ? null : <MainMenu />}
       <Tooltip>
         <TooltipTrigger render={<Button variant="ghost" size="icon-sm" disabled={!canUndo} onClick={() => engine.undo()} aria-label="Undo" />}>
           <Undo2Icon />
@@ -100,7 +100,7 @@ export function EditorToolbar() {
       </span>
       <ThemeToggle />
       <ShortcutsDialog />
-      <ExportDialog />
+      {embedded ? null : <ExportDialog />}
     </div>
   )
 }
