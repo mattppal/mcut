@@ -1,5 +1,11 @@
 # @mcut/transcription-local
 
+## 0.1.0-alpha.2
+
+### Minor Changes
+
+- [#118](https://github.com/mattppal/mcut/pull/118) [`53f0773`](https://github.com/mattppal/mcut/commit/53f0773e0c772ae855825606f299aba2341bf2af) Thanks [@mattppal](https://github.com/mattppal)! - `createLocalWhisperProvider` accepts `ortWasmPaths` so an app can serve the onnxruntime-web WASM from its own origin instead of jsDelivr, falls back from `webgpu` to `wasm` when `navigator.gpu.requestAdapter()` returns no adapter, reports model download progress aggregated across all model files, and posts a `transcribe` progress of 0 as soon as the model is ready. Transformers.js moves to 4.3.0, whose onnxruntime no longer fails session creation on the `q8` Whisper decoders (onnxruntime issue 28306).
+
 ## 0.1.0-alpha.1
 
 ### Patch Changes

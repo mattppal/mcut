@@ -33,6 +33,7 @@
     "live-bridge-app-origin",
     "live-bridge-not-connected-message",
     "live-bridge-reconnect",
+    "local-whisper-desktop-fetch",
     "mcp-server-contract-subpath",
     "media-asset-no-duration",
     "media-probe-error",
