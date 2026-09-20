@@ -26,6 +26,7 @@ ipcRenderer.on('menu', (_event, payload: unknown) => {
 
 const api: DesktopApi = {
   version: 1,
+  platform: process.platform === 'darwin' ? 'darwin' : 'linux',
   info: () => invoke('app.info', DESKTOP_INVOKES['app.info'].output, undefined),
   setTranscriptionKey: (key) => invoke('app.setTranscriptionKey', DESKTOP_INVOKES['app.setTranscriptionKey'].output, { key }),
   projects: {

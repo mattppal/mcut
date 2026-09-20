@@ -81,5 +81,6 @@ export function createDesktopHost(): StudioHost | null {
         return result.value.configured
       },
     },
+    windowChrome: api.platform === 'darwin' ? 'mac' : 'linux',
   }
 }
