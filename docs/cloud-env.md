@@ -10,11 +10,13 @@ script first, then paste the same steps into the dashboard.
 | Tool | Where it comes from | Why |
 | --- | --- | --- |
 | Bun 1.3.14 | GitHub release zip, `~/.bun/bin` | `bun.sh` fails TLS from the VM, the release asset does not |
-| Node 24 | `nodejs.org` tarball, `~/.local/node/bin`, first on `PATH` | `tsdown` loads its config through Node and needs 22.18 or newer |
-| Chromium with WebCodecs | `bunx playwright install --with-deps chromium` in `apps/studio` | The Playwright suite and the verify-studio drive script |
-| Google Chrome | Preinstalled at `/usr/local/bin/google-chrome` | H.264 export when a check needs MP4, set `MCUT_CHROME_PATH` |
+| Node 24 | `nodejs.org` tarball, `~/.local/node/bin`, first on `PATH` | `tsdown` loads its config through Node and needs 22.18 or newer. `drive.ts` runs under `node` because Playwright `_electron.launch` hangs under Bun |
+| xvfb and Electron GTK libs | Ubuntu packages `xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64` | Electron needs a display and these libs on Ubuntu |
+| Electron | `bun install` writes the package under `apps/desktop/node_modules/electron`. `install.sh` runs `install.js` when `dist/electron` is missing | The Playwright suite and `drive.ts` launch `apps/desktop` |
 | ffmpeg 6.1 | Ubuntu package | Fixture generation and re-probing exported media |
-| Workspace `dist/` | `bun run build` | Package `exports` resolve to `dist/` |
+| Workspace `dist/` | `bun run build` and `bun run --cwd apps/desktop build` | Package `exports` resolve to `dist/`. The desktop app serves `apps/studio/out` |
+
+Environment build id. Coordinator fills after the build.
 
 ## Install
 
@@ -35,8 +37,11 @@ mcut, and without `set -e` a build reports success after every step failed.
 OUT=/tmp/mcut-verify bash scripts/cloud-env/verify-e2e.sh
 ```
 
-The script runs the Playwright suite in `apps/studio`, then starts a production
-Studio server on port 3124 and runs `.cursor/skills/verify-studio/scripts/drive.ts`
-against it. It prints one `RESULT` line per stage and ends with `SUMMARY PASS`
-or `SUMMARY FAIL`. Logs, the Playwright report, and the drive screenshots land
-under `$OUT`.
+The script runs the Playwright suite in `apps/studio` through Electron under
+xvfb, then runs `.cursor/skills/verify-studio/scripts/drive.ts` under `node`
+and xvfb. `drive.ts` must run under `node`. Playwright `_electron.launch` hangs
+under Bun. It prints one `RESULT` line per stage with `seconds=` and ends with
+`SUMMARY PASS` or `SUMMARY FAIL`. `SUMMARY PASS` requires the literal
+`RESULT PASS` line from `drive.ts`. Set `MCUT_VERIFY_HEADED=1` with `DISPLAY`
+set to drive the app on that display instead of xvfb. Logs, the Playwright
+report, and the drive screenshots land under `$OUT`.
