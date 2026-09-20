@@ -65,11 +65,11 @@ GITHUB_PACKAGES_TOKEN=<token> bun run release:github-packages -- --all
 
 1. Include a changeset in any pull request that changes public package behavior.
 2. Merge pull requests into `main` after CI and code-owner review pass.
-3. The release workflow opens a version pull request when changesets are present.
-4. Review and merge the version pull request.
-5. The release workflow publishes changed packages to npm and creates GitHub
-   release notes through Changesets.
-6. The release workflow mirrors those package versions to GitHub Packages.
+3. The release workflow commits the version bump to `main` when changesets are
+   present.
+4. The same run publishes changed packages to npm and creates GitHub release
+   notes through Changesets.
+5. The release workflow mirrors those package versions to GitHub Packages.
 
 ## Repository settings checklist
 
@@ -78,3 +78,5 @@ GITHUB_PACKAGES_TOKEN=<token> bun run release:github-packages -- --all
 - Enable secret scanning and push protection if available for the repository.
 - Disable merge methods the project will not use.
 - Require signed commits only if maintainers can support it consistently.
+- Add the six macOS signing secrets from [desktop-signing.md](desktop-signing.md)
+  so desktop releases ship notarized.

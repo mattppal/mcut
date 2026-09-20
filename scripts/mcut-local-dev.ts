@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, watch, type FSWatcher } from 'node:fs'
 import { join } from 'node:path'
 
 export const DEFAULT_STUDIO_PORT = 3000
@@ -7,8 +7,13 @@ export const DEFAULT_BRIDGE_TOKEN = 'mcut-local-dev'
 
 const REPO_ROOT = join(import.meta.dir, '..')
 const DESKTOP_DIR = join(REPO_ROOT, 'apps/desktop')
+const IPC_DIR = join(REPO_ROOT, 'packages/desktop-ipc')
 const ELECTRON_BINARIES = [join(DESKTOP_DIR, 'node_modules/.bin/electron'), join(REPO_ROOT, 'node_modules/.bin/electron')]
-const DEV_SERVER_TIMEOUT_MS = 120_000
+const TSDOWN_BIN = join(REPO_ROOT, 'node_modules/.bin/tsdown')
+const TSC_BIN = join(REPO_ROOT, 'node_modules/.bin/tsc')
+const MAIN_INSPECT_PORT = 9229
+const RENDERER_DEBUG_PORT = 9222
+const WATCH_DEBOUNCE_MS = 25
 
 function integerEnv(name: string): number | undefined {
   const value = process.env[name]
@@ -55,6 +60,18 @@ interface SpawnOptions {
   stdout?: 'inherit' | 'pipe'
 }
 
+interface RebuildStep {
+  name: string
+  cmd: string[]
+  cwd: string
+}
+
+interface SourceWatch {
+  name: string
+  dir: string
+  steps: RebuildStep[]
+}
+
 function spawnProcess(name: string, cmd: string[], options: SpawnOptions = {}): Bun.Subprocess {
   console.error(`[mcut dev] starting ${name}: ${cmd.join(' ')}`)
   return Bun.spawn(cmd, {
@@ -70,32 +87,38 @@ function bunBin(): string {
   return process.execPath
 }
 
-async function runToCompletion(name: string, cmd: string[], cwd?: string): Promise<void> {
-  const child = spawnProcess(name, cmd, { cwd })
-  const code = await child.exited
+const DESKTOP_BUILD: RebuildStep = { name: 'desktop main build', cmd: [bunBin(), TSDOWN_BIN], cwd: DESKTOP_DIR }
+
+const SOURCE_WATCHES: SourceWatch[] = [
+  { name: 'apps/desktop/src', dir: join(DESKTOP_DIR, 'src'), steps: [DESKTOP_BUILD] },
+  {
+    name: 'packages/desktop-ipc/src',
+    dir: join(IPC_DIR, 'src'),
+    steps: [
+      { name: 'desktop-ipc build', cmd: [bunBin(), TSDOWN_BIN], cwd: IPC_DIR },
+      { name: 'desktop typecheck', cmd: [bunBin(), TSC_BIN, '--noEmit'], cwd: DESKTOP_DIR },
+      DESKTOP_BUILD,
+    ],
+  },
+]
+
+function runStep(step: RebuildStep): Promise<number | null> {
+  return spawnProcess(step.name, step.cmd, { cwd: step.cwd }).exited
+}
+
+async function runToCompletion(step: RebuildStep): Promise<void> {
+  const code = await runStep(step)
   if (code !== 0) {
-    throw new Error(`${name} failed with exit code ${code ?? 'unknown'}.`)
+    throw new Error(`${step.name} failed with exit code ${code ?? 'unknown'}.`)
   }
 }
 
 async function prepareDevPackages(filters: string[]): Promise<void> {
-  await runToCompletion('package builds', [bunBin(), 'run', 'turbo', 'run', 'build', ...filters.map((filter) => `--filter=${filter}`)])
-}
-
-async function waitForFirstExit(children: { name: string; proc: Bun.Subprocess }[], expected: () => boolean): Promise<number> {
-  const first = await Promise.race(
-    children.map(async (child) => ({
-      name: child.name,
-      code: await child.proc.exited,
-    })),
-  )
-  for (const child of children) {
-    if (child.proc.exitCode === null) child.proc.kill()
-  }
-  await Promise.allSettled(children.map((child) => child.proc.exited))
-  if (expected()) return 0
-  console.error(`[mcut dev] ${first.name} exited with code ${first.code ?? 'unknown'}`)
-  return 1
+  await runToCompletion({
+    name: 'package builds',
+    cmd: [bunBin(), 'run', 'turbo', 'run', 'build', ...filters.map((filter) => `--filter=${filter}`)],
+    cwd: REPO_ROOT,
+  })
 }
 
 async function runBridge(): Promise<void> {
@@ -126,33 +149,133 @@ function electronEnv(devUrl: string): NodeJS.ProcessEnv {
   return env
 }
 
-async function waitForDevServer(url: string, server: Bun.Subprocess): Promise<void> {
-  const deadline = Date.now() + DEV_SERVER_TIMEOUT_MS
-  while (Date.now() < deadline) {
-    if (server.exitCode !== null) throw new Error(`The Next dev server exited with code ${server.exitCode} before it accepted connections.`)
-    try {
-      await fetch(url, { method: 'HEAD' })
-      return
-    } catch {
-      await Bun.sleep(250)
-    }
-  }
-  throw new Error(`The Next dev server did not accept connections at ${url} within ${DEV_SERVER_TIMEOUT_MS / 1000} seconds.`)
-}
-
-async function echoAppOutput(stdout: ReadableStream<Uint8Array>): Promise<void> {
+async function eachLine(stdout: ReadableStream<Uint8Array>, write: (line: string) => void): Promise<void> {
   let buffered = ''
   for await (const chunk of stdout) {
     buffered += new TextDecoder().decode(chunk)
     let newline = buffered.indexOf('\n')
     while (newline !== -1) {
-      const line = buffered.slice(0, newline)
+      write(buffered.slice(0, newline))
       buffered = buffered.slice(newline + 1)
-      if (line.startsWith('MCP_URL ')) console.error(`[mcut dev] MCP: ${line.slice('MCP_URL '.length)}`)
-      console.log(line)
       newline = buffered.indexOf('\n')
     }
   }
+  if (buffered.length > 0) write(buffered)
+}
+
+async function echoAppOutput(stdout: ReadableStream<Uint8Array>): Promise<void> {
+  await eachLine(stdout, (line) => {
+    if (line.startsWith('MCP_URL ')) console.error(`[mcut dev] MCP: ${line.slice('MCP_URL '.length)}`)
+    console.log(line)
+  })
+}
+
+function waitForReady(studio: Bun.Subprocess): Promise<void> {
+  const stdout = studio.stdout
+  if (!(stdout instanceof ReadableStream)) {
+    return Promise.reject(new Error('The Next dev server has no stdout stream.'))
+  }
+  return new Promise((resolve, reject) => {
+    let ready = false
+    const fail = (code: number | null) => {
+      if (!ready) reject(new Error(`The Next dev server exited with code ${code ?? 'unknown'} before it was ready.`))
+    }
+    void eachLine(stdout, (line) => {
+      console.log(line)
+      if (!ready && line.includes('Ready in')) {
+        ready = true
+        resolve()
+      }
+    })
+    void studio.exited.then((code) => fail(code))
+  })
+}
+
+class DesktopApp {
+  proc: Bun.Subprocess | undefined
+  generation = 0
+  readonly exited: Promise<void>
+  private readonly markExited: () => void
+  private closed = false
+
+  constructor(private readonly devUrl: string) {
+    const settled = Promise.withResolvers<void>()
+    this.exited = settled.promise
+    this.markExited = settled.resolve
+  }
+
+  launch(): void {
+    const proc = spawnProcess('electron', [electronBinary(), `--inspect=${MAIN_INSPECT_PORT}`, `--remote-debugging-port=${RENDERER_DEBUG_PORT}`, DESKTOP_DIR], {
+      env: electronEnv(this.devUrl),
+      stdout: 'pipe',
+    })
+    this.proc = proc
+    if (proc.stdout instanceof ReadableStream) void echoAppOutput(proc.stdout)
+    const gen = this.generation
+    void proc.exited.then(() => {
+      if (gen === this.generation) this.markExited()
+    })
+  }
+
+  async relaunch(): Promise<void> {
+    if (this.closed) return
+    this.generation += 1
+    const previous = this.proc
+    previous?.kill()
+    if (previous !== undefined) await previous.exited
+    if (!this.closed) this.launch()
+  }
+
+  kill(): void {
+    this.closed = true
+    this.generation += 1
+    this.proc?.kill()
+  }
+}
+
+async function runSteps(steps: RebuildStep[]): Promise<boolean> {
+  for (const step of steps) {
+    const code = await runStep(step)
+    if (code === 0) continue
+    console.error(`[mcut dev] ${step.name} failed with exit code ${code ?? 'unknown'}, the running app is unchanged`)
+    return false
+  }
+  return true
+}
+
+function rebuildQueue(app: DesktopApp): (source: SourceWatch) => void {
+  const pending = new Set<SourceWatch>()
+  let running = false
+
+  const drain = async () => {
+    running = true
+    for (const source of pending) {
+      pending.delete(source)
+      const started = Date.now()
+      if (await runSteps(source.steps)) {
+        await app.relaunch()
+        console.error(`[mcut dev] ${source.name} changed, rebuilt and relaunched in ${Date.now() - started} ms`)
+      }
+    }
+    running = false
+  }
+
+  return (source) => {
+    pending.add(source)
+    if (!running) void drain()
+  }
+}
+
+function watchSources(source: SourceWatch, enqueue: (source: SourceWatch) => void): FSWatcher {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  return watch(source.dir, (_event, filename) => {
+    if (typeof filename !== 'string' || !filename.endsWith('.ts')) return
+    if (timer !== undefined) clearTimeout(timer)
+    timer = setTimeout(() => {
+      timer = undefined
+      enqueue(source)
+    }, WATCH_DEBOUNCE_MS)
+  })
 }
 
 async function runDev(): Promise<void> {
@@ -160,36 +283,52 @@ async function runDev(): Promise<void> {
   const devUrl = `http://localhost:${studioPort}`
 
   await prepareDevPackages(['mcut-studio^...', 'mcut-desktop^...'])
-  await runToCompletion('desktop main build', [bunBin(), 'x', 'tsdown'], DESKTOP_DIR)
+  await runToCompletion(DESKTOP_BUILD)
 
   console.error(`[mcut dev] Studio dev server: ${devUrl}`)
 
-  const studio = spawnProcess('next dev', [bunBin(), 'run', '--cwd', 'apps/studio', 'dev', '--', '--port', String(studioPort)])
-  const children = [{ name: 'next dev', proc: studio }]
-  let shuttingDown = false
+  const studio = spawnProcess('next dev', [bunBin(), 'run', '--cwd', 'apps/studio', 'dev', '--', '--port', String(studioPort)], { stdout: 'pipe' })
+  const app = new DesktopApp(devUrl)
+  const watchers: FSWatcher[] = []
+  let signalled = false
 
   const stop = () => {
-    shuttingDown = true
-    for (const child of children) {
-      if (child.proc.exitCode === null) child.proc.kill()
-    }
+    for (const watcher of watchers) watcher.close()
+    watchers.length = 0
+    if (studio.exitCode === null) studio.kill()
+    app.kill()
   }
-  process.once('SIGINT', stop)
-  process.once('SIGTERM', stop)
-  process.once('SIGHUP', stop)
+  const onSignal = () => {
+    signalled = true
+    stop()
+  }
+  process.once('SIGINT', onSignal)
+  process.once('SIGTERM', onSignal)
+  process.once('SIGHUP', onSignal)
 
   try {
-    await waitForDevServer(devUrl, studio)
+    await waitForReady(studio)
   } catch (error) {
     stop()
     throw error
   }
 
-  const app = spawnProcess('electron', [electronBinary(), DESKTOP_DIR], { env: electronEnv(devUrl), stdout: 'pipe' })
-  children.push({ name: 'electron', proc: app })
-  if (app.stdout instanceof ReadableStream) void echoAppOutput(app.stdout)
+  app.launch()
+  const enqueue = rebuildQueue(app)
+  for (const source of SOURCE_WATCHES) watchers.push(watchSources(source, enqueue))
 
-  process.exitCode = await waitForFirstExit(children, () => shuttingDown)
+  const first = await Promise.race([
+    studio.exited.then((code) => ({ name: 'next dev', code })),
+    app.exited.then(() => ({ name: 'electron', code: app.proc?.exitCode ?? null })),
+  ])
+  stop()
+  await Promise.allSettled([studio.exited, app.proc === undefined ? Promise.resolve() : app.proc.exited])
+  if (signalled) {
+    process.exitCode = 0
+    return
+  }
+  console.error(`[mcut dev] ${first.name} exited with code ${first.code ?? 'unknown'}`)
+  process.exitCode = 1
 }
 
 async function main(): Promise<void> {

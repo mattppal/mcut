@@ -71,8 +71,10 @@ Before merging a release PR:
 bun run release:check
 ```
 
-The release workflow runs the same check, then `changeset publish --tag alpha`
-with `NPM_CONFIG_PROVENANCE=true`.
+The release workflow runs the same check, then `changeset publish` with
+`NPM_CONFIG_PROVENANCE=true`. The repo is in changesets pre mode with the
+`alpha` tag, which sets the npm dist-tag. Passing `--tag` is rejected in pre
+mode.
 
 ## Dist-tags
 
