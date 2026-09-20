@@ -49,6 +49,7 @@ import { host } from './studio-host'
 import { TextPanel } from './text-panel'
 import { TimelinePanel } from './timeline-panel'
 import { TransportBar } from './transport-bar'
+import { UpdateDialog } from './update-dialog'
 
 function isTypingTarget(target: EventTarget | null): target is HTMLElement {
   if (!(target instanceof HTMLElement)) return false
@@ -438,6 +439,7 @@ function Shell({
         )}
       </div>
       <Toaster position="bottom-right" />
+      {host.updates === null ? null : <UpdateDialog updates={host.updates} />}
     </div>
   )
 }

@@ -20,6 +20,7 @@ export type TokenSource = 'persisted' | 'random' | { fixed: BridgeToken }
 
 export interface LaunchOptions {
   devUrl?: URL
+  updateFeedUrl?: URL
   bridgePort: number | 'ephemeral'
   tokenSource: TokenSource
 }
@@ -40,11 +41,13 @@ const launchSchema = z
     port: portSchema.default(DEFAULT_BRIDGE_PORT),
     token: z.union([z.literal('random'), bridgeTokenSchema]).optional(),
     devUrl: z.url().optional(),
+    updateFeedUrl: z.url().optional(),
   })
   .transform((input): LaunchOptions => ({
     bridgePort: input.port === 0 ? 'ephemeral' : input.port,
     tokenSource: input.token === undefined ? 'persisted' : input.token === 'random' ? 'random' : { fixed: input.token },
     ...(input.devUrl === undefined ? {} : { devUrl: new URL(input.devUrl) }),
+    ...(input.updateFeedUrl === undefined ? {} : { updateFeedUrl: new URL(input.updateFeedUrl) }),
   }))
 
 function present(value: string | undefined): string | undefined {
@@ -63,6 +66,7 @@ export function parseLaunchOptions(source: LaunchSource): LaunchOptions {
     port: present(flag(source.argv, '--port')) ?? present(source.env.MCUT_BRIDGE_PORT),
     token: present(flag(source.argv, '--token')) ?? present(source.env.MCUT_BRIDGE_TOKEN),
     devUrl: present(source.env.MCUT_DEV_URL),
+    updateFeedUrl: present(source.env.MCUT_UPDATE_FEED_URL),
   })
 }
 

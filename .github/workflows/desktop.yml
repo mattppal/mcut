@@ -52,7 +52,9 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: mcut-studio-linux
-          path: apps/desktop/release/*.AppImage
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/latest-linux.yml
           retention-days: 14
 
   mac:
@@ -109,11 +111,15 @@ jobs:
       - name: Record artifact sizes
         run: |
           echo '### macOS artifacts' >> "$GITHUB_STEP_SUMMARY"
-          du -m apps/desktop/release/*.dmg | awk '{ $1 = $1 " MB"; print "- " $0 }' | tee -a "$GITHUB_STEP_SUMMARY"
+          du -m apps/desktop/release/*.dmg apps/desktop/release/*.zip | awk '{ $1 = $1 " MB"; print "- " $0 }' | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         with:
           name: mcut-studio-mac
-          path: apps/desktop/release/*.dmg
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.zip.blockmap
+            apps/desktop/release/latest-mac.yml
           retention-days: 14
 
   release:
@@ -151,3 +157,8 @@ jobs:
             release/mcut-studio-${{ steps.version.outputs.version }}-linux-x86_64.AppImage
             release/mcut-studio-${{ steps.version.outputs.version }}-mac-x64.dmg
             release/mcut-studio-${{ steps.version.outputs.version }}-mac-arm64.dmg
+            release/mcut-studio-${{ steps.version.outputs.version }}-mac-x64.zip
+            release/mcut-studio-${{ steps.version.outputs.version }}-mac-arm64.zip
+            release/*.blockmap
+            release/latest-linux.yml
+            release/latest-mac.yml

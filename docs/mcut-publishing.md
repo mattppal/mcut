@@ -99,9 +99,9 @@ changesets pre mode, a patch changeset on `0.1.0` produces `0.1.1-alpha.0`.
    `desktop.yml` from `main` with the `version` input set to the new version.
    A tag pushed by hand, `git push origin mcut-desktop@<version>`, starts
    `desktop.yml` on its own.
-4. `desktop.yml` builds the Linux AppImage and both macOS disk images, smokes
-   them, then the `release` job creates or updates the GitHub Release
-   `mcut-desktop@<version>` with the three files attached. Versions under
+4. `desktop.yml` builds the Linux AppImage and both macOS disk images and zips,
+   smokes them, then the `release` job creates or updates the GitHub Release
+   `mcut-desktop@<version>` with the files below attached. Versions under
    `1.0.0` and prerelease versions are marked as prereleases.
 
 The Release lands at
@@ -112,7 +112,19 @@ these assets.
 mcut-studio-<version>-linux-x86_64.AppImage
 mcut-studio-<version>-mac-arm64.dmg
 mcut-studio-<version>-mac-x64.dmg
+mcut-studio-<version>-mac-arm64.zip
+mcut-studio-<version>-mac-x64.zip
+mcut-studio-<version>-mac-arm64.zip.blockmap
+mcut-studio-<version>-mac-x64.zip.blockmap
+latest-linux.yml
+latest-mac.yml
 ```
+
+electron-updater in the running app reads `latest-linux.yml` and
+`latest-mac.yml` to learn the newest version, downloads the AppImage or the
+zip for its architecture, and uses the `.blockmap` files for differential
+downloads. The app resolves the `mcut-desktop@<version>` tag itself, because
+the GitHub Releases feed is shared with the npm package releases.
 
 The asset names contain no spaces because GitHub rewrites special characters in
 release asset names, as documented in
@@ -123,8 +135,9 @@ private workspace package at its current version, so expect one tag each for
 `mcut-studio`, `mcut-web`, the examples, and the skill alongside
 `mcut-desktop`. Later runs only tag versions that changed.
 
-The macOS builds are signed ad hoc and not notarized. There is no auto-update,
-no Windows build, and no signing service.
+The macOS builds are signed ad hoc and not notarized, so the app turns
+auto-update off on macOS until a Developer ID signed build ships. There is no
+Windows build and no signing service.
 
 To test a PR's package set in a scratch app, use the pkg.pr.new preview builds
 CI publishes for package PRs. Install the URLs from the PR comment, for example

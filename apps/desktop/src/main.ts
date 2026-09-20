@@ -1,7 +1,7 @@
 import path from 'node:path'
-import type { DesktopInfo, InvokeHandlers } from '@mcut/desktop-ipc'
+import type { DesktopInfo, InvokeHandlers, UpdateState } from '@mcut/desktop-ipc'
 import { LiveBridgeError } from '@mcut/mcp-server'
-import { app, safeStorage, session } from 'electron'
+import { BrowserWindow, app, safeStorage, session } from 'electron'
 import { parseLaunchOptions, resolveToken, type BridgeConfig, type LaunchOptions } from './bridge-config'
 import { startBridge, type BridgeHost, type BridgeHostOptions } from './bridge-host'
 import { registerDesktopIpc } from './ipc'
@@ -10,6 +10,7 @@ import { projectHandlers } from './projects'
 import { STUDIO_ORIGIN, registerStudioScheme, serveStudio } from './serve-studio'
 import { openSettings, reportSafeStorageBackend, type DesktopSettings } from './settings'
 import { handleTranscribeRequest } from './transcribe'
+import { startUpdater, type UpdateHandlers } from './updater'
 import { hardenSession, openEditorWindow } from './window'
 
 const APP_TITLE = 'mcut Studio'
@@ -43,9 +44,14 @@ function routeDownloadsToSaveDialog(): void {
   })
 }
 
-function desktopHandlers(mcp: DesktopInfo['mcp'], settings: DesktopSettings): InvokeHandlers {
+function broadcastUpdateState(state: UpdateState): void {
+  for (const window of BrowserWindow.getAllWindows()) window.webContents.send('update', state)
+}
+
+function desktopHandlers(mcp: DesktopInfo['mcp'], settings: DesktopSettings, updates: UpdateHandlers): InvokeHandlers {
   return {
     ...projectHandlers,
+    ...updates,
     'app.info': async () => ({
       appVersion: app.getVersion(),
       platform: process.platform === 'darwin' ? 'darwin' : 'linux',
@@ -68,13 +74,22 @@ async function main(): Promise<void> {
   const port = options.bridgePort === 'ephemeral' ? 0 : options.bridgePort
   const { host, title } = await hostBridge({ port, token }, bridgeHostOptions(options))
   const mcp = { url: host.mcpUrl, cursorInstallUrl: cursorInstallUrl(host.mcpUrl) }
-  registerDesktopIpc(desktopHandlers(mcp, settings), { allowedOrigins: allowedOrigins(options) })
+  let updateState: UpdateState = { phase: 'idle' }
+  const updates = startUpdater({
+    feedUrl: options.updateFeedUrl,
+    onState: (state) => {
+      updateState = state
+      broadcastUpdateState(state)
+    },
+  })
+  registerDesktopIpc(desktopHandlers(mcp, settings, updates), { allowedOrigins: allowedOrigins(options) })
   installAppMenu({ mcp })
   app.on('window-all-closed', () => {
     host.bridge.close()
     app.quit()
   })
-  await openEditorWindow({ url: host.editorUrl, title, allowedOrigins: allowedOrigins(options) })
+  const window = await openEditorWindow({ url: host.editorUrl, title, allowedOrigins: allowedOrigins(options) })
+  window.webContents.send('update', updateState)
 }
 
 main().catch((error: unknown) => {
