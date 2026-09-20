@@ -1,7 +1,8 @@
 import { mkdir, stat, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import { _electron, type ElectronApplication, type Page } from '@playwright/test'
+import { pathToFileURL } from 'node:url'
+import type { ElectronApplication, Page } from '@playwright/test'
 
 type StepRecord = { step: string; screenshot: string; observed: string }
 
@@ -67,6 +68,8 @@ async function launch(target: { executablePath: string; args: string[] }, config
     if (value !== undefined && key !== 'ELECTRON_RUN_AS_NODE') env[key] = value
   }
   env.XDG_CONFIG_HOME = configHome
+  const resolved = createRequire(path.join(repoRoot, 'apps/studio/package.json')).resolve('@playwright/test')
+  const { _electron } = (await import(pathToFileURL(resolved).href)) as typeof import('@playwright/test')
   return _electron.launch({ ...target, cwd: repoRoot, env, chromiumSandbox: true })
 }
 
