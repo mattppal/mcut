@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useEditor, useProject } from '@mcut/react'
 import { createLayoutId, type Layout, type LayoutSlot } from '@mcut/timeline'
 import { toast } from 'sonner'
@@ -10,6 +11,7 @@ import { useEditorUI } from './editor-ui'
 import { roundRect, safeAreaRect, saveLayoutSlot } from './layout-slot-editor'
 import { ChoiceRow, FieldRow, NumberField, Section } from './inspector-fields'
 import { FrameFields, type FrameTarget } from './frame-section'
+import { NameDialog } from './name-dialog'
 import { PresetMenu } from './preset-menu'
 import { RadiusRow, readStylePreset, StrokeFields } from './style-fields'
 
@@ -25,6 +27,7 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
   const engine = useEditor()
   const project = useProject()
   const { editingSlotIndex, setEditingSlotIndex } = useEditorUI()
+  const [presetDraft, setPresetDraft] = useState<string | null>(null)
   const W = project.width
   const H = project.height
   const index = editingSlotIndex !== null && layout.slots[editingSlotIndex] !== undefined ? editingSlotIndex : null
@@ -72,15 +75,14 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
           },
         }
 
-  const saveAsPreset = () => {
-    const name = window.prompt('Save this layout as a new preset:', `${layout.name} copy`)
-    if (!name?.trim()) return
+  const saveAsPreset = (name: string) => {
+    setPresetDraft(null)
     try {
       engine.dispatch({
         type: 'saveLayout',
-        layout: { ...layout, id: createLayoutId(), name: name.trim() },
+        layout: { ...layout, id: createLayoutId(), name },
       })
-      toast.success(`"${name.trim()}" added to the layout bank`)
+      toast.success(`"${name}" added to the layout bank`)
     } catch {
       toast.error('Could not save the preset')
     }
@@ -92,9 +94,10 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
         <span className="flex-1 truncate text-xs font-semibold" title={layout.name}>
           Layout · {layout.name}
         </span>
-        <Button variant="secondary" size="xs" onClick={saveAsPreset}>
+        <Button variant="secondary" size="xs" onClick={() => setPresetDraft(`${layout.name} copy`)}>
           Save as preset
         </Button>
+        <NameDialog draft={presetDraft} title="Save this layout as a new preset" onSubmit={saveAsPreset} onCancel={() => setPresetDraft(null)} />
       </div>
 
       <Section title="Slots">

@@ -144,6 +144,11 @@
           "target": "components/mcut/preset-menu.tsx"
         },
         {
+          "path": "registry/mcut/name-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/name-dialog.tsx"
+        },
+        {
           "path": "registry/mcut/captions-panel.tsx",
           "type": "registry:component",
           "target": "components/mcut/captions-panel.tsx"
@@ -1163,7 +1168,8 @@
         "command",
         "select",
         "sonner",
-        "input-group"
+        "input-group",
+        "dialog"
       ],
       "files": [
         {
@@ -1190,6 +1196,11 @@
           "path": "registry/mcut/preset-menu.tsx",
           "type": "registry:component",
           "target": "components/mcut/preset-menu.tsx"
+        },
+        {
+          "path": "registry/mcut/name-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/name-dialog.tsx"
         },
         {
           "path": "lib/icons.ts",
