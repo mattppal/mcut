@@ -1,10 +1,10 @@
-import { pipeline } from '@huggingface/transformers'
+import { env, pipeline } from '@huggingface/transformers'
 import type { TranscriptResult, TranscriptSegment } from '@mcut/transcription'
 import { mergeChunkSegments, planChunks, type ChunkSegmentResult } from './chunking'
 import { textHasRepetitionLoop } from './repetition'
 import { hasSpeech } from './vad'
 import { WHISPER_SAMPLE_RATE } from './wav'
-import type { WhisperDtype, WhisperWorkerRequest, WhisperWorkerResponse } from './protocol'
+import type { WhisperWorkerConfig, WhisperWorkerRequest, WhisperWorkerResponse } from './protocol'
 
 interface WorkerScope {
   postMessage(message: WhisperWorkerResponse, transfer?: Transferable[]): void
@@ -18,21 +18,64 @@ type AsrPipeline = (
   options: Record<string, unknown>,
 ) => Promise<{ text: string; chunks?: Array<{ text: string; timestamp: [number | null, number | null] }> }>
 
+interface OrtWasmEnv {
+  wasmPaths?: string | { mjs?: string | URL; wasm?: string | URL }
+}
+
+function applyOrtWasmPaths(paths: WhisperWorkerConfig['ortWasmPaths']): void {
+  if (!paths) return
+  const onnx: { wasm?: OrtWasmEnv } = env.backends.onnx
+  onnx.wasm ??= {}
+  onnx.wasm.wasmPaths = paths
+  env.useWasmCache = false
+}
+
+async function resolveDevice(requested: 'webgpu' | 'wasm'): Promise<'webgpu' | 'wasm'> {
+  if (requested !== 'webgpu') return requested
+  if (typeof navigator === 'undefined' || !navigator.gpu) return 'wasm'
+  const adapter = await navigator.gpu.requestAdapter()
+  return adapter === null ? 'wasm' : 'webgpu'
+}
+
+interface ModelFileProgressEvent {
+  status?: string
+  file?: string
+  loaded?: number
+  total?: number
+}
+
+function aggregateDownloadProgress(onProgress: (progress: number) => void): (event: ModelFileProgressEvent) => void {
+  const files = new Map<string, { loaded: number; total: number }>()
+  return (event) => {
+    if (typeof event.file !== 'string') return
+    if (event.status === 'progress' && typeof event.loaded === 'number' && typeof event.total === 'number') {
+      files.set(event.file, { loaded: event.loaded, total: event.total })
+    }
+    const finished = event.status === 'done' ? files.get(event.file) : undefined
+    if (finished) finished.loaded = finished.total
+    let loaded = 0
+    let total = 0
+    for (const entry of files.values()) {
+      loaded += entry.loaded
+      total += entry.total
+    }
+    if (total > 0) onProgress(Math.min(1, loaded / total))
+  }
+}
+
 let asrKey: string | null = null
 let asrPromise: Promise<AsrPipeline> | null = null
 
-function ensurePipeline(model: string, device: 'webgpu' | 'wasm', dtype: WhisperDtype, onProgress: (progress: number) => void): Promise<AsrPipeline> {
-  const key = `${model}|${device}|${dtype}`
+async function ensurePipeline(config: WhisperWorkerConfig, onProgress: (progress: number) => void): Promise<AsrPipeline> {
+  const device = await resolveDevice(config.device)
+  const key = `${config.model}|${device}|${config.dtype}|${config.ortWasmPaths?.mjs ?? ''}|${config.ortWasmPaths?.wasm ?? ''}`
   if (asrKey !== key || !asrPromise) {
     asrKey = key
-    asrPromise = pipeline('automatic-speech-recognition', model, {
+    applyOrtWasmPaths(config.ortWasmPaths)
+    asrPromise = pipeline('automatic-speech-recognition', config.model, {
       device,
-      dtype,
-      progress_callback: (event: { status?: string; progress?: number }) => {
-        if (event.status === 'progress' && typeof event.progress === 'number') {
-          onProgress(event.progress / 100)
-        }
-      },
+      dtype: config.dtype,
+      progress_callback: aggregateDownloadProgress(onProgress),
     }) as unknown as Promise<AsrPipeline>
   }
   return asrPromise
@@ -74,9 +117,10 @@ async function transcribeWindow(
 async function handleTranscribe(message: WhisperWorkerRequest): Promise<TranscriptResult> {
   const { audio, config, language } = message
   const multilingual = !isEnglishOnlyWhisperModel(config.model)
-  const asr = await ensurePipeline(config.model, config.device, config.dtype, (progress) =>
+  const asr = await ensurePipeline(config, (progress) =>
     scope.postMessage({ type: 'progress', id: message.id, progress, phase: 'model' }),
   )
+  scope.postMessage({ type: 'progress', id: message.id, progress: 0, phase: 'transcribe' })
 
   const durationS = audio.length / WHISPER_SAMPLE_RATE
   const chunks = planChunks(durationS)

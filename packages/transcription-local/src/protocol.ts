@@ -6,6 +6,7 @@ export interface WhisperWorkerConfig {
   model: string
   device: 'webgpu' | 'wasm'
   dtype: WhisperDtype
+  ortWasmPaths?: { mjs: string; wasm: string }
 }
 
 export interface WhisperTranscribeRequest {
