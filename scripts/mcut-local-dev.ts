@@ -82,13 +82,20 @@ async function prepareDevPackages(filters: string[]): Promise<void> {
   await runToCompletion('package builds', [bunBin(), 'run', 'turbo', 'run', 'build', ...filters.map((filter) => `--filter=${filter}`)])
 }
 
-async function waitForFirstExit(children: Bun.Subprocess[]): Promise<number> {
-  const code = await Promise.race(children.map((child) => child.exited))
+async function waitForFirstExit(children: { name: string; proc: Bun.Subprocess }[], expected: () => boolean): Promise<number> {
+  const first = await Promise.race(
+    children.map(async (child) => ({
+      name: child.name,
+      code: await child.proc.exited,
+    })),
+  )
   for (const child of children) {
-    if (child.exitCode === null) child.kill()
+    if (child.proc.exitCode === null) child.proc.kill()
   }
-  await Promise.allSettled(children.map((child) => child.exited))
-  return code ?? 0
+  await Promise.allSettled(children.map((child) => child.proc.exited))
+  if (expected()) return 0
+  console.error(`[mcut dev] ${first.name} exited with code ${first.code ?? 'unknown'}`)
+  return 1
 }
 
 async function runBridge(): Promise<void> {
@@ -157,12 +164,14 @@ async function runDev(): Promise<void> {
 
   console.error(`[mcut dev] Studio dev server: ${devUrl}`)
 
-  const studio = spawnProcess('studio', [bunBin(), 'run', '--cwd', 'apps/studio', 'dev', '--', '--port', String(studioPort)])
-  const children = [studio]
+  const studio = spawnProcess('next dev', [bunBin(), 'run', '--cwd', 'apps/studio', 'dev', '--', '--port', String(studioPort)])
+  const children = [{ name: 'next dev', proc: studio }]
+  let shuttingDown = false
 
   const stop = () => {
+    shuttingDown = true
     for (const child of children) {
-      if (child.exitCode === null) child.kill()
+      if (child.proc.exitCode === null) child.proc.kill()
     }
   }
   process.once('SIGINT', stop)
@@ -176,11 +185,11 @@ async function runDev(): Promise<void> {
     throw error
   }
 
-  const app = spawnProcess('desktop app', [electronBinary(), DESKTOP_DIR], { env: electronEnv(devUrl), stdout: 'pipe' })
-  children.push(app)
+  const app = spawnProcess('electron', [electronBinary(), DESKTOP_DIR], { env: electronEnv(devUrl), stdout: 'pipe' })
+  children.push({ name: 'electron', proc: app })
   if (app.stdout instanceof ReadableStream) void echoAppOutput(app.stdout)
 
-  process.exitCode = await waitForFirstExit(children)
+  process.exitCode = await waitForFirstExit(children, () => shuttingDown)
 }
 
 async function main(): Promise<void> {

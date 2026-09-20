@@ -19,7 +19,6 @@ reports/
 release-out/
 *.env
 
-# Generated docs and the shadcn registry copied from apps/studio/public/r
 apps/web/public/docs/
 apps/web/public/docs.md
 apps/web/public/r/

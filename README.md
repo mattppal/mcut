@@ -41,7 +41,7 @@ bunx @mcut/cli --help
 - Quickstart: <https://mcut.com/docs/quickstart>
 - Agent instructions: <https://mcut.com/docs/agent-instructions>
 - Contributor docs: <https://mcut.com/docs/contributing/devenv>
-- Install Studio: <https://mcut.com/docs/studio/install>
+- Studio install lives at <https://mcut.com/docs/studio/install>.
 - Local package READMEs live beside each package in `packages/*/README.md`.
 
 ## Develop
