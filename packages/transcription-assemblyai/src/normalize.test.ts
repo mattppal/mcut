@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'bun:test'
-import { normalizeAssemblyAIResult } from './index'
+import { createAssemblyAIProvider, normalizeAssemblyAIResult } from './index'
+
+describe('createAssemblyAIProvider', () => {
+  test('rejects with a cancellation error when the signal is already aborted', async () => {
+    const provider = createAssemblyAIProvider({ apiKey: 'test' })
+    const signal = AbortSignal.abort()
+    await expect(provider.transcribe({ audio: new Uint8Array(4), mimeType: 'audio/wav' }, { signal })).rejects.toThrow(/cancelled/)
+  })
+})
 
 describe('normalizeAssemblyAIResult', () => {
   test('maps words with confidence and speakers', () => {

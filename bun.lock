@@ -28,7 +28,10 @@
       "name": "mcut-desktop",
       "version": "0.1.0",
       "devDependencies": {
+        "@mcut/desktop-ipc": "workspace:*",
         "@mcut/mcp-server": "workspace:*",
+        "@mcut/timeline": "workspace:*",
+        "@mcut/transcription-assemblyai": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.21.0",
         "electron": "44.4.3",
         "electron-builder": "26.15.3",
@@ -46,6 +49,7 @@
         "@dnd-kit/sortable": "10.0.0",
         "@dnd-kit/utilities": "3.2.2",
         "@mcut/compositor": "workspace:*",
+        "@mcut/desktop-ipc": "workspace:*",
         "@mcut/editor": "workspace:*",
         "@mcut/mcp-server": "workspace:*",
         "@mcut/media": "workspace:*",
@@ -160,6 +164,14 @@
       "version": "0.1.0-alpha.0",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
+      },
+    },
+    "packages/desktop-ipc": {
+      "name": "@mcut/desktop-ipc",
+      "version": "0.1.0-alpha.0",
+      "dependencies": {
+        "@mcut/timeline": "workspace:*",
+        "zod": "4.4.3",
       },
     },
     "packages/editor": {
@@ -645,6 +657,8 @@
     "@mcut/cli": ["@mcut/cli@workspace:packages/cli"],
 
     "@mcut/compositor": ["@mcut/compositor@workspace:packages/compositor"],
+
+    "@mcut/desktop-ipc": ["@mcut/desktop-ipc@workspace:packages/desktop-ipc"],
 
     "@mcut/editor": ["@mcut/editor@workspace:packages/editor"],
 

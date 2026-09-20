@@ -8,6 +8,8 @@ const STUDIO_HOST = 'studio'
 
 export const STUDIO_ORIGIN = `${STUDIO_SCHEME}://${STUDIO_HOST}`
 
+const TRANSCRIBE_PATH = '/api/transcribe'
+
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
@@ -56,10 +58,17 @@ function withPolicy(response: Response): Response {
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers })
 }
 
-export function serveStudio(): void {
+export interface StudioServerOptions {
+  transcribe(request: Request): Promise<Response>
+}
+
+export function serveStudio(options: StudioServerOptions): void {
   const root = path.join(app.getAppPath(), 'studio')
   protocol.handle(STUDIO_SCHEME, async (request) => {
     const url = new URL(request.url)
+    if (url.host === STUDIO_HOST && url.pathname === TRANSCRIBE_PATH && request.method === 'POST') {
+      return withPolicy(await options.transcribe(request))
+    }
     const file = url.host === STUDIO_HOST ? resolveStudioFile(root, url.pathname) : undefined
     if (file === undefined) {
       return withPolicy(new Response(`Not found: ${url.pathname}`, { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } }))

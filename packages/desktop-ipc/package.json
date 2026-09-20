@@ -1,0 +1,51 @@
+{
+  "name": "@mcut/desktop-ipc",
+  "version": "0.1.0-alpha.0",
+  "description": "Typed IPC contract between the mcut desktop main process and Studio. One zod schema table per channel, the DesktopApi the preload exposes, and readDesktopApi",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattppal/mcut.git",
+    "directory": "packages/desktop-ipc"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@mcut/timeline": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "author": "Matt Palmer",
+  "homepage": "https://github.com/mattppal/mcut/tree/main/packages/desktop-ipc#readme",
+  "bugs": {
+    "url": "https://github.com/mattppal/mcut/issues"
+  },
+  "keywords": [
+    "mcut",
+    "video",
+    "video-editing",
+    "electron",
+    "ipc",
+    "typescript"
+  ]
+}

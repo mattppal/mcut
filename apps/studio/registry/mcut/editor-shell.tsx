@@ -82,6 +82,9 @@ function EditorHotkeys() {
     const context: ActionContext = { engine, ui, clipboard: editorClipboard }
     if (isActionEnabled(action, context)) runEditorAction(action, context)
   })
+  useWindowEvent('mcut:run-action', (event) => {
+    runEditorAction(event.detail, { engine, ui, clipboard: editorClipboard })
+  })
   return null
 }
 

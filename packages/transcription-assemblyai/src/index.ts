@@ -58,6 +58,28 @@ async function toAudioArg(audio: TranscribeInput['audio']): Promise<string | Uin
   return audio
 }
 
+const POLL_INTERVAL_MS = 3000
+
+function cancellation(signal: AbortSignal): Error {
+  return new Error('AssemblyAI transcription cancelled', { cause: signal.reason })
+}
+
+function waitForPoll(signal: AbortSignal | undefined): Promise<void> {
+  if (signal === undefined) return new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+  if (signal.aborted) return Promise.reject(cancellation(signal))
+  return new Promise((resolve, reject) => {
+    const abort = (): void => {
+      clearTimeout(timer)
+      reject(cancellation(signal))
+    }
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', abort)
+      resolve()
+    }, POLL_INTERVAL_MS)
+    signal.addEventListener('abort', abort, { once: true })
+  })
+}
+
 export function createAssemblyAIProvider(options: AssemblyAIProviderOptions = {}): TranscriptionProvider {
   const apiKey = options.apiKey ?? process.env.ASSEMBLYAI_API_KEY
   const client =
@@ -71,12 +93,18 @@ export function createAssemblyAIProvider(options: AssemblyAIProviderOptions = {}
   return {
     id: options.id ?? 'assemblyai',
     async transcribe(input: TranscribeInput, transcribeOptions?: TranscribeOptions): Promise<TranscriptResult> {
-      const transcript = await client.transcripts.transcribe({
+      const signal = transcribeOptions?.signal
+      if (signal?.aborted) throw cancellation(signal)
+      let transcript = await client.transcripts.submit({
         audio: await toAudioArg(input.audio),
         speaker_labels: options.speakerLabels ?? true,
         ...(transcribeOptions?.language ? { language_code: transcribeOptions.language } : {}),
         ...options.params,
       })
+      while (transcript.status !== 'completed' && transcript.status !== 'error') {
+        await waitForPoll(signal)
+        transcript = await client.transcripts.get(transcript.id)
+      }
       if (transcript.status === 'error') {
         throw new Error(`AssemblyAI transcription failed: ${transcript.error ?? 'unknown error'}`)
       }

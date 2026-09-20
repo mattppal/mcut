@@ -27,7 +27,8 @@
         "color",
         "react-resizable-panels",
         "@mcut/mcp-server",
-        "zod"
+        "zod",
+        "@mcut/desktop-ipc"
       ],
       "registryDependencies": [
         "badge",
@@ -406,6 +407,21 @@
           "path": "registry/mcut/project-file.ts",
           "type": "registry:lib",
           "target": "components/mcut/project-file.ts"
+        },
+        {
+          "path": "registry/mcut/studio-host.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/studio-host.ts"
+        },
+        {
+          "path": "registry/mcut/browser-host.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/browser-host.ts"
+        },
+        {
+          "path": "registry/mcut/desktop-host.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/desktop-host.ts"
         }
       ],
       "cssVars": {
@@ -726,7 +742,8 @@
         "unicode-animations@1.0.3",
         "@mcut/editor",
         "sonner",
-        "zod"
+        "zod",
+        "@mcut/desktop-ipc"
       ],
       "registryDependencies": ["button", "dialog", "dropdown-menu", "kbd", "progress", "tooltip"],
       "files": [
@@ -869,6 +886,21 @@
           "path": "registry/mcut/project-file.ts",
           "type": "registry:lib",
           "target": "components/mcut/project-file.ts"
+        },
+        {
+          "path": "registry/mcut/studio-host.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/studio-host.ts"
+        },
+        {
+          "path": "registry/mcut/browser-host.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/browser-host.ts"
+        },
+        {
+          "path": "registry/mcut/desktop-host.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/desktop-host.ts"
         },
         {
           "path": "registry/mcut/transcript-keywords.ts",
@@ -1277,9 +1309,10 @@
         "iconoir-react",
         "sonner",
         "unicode-animations@1.0.3",
-        "@mcut/transcription-local"
+        "@mcut/transcription-local",
+        "@mcut/desktop-ipc"
       ],
-      "registryDependencies": ["button", "textarea", "switch", "scroll-area"],
+      "registryDependencies": ["button", "input", "textarea", "switch", "scroll-area"],
       "files": [
         {
           "path": "registry/mcut/captions-panel.tsx",
@@ -1305,6 +1338,31 @@
           "path": "registry/mcut/local-transcription.ts",
           "type": "registry:lib",
           "target": "components/mcut/local-transcription.ts"
+        },
+        {
+          "path": "registry/mcut/studio-host.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/studio-host.ts"
+        },
+        {
+          "path": "registry/mcut/browser-host.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/browser-host.ts"
+        },
+        {
+          "path": "registry/mcut/desktop-host.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/desktop-host.ts"
+        },
+        {
+          "path": "registry/mcut/project-file.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/project-file.ts"
+        },
+        {
+          "path": "registry/mcut/media-import.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/media-import.ts"
         }
       ],
       "cssVars": {
