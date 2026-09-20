@@ -8,6 +8,10 @@ export const docsLayoutOptions: Omit<BaseLayoutProps, 'children'> = {
   githubUrl: 'https://github.com/mattppal/mcut',
   links: [
     {
+      text: 'Download',
+      url: '/downloads',
+    },
+    {
       text: 'Docs',
       url: '/docs',
       active: 'nested-url',
