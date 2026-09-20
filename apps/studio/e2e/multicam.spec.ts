@@ -64,7 +64,7 @@ test('multicam: create from selection, style a slot shadow without crashing', as
   await page.mouse.up()
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Save as preset' }).click()
-  await page.getByRole('textbox', { name: 'Name' }).fill('Square cam')
+  await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Square cam')
   await page.keyboard.press('Enter')
   await expect(tiles, 'saveLayout appends the preset to the five defaults').toHaveCount(6)
   await page.waitForTimeout(400)
