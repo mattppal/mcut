@@ -38,7 +38,7 @@ app.
 | 3 | `@mcut/desktop-ipc` | The typed IPC contract between the desktop main process and Studio. One zod schema table per channel, the `DesktopApi` the preload exposes, `readDesktopApi` |
 | 4 | `@mcut/react` | `EditorProvider`, hooks, `PlayerCanvas`, gestures. Logic stays in the packages below |
 | app | `apps/studio` | The renderer for the desktop app, a static Next export. Also the shadcn registry source |
-| app | `apps/web`, `examples/*` | The docs site, which hosts the registry and the agent skill index, and runnable integrations over the packages |
+| app | `apps/web`, `examples/*` | The docs site, which hosts the registry and the agent skill index and serves the Studio export at `/embed` for the homepage demo, and runnable integrations over the packages |
 | app | `apps/desktop` | The Electron shell. Serves the Studio static export from `app://studio` and hosts `LiveMcutBridge` in the main process |
 
 Every project mutation is a command in `@mcut/timeline`. A command is

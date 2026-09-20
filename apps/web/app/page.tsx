@@ -1,6 +1,8 @@
+import { HeroDemo } from '@/components/hero-demo'
 import { InstallCommands } from '@/components/install-commands'
 import { SignupForm } from '@/components/signup-form'
 import { SiteFooter, SiteHeader } from '@/components/site-chrome'
+import { DEMO_CLIP } from '@/lib/demo-clip'
 import { desktopRelease } from '@/lib/desktop-release.generated'
 import Link from 'next/link'
 
@@ -40,7 +42,10 @@ export default function Home() {
       <SiteHeader />
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6">
-        <section className="flex flex-col gap-6 pt-24 pb-16">
+        <div className="pt-8">
+          <HeroDemo clip={DEMO_CLIP} />
+        </div>
+        <section className="flex flex-col gap-6 pt-12 pb-16">
           <h1 className="text-5xl leading-[1.12] tracking-tight text-balance">
             Open source video editing for <Serif>agents</Serif>
           </h1>
