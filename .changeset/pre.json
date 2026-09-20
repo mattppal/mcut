@@ -27,6 +27,7 @@
     "caption-word-order",
     "desktop-ipc",
     "desktop-platform-field",
+    "desktop-update-state",
     "duplicate-element-ids",
     "edge-trim-safe-integer",
     "live-bridge-app-origin",

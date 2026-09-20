@@ -1,5 +1,11 @@
 # @mcut/desktop-ipc
 
+## 0.1.0-alpha.3
+
+### Minor Changes
+
+- [#119](https://github.com/mattppal/mcut/pull/119) [`eb3826c`](https://github.com/mattppal/mcut/commit/eb3826c6bf507ebe18e5323c3e7634619e239670) Thanks [@mattppal](https://github.com/mattppal)! - `updateStateSchema` names the desktop auto-update state machine, one of `idle`, `available`, `downloading`, `ready`, or `failed`, and `UpdateState` is its type. `DESKTOP_INVOKES` gains `update.download` and `update.install`, which both return the state after the call, and the main process pushes every state change on the `update` channel with the same schema. `DesktopApi.update` exposes `download()`, `install()`, and `onState()` to Studio.
+
 ## 0.1.0-alpha.2
 
 ### Patch Changes

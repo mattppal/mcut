@@ -1,5 +1,12 @@
 # mcut-studio
 
+## 0.1.1-alpha.2
+
+### Patch Changes
+
+- Updated dependencies [[`eb3826c`](https://github.com/mattppal/mcut/commit/eb3826c6bf507ebe18e5323c3e7634619e239670)]:
+  - @mcut/desktop-ipc@0.1.0-alpha.3
+
 ## 0.1.1-alpha.1
 
 ### Patch Changes
