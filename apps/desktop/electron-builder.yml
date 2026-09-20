@@ -1,6 +1,6 @@
 appId: com.mcut.studio
 productName: mcut Studio
-artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+artifactName: mcut-studio-${version}-${os}-${arch}.${ext}
 directories:
   output: release
   buildResources: build

@@ -5,13 +5,17 @@ description: Download mcut Studio for macOS or Linux, launch it the first time, 
 
 mcut Studio is a desktop app. It bundles the editor and the live MCP bridge in
 one process, so an agent connects to the running app without a separate server.
-Builds for macOS and Linux are published on the
-[GitHub Releases page](https://github.com/mattppal/mcut/releases). Windows is
-not supported in the first release.
+Builds for macOS and Linux are published on GitHub Releases. The
+[desktop releases](https://github.com/mattppal/mcut/releases?q=mcut-desktop&expanded=true)
+carry three files, `mcut-studio-<version>-mac-arm64.dmg`,
+`mcut-studio-<version>-mac-x64.dmg`, and
+`mcut-studio-<version>-linux-x86_64.AppImage`. Releases are tagged
+`mcut-desktop@<version>` and marked prerelease while the version is `0.x`.
+Windows is not supported in the first release.
 
 ## macOS
 
-1. Download `mcut Studio-<version>-mac-<arch>.dmg` for your chip. Apple silicon
+1. Download `mcut-studio-<version>-mac-<arch>.dmg` for your chip. Apple silicon
    Macs take `arm64`, Intel Macs take `x64`.
 2. Open the disk image and drag mcut Studio into Applications.
 3. The app is signed ad hoc and not notarized, so the first launch needs one
@@ -22,12 +26,12 @@ not supported in the first release.
 
 ## Linux
 
-1. Download `mcut Studio-<version>-linux-x86_64.AppImage`.
+1. Download `mcut-studio-<version>-linux-x86_64.AppImage`.
 2. Make it executable and run it.
 
 ```sh
-chmod +x "mcut Studio-<version>-linux-x86_64.AppImage"
-./"mcut Studio-<version>-linux-x86_64.AppImage"
+chmod +x mcut-studio-<version>-linux-x86_64.AppImage
+./mcut-studio-<version>-linux-x86_64.AppImage
 ```
 
 An AppImage mounts itself with FUSE. On a machine without FUSE, run it with
