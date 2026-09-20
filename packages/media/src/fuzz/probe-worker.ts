@@ -1,13 +1,16 @@
-import { MediaProbeError, probeMedia } from '../probe'
+import { basename } from 'node:path'
+import { mediabunnyProber, MediaProbeError, type MediaProber, type MediaProberId } from '../probe'
 import type { ProbeReply, ProbeRequest } from './probe-runner'
+
+const probers: Record<MediaProberId, MediaProber> = { mediabunny: mediabunnyProber }
 
 const reply = (message: ProbeReply): void => postMessage(message)
 
 self.onmessage = async (event: MessageEvent<ProbeRequest>) => {
-  const { id, path } = event.data
+  const { id, prober, path } = event.data
   const bytes = await Bun.file(path).arrayBuffer()
   try {
-    const probe = await probeMedia(new Blob([bytes]))
+    const probe = await probers[prober].probe({ kind: 'blob', blob: new Blob([bytes]), name: basename(path) })
     reply({ id, kind: 'probe', probe })
   } catch (error) {
     reply({

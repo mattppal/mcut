@@ -74,13 +74,21 @@ The closed table of export containers, MP4, WebM, and MKV, each muxed by the mat
 
 ## Functions
 
-### createAssetFromFile
+### mediabunnyProber
 
 ```ts
-async function createAssetFromFile(file: File): Promise<AssetRef>
+const mediabunnyProber: MediaProber
 ```
 
-Probes a picked or dropped file and returns an `AssetRef` with an object URL as `src` and a SHA-256 `hash` when the file is small enough to hash.
+The default `MediaProber`. Its `id` is `mediabunny` and its `probe` reads a blob origin through `probeMedia`.
+
+### createAsset
+
+```ts
+async function createAsset(origin: MediaOrigin, prober: MediaProber = mediabunnyProber): Promise<AssetRef>
+```
+
+Probes a media origin with the given prober and returns an `AssetRef` with an object URL as `src` and a SHA-256 `hash` when the blob is small enough to hash. Image origins skip the prober and are measured with `probeImage`.
 
 ### inputFor
 

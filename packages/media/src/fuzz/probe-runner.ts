@@ -1,7 +1,8 @@
-import type { MediaProbe } from '../probe'
+import type { MediaProbe, MediaProberId } from '../probe'
 
 export interface ProbeRequest {
   id: number
+  prober: MediaProberId
   path: string
 }
 
@@ -19,9 +20,11 @@ export class ProbeRunner {
   private worker: Worker | null = null
   private nextId = 0
   readonly timeoutMs: number
+  readonly prober: MediaProberId
 
-  constructor(timeoutMs = DEFAULT_PROBE_TIMEOUT_MS) {
+  constructor(timeoutMs = DEFAULT_PROBE_TIMEOUT_MS, prober: MediaProberId = 'mediabunny') {
     this.timeoutMs = timeoutMs
+    this.prober = prober
   }
 
   probe(path: string): Promise<ProbeOutcome> {
@@ -45,7 +48,7 @@ export class ProbeRunner {
         this.close()
         resolve({ kind: 'crash', message: event.message, elapsedMs: elapsed() })
       }
-      worker.postMessage({ id, path } satisfies ProbeRequest)
+      worker.postMessage({ id, prober: this.prober, path } satisfies ProbeRequest)
     })
   }
 

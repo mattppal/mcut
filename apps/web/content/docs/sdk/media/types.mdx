@@ -20,6 +20,34 @@ interface MediaProbe {
 
 The result of `probeMedia`, duration, which tracks exist, optional dimensions, and MIME type.
 
+### MediaOrigin
+
+```ts
+type MediaOrigin =
+  | { kind: 'blob'; blob: Blob; name: string }
+```
+
+Where the bytes of a media file come from. Today the only member is a blob with a display name.
+
+### MediaProberId
+
+```ts
+type MediaProberId = 'mediabunny'
+```
+
+The closed set of prober ids. Today the only member is `mediabunny`.
+
+### MediaProber
+
+```ts
+interface MediaProber {
+  id: MediaProberId
+  probe(origin: MediaOrigin, signal?: AbortSignal): Promise<MediaProbe>
+}
+```
+
+An engine that turns a `MediaOrigin` into a `MediaProbe`. `createAsset` accepts one so another engine can replace `mediabunnyProber` without changing its callers.
+
 ### MediaProbeErrorCode
 
 ```ts

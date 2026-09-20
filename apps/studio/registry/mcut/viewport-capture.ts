@@ -1,7 +1,7 @@
 'use client'
 
 import { renderFrame, type FrameSource } from '@mcut/compositor'
-import { createAssetFromFile, getActiveMediaItems, type PreviewMediaPool } from '@mcut/media'
+import { createAsset, getActiveMediaItems, type PreviewMediaPool } from '@mcut/media'
 import type { AssetRef, EditorEngine } from '@mcut/timeline'
 import { ensureProjectFontsLoaded } from './font-library'
 import { saveAssetBlob } from './persistence'
@@ -71,7 +71,7 @@ export async function captureViewportStill(engine: EditorEngine, options: Captur
 
   const suffix = scale === 1 ? '' : `-${scale}x`
   const file = await canvasToPngFile(canvas, `${slugPart(project.name)}-${timePart(timeMs)}${suffix}.png`)
-  const asset = await createAssetFromFile(file)
+  const asset = await createAsset({ kind: 'blob', blob: file, name: file.name })
   engine.dispatch({ type: 'addAsset', asset }, { history: false })
   await saveAssetBlob(asset, file)
   return { asset, file, width, height }
