@@ -40,7 +40,7 @@ jobs:
       - name: Record artifact sizes
         run: |
           echo '### Linux artifacts' >> "$GITHUB_STEP_SUMMARY"
-          du -m apps/desktop/release/*.AppImage | awk '{ $1 = $1 " MB"; print "- " $0 }' >> "$GITHUB_STEP_SUMMARY"
+          du -m apps/desktop/release/*.AppImage | awk '{ $1 = $1 " MB"; print "- " $0 }' | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         with:
           name: mcut-studio-linux
@@ -61,10 +61,14 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bunx turbo run build --filter=mcut-desktop
       - run: bun run --cwd apps/desktop dist:mac
+        # electron-builder skips macOS signing on pull request builds unless this is set. Ad-hoc signing uses no certificate, so nothing secret is exposed. https://github.com/electron-userland/electron-builder/blob/master/packages/app-builder-lib/src/codeSign/mac/macCodeSign.ts
+        env:
+          CSC_FOR_PULL_REQUEST: 'true'
       - name: Verify the ad-hoc signature
         run: |
           codesign -dv --verbose=2 "apps/desktop/release/mac-arm64/mcut Studio.app" 2>&1 | tee "$RUNNER_TEMP/codesign.txt"
           grep -q 'Signature=adhoc' "$RUNNER_TEMP/codesign.txt"
+          grep -q 'Identifier=com.mcut.studio' "$RUNNER_TEMP/codesign.txt"
       - name: Smoke the app for the runner architecture
         run: |
           case "$(uname -m)" in
@@ -75,7 +79,7 @@ jobs:
       - name: Record artifact sizes
         run: |
           echo '### macOS artifacts' >> "$GITHUB_STEP_SUMMARY"
-          du -m apps/desktop/release/*.dmg | awk '{ $1 = $1 " MB"; print "- " $0 }' >> "$GITHUB_STEP_SUMMARY"
+          du -m apps/desktop/release/*.dmg | awk '{ $1 = $1 " MB"; print "- " $0 }' | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         with:
           name: mcut-studio-mac
