@@ -2,7 +2,13 @@
 
 import { useSyncExternalStore } from 'react'
 import { toast } from 'sonner'
-import { createLocalWhisperProvider, isLocalTranscriptionSupported, pickDefaultModel, WHISPER_MODELS, type LocalWhisperProgress } from '@mcut/transcription-local'
+import {
+  createLocalWhisperProvider,
+  isLocalTranscriptionSupported,
+  pickDefaultModel,
+  WHISPER_MODELS,
+  type LocalWhisperProgress,
+} from '@mcut/transcription-local'
 import type { TranscribeOptions, TranscriptResult } from '@mcut/transcription'
 
 export { isLocalTranscriptionSupported }

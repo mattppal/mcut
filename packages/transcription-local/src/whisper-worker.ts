@@ -120,9 +120,7 @@ async function transcribeWindow(
 async function handleTranscribe(message: WhisperWorkerRequest): Promise<TranscriptResult> {
   const { audio, config, language } = message
   const multilingual = !isEnglishOnlyWhisperModel(config.model)
-  const asr = await ensurePipeline(config, (progress) =>
-    scope.postMessage({ type: 'progress', id: message.id, progress, phase: 'model' }),
-  )
+  const asr = await ensurePipeline(config, (progress) => scope.postMessage({ type: 'progress', id: message.id, progress, phase: 'model' }))
   scope.postMessage({ type: 'progress', id: message.id, progress: 0, phase: 'transcribe' })
 
   const durationS = audio.length / WHISPER_SAMPLE_RATE
