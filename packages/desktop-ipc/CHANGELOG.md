@@ -1,5 +1,11 @@
 # @mcut/desktop-ipc
 
+## 0.1.0-alpha.2
+
+### Patch Changes
+
+- [#116](https://github.com/mattppal/mcut/pull/116) [`8c2ec43`](https://github.com/mattppal/mcut/commit/8c2ec43005515e57832b30e26b78705a51fd1e7a) Thanks [@mattppal](https://github.com/mattppal)! - Expose the desktop platform on `DesktopApi` so Studio can lay out around the hidden title bar.
+
 ## 0.1.0-alpha.1
 
 ### Minor Changes

@@ -26,6 +26,7 @@
     "audio-activity-mcp",
     "caption-word-order",
     "desktop-ipc",
+    "desktop-platform-field",
     "duplicate-element-ids",
     "edge-trim-safe-integer",
     "live-bridge-app-origin",
