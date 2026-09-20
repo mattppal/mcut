@@ -78,3 +78,5 @@ GITHUB_PACKAGES_TOKEN=<token> bun run release:github-packages -- --all
 - Enable secret scanning and push protection if available for the repository.
 - Disable merge methods the project will not use.
 - Require signed commits only if maintainers can support it consistently.
+- Add the six macOS signing secrets from [desktop-signing.md](desktop-signing.md)
+  so desktop releases ship notarized.

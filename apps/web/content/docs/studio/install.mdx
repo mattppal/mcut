@@ -18,22 +18,14 @@ Windows is not supported in the first release.
 1. Download `mcut-studio-<version>-mac-<arch>.dmg` for your chip. Apple silicon
    Macs take `arm64`, Intel Macs take `x64`.
 2. Open the disk image and drag mcut Studio into Applications.
-3. The app is signed ad hoc and is not notarized by Apple. The first launch
-   stops on a Gatekeeper dialog that says Apple could not verify mcut Studio
-   is free of malware. On macOS 15 and later, right-click and Open no longer
-   bypasses this dialog. Click Done, open System Settings, go to Privacy &
-   Security, scroll to the Security section, and click Open Anyway next to
-   mcut Studio. Confirm with your password or Touch ID. Apple documents the
-   flow in
+3. Open it. Releases are signed with a Developer ID certificate and notarized
+   by Apple, so the first launch opens with a double-click.
+
+   Versions built before signing was configured are signed ad hoc and are not
+   notarized. For those, the first launch stops on a Gatekeeper dialog. Click
+   Done, open System Settings, Privacy & Security, and click Open Anyway next
+   to mcut Studio, as described in
    [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac).
-   Later launches open with a double-click.
-
-   The same result from a terminal is to clear the quarantine attribute the
-   download added.
-
-   ```sh
-   xattr -dr com.apple.quarantine "/Applications/mcut Studio.app"
-   ```
 
 ## Linux
 

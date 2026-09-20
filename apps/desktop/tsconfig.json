@@ -1,4 +1,4 @@
 {
   "extends": "../../tsconfig.bun.json",
-  "include": ["src", "scripts", "tsdown.config.ts"]
+  "include": ["src", "scripts", "tsdown.config.ts", "electron-builder.ts"]
 }
