@@ -197,7 +197,6 @@ class DesktopApp {
   readonly exited: Promise<void>
   private readonly markExited: () => void
   private closed = false
-  private chain: Promise<void> = Promise.resolve()
 
   constructor(private readonly devUrl: string) {
     const settled = Promise.withResolvers<void>()
@@ -218,21 +217,13 @@ class DesktopApp {
     })
   }
 
-  relaunch(): Promise<void> {
-    const next = this.chain.then(async () => {
-      if (this.closed) return
-      this.generation += 1
-      const previous = this.proc
-      previous?.kill()
-      if (previous !== undefined) await previous.exited
-      if (this.closed) return
-      this.launch()
-    })
-    this.chain = next.then(
-      () => undefined,
-      () => undefined,
-    )
-    return next
+  async relaunch(): Promise<void> {
+    if (this.closed) return
+    this.generation += 1
+    const previous = this.proc
+    previous?.kill()
+    if (previous !== undefined) await previous.exited
+    if (!this.closed) this.launch()
   }
 
   kill(): void {
@@ -242,44 +233,47 @@ class DesktopApp {
   }
 }
 
-function watchSources(source: SourceWatch, app: DesktopApp): FSWatcher {
-  let timer: ReturnType<typeof setTimeout> | undefined
-  let running = false
-  let dirty = false
-
-  const runSteps = async (): Promise<boolean> => {
-    for (const step of source.steps) {
-      const code = await runStep(step)
-      if (code === 0) continue
-      console.error(`[mcut dev] ${step.name} failed with exit code ${code ?? 'unknown'}, the running app is unchanged`)
-      return false
-    }
-    return true
+async function runSteps(steps: RebuildStep[]): Promise<boolean> {
+  for (const step of steps) {
+    const code = await runStep(step)
+    if (code === 0) continue
+    console.error(`[mcut dev] ${step.name} failed with exit code ${code ?? 'unknown'}, the running app is unchanged`)
+    return false
   }
+  return true
+}
 
-  const runPipeline = async () => {
+function rebuildQueue(app: DesktopApp): (source: SourceWatch) => void {
+  const pending = new Set<SourceWatch>()
+  let running = false
+
+  const drain = async () => {
     running = true
-    do {
-      dirty = false
+    for (const source of pending) {
+      pending.delete(source)
       const started = Date.now()
-      if (await runSteps()) {
+      if (await runSteps(source.steps)) {
         await app.relaunch()
         console.error(`[mcut dev] ${source.name} changed, rebuilt and relaunched in ${Date.now() - started} ms`)
       }
-    } while (dirty)
+    }
     running = false
   }
 
+  return (source) => {
+    pending.add(source)
+    if (!running) void drain()
+  }
+}
+
+function watchSources(source: SourceWatch, enqueue: (source: SourceWatch) => void): FSWatcher {
+  let timer: ReturnType<typeof setTimeout> | undefined
   return watch(source.dir, (_event, filename) => {
     if (typeof filename !== 'string' || !filename.endsWith('.ts')) return
     if (timer !== undefined) clearTimeout(timer)
     timer = setTimeout(() => {
       timer = undefined
-      if (running) {
-        dirty = true
-        return
-      }
-      void runPipeline()
+      enqueue(source)
     }, WATCH_DEBOUNCE_MS)
   })
 }
@@ -320,7 +314,8 @@ async function runDev(): Promise<void> {
   }
 
   app.launch()
-  for (const source of SOURCE_WATCHES) watchers.push(watchSources(source, app))
+  const enqueue = rebuildQueue(app)
+  for (const source of SOURCE_WATCHES) watchers.push(watchSources(source, enqueue))
 
   const first = await Promise.race([
     studio.exited.then((code) => ({ name: 'next dev', code })),
