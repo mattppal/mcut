@@ -69,7 +69,11 @@ async function launch(target: { executablePath: string; args: string[] }, config
   }
   env.XDG_CONFIG_HOME = configHome
   const resolved = createRequire(path.join(repoRoot, 'apps/studio/package.json')).resolve('@playwright/test')
-  const { _electron } = (await import(pathToFileURL(resolved).href)) as typeof import('@playwright/test')
+  const loaded = (await import(pathToFileURL(resolved).href)) as typeof import('@playwright/test') & {
+    default?: typeof import('@playwright/test')
+  }
+  const _electron = loaded._electron ?? loaded.default?._electron
+  if (!_electron) throw new Error('resolved @playwright/test did not export _electron')
   return _electron.launch({ ...target, cwd: repoRoot, env, chromiumSandbox: true })
 }
 
