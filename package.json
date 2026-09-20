@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "bun run scripts/mcut-local-dev.ts dev",
     "dev:web": "turbo run dev --filter=mcut-web",
+    "desktop:check": "bun run scripts/desktop-check.ts",
     "build": "turbo run build",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
