@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { DesktopInfo, DesktopResult, InvokeInput, InvokeOutput } from './contract'
+import { desktopPlatformSchema, type DesktopInfo, type DesktopPlatform, type DesktopResult, type InvokeInput, type InvokeOutput } from './contract'
 
 const menuActionSchema = z.enum(['project.open', 'project.save', 'project.saveAs'])
 
@@ -9,6 +9,7 @@ export const menuMessageSchema = z.object({ action: menuActionSchema })
 
 export interface DesktopApi {
   version: 1
+  platform: DesktopPlatform
   info(): Promise<DesktopResult<DesktopInfo>>
   setTranscriptionKey(key: string): Promise<DesktopResult<InvokeOutput<'app.setTranscriptionKey'>>>
   projects: {
@@ -22,6 +23,7 @@ const exposedFunction = <F>() => z.custom<F>((value) => typeof value === 'functi
 
 const desktopApiSchema = z.object({
   version: z.literal(1),
+  platform: desktopPlatformSchema,
   info: exposedFunction<DesktopApi['info']>(),
   setTranscriptionKey: exposedFunction<DesktopApi['setTranscriptionKey']>(),
   projects: z.object({

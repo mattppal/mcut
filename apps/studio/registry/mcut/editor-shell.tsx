@@ -45,6 +45,7 @@ import { TextEditOverlay } from './text-edit-overlay'
 import { MediaBin } from './media-bin'
 import { clearSavedSession, loadSavedSession, requestPersistentStorage, saveAssetBlob, saveProjectSnapshot } from './persistence'
 import { PropertiesPanel } from './properties-panel'
+import { host } from './studio-host'
 import { TextPanel } from './text-panel'
 import { TimelinePanel } from './timeline-panel'
 import { TransportBar } from './transport-bar'
@@ -207,7 +208,7 @@ const LEFT_TABS: Array<{ id: LeftTab; label: string; icon: typeof FolderOpenIcon
 
 function ChromeRail({ tab, collapsed, onSelect }: { tab: LeftTab; collapsed: boolean; onSelect: (tab: LeftTab) => void }) {
   return (
-    <div className="flex w-13 shrink-0 flex-col items-center gap-2 pt-1">
+    <div className="flex w-12 shrink-0 flex-col items-center gap-2">
       {LEFT_TABS.map(({ id, label, icon: Icon }) => (
         <Tooltip key={id}>
           <TooltipTrigger
@@ -261,7 +262,7 @@ function LeftPanel({ tab, transcribe }: { tab: LeftTab } & Pick<EditorShellProps
       <PanelHeader>
         <PanelSectionLabel>{tab === 'text' ? 'Text' : 'Animate'}</PanelSectionLabel>
       </PanelHeader>
-      <ScrollArea className="min-h-0 min-w-0 flex-1 scroll-mask-y">{tab === 'text' ? <TextPanel /> : <AnimationsPanel />}</ScrollArea>
+      <ScrollArea className="min-h-0 min-w-0 flex-1 scroll-mask-b">{tab === 'text' ? <TextPanel /> : <AnimationsPanel />}</ScrollArea>
     </PanelCard>
   )
 }
@@ -284,6 +285,7 @@ function usePreviewRenderer(): 'canvas2d' | 'webgpu' {
 
 function EditorDocumentTheme({ theme }: { theme: EditorTheme }) {
   useDocumentRootAttribute('data-editor', '')
+  useDocumentRootAttribute('data-window-chrome', host.windowChrome)
   useDocumentRootClass('dark', theme === 'dark')
   return null
 }

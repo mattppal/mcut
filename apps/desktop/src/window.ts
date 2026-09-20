@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { BrowserWindow, session } from 'electron'
+import { BrowserWindow, session, type BrowserWindowConstructorOptions } from 'electron'
 import { openExternalLink } from './menu'
 
 export interface EditorWindowOptions {
@@ -22,11 +22,27 @@ export function hardenSession(allowedOrigins: readonly string[]): void {
   session.defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => isStudioPermission(permission, requestingOrigin))
 }
 
+const STUDIO_DARK_BACKGROUND = '#0d0b09'
+const STUDIO_DARK_FOREGROUND = '#cecdc3'
+const HEADER_HEIGHT = 40
+
+function chromeOptions(): BrowserWindowConstructorOptions {
+  if (process.platform === 'darwin') {
+    return { titleBarStyle: 'hidden', trafficLightPosition: { x: 16, y: 14 } }
+  }
+  return {
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: STUDIO_DARK_BACKGROUND, symbolColor: STUDIO_DARK_FOREGROUND, height: HEADER_HEIGHT },
+  }
+}
+
 export async function openEditorWindow(options: EditorWindowOptions): Promise<BrowserWindow> {
   const window = new BrowserWindow({
     width: 1440,
     height: 900,
     title: options.title,
+    backgroundColor: STUDIO_DARK_BACKGROUND,
+    ...chromeOptions(),
     webPreferences: {
       preload: path.join(import.meta.dirname, 'preload.cjs'),
       contextIsolation: true,
