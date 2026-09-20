@@ -5,7 +5,15 @@ on:
     paths:
       - apps/desktop/**
       - .github/workflows/desktop.yml
+  push:
+    tags:
+      - mcut-desktop@*
   workflow_dispatch:
+    inputs:
+      version:
+        description: Desktop version to publish as a GitHub Release, for example 0.1.0. Leave empty to build without publishing.
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -85,3 +93,39 @@ jobs:
           name: mcut-studio-mac
           path: apps/desktop/release/*.dmg
           retention-days: 14
+
+  release:
+    needs: [linux, mac]
+    if: startsWith(github.ref, 'refs/tags/mcut-desktop@') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Resolve the release version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          version="${INPUT_VERSION:-${GITHUB_REF_NAME#mcut-desktop@}}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          case "$version" in
+            0.* | *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: mcut-studio-*
+          merge-multiple: true
+          path: release
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: mcut-desktop@${{ steps.version.outputs.version }}
+          name: mcut Studio ${{ steps.version.outputs.version }}
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release/mcut-studio-${{ steps.version.outputs.version }}-linux-x86_64.AppImage
+            release/mcut-studio-${{ steps.version.outputs.version }}-mac-x64.dmg
+            release/mcut-studio-${{ steps.version.outputs.version }}-mac-arm64.dmg
