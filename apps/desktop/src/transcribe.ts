@@ -11,35 +11,6 @@ function transcribeOptions(language: string | undefined, signal: AbortSignal): {
   return language === undefined ? { signal } : { language, signal }
 }
 
-function combineAbortSignals(timeout: AbortSignal, existing: AbortSignal | null | undefined): AbortSignal {
-  return existing == null ? timeout : AbortSignal.any([timeout, existing])
-}
-
-function whenAborted(signal: AbortSignal): Promise<never> {
-  return new Promise((_, reject) => {
-    if (signal.aborted) {
-      reject(signal.reason)
-      return
-    }
-    signal.addEventListener('abort', () => reject(signal.reason), { once: true })
-  })
-}
-
-async function withFetchSignal<T>(signal: AbortSignal, run: () => Promise<T>): Promise<T> {
-  const previous = globalThis.fetch
-  globalThis.fetch = new Proxy(previous, {
-    apply(target, thisArg, argArray: Parameters<typeof fetch>) {
-      const [input, init] = argArray
-      return target.call(thisArg, input, { ...init, signal: combineAbortSignals(signal, init?.signal) })
-    },
-  })
-  try {
-    return await run()
-  } finally {
-    globalThis.fetch = previous
-  }
-}
-
 async function readAudioForm(request: Request): Promise<{ audio: Blob; language: string | undefined } | Response> {
   try {
     const form = await request.formData()
@@ -72,12 +43,7 @@ export async function handleTranscribeRequest(request: Request, settings: Deskto
   const signal = AbortSignal.timeout(TRANSCRIBE_TIMEOUT_MS)
   try {
     const provider = createAssemblyAIProvider({ apiKey: key })
-    const result = await withFetchSignal(signal, () =>
-      Promise.race([
-        provider.transcribe({ audio: form.audio, mimeType: form.audio.type || 'audio/wav' }, transcribeOptions(form.language, signal)),
-        whenAborted(signal),
-      ]),
-    )
+    const result = await provider.transcribe({ audio: form.audio, mimeType: form.audio.type || 'audio/wav' }, transcribeOptions(form.language, signal))
     return Response.json(result)
   } catch (error) {
     if (signal.aborted) {
