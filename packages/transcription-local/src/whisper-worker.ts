@@ -33,7 +33,7 @@ function applyOrtWasmPaths(paths: WhisperWorkerConfig['ortWasmPaths']): void {
 async function resolveDevice(requested: 'webgpu' | 'wasm'): Promise<'webgpu' | 'wasm'> {
   if (requested !== 'webgpu') return requested
   if (typeof navigator === 'undefined' || !navigator.gpu) return 'wasm'
-  const adapter = await navigator.gpu.requestAdapter()
+  const adapter = await navigator.gpu.requestAdapter().catch(() => null)
   return adapter === null ? 'wasm' : 'webgpu'
 }
 
@@ -46,7 +46,6 @@ interface ModelFileProgressEvent {
 
 function aggregateDownloadProgress(onProgress: (progress: number) => void): (event: ModelFileProgressEvent) => void {
   const files = new Map<string, { loaded: number; total: number }>()
-  let reported = 0
   return (event) => {
     if (typeof event.file !== 'string') return
     if (event.status === 'progress' && typeof event.loaded === 'number' && typeof event.total === 'number') {
@@ -60,9 +59,7 @@ function aggregateDownloadProgress(onProgress: (progress: number) => void): (eve
       loaded += entry.loaded
       total += entry.total
     }
-    if (total === 0) return
-    reported = Math.max(reported, Math.min(1, loaded / total))
-    onProgress(reported)
+    if (total > 0) onProgress(Math.min(1, loaded / total))
   }
 }
 
