@@ -5,7 +5,8 @@ cd "$(dirname "$0")/../.."
 BUN_VERSION="${BUN_VERSION:-1.3.14}"
 NODE_VERSION="${NODE_VERSION:-24.13.0}"
 
-export PATH="$HOME/.bun/bin:$HOME/.local/node/bin:$PATH"
+export PATH="$HOME/.local/node/bin:$HOME/.bun/bin:$PATH"
+unset ELECTRON_RUN_AS_NODE
 
 if [ ! -x "$HOME/.bun/bin/bun" ] || [ "$("$HOME/.bun/bin/bun" --version)" != "$BUN_VERSION" ]; then
   curl -fsSL -o /tmp/bun.zip "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-x64.zip"
@@ -22,15 +23,24 @@ if [ ! -x "$HOME/.local/node/bin/node" ] || [ "$("$HOME/.local/node/bin/node" --
 fi
 
 for rc in "$HOME/.bashrc" "$HOME/.profile"; do
-  grep -q '\.bun/bin:\$HOME/\.local/node/bin' "$rc" 2>/dev/null \
-    || echo 'export PATH="$HOME/.bun/bin:$HOME/.local/node/bin:$PATH"' >> "$rc"
+  grep -q '\.local/node/bin:\$HOME/\.bun/bin' "$rc" 2>/dev/null \
+    || echo 'export PATH="$HOME/.local/node/bin:$HOME/.bun/bin:$PATH"' >> "$rc"
 done
 
-command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; }
+sudo apt-get update -qq
+sudo apt-get install -y -qq ffmpeg xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
 
 bun install --frozen-lockfile
+electron_pkg=apps/desktop/node_modules/electron
+if [ -e node_modules/electron/package.json ]; then
+  electron_pkg=node_modules/electron
+fi
+if [ ! -x "$electron_pkg/dist/electron" ]; then
+  node "$electron_pkg/install.js"
+  echo "cloud-env electron binary fetched via $electron_pkg/install.js"
+fi
 bun run build
-(cd apps/studio && bunx playwright install --with-deps chromium)
+bun run --cwd apps/desktop build
 if [ -f scripts/fixtures/generate-media.ts ]; then bun run fixtures; fi
 
-echo "cloud-env install ok: bun $(bun --version), node $(node --version), $(ls packages/timeline/dist | wc -l) timeline dist files"
+echo "cloud-env install ok: bun $(bun --version), node $(node --version), electron $(node -p "require('./${electron_pkg}/package.json').version")"
