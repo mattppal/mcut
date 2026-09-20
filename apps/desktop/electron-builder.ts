@@ -15,6 +15,7 @@ const config: Configuration = {
   asar: true,
   files: ['dist/**', 'studio/**', 'package.json', 'THIRD_PARTY_NOTICES.md'],
   npmRebuild: false,
+  publish: { provider: 'github', owner: 'mattppal', repo: 'mcut' },
   electronFuses: {
     runAsNode: false,
     enableNodeOptionsEnvironmentVariable: false,
@@ -22,7 +23,10 @@ const config: Configuration = {
     enableNodeCliInspectArguments: true,
   },
   mac: {
-    target: [{ target: 'dmg', arch: ['x64', 'arm64'] }],
+    target: [
+      { target: 'dmg', arch: ['x64', 'arm64'] },
+      { target: 'zip', arch: ['x64', 'arm64'] },
+    ],
     category: 'public.app-category.video',
     hardenedRuntime: true,
     gatekeeperAssess: false,
