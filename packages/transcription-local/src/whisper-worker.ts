@@ -46,6 +46,7 @@ interface ModelFileProgressEvent {
 
 function aggregateDownloadProgress(onProgress: (progress: number) => void): (event: ModelFileProgressEvent) => void {
   const files = new Map<string, { loaded: number; total: number }>()
+  let reported = 0
   return (event) => {
     if (typeof event.file !== 'string') return
     if (event.status === 'progress' && typeof event.loaded === 'number' && typeof event.total === 'number') {
@@ -59,7 +60,9 @@ function aggregateDownloadProgress(onProgress: (progress: number) => void): (eve
       loaded += entry.loaded
       total += entry.total
     }
-    if (total > 0) onProgress(Math.min(1, loaded / total))
+    if (total === 0) return
+    reported = Math.max(reported, Math.min(1, loaded / total))
+    onProgress(reported)
   }
 }
 
