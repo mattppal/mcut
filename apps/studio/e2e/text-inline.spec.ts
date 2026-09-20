@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './electron-fixture'
 import { openEditor, openLeftTab } from './helpers'
 
-test('double-click edits text in place; selection toolbar bolds a range', async ({ page }) => {
-  await openEditor(page)
+test('double-click edits text in place; selection toolbar bolds a range', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await openLeftTab(page, 'text')
   await page.getByTitle(/Title — drag/).click()
 

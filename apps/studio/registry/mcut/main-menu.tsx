@@ -44,6 +44,7 @@ const MENU_SECTIONS: Array<{ label: string; entries: MenuEntry[] }> = [
       { id: 'file.new' },
       { id: 'file.open' },
       { id: 'file.save' },
+      { id: 'file.save-as' },
       'separator',
       { id: 'file.import' },
       'separator',

@@ -1,15 +1,15 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './electron-fixture'
 import { clip, collectErrors, dragAssetToLane, importPng, importWebm, openEditor, openLeftTab, previewPixels } from './helpers'
 
-test('loads without console errors', async ({ page }) => {
+test('loads without console errors', async ({ page, editorUrl }) => {
   const errors = collectErrors(page)
-  await openEditor(page)
+  await openEditor(page, editorUrl)
   await expect(page.getByRole('button', { name: 'Go to start' })).toBeVisible()
   expect(errors).toEqual([])
 })
 
-test('text preset inserts a selected clip; undo removes it', async ({ page }) => {
-  await openEditor(page)
+test('text preset inserts a selected clip; undo removes it', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await openLeftTab(page, 'text')
   await page.getByTitle(/Title — drag/).click()
   await expect(clip(page)).toHaveCount(1)
@@ -19,16 +19,16 @@ test('text preset inserts a selected clip; undo removes it', async ({ page }) =>
   await expect(clip(page)).toHaveCount(0)
 })
 
-test('imported image drags onto a lane with a ghost preview', async ({ page }) => {
-  await openEditor(page)
+test('imported image drags onto a lane with a ghost preview', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await importPng(page, 'blue.png')
   await dragAssetToLane(page, /blue.png/, { offsetX: 300 })
   await expect(clip(page)).toHaveCount(1)
   await expect(page.locator('[data-mcut-lane]')).toHaveCount(1)
 })
 
-test('drop ghost stays visible over a timeline that already has clips', async ({ page }) => {
-  await openEditor(page)
+test('drop ghost stays visible over a timeline that already has clips', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await openLeftTab(page, 'text')
   await page.getByTitle(/Title — drag/).click()
   await page.getByTitle(/Subtitle — drag/).click()
@@ -51,8 +51,8 @@ test('drop ghost stays visible over a timeline that already has clips', async ({
   await expect(clip(page)).toHaveCount(3)
 })
 
-test('clip trims from the right edge', async ({ page }) => {
-  await openEditor(page)
+test('clip trims from the right edge', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await importPng(page, 'trim.png')
   await dragAssetToLane(page, /trim.png/, { offsetX: 150 })
   const target = clip(page).first()
@@ -65,8 +65,8 @@ test('clip trims from the right edge', async ({ page }) => {
   expect(after.width).toBeLessThan(before.width - 50)
 })
 
-test('fade-in preset animates opacity on the canvas', async ({ page }) => {
-  await openEditor(page)
+test('fade-in preset animates opacity on the canvas', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await openLeftTab(page, 'text')
   await page.getByTitle(/Title — drag/).click()
   await openLeftTab(page, 'animate')
@@ -83,9 +83,9 @@ test('fade-in preset animates opacity on the canvas', async ({ page }) => {
   expect(atOneSecond).toBeGreaterThan(100)
 })
 
-test('real video imports, drags, and shows a filmstrip', async ({ page }) => {
+test('real video imports, drags, and shows a filmstrip', async ({ page, editorUrl }) => {
   test.slow()
-  await openEditor(page)
+  await openEditor(page, editorUrl)
   await importWebm(page, 'demo.webm')
   const card = page.getByTitle(/demo\.webm/).first()
   await expect(card.locator('img')).toBeVisible({ timeout: 10_000 })

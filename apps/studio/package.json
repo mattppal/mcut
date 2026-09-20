@@ -19,6 +19,7 @@
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
     "@mcut/compositor": "workspace:*",
+    "@mcut/desktop-ipc": "workspace:*",
     "@mcut/editor": "workspace:*",
     "@mcut/mcp-server": "workspace:*",
     "@mcut/media": "workspace:*",

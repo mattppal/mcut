@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './electron-fixture'
 import { dragAssetToLane, openEditor, previewPixels } from './helpers'
 
 const FIXTURE_DIR = join(tmpdir(), 'mcut-e2e-fixtures')
@@ -44,8 +44,8 @@ test.beforeEach(() => {
   test.skip(!haveFixtures, 'ffmpeg unavailable — cannot synthesize video fixtures')
 })
 
-test('reversed clip shows frames at rest and during playback', async ({ page }) => {
-  await openEditor(page)
+test('reversed clip shows frames at rest and during playback', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await importFile(page, SMOOTH_FIXTURE, /smooth-8s\.webm/)
   await dragAssetToLane(page, /smooth-8s\.webm/, { offsetX: 120 })
   await dragClipToStart(page)

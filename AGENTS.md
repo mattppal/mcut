@@ -33,6 +33,7 @@ app.
 | 3 | `@mcut/media` | Media probing, preview pools, filmstrips, audio peaks, browser export, container formats |
 | 3 | `@mcut/transcription-local`, `@mcut/transcription-ai-sdk`, `@mcut/transcription-assemblyai` | One transcription provider each |
 | 3 | `@mcut/cli`, `@mcut/mcp-server` | The `mcut` binary and the MCP server, both tools over commands and operators |
+| 3 | `@mcut/desktop-ipc` | The typed IPC contract between the desktop main process and Studio. One zod schema table per channel, the `DesktopApi` the preload exposes, `readDesktopApi` |
 | 4 | `@mcut/react` | `EditorProvider`, hooks, `PlayerCanvas`, gestures. Logic stays in the packages below |
 | app | `apps/studio`, `apps/web`, `examples/*` | Studio, the docs site, and runnable integrations over the packages |
 | app | `apps/desktop` | The Electron shell. Serves the Studio static export from `app://studio` and hosts `LiveMcutBridge` in the main process |

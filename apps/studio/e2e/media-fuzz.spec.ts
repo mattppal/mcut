@@ -1,8 +1,9 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Downloads, type Locator, type Page } from './electron-fixture'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { parseManifest, type FixtureManifest, type ManifestFixture, type ManifestMutation } from '../../../scripts/fixtures/manifest'
+import type { FixtureRecipe } from '../../../scripts/fixtures/recipes'
 import { clip, collectErrors, openEditor } from './helpers'
 import type { InPageProbe } from './media-fuzz/inpage'
 import { knownFailures, matchKnownFailure, type Violation } from './media-fuzz/known-failures'
@@ -20,6 +21,7 @@ const AUDIO_CANVAS = { width: 320, height: 180 }
 const CANVAS_MIN_PX = 2
 const ODD_SIZE_SLACK_PX = 1
 const EXPORT_TIMEOUT_MS = 120_000
+const EXPORT_VIDEO_CODEC = 'vp09.00.10.08'
 
 interface Canvas {
   width: number
@@ -88,12 +90,13 @@ async function setCanvas(page: Page, canvas: Canvas): Promise<void> {
 
 type ExportOutcome = { kind: 'file'; bytes: Buffer } | { kind: 'failed'; detail: string }
 
-async function exportWebm(page: Page): Promise<ExportOutcome> {
+async function exportWebm(page: Page, downloads: Downloads): Promise<ExportOutcome> {
   await page.locator('[data-mcut-export-trigger]').click()
   await page.getByRole('button', { name: 'WebM', exact: true }).click()
   const failure = page.getByText(/^Export failed:/)
-  const download = page.waitForEvent('download', { timeout: EXPORT_TIMEOUT_MS }).then(
-    (value) => ({ kind: 'download' as const, value }),
+  const wait = await downloads.next(EXPORT_TIMEOUT_MS)
+  const download = wait.file.then(
+    (file) => ({ kind: 'download' as const, file }),
     () => ({ kind: 'timeout' as const }),
   )
   const failed = failure.waitFor({ timeout: EXPORT_TIMEOUT_MS }).then(
@@ -102,9 +105,45 @@ async function exportWebm(page: Page): Promise<ExportOutcome> {
   )
   await page.getByRole('button', { name: 'Export WebM' }).click()
   const first = await Promise.race([download, failed])
-  if (first.kind === 'download') return { kind: 'file', bytes: readFileSync(await first.value.path()) }
+  if (first.kind === 'download') return { kind: 'file', bytes: readFileSync(first.file) }
+  await wait.cancel()
   if (first.kind === 'failed') return { kind: 'failed', detail: (await failure.textContent()) ?? 'Export failed' }
   return { kind: 'failed', detail: `neither a download nor an export error within ${EXPORT_TIMEOUT_MS} ms` }
+}
+
+function webCodecsVideoCodec(codec: NonNullable<FixtureRecipe['videoCodec']>): string | null {
+  switch (codec) {
+    case 'h264':
+      return 'avc1.64001f'
+    case 'hevc':
+      return 'hvc1.1.6.L93.B0'
+    case 'vp9':
+      return 'vp09.00.10.08'
+    case 'av1':
+      return 'av01.0.04M.08'
+    case 'prores':
+      return null
+    default: {
+      const exhaustive: never = codec
+      return exhaustive
+    }
+  }
+}
+
+async function unsupportedCodec(page: Page, fixture: ManifestFixture): Promise<string | null> {
+  const { videoCodec } = fixture.recipe
+  if (videoCodec === 'prores') return 'prores has no WebCodecs codec string'
+  const decode = videoCodec === null ? null : webCodecsVideoCodec(videoCodec)
+  const supported = await page.evaluate(
+    async (codecs) => ({
+      decode: codecs.decode === null ? true : (await VideoDecoder.isConfigSupported({ codec: codecs.decode })).supported === true,
+      encode: (await VideoEncoder.isConfigSupported({ codec: codecs.encode, width: 640, height: 360 })).supported === true,
+    }),
+    { decode, encode: EXPORT_VIDEO_CODEC },
+  )
+  if (!supported.decode) return `VideoDecoder.isConfigSupported(${decode}) reports supported false`
+  if (!supported.encode) return `VideoEncoder.isConfigSupported(${EXPORT_VIDEO_CODEC}) reports supported false`
+  return null
 }
 
 function probeInPage(page: Page, bytes: Buffer, type: string): Promise<InPageProbe> {
@@ -165,24 +204,21 @@ function settle(id: string, violations: readonly Violation[]): void {
   expect(stale, `${id} no longer reproduces these issues, remove the rows from e2e/media-fuzz/known-failures.ts`).toEqual([])
 }
 
-const fullChrome = Boolean(process.env.MCUT_CHROME_PATH)
-const fixtureRows = [
-  ...browserFixtures.map((row) => ({ ...row, proprietary: false })),
-  ...proprietaryCodecFixtures.map((row) => ({ ...row, proprietary: true })),
-]
+const fixtureRows = [...browserFixtures, ...proprietaryCodecFixtures]
 
 test.describe('media fuzz', () => {
   test.skip(manifest === null, `no fixture manifest at ${manifestFile}, run bun run fixtures first`)
 
   for (const row of fixtureRows.filter((entry) => selected(entry.id))) {
-    test(`${row.id} imports, exports to webm, and re-probes within tolerance`, async ({ page }) => {
+    test(`${row.id} imports, exports to webm, and re-probes within tolerance`, async ({ page, editorUrl, downloads }) => {
       test.slow()
-      test.skip(row.proprietary && !fullChrome, 'needs H.264 and AAC decoders, set MCUT_CHROME_PATH to a full Chrome')
       const fixture = fixtureById(row.id)
       test.skip(fixture.skipped !== null, fixture.skipped ?? '')
       const canvas = canvasFor(fixture)
       const errors = collectErrors(page)
-      await openEditor(page)
+      await openEditor(page, editorUrl)
+      const unsupported = await unsupportedCodec(page, fixture)
+      test.skip(unsupported !== null, unsupported ?? '')
       await page.addScriptTag({ content: bundle })
 
       const violations: Violation[] = []
@@ -203,7 +239,7 @@ test.describe('media fuzz', () => {
       await card.getByTitle('Add at playhead').click()
       await expect(clip(page)).toHaveCount(1)
 
-      const outcome = await exportWebm(page)
+      const outcome = await exportWebm(page, downloads)
       if (outcome.kind === 'failed') {
         console.log(`${row.id} badge "${badge}" export failed, ${outcome.detail}`)
         violations.push({ invariant: 'export-completes', detail: outcome.detail })
@@ -218,12 +254,12 @@ test.describe('media fuzz', () => {
   }
 
   for (const row of browserMutations.filter((entry) => selected(entry.id))) {
-    test(`${row.id} is rejected with a typed error or imports as a partial file`, async ({ page }) => {
+    test(`${row.id} is rejected with a typed error or imports as a partial file`, async ({ page, editorUrl }) => {
       const mutation = mutationById(row.id)
       const source = fixtureById(mutation.sourceId)
       const sourceSeconds = Math.round(source.recipe.expected.durationMs / 1000)
       const errors = collectErrors(page)
-      await openEditor(page)
+      await openEditor(page, editorUrl)
 
       const violations: Violation[] = []
       const { card, toast } = await importFile(page, mutation.file)

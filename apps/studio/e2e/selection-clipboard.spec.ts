@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './electron-fixture'
 import { clip, openEditor, openLeftTab } from './helpers'
 
 const selectedClips = (page: import('@playwright/test').Page) => page.locator('[data-mcut-clip][class*="ring-2"]')
@@ -10,8 +10,8 @@ async function addTwoTitles(page: import('@playwright/test').Page) {
   await expect(clip(page)).toHaveCount(2)
 }
 
-test('⌘A selects every clip; ⇧⌘A deselects', async ({ page }) => {
-  await openEditor(page)
+test('⌘A selects every clip; ⇧⌘A deselects', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await addTwoTitles(page)
   await page.keyboard.press('ControlOrMeta+a')
   await expect(selectedClips(page)).toHaveCount(2)
@@ -19,8 +19,8 @@ test('⌘A selects every clip; ⇧⌘A deselects', async ({ page }) => {
   await expect(selectedClips(page)).toHaveCount(0)
 })
 
-test('copy/paste at playhead round-trips a clip', async ({ page }) => {
-  await openEditor(page)
+test('copy/paste at playhead round-trips a clip', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await openLeftTab(page, 'text')
   await page.getByTitle(/Title — drag/).click()
   await expect(clip(page)).toHaveCount(1)
@@ -39,8 +39,8 @@ test('copy/paste at playhead round-trips a clip', async ({ page }) => {
   await expect(selectedClips(page)).toHaveCount(1)
 })
 
-test('cut removes, paste restores; ⌘D duplicates', async ({ page }) => {
-  await openEditor(page)
+test('cut removes, paste restores; ⌘D duplicates', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await openLeftTab(page, 'text')
   await page.getByTitle(/Title — drag/).click()
   await page.keyboard.press('ControlOrMeta+x')
@@ -51,16 +51,16 @@ test('cut removes, paste restores; ⌘D duplicates', async ({ page }) => {
   await expect(clip(page)).toHaveCount(2)
 })
 
-test("track header click selects that track's clips", async ({ page }) => {
-  await openEditor(page)
+test("track header click selects that track's clips", async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await addTwoTitles(page)
   await page.keyboard.press('ControlOrMeta+Shift+a')
   await page.locator('[data-mcut-timeline] span.truncate').first().click()
   await expect(selectedClips(page)).toHaveCount(1)
 })
 
-test('⌘K palette runs registry actions with shortcuts shown', async ({ page }) => {
-  await openEditor(page)
+test('⌘K palette runs registry actions with shortcuts shown', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
   await page.keyboard.press('ControlOrMeta+k')
   await expect(page.getByPlaceholder('Type a command…')).toBeVisible()
   await page.getByPlaceholder('Type a command…').fill('add text')
