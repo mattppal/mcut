@@ -60,7 +60,6 @@ export function startUpdater(options: UpdaterOptions): UpdateHandlers {
   autoUpdater.on('update-downloaded', (event) => set({ phase: 'ready', version: event.version }))
   autoUpdater.on('error', (error) => {
     if (current.phase === 'downloading') set({ phase: 'failed', version: current.version, message: error.message })
-    else log(`error while ${current.phase}. ${error.message}`)
   })
 
   const check = async (): Promise<void> => {
