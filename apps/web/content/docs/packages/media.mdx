@@ -17,7 +17,8 @@ bun add @mcut/media @mcut/timeline @mcut/compositor
 ```ts
 import { createAsset, exportProject } from "@mcut/media"
 
-const asset = await createAsset({ kind: "blob", blob: file, name: file.name })
+const blob = await fetch("/clips/interview.mp4").then((response) => response.blob())
+const asset = await createAsset({ kind: "blob", blob, name: "interview.mp4" })
 const result = await exportProject(project)
 ```
 
