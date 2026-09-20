@@ -7,6 +7,7 @@ import { z } from 'zod'
 const USAGE = 'usage: node apps/desktop/scripts/smoke-packaged.ts <packaged binary>   (or set MCUT_ELECTRON_PATH)'
 const QUIT_TIMEOUT_MS = 5_000
 const WATCHDOG_MS = 120_000
+const DEAD_UPDATE_FEED = 'http://127.0.0.1:9/'
 
 const desktopDir = path.resolve(import.meta.dirname, '..')
 const repoRoot = path.resolve(desktopDir, '../..')
@@ -97,6 +98,7 @@ function launchEnvironment(configHome: string): Record<string, string> {
     if (value !== undefined && key !== 'ELECTRON_RUN_AS_NODE') env[key] = value
   }
   env.XDG_CONFIG_HOME = configHome
+  env.MCUT_UPDATE_FEED_URL = DEAD_UPDATE_FEED
   return env
 }
 
