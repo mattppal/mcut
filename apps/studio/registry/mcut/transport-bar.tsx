@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Kbd } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import { useEditorUI, type TimelineEditMode, type TimelineTool } from './editor-ui'
 import { formatTimecode } from './format'
 import { captureViewportStill } from './viewport-capture'
@@ -77,6 +78,7 @@ function IconButton({
   active,
   children,
   disabled,
+  className,
 }: {
   label: string
   shortcut?: string
@@ -84,6 +86,7 @@ function IconButton({
   active?: boolean
   disabled?: boolean
   children: React.ReactNode
+  className?: string
 }) {
   return (
     <Tooltip>
@@ -92,7 +95,7 @@ function IconButton({
           <Button
             variant={active ? 'secondary' : 'ghost'}
             size="icon-sm"
-            className={active === undefined ? undefined : 'transition-none'}
+            className={cn(active === undefined ? undefined : 'transition-none', className)}
             onClick={onClick}
             disabled={disabled}
             aria-label={label}
@@ -121,7 +124,55 @@ function Timecode() {
   )
 }
 
+function CompactTransportBar() {
+  const { engine } = useEditorContext()
+  const isPlaying = usePlayback((s) => s.isPlaying)
+  const muted = usePlayback((s) => s.muted)
+  const fps = useEditorState((s) => s.project.fps)
+  const frameMs = 1000 / fps
+  const seekBy = (deltaMs: number) => engine.seek(engine.playback.state.currentTimeMs + deltaMs)
+
+  return (
+    <div className="flex h-12 shrink-0 items-center gap-1 px-2">
+      <div className="flex flex-1 items-center justify-center gap-1">
+        <IconButton label="Go to start" className="size-10" onClick={() => engine.seek(0)}>
+          <ChevronFirstIcon />
+        </IconButton>
+        <IconButton label="Previous frame" className="size-10" onClick={() => seekBy(-frameMs)}>
+          <StepBackIcon />
+        </IconButton>
+        <IconButton label={isPlaying ? 'Pause' : 'Play'} className="size-10" onClick={() => (isPlaying ? engine.pause() : engine.play())}>
+          <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground [&_svg]:size-4">
+            {isPlaying ? <PauseIcon /> : <PlayIcon className="translate-x-px" />}
+          </span>
+        </IconButton>
+        <IconButton label="Next frame" className="size-10" onClick={() => seekBy(frameMs)}>
+          <StepForwardIcon />
+        </IconButton>
+        <Timecode />
+      </div>
+      <IconButton label={muted ? 'Unmute' : 'Mute'} className="size-10" onClick={() => engine.setMuted(!muted)}>
+        {muted ? <VolumeXIcon className="text-destructive" /> : <Volume2Icon />}
+      </IconButton>
+    </div>
+  )
+}
+
 export function TransportBar() {
+  const { layout } = useEditorUI()
+  switch (layout) {
+    case 'full':
+      return <FullTransportBar />
+    case 'compact':
+      return <CompactTransportBar />
+    default: {
+      const exhaustive: never = layout
+      return exhaustive
+    }
+  }
+}
+
+function FullTransportBar() {
   const { engine, pool } = useEditorContext()
   const isPlaying = usePlayback((s) => s.isPlaying)
   const muted = usePlayback((s) => s.muted)

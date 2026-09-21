@@ -29,10 +29,8 @@ import { FadeOverlay } from './clip-fades'
 import { getElementUI } from './element-ui'
 import { KeyframeMarkers, VolumeBand } from './clip-keyframes'
 import { duplicateElement, removeSelection, splitSelectionAtPlayhead, unlinkElements } from './editor-actions'
-import { useEditorUI } from './editor-ui'
+import { useEditorUI, WORKSPACE_LAYOUT } from './editor-ui'
 import { TRACK_HEIGHT, useClipDrag, type ClipDragMode } from './timeline-drag'
-
-const TRIM_HANDLE_PX = 9
 
 function clipLabel(element: TimelineElement, asset?: AssetRef): string {
   if (element.type === 'text' || element.type === 'caption') return element.text
@@ -146,7 +144,8 @@ function MulticamCutTicks({ element, pxPerMs }: { element: TimelineElement & { t
 export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: TimelineElement; track: Track; pxPerMs: number }) {
   const engine = useEditor()
   const clipDrag = useClipDrag()
-  const { timelineTool } = useEditorUI()
+  const { timelineTool, layout } = useEditorUI()
+  const { trimHandlePx, trimHandlesAlwaysVisible } = WORKSPACE_LAYOUT[layout]
   const selected = useEditorState((s) => s.selection.elementIds.includes(element.id))
   const multiSelected = useEditorState((s) => s.selection.elementIds.length >= 2)
   const asset = useEditorState((s) => ('assetId' in element ? s.project.assets[element.assetId] : undefined))
@@ -174,9 +173,9 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
     const canTrim = canTrimFromTimeline(element)
     if (canTrim && timelineTool === 'slip') mode = 'slip'
     else if (canTrim && timelineTool === 'slide') mode = 'slide'
-    else if (canTrim && offsetX <= TRIM_HANDLE_PX) {
+    else if (canTrim && offsetX <= trimHandlePx) {
       mode = timelineTool === 'ripple' ? 'ripple-start' : timelineTool === 'roll' ? 'roll-start' : 'trim-start'
-    } else if (canTrim && offsetX >= rect.width - TRIM_HANDLE_PX) {
+    } else if (canTrim && offsetX >= rect.width - trimHandlePx) {
       mode = timelineTool === 'ripple' ? 'ripple-end' : timelineTool === 'roll' ? 'roll-end' : 'trim-end'
     }
     if (element.groupId) {
@@ -216,6 +215,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
     } catch {}
   }
   const showTrimHandles = canTrimFromTimeline(element)
+  const idleTrimHandleClassName = trimHandlesAlwaysVisible ? 'bg-overlay-foreground/40' : 'group-hover:bg-overlay-foreground/40'
 
   return (
     <ContextMenu>
@@ -224,7 +224,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
           <div
             data-mcut-clip={element.type}
             className={cn(
-              'group absolute top-1 bottom-1 left-0 flex cursor-grab items-center overflow-hidden rounded-lg text-xs font-medium shadow-sm select-none active:cursor-grabbing',
+              'group absolute top-1 bottom-1 left-0 flex cursor-grab touch-none items-center overflow-hidden rounded-lg text-xs font-medium shadow-sm select-none active:cursor-grabbing',
               getElementUI(element.type).clipClassName,
               selected ? 'ring-2 ring-overlay-foreground' : 'ring-1 ring-overlay-foreground/10 hover:ring-overlay-foreground/30',
             )}
@@ -318,17 +318,19 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
           <>
             <span
               className={cn(
-                'absolute inset-y-0 left-0 z-20 flex w-[9px] cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors',
-                selected ? 'bg-overlay-foreground/90' : 'group-hover:bg-overlay-foreground/40',
+                'absolute inset-y-0 left-0 z-20 flex cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors',
+                selected ? 'bg-overlay-foreground/90' : idleTrimHandleClassName,
               )}
+              style={{ width: trimHandlePx }}
             >
               <span className={cn('h-3.5 w-0.5 rounded-full', selected ? 'bg-overlay/70' : 'bg-overlay-foreground/70')} />
             </span>
             <span
               className={cn(
-                'absolute inset-y-0 right-0 z-20 flex w-[9px] cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors',
-                selected ? 'bg-overlay-foreground/90' : 'group-hover:bg-overlay-foreground/40',
+                'absolute inset-y-0 right-0 z-20 flex cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors',
+                selected ? 'bg-overlay-foreground/90' : idleTrimHandleClassName,
               )}
+              style={{ width: trimHandlePx }}
             >
               <span className={cn('h-3.5 w-0.5 rounded-full', selected ? 'bg-overlay/70' : 'bg-overlay-foreground/70')} />
             </span>

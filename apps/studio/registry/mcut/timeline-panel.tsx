@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { useActiveDrag } from './editor-dnd'
 import { PanelHeader } from './editor-primitives'
-import { MAX_PX_PER_MS, MIN_PX_PER_MS, useEditorUI } from './editor-ui'
+import { MAX_PX_PER_MS, MIN_PX_PER_MS, useEditorUI, type WorkspaceLayout } from './editor-ui'
 import { formatTimecode } from './format'
 import { ClipDragProvider, NEW_TRACK_LANE_HEIGHT, RULER_HEIGHT, TRACK_HEIGHT, useClipDragController } from './timeline-drag'
 import { MarkerLines, Playhead, Ruler, SnapGuide } from './timeline-ruler'
@@ -30,6 +30,11 @@ export interface TimelinePanelProps {
 
 const CONTENT_WIDTH_STEP_PX = 400
 
+const HEADER_CONTROLS: Record<WorkspaceLayout, { addTrack: 'xs' | 'sm'; zoom: 'icon-xs' | 'icon-lg'; sliderClassName: string }> = {
+  full: { addTrack: 'xs', zoom: 'icon-xs', sliderClassName: 'w-28! shrink-0' },
+  compact: { addTrack: 'sm', zoom: 'icon-lg', sliderClassName: 'max-w-40 flex-1' },
+}
+
 function contentWidthQuantizedToKeepLanesMemoized(durationMs: number, pxPerMs: number): number {
   const rawWidth = (durationMs + 15_000) * pxPerMs
   return Math.max(1600, Math.ceil(rawWidth / CONTENT_WIDTH_STEP_PX) * CONTENT_WIDTH_STEP_PX)
@@ -40,7 +45,8 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
   const project = useProject()
   const activeDrag = useActiveDrag()
   const clipDrag = useClipDragController()
-  const { pxPerMs, setPxPerMs, zoomBy, timelineScrollRef } = useEditorUI()
+  const { pxPerMs, setPxPerMs, zoomBy, timelineScrollRef, layout } = useEditorUI()
+  const controls = HEADER_CONTROLS[layout]
   const durationMs = useEditorState((s) => getProjectDurationMs(s.project))
   const [marquee, setMarquee] = useState<MarqueeState | null>(null)
   const contentRef = useRef<HTMLDivElement | null>(null)
@@ -125,14 +131,14 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
     <ClipDragProvider value={clipDrag}>
       <div className={cn('flex flex-col', className)} data-mcut-timeline="">
         <PanelHeader>
-          <Button variant="ghost" size="xs" title="Add track" onClick={() => engine.dispatch({ type: 'addTrack' })}>
+          <Button variant="ghost" size={controls.addTrack} title="Add track" onClick={() => engine.dispatch({ type: 'addTrack' })}>
             <PlusIcon /> Track
           </Button>
           <div className="flex-1" />
-          <Button variant="ghost" size="icon-xs" title="Fit timeline" onClick={fitToView}>
+          <Button variant="ghost" size={controls.zoom} title="Fit timeline" onClick={fitToView}>
             <MaximizeIcon />
           </Button>
-          <Button variant="ghost" size="icon-xs" title="Zoom out" onClick={() => zoomBy(1 / 1.4)}>
+          <Button variant="ghost" size={controls.zoom} title="Zoom out" onClick={() => zoomBy(1 / 1.4)}>
             <ZoomOutIcon />
           </Button>
           <Slider
@@ -140,13 +146,13 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
             min={0}
             max={100}
             step={1}
-            className="w-28! shrink-0"
+            className={controls.sliderClassName}
             onValueChange={(value) => {
               const v = (Array.isArray(value) ? (value[0] ?? 0) : value) / 100
               setPxPerMs(MIN_PX_PER_MS * Math.pow(MAX_PX_PER_MS / MIN_PX_PER_MS, v))
             }}
           />
-          <Button variant="ghost" size="icon-xs" title="Zoom in" onClick={() => zoomBy(1.4)}>
+          <Button variant="ghost" size={controls.zoom} title="Zoom in" onClick={() => zoomBy(1.4)}>
             <ZoomInIcon />
           </Button>
         </PanelHeader>

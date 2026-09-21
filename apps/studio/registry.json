@@ -84,6 +84,16 @@
           "target": "components/mcut/embed-shell.tsx"
         },
         {
+          "path": "registry/mcut/left-panel.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/left-panel.tsx"
+        },
+        {
+          "path": "registry/mcut/compact-workspace.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/compact-workspace.tsx"
+        },
+        {
           "path": "registry/mcut/editor-toolbar.tsx",
           "type": "registry:component",
           "target": "components/mcut/editor-toolbar.tsx"
