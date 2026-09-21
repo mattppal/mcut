@@ -182,6 +182,7 @@ function createHeroEmbed() {
   }
 
   const expand = () => {
+    measure()
     window.clearTimeout(scriptTimer)
     const replay = handOff(state.replay)
     if (state.phase === 'poster') startLoading({ expanded: true, autoplay: false, replay })
