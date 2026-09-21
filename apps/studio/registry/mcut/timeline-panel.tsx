@@ -14,7 +14,7 @@ import { MAX_PX_PER_MS, MIN_PX_PER_MS, useEditorUI, type WorkspaceLayout } from 
 import { formatTimecode } from './format'
 import { ClipDragProvider, NEW_TRACK_LANE_HEIGHT, RULER_HEIGHT, TRACK_HEIGHT, useClipDragController } from './timeline-drag'
 import { MarkerLines, Playhead, Ruler, SnapGuide } from './timeline-ruler'
-import { DropGhostOverlay, HEADER_WIDTH, NewTrackLane, SortableRow } from './timeline-tracks'
+import { DropGhostOverlay, NewTrackLane, SortableRow } from './timeline-tracks'
 
 interface MarqueeState {
   x0: number
@@ -45,7 +45,7 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
   const project = useProject()
   const activeDrag = useActiveDrag()
   const clipDrag = useClipDragController()
-  const { pxPerMs, setPxPerMs, zoomBy, timelineScrollRef, layout } = useEditorUI()
+  const { pxPerMs, setPxPerMs, zoomBy, timelineScrollRef, layout, timelineHeaderPx } = useEditorUI()
   const controls = HEADER_CONTROLS[layout]
   const durationMs = useEditorState((s) => getProjectDurationMs(s.project))
   const [marquee, setMarquee] = useState<MarqueeState | null>(null)
@@ -64,7 +64,7 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
       if (!scroller || (!event.ctrlKey && !event.metaKey)) return
       event.preventDefault()
       const rect = scroller.getBoundingClientRect()
-      const anchorMs = (scroller.scrollLeft + (event.clientX - rect.left) - HEADER_WIDTH) / pxPerMs
+      const anchorMs = (scroller.scrollLeft + (event.clientX - rect.left) - timelineHeaderPx) / pxPerMs
       zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12, Math.max(0, anchorMs))
     },
     { passive: false },
@@ -73,7 +73,7 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
   const fitToView = () => {
     const scroller = timelineScrollRef.current
     if (!scroller || durationMs === 0) return
-    setPxPerMs((scroller.clientWidth - HEADER_WIDTH - 60) / durationMs)
+    setPxPerMs((scroller.clientWidth - timelineHeaderPx - 60) / durationMs)
     scroller.scrollLeft = 0
   }
 
@@ -98,8 +98,8 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
     setMarquee(next)
     if (!next.active) return
 
-    const fromMs = (Math.min(next.x0, next.x1) - HEADER_WIDTH) / pxPerMs
-    const toMs = (Math.max(next.x0, next.x1) - HEADER_WIDTH) / pxPerMs
+    const fromMs = (Math.min(next.x0, next.x1) - timelineHeaderPx) / pxPerMs
+    const toMs = (Math.max(next.x0, next.x1) - timelineHeaderPx) / pxPerMs
     const rowsTop = RULER_HEIGHT + NEW_TRACK_LANE_HEIGHT
     const rowTop = Math.floor((Math.min(next.y0, next.y1) - rowsTop) / TRACK_HEIGHT)
     const rowBottom = Math.floor((Math.max(next.y0, next.y1) - rowsTop) / TRACK_HEIGHT)
@@ -118,7 +118,7 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
   const onBackgroundPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!marquee) return
     if (!marquee.active) {
-      engine.seek(Math.max(0, (marquee.x0 - HEADER_WIDTH) / pxPerMs))
+      engine.seek(Math.max(0, (marquee.x0 - timelineHeaderPx) / pxPerMs))
       engine.clearSelection()
     }
     setMarquee(null)
@@ -169,7 +169,7 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
             <div className="sticky top-0 z-[60] flex">
               <div
                 className="sticky left-0 z-[70] flex shrink-0 items-center justify-center border-r border-foreground/10 bg-card"
-                style={{ width: HEADER_WIDTH, height: RULER_HEIGHT }}
+                style={{ width: timelineHeaderPx, height: RULER_HEIGHT }}
               >
                 <CurrentTime />
               </div>
@@ -187,7 +187,7 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
             {durationMs === 0 && !activeDrag && (
               <div
                 className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex justify-center text-xs text-muted-foreground"
-                style={{ paddingLeft: HEADER_WIDTH }}
+                style={{ paddingLeft: timelineHeaderPx }}
               >
                 Drag media here, or press the import button in the media bin
               </div>

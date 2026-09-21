@@ -98,9 +98,7 @@ export function CompactWorkspace({ transcribe, omitted }: Omit<LeftPanelProps, '
             className="top-auto bottom-0 left-0 flex h-[70dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-b-none p-0 transition-[opacity,translate,scale] sm:max-w-none data-starting-style:translate-y-4 data-ending-style:translate-y-4"
           >
             <DialogTitle className="sr-only">{label}</DialogTitle>
-            <div className="min-h-0 flex-1">
-              {sheet.panel !== null && <SheetBody panel={sheet.panel} transcribe={transcribe} omitted={omitted} />}
-            </div>
+            <div className="min-h-0 flex-1">{sheet.panel !== null && <SheetBody panel={sheet.panel} transcribe={transcribe} omitted={omitted} />}</div>
             <CompactTabBar active={active} onSelect={toggleSheet} />
           </DialogContent>
         </Dialog>

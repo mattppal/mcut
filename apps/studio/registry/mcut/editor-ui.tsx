@@ -88,9 +88,9 @@ export type WorkspaceLayout = 'full' | 'compact'
 
 export const COMPACT_LAYOUT_QUERY = '(max-width: 639px)'
 
-export const WORKSPACE_LAYOUT: Record<WorkspaceLayout, { trimHandlePx: number; trimHandlesAlwaysVisible: boolean }> = {
-  full: { trimHandlePx: 9, trimHandlesAlwaysVisible: false },
-  compact: { trimHandlePx: 20, trimHandlesAlwaysVisible: true },
+export const WORKSPACE_LAYOUT: Record<WorkspaceLayout, { trimHandlePx: number; trimHandlesAlwaysVisible: boolean; timelineHeaderPx: number }> = {
+  full: { trimHandlePx: 9, trimHandlesAlwaysVisible: false, timelineHeaderPx: 288 },
+  compact: { trimHandlePx: 20, trimHandlesAlwaysVisible: true, timelineHeaderPx: 112 },
 }
 
 export interface CurveEditorTarget {
@@ -100,6 +100,7 @@ export interface CurveEditorTarget {
 
 export interface EditorUIValue {
   layout: WorkspaceLayout
+  timelineHeaderPx: number
   theme: EditorTheme
   setTheme: (value: EditorTheme) => void
   mode: EditorMode
@@ -137,7 +138,6 @@ export interface EditorUIValue {
 
 export const MIN_PX_PER_MS = 0.004
 export const MAX_PX_PER_MS = 0.6
-export const TIMELINE_HEADER_WIDTH = 288
 
 const EditorUIContext = createContext<EditorUIValue | null>(null)
 
@@ -290,6 +290,7 @@ export function EditorUIProvider({ children, leftPanelRef }: { children: ReactNo
   const value = useMemo<EditorUIValue>(
     () => ({
       layout,
+      timelineHeaderPx: WORKSPACE_LAYOUT[layout].timelineHeaderPx,
       theme: prefs.theme,
       setTheme,
       mode,

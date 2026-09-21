@@ -8,7 +8,6 @@ import { useTranscriptKeywords } from './transcript-keywords'
 import { useEditorUI, useSnapGuideMs } from './editor-ui'
 import { formatRulerLabel } from './format'
 import { RULER_HEIGHT } from './timeline-drag'
-import { HEADER_WIDTH } from './timeline-tracks'
 
 function RulerMarkers({ pxPerMs }: { pxPerMs: number }) {
   const engine = useEditor()
@@ -98,6 +97,7 @@ function KeywordTicks({ pxPerMs }: { pxPerMs: number }) {
 
 export function MarkerLines({ pxPerMs, height }: { pxPerMs: number; height: number }) {
   const markers = useEditorState((s) => s.project.markers)
+  const { timelineHeaderPx } = useEditorUI()
   return (
     <>
       {markers.map((marker) => (
@@ -105,7 +105,7 @@ export function MarkerLines({ pxPerMs, height }: { pxPerMs: number; height: numb
           key={marker.id}
           className="pointer-events-none absolute top-0 z-0 w-px opacity-35"
           style={{
-            left: HEADER_WIDTH + marker.timeMs * pxPerMs,
+            left: timelineHeaderPx + marker.timeMs * pxPerMs,
             height,
             backgroundColor: marker.color ?? 'var(--snap-guide)',
           }}
@@ -167,21 +167,21 @@ export function Ruler({ pxPerMs, contentWidth }: { pxPerMs: number; contentWidth
 export function Playhead({ pxPerMs, height }: { pxPerMs: number; height: number }) {
   const engine = useEditor()
   const currentTimeMs = usePlayback((s) => s.currentTimeMs)
-  const { timelineScrollRef } = useEditorUI()
+  const { timelineScrollRef, timelineHeaderPx } = useEditorUI()
 
   useEngineSubscription(engine.playback, (playback) => {
     const scroller = timelineScrollRef.current
     if (!playback.isPlaying || !scroller) return
-    const playheadX = HEADER_WIDTH + playback.currentTimeMs * pxPerMs
-    const viewLeft = scroller.scrollLeft + HEADER_WIDTH
+    const playheadX = timelineHeaderPx + playback.currentTimeMs * pxPerMs
+    const viewLeft = scroller.scrollLeft + timelineHeaderPx
     const viewRight = scroller.scrollLeft + scroller.clientWidth - 40
     if (playheadX < viewLeft || playheadX > viewRight) {
-      scroller.scrollLeft = Math.max(0, playheadX - HEADER_WIDTH - 80)
+      scroller.scrollLeft = Math.max(0, playheadX - timelineHeaderPx - 80)
     }
   })
 
   return (
-    <div className="pointer-events-none absolute top-0 z-10 w-px bg-primary" style={{ left: HEADER_WIDTH + currentTimeMs * pxPerMs, height }}>
+    <div className="pointer-events-none absolute top-0 z-10 w-px bg-primary" style={{ left: timelineHeaderPx + currentTimeMs * pxPerMs, height }}>
       <div className="absolute -top-px -left-[5.5px] flex h-4 w-3 items-start justify-center">
         <div className="h-3 w-3 rounded-[3px] rounded-b-none bg-primary [clip-path:polygon(0_0,100%_0,100%_60%,50%_100%,0_60%)]" />
       </div>
@@ -191,6 +191,7 @@ export function Playhead({ pxPerMs, height }: { pxPerMs: number; height: number 
 
 export function SnapGuide({ pxPerMs, height }: { pxPerMs: number; height: number }) {
   const snapGuideMs = useSnapGuideMs()
+  const { timelineHeaderPx } = useEditorUI()
   if (snapGuideMs === null) return null
-  return <div className="pointer-events-none absolute top-0 z-30 w-px bg-(--snap-guide)" style={{ left: HEADER_WIDTH + snapGuideMs * pxPerMs, height }} />
+  return <div className="pointer-events-none absolute top-0 z-30 w-px bg-(--snap-guide)" style={{ left: timelineHeaderPx + snapGuideMs * pxPerMs, height }} />
 }

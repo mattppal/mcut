@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext } from 'react'
-import { useDisposable, useEditor } from '@mcut/react'
+import { useDisposable, useEditor, useLatest } from '@mcut/react'
 import {
   canPlaceIgnoring,
   collectClipDragBases,
@@ -14,7 +14,7 @@ import {
   type ClipDragMode,
 } from '@mcut/editor'
 import { createTrackId, getElementLocation, MIN_ELEMENT_DURATION_MS, type ElementId, type Track } from '@mcut/timeline'
-import { getEditorPrefs, TIMELINE_HEADER_WIDTH, useEditorUI } from './editor-ui'
+import { getEditorPrefs, useEditorUI } from './editor-ui'
 import { collectSnapTargets, snapClip, snapTime, type SnapTarget } from './timeline-snap'
 
 type Engine = ReturnType<typeof useEditor>
@@ -46,6 +46,7 @@ export interface ClipDragPrefs {
 export interface ClipDragDeps {
   engine: Engine
   prefs: () => ClipDragPrefs
+  timelineHeaderPx: () => number
   setSnapGuideMs: (ms: number | null) => void
   scrollerRef: React.RefObject<HTMLElement | null>
 }
@@ -349,7 +350,7 @@ export class ClipDragController {
         return
       }
       const rect = scroller.getBoundingClientRect()
-      const dx = edgeScrollSpeed(gesture.lastClientX, rect.left + TIMELINE_HEADER_WIDTH, rect.right)
+      const dx = edgeScrollSpeed(gesture.lastClientX, rect.left + this.deps.timelineHeaderPx(), rect.right)
       const dy = edgeScrollSpeed(gesture.lastClientY, rect.top + RULER_HEIGHT, rect.bottom)
       let scrolled = false
       if (dx !== 0) {
@@ -616,12 +617,14 @@ export const ClipDragProvider = ClipDragContext.Provider
 
 export function useClipDragController(): ClipDragController {
   const engine = useEditor()
-  const { setSnapGuideMs, timelineScrollRef } = useEditorUI()
+  const { setSnapGuideMs, timelineScrollRef, timelineHeaderPx } = useEditorUI()
+  const latestHeaderPx = useLatest(timelineHeaderPx)
   return useDisposable(
     () =>
       new ClipDragController({
         engine,
         prefs: getEditorPrefs,
+        timelineHeaderPx: () => latestHeaderPx.current,
         setSnapGuideMs,
         scrollerRef: timelineScrollRef,
       }),
