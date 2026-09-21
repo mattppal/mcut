@@ -7,7 +7,7 @@ import { handOff, type ReplayPhase, type TraceMode } from '@/lib/agent-replay'
 import { AGENT_SCRIPT, LEAD_IN_MS } from '@/lib/agent-script'
 import type { DEMO_CLIP } from '@/lib/demo-clip'
 import { readEmbedMessage, type EmbedResult, type ParentMessage } from '@/lib/embed-protocol'
-import { FRAME_PAD, expandedScrollTop, heroGeometry, measureWrapper, sameMetrics, type HeroMetrics } from '@/lib/hero-geometry'
+import { FRAME_PAD, centeredScrollTop, heroGeometry, measureWrapper, sameMetrics, type HeroMetrics } from '@/lib/hero-geometry'
 import { cn } from '@/lib/utils'
 
 const GUTTER_WIDTH = '15rem'
@@ -172,9 +172,15 @@ function createHeroEmbed() {
   const collapse = () => {
     update({ expanded: false })
     post({ type: 'mcut:embed:collapsed', collapsed: true })
+    scrollTo(scrollTarget(false))
   }
 
-  const scrollTarget = () => (state.metrics === null ? 0 : expandedScrollTop(state.metrics))
+  const scrollTarget = (expanded: boolean) => {
+    const geometry = heroGeometry({ metrics: state.metrics, expanded })
+    return state.metrics === null || geometry === null ? 0 : centeredScrollTop(state.metrics, geometry.wrapperHeight)
+  }
+
+  const scrollTo = (top: number) => window.scrollTo({ top, behavior: state.reducedMotion ? 'auto' : 'smooth' })
 
   const arm = () => {
     window.clearTimeout(armTimer)
@@ -191,7 +197,7 @@ function createHeroEmbed() {
     armed = false
     window.clearTimeout(armTimer)
     armTimer = window.setTimeout(arm, SCROLL_ARM_MS)
-    window.scrollTo({ top: scrollTarget(), behavior: state.reducedMotion ? 'auto' : 'smooth' })
+    scrollTo(scrollTarget(true))
   }
 
   const load = () => startLoading({ autoplay: true })
@@ -212,7 +218,7 @@ function createHeroEmbed() {
 
   const onScroll = () => {
     if (!state.expanded) return
-    const offset = Math.abs(window.scrollY - scrollTarget())
+    const offset = Math.abs(window.scrollY - scrollTarget(true))
     if (!armed) {
       if (offset <= 1) arm()
       return
