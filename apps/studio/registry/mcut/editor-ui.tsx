@@ -86,7 +86,7 @@ export type LeftTab = 'media' | 'text' | 'animate' | 'captions' | 'transcript'
 
 export type WorkspaceLayout = 'full' | 'compact'
 
-export const COMPACT_LAYOUT_QUERY = '(max-width: 639px)'
+const COMPACT_LAYOUT_QUERY = '(max-width: 639px)'
 
 export const WORKSPACE_LAYOUT: Record<WorkspaceLayout, { trimHandlePx: number; trimHandlesAlwaysVisible: boolean; timelineHeaderPx: number }> = {
   full: { trimHandlePx: 9, trimHandlesAlwaysVisible: false, timelineHeaderPx: 288 },
