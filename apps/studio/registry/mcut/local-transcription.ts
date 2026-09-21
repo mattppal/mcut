@@ -10,6 +10,7 @@ import {
   type LocalWhisperProgress,
 } from '@mcut/transcription-local'
 import type { TranscribeOptions, TranscriptResult } from '@mcut/transcription'
+import { host } from './studio-host'
 
 export { isLocalTranscriptionSupported }
 
@@ -58,7 +59,8 @@ const PROGRESS_TOAST_ID = 'mcut-on-device-transcription'
 
 const ORT_WASM_FILES = { mjs: 'ort-wasm-simd-threaded.asyncify.mjs', wasm: 'ort-wasm-simd-threaded.asyncify.wasm' }
 
-function ortWasmPaths(): { mjs: string; wasm: string } {
+function ortWasmPaths(): { mjs: string; wasm: string } | null {
+  if (host.windowChrome === 'browser') return null
   return {
     mjs: new URL(`/ort/${ORT_WASM_FILES.mjs}`, window.location.origin).href,
     wasm: new URL(`/ort/${ORT_WASM_FILES.wasm}`, window.location.origin).href,
@@ -71,8 +73,9 @@ function progressLabel(phase: LocalWhisperProgress['phase'], percent: number): s
 }
 
 export async function transcribeOnDevice(audio: Blob, options?: TranscribeOptions): Promise<TranscriptResult> {
+  const paths = ortWasmPaths()
   provider ??= createLocalWhisperProvider({
-    ortWasmPaths: ortWasmPaths(),
+    ...(paths === null ? {} : { ortWasmPaths: paths }),
     onProgress: ({ phase, progress }) => {
       toast.loading(progressLabel(phase, Math.round(progress * 100)), { id: PROGRESS_TOAST_ID })
     },
