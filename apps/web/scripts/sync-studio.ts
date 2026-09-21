@@ -5,7 +5,7 @@ const appRoot = process.cwd()
 const repoRoot = path.resolve(appRoot, '../..')
 const studioOut = path.join(repoRoot, 'apps/studio/out')
 const webOut = path.join(appRoot, 'out')
-const EMBED_PAGES = ['embed.html', 'embed.txt']
+const EMBED_PAGES = ['embed.html', 'embed.txt', 'ort']
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
