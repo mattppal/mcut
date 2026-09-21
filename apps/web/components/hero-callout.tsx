@@ -7,26 +7,26 @@ export function HeroCallout({ hidden, className }: { hidden: boolean; className?
     <div
       aria-hidden
       className={cn(
-        'hidden items-start gap-2 pt-1 pl-6 text-muted-foreground transition-opacity duration-300 select-none motion-reduce:transition-none sm:flex',
+        'hidden flex-col items-start gap-1 pt-10 text-muted-foreground transition-opacity duration-300 select-none motion-reduce:transition-none xl:flex',
         hidden && 'opacity-0',
         className,
       )}
     >
-      <span className="mt-4 -rotate-2 text-[1.4rem] leading-none" style={{ fontFamily: "var(--font-hand), 'Caveat', cursive" }}>
-        {CALLOUT}
-      </span>
       <svg
-        viewBox="0 0 72 56"
-        className="-mt-1 h-14 w-auto shrink-0"
+        viewBox="0 0 72 40"
+        className="-ml-3 h-10 w-auto shrink-0"
         fill="none"
         stroke="currentColor"
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <path d="M4 50c9-1 17-6 23-13 5-6 8-13 15-19 5-4 10-8 16-11" />
-        <path d="M46 9c4-2 8-2 12-3-1 4-2 8-3 12" />
+        <path d="M68 34c-10 2-19-2-28-6-8-4-14-9-20-14-3-3-6-5-9-8" />
+        <path d="M12 18c-1-4-1-8-1-12 4 1 8 1 12 2" />
       </svg>
+      <span className="ml-4 max-w-[12rem] -rotate-2 text-[1.35rem] leading-tight" style={{ fontFamily: "var(--font-hand), 'Caveat', cursive" }}>
+        {CALLOUT}
+      </span>
     </div>
   )
 }

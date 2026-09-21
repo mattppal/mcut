@@ -14,8 +14,6 @@ const step = (id: string, tool: string, digest: string, holdMs: number, request:
   request: { id, ...request },
 })
 
-export const AGENT_PROMPT = 'Add a title, fade it, make it vertical.'
-
 export const ASPECT_STEP = step('r4', 'run_action view.aspect-9-16', 'canvas 1080 x 1920', 3000, {
   type: 'run_action',
   payload: { actionId: 'view.aspect-9-16', input: {} },

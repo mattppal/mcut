@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils'
 
 interface AgentTraceProps {
   steps: readonly AgentStep[]
-  prompt: string
   phase: ReplayPhase
   mode: TraceMode
   results: ReadonlyMap<string, unknown>
@@ -84,15 +83,14 @@ function TraceFooter({ phase, onReplay, onLoad, onRun }: Pick<AgentTraceProps, '
       </Button>
     )
   }
-  return <span className="text-xs text-muted-foreground">Click the editor to take over</span>
+  return null
 }
 
-export function AgentTrace({ steps, prompt, phase, mode, results, onReplay, onLoad, onRun }: AgentTraceProps) {
+export function AgentTrace({ steps, phase, mode, results, onReplay, onLoad, onRun }: AgentTraceProps) {
   const live = mode === 'live'
   return (
-    <aside aria-label="Agent session" className="flex flex-col gap-3 text-sm lg:pt-1">
-      <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">Agent session</span>
-      <p className="text-muted-foreground">{prompt}</p>
+    <aside aria-label="Agent session" className="flex flex-col gap-3 text-sm xl:pt-1">
+      <p className="text-muted-foreground">An agent is editing this video.</p>
       <ol className="-mx-2 flex flex-col">
         {steps.map((step, index) => (
           <TraceRow key={step.id} index={index} step={step} status={live ? rowStatus(phase, index) : null} result={results.get(step.id)} />

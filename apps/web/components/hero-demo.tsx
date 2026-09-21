@@ -4,13 +4,13 @@ import { useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { AgentTrace } from '@/components/agent-trace'
 import { HeroCallout } from '@/components/hero-callout'
 import { handOff, type ReplayPhase, type TraceMode } from '@/lib/agent-replay'
-import { AGENT_PROMPT, AGENT_SCRIPT, LEAD_IN_MS } from '@/lib/agent-script'
+import { AGENT_SCRIPT, LEAD_IN_MS } from '@/lib/agent-script'
 import type { DEMO_CLIP } from '@/lib/demo-clip'
 import { readEmbedMessage, type EmbedResult, type ParentMessage } from '@/lib/embed-protocol'
-import { FRAME_PAD, heroGeometry, measureWrapper, sameMetrics, type HeroMetrics } from '@/lib/hero-geometry'
+import { FRAME_PAD, expandedScrollTop, heroGeometry, measureWrapper, sameMetrics, type HeroMetrics } from '@/lib/hero-geometry'
 import { cn } from '@/lib/utils'
 
-const TRACE_WIDTH = '20rem'
+const GUTTER_WIDTH = '15rem'
 
 type Phase = 'poster' | 'loading' | 'slow' | 'fading' | 'live'
 
@@ -174,6 +174,8 @@ function createHeroEmbed() {
     post({ type: 'mcut:embed:collapsed', collapsed: true })
   }
 
+  const scrollTarget = () => (state.metrics === null ? 0 : expandedScrollTop(state.metrics))
+
   const arm = () => {
     window.clearTimeout(armTimer)
     armed = true
@@ -188,7 +190,7 @@ function createHeroEmbed() {
     armed = false
     window.clearTimeout(armTimer)
     armTimer = window.setTimeout(arm, SCROLL_ARM_MS)
-    window.scrollTo({ top: 0, behavior: state.reducedMotion ? 'auto' : 'smooth' })
+    window.scrollTo({ top: scrollTarget(), behavior: state.reducedMotion ? 'auto' : 'smooth' })
   }
 
   const load = () => startLoading({ autoplay: true })
@@ -209,11 +211,12 @@ function createHeroEmbed() {
 
   const onScroll = () => {
     if (!state.expanded) return
+    const offset = Math.abs(window.scrollY - scrollTarget())
     if (!armed) {
-      if (window.scrollY <= 1) arm()
+      if (offset <= 1) arm()
       return
     }
-    if (window.scrollY > SCROLL_COLLAPSE_PX) collapse()
+    if (offset > SCROLL_COLLAPSE_PX) collapse()
   }
 
   const subscribe = (listener: () => void) => {
@@ -292,8 +295,19 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
         onClick={collapse}
         className={cn('fixed inset-0 z-10 bg-overlay/50 transition-opacity', MOTION, state.expanded ? 'opacity-100' : 'pointer-events-none opacity-0')}
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_var(--trace-width)]" style={cssVariables({ '--trace-width': TRACE_WIDTH })}>
-        <div className="flex min-w-0 flex-col">
+      <div className="grid gap-6 xl:grid-cols-[var(--gutter)_minmax(0,1fr)_var(--gutter)]" style={cssVariables({ '--gutter': GUTTER_WIDTH })}>
+        <div className="order-2 xl:order-1">
+          <AgentTrace
+            steps={AGENT_SCRIPT}
+            phase={state.replay}
+            mode={traceMode(state.phase)}
+            results={state.results}
+            onReplay={replay}
+            onLoad={state.phase === 'poster' ? load : null}
+            onRun={awaitingRun ? run : null}
+          />
+        </div>
+        <div className="order-1 flex min-w-0 flex-col xl:order-2">
           <div
             ref={attachContainer}
             className={cn('relative z-20 transition-[height]', MOTION, geometry === null && 'aspect-video w-full')}
@@ -369,18 +383,8 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
               />
             )}
           </div>
-          <HeroCallout hidden={state.expanded} />
         </div>
-        <AgentTrace
-          steps={AGENT_SCRIPT}
-          prompt={AGENT_PROMPT}
-          phase={state.replay}
-          mode={traceMode(state.phase)}
-          results={state.results}
-          onReplay={replay}
-          onLoad={state.phase === 'poster' ? load : null}
-          onRun={awaitingRun ? run : null}
-        />
+        <HeroCallout hidden={state.expanded} className="order-3" />
       </div>
     </>
   )
