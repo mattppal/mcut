@@ -36,8 +36,8 @@ function TraceRow({ index, step, status, result }: { index: number; step: AgentS
   const failed = status !== null && status.kind === 'failed'
   return (
     <li className="group relative">
-      <button
-        type="button"
+      <div
+        tabIndex={0}
         className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
       >
         <span className="w-4 shrink-0 text-xs text-muted-foreground tabular-nums">{index + 1}</span>
@@ -53,7 +53,7 @@ function TraceRow({ index, step, status, result }: { index: number; step: AgentS
             <span className="sr-only">{status.kind}</span>
           </>
         )}
-      </button>
+      </div>
       <pre className="absolute inset-x-0 top-full z-10 mt-1 hidden max-h-56 overflow-auto rounded-lg border bg-popover p-3 text-2xs leading-relaxed text-popover-foreground shadow-lg group-focus-within:block group-hover:block">
         {JSON.stringify(step.request, null, 2)}
         {result !== undefined && `\n\n${JSON.stringify(result, null, 2)}`}

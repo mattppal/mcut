@@ -47,7 +47,7 @@ const AUTOPLAY_WIDTH_QUERY = '(min-width: 640px)'
 const MOTION = 'duration-[600ms] ease-out-expo motion-reduce:transition-none'
 
 const isReady = (phase: Phase): boolean => phase === 'fading' || phase === 'live'
-const traceMode = (phase: Phase): TraceMode => (phase === 'poster' || phase === 'slow' ? 'recorded' : 'live')
+const traceMode = (phase: Phase): TraceMode => (isReady(phase) ? 'live' : 'recorded')
 
 function cssVariables(variables: Record<`--${string}`, string>): CSSProperties {
   return variables
@@ -230,6 +230,7 @@ function createHeroEmbed() {
       listeners.delete(listener)
       window.clearTimeout(armTimer)
       window.clearTimeout(scriptTimer)
+      window.clearTimeout(readyTimer)
       window.removeEventListener('message', onMessage)
       window.removeEventListener('keydown', onKeydown)
       window.removeEventListener('resize', measure)

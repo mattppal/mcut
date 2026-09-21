@@ -115,6 +115,7 @@ export function EmbedBootstrap({ options, loop, onCollapsed }: { options: EmbedO
     gcTime: Infinity,
     retry: false,
   })
+  const project = bootstrap.data?.project
 
   useEngineSubscription(engine.playback, (state, previous) => {
     if (state.isPlaying === previous.isPlaying) return
@@ -130,7 +131,7 @@ export function EmbedBootstrap({ options, loop, onCollapsed }: { options: EmbedO
   useWindowEvent('message', (event) => {
     if (event.origin !== window.location.origin) return
     const parsed = parentMessageSchema.safeParse(event.data)
-    if (parsed.success) applyParentMessage(engine, ui, parsed.data, onCollapsed, bootstrap.data?.project)
+    if (parsed.success) applyParentMessage(engine, ui, parsed.data, onCollapsed, project)
   })
 
   if (!bootstrap.isError) return null
