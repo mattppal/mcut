@@ -32,8 +32,8 @@ export function heroGeometry({ metrics, expanded }: { metrics: HeroMetrics | nul
   return { stageWidth, stageHeight, scale, frameWidth, frameHeight, frameTranslateX, wrapperHeight: frameHeight }
 }
 
-export function expandedScrollTop(metrics: HeroMetrics): number {
-  return Math.max(0, metrics.wrapperTop - VIEWPORT_PAD)
+export function centeredScrollTop(metrics: HeroMetrics, frameHeight: number): number {
+  return Math.max(0, Math.round(metrics.wrapperTop - (metrics.viewportHeight - frameHeight) / 2))
 }
 
 export function measureWrapper(wrapper: HTMLDivElement): HeroMetrics {
