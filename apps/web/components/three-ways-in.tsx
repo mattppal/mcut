@@ -9,7 +9,7 @@ const STUDIO_ASSETS: readonly AssetKey[] = ['mac-arm64', 'linux-x86_64']
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border bg-card p-5">
+    <div className="flex flex-col gap-3">
       <h3 className="text-sm font-medium">{title}</h3>
       {children}
     </div>
@@ -54,7 +54,7 @@ export function ThreeWaysIn({ release }: { release: DesktopRelease | null }) {
   return (
     <section className="flex flex-col gap-5">
       <h2 className="text-2xl tracking-tight">Same edit, three ways in</h2>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-8 sm:grid-cols-3">
         <Card title="Build with the SDK">
           <Snippet code={SDK_SNIPPET} />
           <Line>{'The same JSON travels over MCP as apply_commands.'}</Line>

@@ -90,14 +90,8 @@ function TraceFooter({ phase, onReplay, onLoad, onRun }: Pick<AgentTraceProps, '
 export function AgentTrace({ steps, prompt, phase, mode, results, onReplay, onLoad, onRun }: AgentTraceProps) {
   const live = mode === 'live'
   return (
-    <aside aria-label="Agent session" className="flex flex-col gap-3 rounded-2xl border bg-card p-4 text-sm">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">Agent session</span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-2xs font-medium">
-          <span className={cn('size-1.5 rounded-full', live ? 'bg-emerald-500' : 'bg-muted-foreground/50')} />
-          {mode}
-        </span>
-      </div>
+    <aside aria-label="Agent session" className="flex flex-col gap-3 text-sm lg:pt-1">
+      <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">Agent session</span>
       <p className="text-muted-foreground">{prompt}</p>
       <ol className="-mx-2 flex flex-col">
         {steps.map((step, index) => (
