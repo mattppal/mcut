@@ -51,6 +51,17 @@ describe('mcut CLI', () => {
     expect(summarized.stdout).toContain('e-1')
   })
 
+  test('new refuses a directory target with and without --force', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'mcut-cli-'))
+    const plain = await run(['new', dir])
+    expect(plain.exitCode).toBe(1)
+    expect(plain.stderr).toBe(`mcut: ${dir} is a directory\n`)
+
+    const forced = await run(['new', dir, '--force'])
+    expect(forced.exitCode).toBe(1)
+    expect(forced.stderr).toBe(`mcut: ${dir} is a directory\n`)
+  })
+
   test('apply with an invalid command fails without writing', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'mcut-cli-'))
     const file = join(dir, 'project.json')
