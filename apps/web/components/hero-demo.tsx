@@ -1,10 +1,8 @@
 'use client'
 
 import { useState, useSyncExternalStore } from 'react'
-import { Button } from '@/components/ui/button'
 import type { DEMO_CLIP } from '@/lib/demo-clip'
 import { readEmbedMessage, type ParentMessage } from '@/lib/embed-protocol'
-import { XIcon } from '@/lib/hugeicons'
 import { cn } from '@/lib/utils'
 
 type Phase = 'poster' | 'loading' | 'fading' | 'live'
@@ -26,26 +24,36 @@ interface HeroState {
 }
 
 interface HeroGeometry {
-  width: number
-  height: number
+  stageWidth: number
+  stageHeight: number
   scale: number
-  translateX: number
+  frameWidth: number
+  frameHeight: number
+  frameTranslateX: number
   wrapperHeight: number
 }
 
 const INITIAL_STATE: HeroState = { phase: 'poster', autoplay: false, expanded: false, playing: false, userPaused: false, metrics: null }
 const VISIBLE_RATIO = 0.25
 const POSTER_FADE_MS = 400
+const FRAME_PAD = 8
+const VIEWPORT_PAD = 16
+const SCROLL_COLLAPSE_PX = 48
+const SCROLL_ARM_MS = 700
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 const MOTION = 'duration-[600ms] ease-out-expo motion-reduce:transition-none'
 
 function heroGeometry({ metrics, expanded }: HeroState): HeroGeometry | null {
   if (metrics === null) return null
-  const width = metrics.viewportWidth
-  const height = metrics.viewportHeight - metrics.wrapperTop
-  const scale = expanded ? 1 : metrics.containerWidth / width
-  const translateX = expanded ? -(width - metrics.containerWidth) / 2 : 0
-  return { width, height, scale, translateX, wrapperHeight: height * scale }
+  const availableWidth = metrics.viewportWidth - 2 * VIEWPORT_PAD - 2 * FRAME_PAD
+  const availableHeight = metrics.viewportHeight - metrics.wrapperTop - VIEWPORT_PAD - 2 * FRAME_PAD
+  const stageWidth = Math.floor(Math.min(availableWidth, (availableHeight * 16) / 9))
+  const stageHeight = Math.round((stageWidth * 9) / 16)
+  const scale = expanded ? 1 : (metrics.containerWidth - 2 * FRAME_PAD) / stageWidth
+  const frameWidth = expanded ? stageWidth + 2 * FRAME_PAD : metrics.containerWidth
+  const frameHeight = stageHeight * scale + 2 * FRAME_PAD
+  const frameTranslateX = expanded ? (metrics.containerWidth - frameWidth) / 2 : 0
+  return { stageWidth, stageHeight, scale, frameWidth, frameHeight, frameTranslateX, wrapperHeight: frameHeight }
 }
 
 function measureWrapper(wrapper: HTMLDivElement): HeroMetrics {
@@ -73,6 +81,8 @@ function createHeroEmbed() {
   let frame: HTMLIFrameElement | null = null
   let wrapper: HTMLDivElement | null = null
   let visible = false
+  let armed = false
+  let armTimer = 0
   const listeners = new Set<() => void>()
 
   const update = (patch: Partial<HeroState>) => {
@@ -126,14 +136,31 @@ function createHeroEmbed() {
     post({ type: 'mcut:embed:collapsed', collapsed: true })
   }
 
+  const arm = () => {
+    window.clearTimeout(armTimer)
+    armed = true
+  }
+
   const expand = () => {
     update(state.phase === 'poster' ? { expanded: true, phase: 'loading', autoplay: false } : { expanded: true })
     post({ type: 'mcut:embed:collapsed', collapsed: false })
+    armed = false
+    window.clearTimeout(armTimer)
+    armTimer = window.setTimeout(arm, SCROLL_ARM_MS)
     window.scrollTo({ top: 0, behavior: window.matchMedia(REDUCED_MOTION_QUERY).matches ? 'auto' : 'smooth' })
   }
 
   const onKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && state.expanded) collapse()
+  }
+
+  const onScroll = () => {
+    if (!state.expanded) return
+    if (!armed) {
+      if (window.scrollY <= 1) arm()
+      return
+    }
+    if (window.scrollY > SCROLL_COLLAPSE_PX) collapse()
   }
 
   const subscribe = (listener: () => void) => {
@@ -142,12 +169,15 @@ function createHeroEmbed() {
     window.addEventListener('message', onMessage)
     window.addEventListener('keydown', onKeydown)
     window.addEventListener('resize', measure)
+    window.addEventListener('scroll', onScroll)
     document.addEventListener('visibilitychange', onVisibility)
     return () => {
       listeners.delete(listener)
+      window.clearTimeout(armTimer)
       window.removeEventListener('message', onMessage)
       window.removeEventListener('keydown', onKeydown)
       window.removeEventListener('resize', measure)
+      window.removeEventListener('scroll', onScroll)
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }
@@ -206,67 +236,55 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
         className={cn('relative z-20 transition-[height]', MOTION, geometry === null && 'aspect-video w-full')}
         style={geometry === null ? undefined : { height: geometry.wrapperHeight }}
       >
-        <Button
-          size="icon-sm"
-          variant="secondary"
-          aria-label="Collapse the editor"
-          inert={!state.expanded}
-          onClick={collapse}
-          className={cn('absolute -top-10 right-6 z-30 transition-opacity', MOTION, !state.expanded && 'pointer-events-none opacity-0')}
-        >
-          <XIcon />
-        </Button>
         <div
-          key={geometry === null ? 'placeholder' : 'stage'}
+          key={geometry === null ? 'placeholder' : 'frame'}
           className={cn(
-            'absolute top-0 left-0 origin-top-left overflow-hidden bg-black will-change-transform transition-[transform,border-radius,box-shadow]',
+            'absolute top-0 left-0 rounded-2xl bg-card shadow-[0_24px_64px_-24px] shadow-overlay/45 will-change-transform transition-[width,height,transform,box-shadow]',
             MOTION,
             geometry === null && 'size-full',
-            state.expanded ? 'rounded-none shadow-none' : 'rounded-xl shadow-[0_24px_64px_-24px] shadow-overlay/45',
           )}
           style={
-            geometry === null
-              ? undefined
-              : { width: geometry.width, height: geometry.height, transform: `translateX(${geometry.translateX}px) scale(${geometry.scale})` }
+            geometry === null ? undefined : { width: geometry.frameWidth, height: geometry.frameHeight, transform: `translateX(${geometry.frameTranslateX}px)` }
           }
         >
-          {state.phase !== 'poster' && (
-            <iframe
-              ref={attachFrame}
-              src={src}
-              title="mcut Studio"
-              allow="autoplay; fullscreen"
-              allowFullScreen
-              className={cn('absolute top-0 left-0 border-0', geometry === null && 'size-full')}
-              style={geometry === null ? undefined : { width: geometry.width, height: geometry.height }}
-            />
-          )}
-          {state.phase !== 'live' && (
-            <img
-              src={clip.poster}
-              alt=""
-              width={clip.width}
-              height={clip.height}
-              fetchPriority="high"
-              decoding="async"
-              className={cn('absolute inset-0 size-full object-cover transition-opacity duration-300', state.phase === 'fading' && 'opacity-0')}
-            />
-          )}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-40 rounded-[inherit] bg-radial-[80%_100%_at_50%_0%] from-violet-500/15 to-transparent" />
           <div
             className={cn(
-              'pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-b from-white/55 to-border to-45% p-px transition-opacity [mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]',
+              'absolute origin-top-left overflow-hidden rounded-lg bg-black will-change-transform transition-transform',
               MOTION,
-              state.expanded && 'opacity-0',
+              geometry === null && 'inset-2',
             )}
-          />
-          <div
-            className={cn(
-              'pointer-events-none absolute inset-x-0 top-0 h-40 bg-radial-[80%_100%_at_50%_0%] from-violet-500/15 to-transparent transition-opacity',
-              MOTION,
-              state.expanded && 'opacity-0',
+            style={
+              geometry === null
+                ? undefined
+                : { top: FRAME_PAD, left: FRAME_PAD, width: geometry.stageWidth, height: geometry.stageHeight, transform: `scale(${geometry.scale})` }
+            }
+          >
+            {state.phase !== 'poster' && (
+              <iframe
+                ref={attachFrame}
+                src={src}
+                title="mcut Studio"
+                allow="autoplay; fullscreen"
+                allowFullScreen
+                className={cn('absolute top-0 left-0 border-0', geometry === null && 'size-full')}
+                style={geometry === null ? undefined : { width: geometry.stageWidth, height: geometry.stageHeight }}
+              />
             )}
-          />
-          {!state.expanded && <button type="button" aria-label="Open the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />}
+            {state.phase !== 'live' && (
+              <img
+                src={clip.poster}
+                alt=""
+                width={clip.width}
+                height={clip.height}
+                fetchPriority="high"
+                decoding="async"
+                className={cn('absolute inset-0 size-full object-cover transition-opacity duration-300', state.phase === 'fading' && 'opacity-0')}
+              />
+            )}
+            {!state.expanded && <button type="button" aria-label="Open the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />}
+          </div>
+          <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-b from-white/55 to-border to-45% p-px [mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]" />
         </div>
       </div>
     </>
