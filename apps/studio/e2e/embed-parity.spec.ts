@@ -118,7 +118,7 @@ async function openEmbed(
   const context = await browser.newContext({ viewport: { width: FRAME.width, height: FRAME.height + 200 }, reducedMotion: 'reduce' })
   const page = await context.newPage()
   await page.goto(`${siteUrl}/`)
-  await page.getByRole('button', { name: 'Open the editor' }).click()
+  await page.getByRole('button', { name: 'Take over the editor' }).click()
   const iframe = page.locator('iframe[title="mcut Studio"]')
   await iframe.waitFor()
   const frame = await (await iframe.elementHandle())?.contentFrame()

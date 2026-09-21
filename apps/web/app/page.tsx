@@ -2,14 +2,9 @@ import { HeroDemo } from '@/components/hero-demo'
 import { InstallCommands } from '@/components/install-commands'
 import { SignupForm } from '@/components/signup-form'
 import { SiteFooter, SiteHeader } from '@/components/site-chrome'
+import { ThreeWaysIn } from '@/components/three-ways-in'
 import { DEMO_CLIP } from '@/lib/demo-clip'
 import { desktopRelease } from '@/lib/desktop-release.generated'
-
-const POINTS: [string, string][] = [
-  ['SDK available', 'Use the TypeScript packages for timelines, previews, media/export, captions, React interfaces, and CLI workflows.'],
-  ['Built for agents', 'Compose edits through serializable commands, editor operators, CLI tools, and MCP server packages.'],
-  ['Studio', 'The desktop editor uses the same engine for cutting, captioning, exporting, and agent-assisted video work.'],
-]
 
 function Serif({ children }: { children: React.ReactNode }) {
   return (
@@ -31,34 +26,28 @@ export default function Home() {
     <div className="flex flex-1 flex-col overflow-x-clip bg-background text-foreground">
       <SiteHeader />
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6">
-        <div className="pt-8">
-          <HeroDemo clip={DEMO_CLIP} />
-        </div>
-        <section className="flex flex-col gap-6 pt-10 pb-12 sm:pt-12 sm:pb-16">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6">
+        <section className="flex max-w-2xl flex-col gap-3 pt-8 pb-6">
           <h1 className="text-4xl leading-[1.12] tracking-tight text-balance sm:text-5xl">
             Open source video editing for <Serif>agents</Serif>
           </h1>
-          {release === null ? (
-            <p className="max-w-md leading-relaxed text-muted-foreground">The full mcut editor is coming soon. Join the waitlist for early access.</p>
-          ) : (
-            <p className="max-w-md leading-relaxed text-muted-foreground">
-              mcut Studio {release.version} is out for macOS and Linux. Join the waitlist for updates.
-            </p>
-          )}
+          <p className="max-w-md leading-relaxed text-muted-foreground">
+            This is the real Studio build. An agent is editing it through the same MCP tools it would use on your desktop.
+          </p>
+        </section>
+        <HeroDemo clip={DEMO_CLIP} />
+        <section className="flex max-w-2xl flex-col gap-4 pt-10 pb-12">
+          <p className="max-w-md leading-relaxed text-muted-foreground">
+            {release === null
+              ? 'The full mcut editor is coming soon. Join the waitlist for early access.'
+              : `mcut Studio ${release.version} is out for macOS and Linux. Join the waitlist for updates.`}
+          </p>
           <SignupForm />
         </section>
-
-        <InstallCommands />
-
-        <dl className="pt-4 pb-24">
-          {POINTS.map(([term, body]) => (
-            <div key={term} className="grid gap-1 border-b py-4 last:border-b-0 sm:grid-cols-[11rem_1fr] sm:gap-6">
-              <dt className="text-sm font-medium">{term}</dt>
-              <dd className="text-sm leading-relaxed text-muted-foreground">{body}</dd>
-            </div>
-          ))}
-        </dl>
+        <ThreeWaysIn release={release} />
+        <div className="max-w-2xl pt-10 pb-24">
+          <InstallCommands />
+        </div>
       </main>
 
       <SiteFooter />

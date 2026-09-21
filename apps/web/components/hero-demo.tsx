@@ -1,18 +1,18 @@
 'use client'
 
-import { useState, useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore, type CSSProperties } from 'react'
+import { AgentTrace } from '@/components/agent-trace'
+import { HeroCallout } from '@/components/hero-callout'
+import { handOff, type ReplayPhase, type TraceMode } from '@/lib/agent-replay'
+import { AGENT_PROMPT, AGENT_SCRIPT, LEAD_IN_MS } from '@/lib/agent-script'
 import type { DEMO_CLIP } from '@/lib/demo-clip'
-import { readEmbedMessage, type ParentMessage } from '@/lib/embed-protocol'
+import { readEmbedMessage, type EmbedResult, type ParentMessage } from '@/lib/embed-protocol'
+import { FRAME_PAD, heroGeometry, measureWrapper, sameMetrics, type HeroMetrics } from '@/lib/hero-geometry'
 import { cn } from '@/lib/utils'
 
-type Phase = 'poster' | 'loading' | 'fading' | 'live'
+const TRACE_WIDTH = '20rem'
 
-interface HeroMetrics {
-  viewportWidth: number
-  viewportHeight: number
-  containerWidth: number
-  wrapperTop: number
-}
+type Phase = 'poster' | 'loading' | 'slow' | 'fading' | 'live'
 
 interface HeroState {
   phase: Phase
@@ -20,60 +20,48 @@ interface HeroState {
   expanded: boolean
   playing: boolean
   userPaused: boolean
+  reducedMotion: boolean
   metrics: HeroMetrics | null
+  replay: ReplayPhase
+  results: ReadonlyMap<string, unknown>
 }
 
-interface HeroGeometry {
-  stageWidth: number
-  stageHeight: number
-  scale: number
-  frameWidth: number
-  frameHeight: number
-  frameTranslateX: number
-  wrapperHeight: number
+const INITIAL_STATE: HeroState = {
+  phase: 'poster',
+  autoplay: false,
+  expanded: false,
+  playing: false,
+  userPaused: false,
+  reducedMotion: false,
+  metrics: null,
+  replay: { kind: 'waiting' },
+  results: new Map(),
 }
-
-const INITIAL_STATE: HeroState = { phase: 'poster', autoplay: false, expanded: false, playing: false, userPaused: false, metrics: null }
 const VISIBLE_RATIO = 0.25
-const POSTER_FADE_MS = 400
-const FRAME_PAD = 8
-const VIEWPORT_PAD = 16
+const POSTER_FADE_MS = 600
+const READY_TIMEOUT_MS = 8000
 const SCROLL_COLLAPSE_PX = 48
 const SCROLL_ARM_MS = 700
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
+const AUTOPLAY_WIDTH_QUERY = '(min-width: 640px)'
 const MOTION = 'duration-[600ms] ease-out-expo motion-reduce:transition-none'
 
-function heroGeometry({ metrics, expanded }: HeroState): HeroGeometry | null {
-  if (metrics === null) return null
-  const availableWidth = metrics.viewportWidth - 2 * VIEWPORT_PAD - 2 * FRAME_PAD
-  const availableHeight = metrics.viewportHeight - metrics.wrapperTop - VIEWPORT_PAD - 2 * FRAME_PAD
-  const stageWidth = Math.floor(Math.min(availableWidth, (availableHeight * 16) / 9))
-  const stageHeight = Math.round((stageWidth * 9) / 16)
-  const scale = expanded ? 1 : (metrics.containerWidth - 2 * FRAME_PAD) / stageWidth
-  const frameWidth = expanded ? stageWidth + 2 * FRAME_PAD : metrics.containerWidth
-  const frameHeight = stageHeight * scale + 2 * FRAME_PAD
-  const frameTranslateX = expanded ? (metrics.containerWidth - frameWidth) / 2 : 0
-  return { stageWidth, stageHeight, scale, frameWidth, frameHeight, frameTranslateX, wrapperHeight: frameHeight }
+const isReady = (phase: Phase): boolean => phase === 'fading' || phase === 'live'
+const traceMode = (phase: Phase): TraceMode => (isReady(phase) ? 'live' : 'recorded')
+
+function cssVariables(variables: Record<`--${string}`, string>): CSSProperties {
+  return variables
 }
 
-function measureWrapper(wrapper: HTMLDivElement): HeroMetrics {
-  const rect = wrapper.getBoundingClientRect()
-  return {
-    viewportWidth: document.documentElement.clientWidth,
-    viewportHeight: window.innerHeight,
-    containerWidth: rect.width,
-    wrapperTop: rect.top + window.scrollY,
-  }
+function savesData(): boolean {
+  const nav: unknown = navigator
+  if (typeof nav !== 'object' || nav === null || !('connection' in nav)) return false
+  const { connection } = nav
+  return typeof connection === 'object' && connection !== null && 'saveData' in connection && connection.saveData === true
 }
 
-function sameMetrics(a: HeroMetrics | null, b: HeroMetrics): boolean {
-  return (
-    a !== null &&
-    a.viewportWidth === b.viewportWidth &&
-    a.viewportHeight === b.viewportHeight &&
-    a.containerWidth === b.containerWidth &&
-    a.wrapperTop === b.wrapperTop
-  )
+function canAutoplay(reducedMotion: boolean): boolean {
+  return !reducedMotion && window.matchMedia(AUTOPLAY_WIDTH_QUERY).matches && !savesData()
 }
 
 function createHeroEmbed() {
@@ -83,6 +71,8 @@ function createHeroEmbed() {
   let visible = false
   let armed = false
   let armTimer = 0
+  let readyTimer = 0
+  let scriptTimer = 0
   const listeners = new Set<() => void>()
 
   const update = (patch: Partial<HeroState>) => {
@@ -95,8 +85,7 @@ function createHeroEmbed() {
   }
 
   const resume = () => {
-    const ready = state.phase === 'fading' || state.phase === 'live'
-    if (ready && visible && !document.hidden && !state.userPaused) post({ type: 'mcut:embed:play' })
+    if (isReady(state.phase) && visible && !document.hidden && !state.userPaused) post({ type: 'mcut:embed:play' })
   }
 
   const measure = () => {
@@ -105,18 +94,67 @@ function createHeroEmbed() {
     if (!sameMetrics(state.metrics, metrics)) update({ metrics })
   }
 
+  const schedule = (delayMs: number, run: () => void) => {
+    window.clearTimeout(scriptTimer)
+    scriptTimer = window.setTimeout(run, delayMs)
+  }
+
+  const send = (step: number) => {
+    if (step >= AGENT_SCRIPT.length) {
+      update({ replay: { kind: 'done' } })
+      return
+    }
+    update({ replay: { kind: 'running', step } })
+    post({ type: 'mcut:embed:request', request: AGENT_SCRIPT[step].request })
+  }
+
+  const startLoading = (patch: Partial<HeroState>) => {
+    update({ ...patch, phase: 'loading' })
+    window.clearTimeout(readyTimer)
+    readyTimer = window.setTimeout(() => {
+      if (state.phase === 'loading') update({ phase: 'slow' })
+    }, READY_TIMEOUT_MS)
+  }
+
+  const onReady = () => {
+    window.clearTimeout(readyTimer)
+    post({ type: 'mcut:embed:collapsed', collapsed: !state.expanded })
+    if (!visible || document.hidden) post({ type: 'mcut:embed:pause' })
+    update({ phase: 'fading' })
+    window.setTimeout(() => update({ phase: 'live' }), POSTER_FADE_MS)
+    if (state.replay.kind === 'waiting' && !state.reducedMotion) schedule(LEAD_IN_MS, () => send(0))
+  }
+
+  const onResult = (message: EmbedResult) => {
+    const { replay } = state
+    if (replay.kind !== 'running' || AGENT_SCRIPT[replay.step].id !== message.id) return
+    if (!message.ok) {
+      update({ replay: { kind: 'failed', step: replay.step, message: message.message } })
+      return
+    }
+    update({ results: new Map(state.results).set(message.id, message.result), replay: { kind: 'holding', step: replay.step } })
+    schedule(AGENT_SCRIPT[replay.step].holdMs, () => send(replay.step + 1))
+  }
+
   const onMessage = (event: MessageEvent) => {
     if (frame === null || event.origin !== window.location.origin || event.source !== frame.contentWindow) return
     const message = readEmbedMessage(event.data)
     if (message === null) return
-    if (message.type === 'mcut:embed:ready') {
-      post({ type: 'mcut:embed:collapsed', collapsed: !state.expanded })
-      if (!visible || document.hidden) post({ type: 'mcut:embed:pause' })
-      update({ phase: 'fading' })
-      window.setTimeout(() => update({ phase: 'live' }), POSTER_FADE_MS)
-      return
+    switch (message.type) {
+      case 'mcut:embed:ready':
+        onReady()
+        return
+      case 'mcut:embed:playing':
+        update({ playing: message.playing, userPaused: !message.playing && visible && !document.hidden })
+        return
+      case 'mcut:embed:result':
+        onResult(message)
+        return
+      default: {
+        const unhandled: never = message
+        throw new Error(`Unhandled embed message ${JSON.stringify(unhandled)}`)
+      }
     }
-    update({ playing: message.playing, userPaused: !message.playing && visible && !document.hidden })
   }
 
   const setVisible = (next: boolean) => {
@@ -142,12 +180,27 @@ function createHeroEmbed() {
   }
 
   const expand = () => {
-    update(state.phase === 'poster' ? { expanded: true, phase: 'loading', autoplay: false } : { expanded: true })
+    window.clearTimeout(scriptTimer)
+    const replay = handOff(state.replay)
+    if (state.phase === 'poster') startLoading({ expanded: true, autoplay: false, replay })
+    else update({ expanded: true, replay })
     post({ type: 'mcut:embed:collapsed', collapsed: false })
     armed = false
     window.clearTimeout(armTimer)
     armTimer = window.setTimeout(arm, SCROLL_ARM_MS)
-    window.scrollTo({ top: 0, behavior: window.matchMedia(REDUCED_MOTION_QUERY).matches ? 'auto' : 'smooth' })
+    window.scrollTo({ top: 0, behavior: state.reducedMotion ? 'auto' : 'smooth' })
+  }
+
+  const load = () => startLoading({ autoplay: true })
+
+  const run = () => send(0)
+
+  const replay = () => {
+    window.clearTimeout(scriptTimer)
+    if (state.expanded) collapse()
+    update({ results: new Map(), replay: { kind: 'waiting' } })
+    post({ type: 'mcut:embed:reset' })
+    if (isReady(state.phase)) schedule(LEAD_IN_MS, () => send(0))
   }
 
   const onKeydown = (event: KeyboardEvent) => {
@@ -165,7 +218,9 @@ function createHeroEmbed() {
 
   const subscribe = (listener: () => void) => {
     listeners.add(listener)
-    if (state.phase === 'poster' && !window.matchMedia(REDUCED_MOTION_QUERY).matches) update({ phase: 'loading', autoplay: true })
+    const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY).matches
+    if (state.reducedMotion !== reducedMotion) update({ reducedMotion })
+    if (state.phase === 'poster' && canAutoplay(reducedMotion)) startLoading({ autoplay: true })
     window.addEventListener('message', onMessage)
     window.addEventListener('keydown', onKeydown)
     window.addEventListener('resize', measure)
@@ -174,6 +229,8 @@ function createHeroEmbed() {
     return () => {
       listeners.delete(listener)
       window.clearTimeout(armTimer)
+      window.clearTimeout(scriptTimer)
+      window.clearTimeout(readyTimer)
       window.removeEventListener('message', onMessage)
       window.removeEventListener('keydown', onKeydown)
       window.removeEventListener('resize', measure)
@@ -215,14 +272,18 @@ function createHeroEmbed() {
     attachFrame,
     expand,
     collapse,
+    load,
+    run,
+    replay,
   }
 }
 
 export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
-  const [{ subscribe, getSnapshot, getServerSnapshot, attachContainer, attachFrame, expand, collapse }] = useState(createHeroEmbed)
+  const [{ subscribe, getSnapshot, getServerSnapshot, attachContainer, attachFrame, expand, collapse, load, run, replay }] = useState(createHeroEmbed)
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
   const geometry = heroGeometry(state)
   const src = `/embed?clip=${encodeURIComponent(clip.url)}${state.autoplay ? '&autoplay=1' : ''}&muted=1`
+  const awaitingRun = isReady(state.phase) && state.reducedMotion && state.replay.kind === 'waiting'
 
   return (
     <>
@@ -231,46 +292,56 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
         onClick={collapse}
         className={cn('fixed inset-0 z-10 bg-overlay/50 transition-opacity', MOTION, state.expanded ? 'opacity-100' : 'pointer-events-none opacity-0')}
       />
-      <div
-        ref={attachContainer}
-        className={cn('relative z-20 transition-[height]', MOTION, geometry === null && 'aspect-video w-full')}
-        style={geometry === null ? undefined : { height: geometry.wrapperHeight }}
-      >
-        <div
-          key={geometry === null ? 'placeholder' : 'frame'}
-          className={cn(
-            'absolute top-0 left-0 rounded-2xl bg-card shadow-[0_24px_64px_-24px] shadow-overlay/45 will-change-transform transition-[width,height,transform,box-shadow]',
-            MOTION,
-            geometry === null && 'size-full',
-          )}
-          style={
-            geometry === null ? undefined : { width: geometry.frameWidth, height: geometry.frameHeight, transform: `translateX(${geometry.frameTranslateX}px)` }
-          }
-        >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-40 rounded-[inherit] bg-radial-[80%_100%_at_50%_0%] from-violet-500/15 to-transparent" />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_var(--trace-width)]" style={cssVariables({ '--trace-width': TRACE_WIDTH })}>
+        <div className="flex min-w-0 flex-col">
           <div
-            className={cn(
-              'absolute origin-top-left overflow-hidden rounded-lg bg-black will-change-transform transition-transform',
-              MOTION,
-              geometry === null && 'inset-2',
-            )}
-            style={
-              geometry === null
-                ? undefined
-                : { top: FRAME_PAD, left: FRAME_PAD, width: geometry.stageWidth, height: geometry.stageHeight, transform: `scale(${geometry.scale})` }
-            }
+            ref={attachContainer}
+            className={cn('relative z-20 transition-[height]', MOTION, geometry === null && 'aspect-video w-full')}
+            style={geometry === null ? undefined : { height: geometry.wrapperHeight }}
           >
-            {state.phase !== 'poster' && (
-              <iframe
-                ref={attachFrame}
-                src={src}
-                title="mcut Studio"
-                allow="autoplay; fullscreen"
-                allowFullScreen
-                className={cn('absolute top-0 left-0 border-0', geometry === null && 'size-full')}
-                style={geometry === null ? undefined : { width: geometry.stageWidth, height: geometry.stageHeight }}
-              />
-            )}
+            <div
+              key={geometry === null ? 'placeholder' : 'frame'}
+              className={cn(
+                'absolute top-0 left-0 rounded-2xl bg-card shadow-[0_24px_64px_-24px] shadow-overlay/45 will-change-transform transition-[width,height,transform,box-shadow]',
+                MOTION,
+                geometry === null && 'size-full',
+              )}
+              style={
+                geometry === null
+                  ? undefined
+                  : { width: geometry.frameWidth, height: geometry.frameHeight, transform: `translateX(${geometry.frameTranslateX}px)` }
+              }
+            >
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-40 rounded-[inherit] bg-radial-[80%_100%_at_50%_0%] from-violet-500/15 to-transparent" />
+              <div
+                className={cn(
+                  'absolute origin-top-left overflow-hidden rounded-lg bg-black will-change-transform transition-transform',
+                  MOTION,
+                  geometry === null && 'inset-2',
+                )}
+                style={
+                  geometry === null
+                    ? undefined
+                    : { top: FRAME_PAD, left: FRAME_PAD, width: geometry.stageWidth, height: geometry.stageHeight, transform: `scale(${geometry.scale})` }
+                }
+              >
+                {state.phase !== 'poster' && (
+                  <iframe
+                    ref={attachFrame}
+                    src={src}
+                    title="mcut Studio"
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                    className={cn('absolute top-0 left-0 border-0', geometry === null && 'size-full')}
+                    style={geometry === null ? undefined : { width: geometry.stageWidth, height: geometry.stageHeight }}
+                  />
+                )}
+                {!state.expanded && (
+                  <button type="button" aria-label="Take over the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />
+                )}
+              </div>
+              <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-b from-white/55 to-border to-45% p-px [mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]" />
+            </div>
             {state.phase !== 'live' && (
               <img
                 src={clip.poster}
@@ -279,13 +350,37 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                 height={clip.height}
                 fetchPriority="high"
                 decoding="async"
-                className={cn('absolute inset-0 size-full object-cover transition-opacity duration-300', state.phase === 'fading' && 'opacity-0')}
+                className={cn(
+                  'pointer-events-none absolute rounded-lg object-cover transition-[top,left,width,height,opacity]',
+                  MOTION,
+                  geometry === null && 'top-2 left-2 h-[calc(100%-1rem)] w-[calc(100%-1rem)]',
+                  state.phase === 'fading' && 'opacity-0',
+                )}
+                style={
+                  geometry === null
+                    ? undefined
+                    : {
+                        top: FRAME_PAD,
+                        left: FRAME_PAD + geometry.frameTranslateX,
+                        width: geometry.stageWidth * geometry.scale,
+                        height: geometry.stageHeight * geometry.scale,
+                      }
+                }
               />
             )}
-            {!state.expanded && <button type="button" aria-label="Open the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />}
           </div>
-          <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-b from-white/55 to-border to-45% p-px [mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]" />
+          <HeroCallout hidden={state.expanded} />
         </div>
+        <AgentTrace
+          steps={AGENT_SCRIPT}
+          prompt={AGENT_PROMPT}
+          phase={state.replay}
+          mode={traceMode(state.phase)}
+          results={state.results}
+          onReplay={replay}
+          onLoad={state.phase === 'poster' ? load : null}
+          onRun={awaitingRun ? run : null}
+        />
       </div>
     </>
   )
