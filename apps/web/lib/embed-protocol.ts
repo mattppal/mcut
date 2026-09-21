@@ -1,4 +1,4 @@
-export type ParentMessage = { type: 'mcut:embed:play' } | { type: 'mcut:embed:pause' } | { type: 'mcut:embed:layout'; compact: boolean }
+export type ParentMessage = { type: 'mcut:embed:play' } | { type: 'mcut:embed:pause' } | { type: 'mcut:embed:collapsed'; collapsed: boolean }
 
 export type EmbedMessage = { type: 'mcut:embed:ready' } | { type: 'mcut:embed:playing'; playing: boolean }
 

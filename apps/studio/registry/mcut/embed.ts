@@ -47,7 +47,7 @@ export function readEmbedOptions(search: string): EmbedOptions | null {
 export const parentMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('mcut:embed:play') }),
   z.object({ type: z.literal('mcut:embed:pause') }),
-  z.object({ type: z.literal('mcut:embed:layout'), compact: z.boolean() }),
+  z.object({ type: z.literal('mcut:embed:collapsed'), collapsed: z.boolean() }),
 ])
 
 export type ParentMessage = z.infer<typeof parentMessageSchema>

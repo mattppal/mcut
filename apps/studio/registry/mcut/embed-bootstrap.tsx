@@ -38,7 +38,7 @@ async function bootstrapEmbed(engine: EditorEngine, options: EmbedOptions): Prom
   return elementId
 }
 
-function applyParentMessage(engine: EditorEngine, message: ParentMessage, onLayout: (compact: boolean) => void): void {
+function applyParentMessage(engine: EditorEngine, message: ParentMessage, onCollapsed: (collapsed: boolean) => void): void {
   switch (message.type) {
     case 'mcut:embed:play':
       engine.play()
@@ -46,8 +46,8 @@ function applyParentMessage(engine: EditorEngine, message: ParentMessage, onLayo
     case 'mcut:embed:pause':
       engine.pause()
       return
-    case 'mcut:embed:layout':
-      onLayout(message.compact)
+    case 'mcut:embed:collapsed':
+      onCollapsed(message.collapsed)
       return
     default: {
       const unhandled: never = message
@@ -56,7 +56,7 @@ function applyParentMessage(engine: EditorEngine, message: ParentMessage, onLayo
   }
 }
 
-export function EmbedBootstrap({ options, loop, onLayout }: { options: EmbedOptions; loop: boolean; onLayout: (compact: boolean) => void }) {
+export function EmbedBootstrap({ options, loop, onCollapsed }: { options: EmbedOptions; loop: boolean; onCollapsed: (collapsed: boolean) => void }) {
   const engine = useEditor()
   const bootstrap = useQuery({
     queryKey: ['mcut', 'embed', options.clip],
@@ -80,7 +80,7 @@ export function EmbedBootstrap({ options, loop, onLayout }: { options: EmbedOpti
   useWindowEvent('message', (event) => {
     if (event.origin !== window.location.origin) return
     const parsed = parentMessageSchema.safeParse(event.data)
-    if (parsed.success) applyParentMessage(engine, parsed.data, onLayout)
+    if (parsed.success) applyParentMessage(engine, parsed.data, onCollapsed)
   })
 
   if (!bootstrap.isError) return null
