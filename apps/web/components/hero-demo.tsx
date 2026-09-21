@@ -38,7 +38,7 @@ const INITIAL_STATE: HeroState = {
   results: new Map(),
 }
 const VISIBLE_RATIO = 0.25
-const POSTER_FADE_MS = 400
+const POSTER_FADE_MS = 600
 const READY_TIMEOUT_MS = 8000
 const SCROLL_COLLAPSE_PX = 48
 const SCROLL_ARM_MS = 700
@@ -335,23 +335,38 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                     style={geometry === null ? undefined : { width: geometry.stageWidth, height: geometry.stageHeight }}
                   />
                 )}
-                {state.phase !== 'live' && (
-                  <img
-                    src={clip.poster}
-                    alt=""
-                    width={clip.width}
-                    height={clip.height}
-                    fetchPriority="high"
-                    decoding="async"
-                    className={cn('absolute inset-0 size-full object-cover transition-opacity duration-300', state.phase === 'fading' && 'opacity-0')}
-                  />
-                )}
                 {!state.expanded && (
                   <button type="button" aria-label="Take over the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />
                 )}
               </div>
               <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-b from-white/55 to-border to-45% p-px [mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]" />
             </div>
+            {state.phase !== 'live' && (
+              <img
+                src={clip.poster}
+                alt=""
+                width={clip.width}
+                height={clip.height}
+                fetchPriority="high"
+                decoding="async"
+                className={cn(
+                  'pointer-events-none absolute rounded-lg object-cover transition-[top,left,width,height,opacity]',
+                  MOTION,
+                  geometry === null && 'top-2 left-2 h-[calc(100%-1rem)] w-[calc(100%-1rem)]',
+                  state.phase === 'fading' && 'opacity-0',
+                )}
+                style={
+                  geometry === null
+                    ? undefined
+                    : {
+                        top: FRAME_PAD,
+                        left: FRAME_PAD + geometry.frameTranslateX,
+                        width: geometry.stageWidth * geometry.scale,
+                        height: geometry.stageHeight * geometry.scale,
+                      }
+                }
+              />
+            )}
           </div>
           <HeroCallout hidden={state.expanded} />
         </div>
