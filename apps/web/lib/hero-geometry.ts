@@ -6,7 +6,7 @@ export interface HeroMetrics {
   wrapperLeft: number
 }
 
-interface HeroGeometry {
+export interface HeroGeometry {
   stageWidth: number
   stageHeight: number
   scale: number
