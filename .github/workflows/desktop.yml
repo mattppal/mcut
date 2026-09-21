@@ -23,7 +23,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Require the requested version to match apps/desktop/package.json
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          built="$(node -p "require('./apps/desktop/package.json').version")"
+          case "$GITHUB_REF" in
+            refs/tags/mcut-desktop@*) requested="${GITHUB_REF_NAME#mcut-desktop@}" ;;
+            *) requested="$INPUT_VERSION" ;;
+          esac
+          if [ -z "$requested" ]; then
+            echo "Building $built without publishing."
+            exit 0
+          fi
+          if [ "$requested" != "$built" ]; then
+            echo "::error::Requested $requested but apps/desktop/package.json is $built. Bump the version on main first, then dispatch or tag mcut-desktop@$built."
+            exit 1
+          fi
+          echo "Publishing $built."
+
   linux:
+    needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -58,6 +83,7 @@ jobs:
           retention-days: 14
 
   mac:
+    needs: version
     runs-on: macos-15
     timeout-minutes: 45
     env:
