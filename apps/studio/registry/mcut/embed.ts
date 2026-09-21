@@ -48,11 +48,17 @@ export const parentMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('mcut:embed:play') }),
   z.object({ type: z.literal('mcut:embed:pause') }),
   z.object({ type: z.literal('mcut:embed:collapsed'), collapsed: z.boolean() }),
+  z.object({ type: z.literal('mcut:embed:request'), request: z.unknown() }),
+  z.object({ type: z.literal('mcut:embed:reset') }),
 ])
 
 export type ParentMessage = z.infer<typeof parentMessageSchema>
 
-export type EmbedMessage = { type: 'mcut:embed:ready' } | { type: 'mcut:embed:playing'; playing: boolean }
+export type EmbedMessage =
+  | { type: 'mcut:embed:ready' }
+  | { type: 'mcut:embed:playing'; playing: boolean }
+  | { type: 'mcut:embed:result'; id: string; ok: true; result: unknown }
+  | { type: 'mcut:embed:result'; id: string; ok: false; message: string }
 
 export function postToParent(message: EmbedMessage): void {
   if (window.parent === window) return

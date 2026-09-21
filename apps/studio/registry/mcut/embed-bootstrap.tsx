@@ -2,9 +2,13 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useEditor, useEngineSubscription, useWindowEvent } from '@mcut/react'
-import { getElementLocation, getProjectDurationMs, type EditorEngine, type ElementId } from '@mcut/timeline'
+import { getElementLocation, getProjectDurationMs, type EditorEngine, type ElementId, type Project } from '@mcut/timeline'
+import { z } from 'zod'
+import { bridgeRequestSchema } from './bridge-request'
 import { elementForAsset, insertElementAtPlayhead } from './editor-actions'
 import { parentMessageSchema, postToParent, type EmbedOptions, type ParentMessage } from './embed'
+import { useEditorUI } from './editor-ui'
+import { handleLiveMcpRequest } from './live-mcp-bridge'
 import { importMediaFiles } from './media-import'
 
 function clipFileName(clip: string): string {
@@ -19,7 +23,7 @@ async function fetchClipFile(clip: string): Promise<File> {
   return new File([blob], clipFileName(clip), { type: blob.type })
 }
 
-async function bootstrapEmbed(engine: EditorEngine, options: EmbedOptions): Promise<ElementId> {
+async function bootstrapEmbed(engine: EditorEngine, options: EmbedOptions): Promise<{ elementId: ElementId; project: Project }> {
   const [asset] = await importMediaFiles(engine, [await fetchClipFile(options.clip)])
   if (!asset) throw new Error('Could not import the clip')
   if (asset.width !== undefined && asset.height !== undefined) {
@@ -35,10 +39,21 @@ async function bootstrapEmbed(engine: EditorEngine, options: EmbedOptions): Prom
   engine.seek(0)
   if (options.autoplay) engine.play()
   postToParent({ type: 'mcut:embed:ready' })
-  return elementId
+  return { elementId, project: engine.project }
 }
 
-function applyParentMessage(engine: EditorEngine, message: ParentMessage, onCollapsed: (collapsed: boolean) => void): void {
+function requestId(raw: unknown): string {
+  const parsed = z.object({ id: z.string() }).safeParse(raw)
+  return parsed.success ? parsed.data.id : ''
+}
+
+function applyParentMessage(
+  engine: EditorEngine,
+  ui: ReturnType<typeof useEditorUI>,
+  message: ParentMessage,
+  onCollapsed: (collapsed: boolean) => void,
+  project: Project | undefined,
+): void {
   switch (message.type) {
     case 'mcut:embed:play':
       engine.play()
@@ -49,6 +64,40 @@ function applyParentMessage(engine: EditorEngine, message: ParentMessage, onColl
     case 'mcut:embed:collapsed':
       onCollapsed(message.collapsed)
       return
+    case 'mcut:embed:reset':
+      if (!project) return
+      engine.pause()
+      engine.loadProject(project)
+      engine.seek(0)
+      engine.play()
+      return
+    case 'mcut:embed:request': {
+      const parsed = bridgeRequestSchema.safeParse(message.request)
+      if (!parsed.success) {
+        postToParent({
+          type: 'mcut:embed:result',
+          id: requestId(message.request),
+          ok: false,
+          message: z.prettifyError(parsed.error),
+        })
+        return
+      }
+      const request = parsed.data
+      void (async () => {
+        try {
+          const result = await handleLiveMcpRequest(engine, ui, request)
+          postToParent({ type: 'mcut:embed:result', id: request.id, ok: true, result })
+        } catch (error) {
+          postToParent({
+            type: 'mcut:embed:result',
+            id: request.id,
+            ok: false,
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
+      })()
+      return
+    }
     default: {
       const unhandled: never = message
       throw new Error(`Unhandled parent message ${JSON.stringify(unhandled)}`)
@@ -58,6 +107,7 @@ function applyParentMessage(engine: EditorEngine, message: ParentMessage, onColl
 
 export function EmbedBootstrap({ options, loop, onCollapsed }: { options: EmbedOptions; loop: boolean; onCollapsed: (collapsed: boolean) => void }) {
   const engine = useEditor()
+  const ui = useEditorUI()
   const bootstrap = useQuery({
     queryKey: ['mcut', 'embed', options.clip],
     queryFn: () => bootstrapEmbed(engine, options),
@@ -80,7 +130,7 @@ export function EmbedBootstrap({ options, loop, onCollapsed }: { options: EmbedO
   useWindowEvent('message', (event) => {
     if (event.origin !== window.location.origin) return
     const parsed = parentMessageSchema.safeParse(event.data)
-    if (parsed.success) applyParentMessage(engine, parsed.data, onCollapsed)
+    if (parsed.success) applyParentMessage(engine, ui, parsed.data, onCollapsed, bootstrap.data?.project)
   })
 
   if (!bootstrap.isError) return null
