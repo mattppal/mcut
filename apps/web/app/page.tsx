@@ -27,20 +27,18 @@ export default function Home() {
       <SiteHeader />
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6">
-        <section className="flex max-w-2xl flex-col gap-3 pt-8 pb-6">
+        <div className="pt-8">
+          <HeroDemo clip={DEMO_CLIP} />
+        </div>
+        <section className="flex max-w-2xl flex-col gap-6 pt-10 pb-12 sm:pt-12 sm:pb-16">
           <h1 className="text-4xl leading-[1.12] tracking-tight text-balance sm:text-5xl">
             Open source video editing for <Serif>agents</Serif>
           </h1>
           <p className="max-w-md leading-relaxed text-muted-foreground">
             This is the real Studio build. An agent is editing it through the same MCP tools it would use on your desktop.
-          </p>
-        </section>
-        <HeroDemo clip={DEMO_CLIP} />
-        <section className="flex max-w-2xl flex-col gap-4 pt-10 pb-12">
-          <p className="max-w-md leading-relaxed text-muted-foreground">
             {release === null
-              ? 'The full mcut editor is coming soon. Join the waitlist for early access.'
-              : `mcut Studio ${release.version} is out for macOS and Linux. Join the waitlist for updates.`}
+              ? ' The full editor is coming soon. Join the waitlist for early access.'
+              : ` Studio ${release.version} is out for macOS and Linux.`}
           </p>
           <SignupForm />
         </section>
