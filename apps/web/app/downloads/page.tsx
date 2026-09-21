@@ -23,9 +23,9 @@ export default function DownloadsPage() {
   return (
     <div className="flex flex-1 flex-col bg-background text-foreground">
       <SiteHeader />
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-6 pt-16 pb-24">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-6 pt-10 pb-24 sm:pt-16">
         <div className="flex flex-col gap-4">
-          <h1 className="text-5xl leading-[1.12] tracking-tight text-balance">Download mcut Studio</h1>
+          <h1 className="text-4xl leading-[1.12] tracking-tight text-balance sm:text-5xl">Download mcut Studio</h1>
           {release === null ? (
             <>
               <p className="max-w-md leading-relaxed text-muted-foreground">Builds for macOS and Linux are published on GitHub Releases.</p>

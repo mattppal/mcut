@@ -35,8 +35,8 @@ export default function Home() {
         <div className="pt-8">
           <HeroDemo clip={DEMO_CLIP} />
         </div>
-        <section className="flex flex-col gap-6 pt-12 pb-16">
-          <h1 className="text-5xl leading-[1.12] tracking-tight text-balance">
+        <section className="flex flex-col gap-6 pt-10 pb-12 sm:pt-12 sm:pb-16">
+          <h1 className="text-4xl leading-[1.12] tracking-tight text-balance sm:text-5xl">
             Open source video editing for <Serif>agents</Serif>
           </h1>
           {release === null ? (

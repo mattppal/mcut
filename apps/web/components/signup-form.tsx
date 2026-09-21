@@ -76,7 +76,7 @@ export function SignupForm() {
           disabled={state === "submitting"}
           required
         />
-        <Button type="submit" size="lg" className="h-9 sm:w-auto" disabled={state === "submitting"}>
+        <Button type="submit" size="lg" className="h-10 sm:h-9 sm:w-auto" disabled={state === "submitting"}>
           {state === "submitting" ? "Joining..." : "Join editor waitlist"}
         </Button>
       </div>
