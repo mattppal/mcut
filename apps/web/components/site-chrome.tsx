@@ -30,7 +30,10 @@ export function SiteFooter() {
     <footer className="border-t">
       <div className="mx-auto flex w-full max-w-2xl flex-wrap items-center gap-x-5 gap-y-2 px-6 py-6 text-xs text-muted-foreground">
         <span>Apache-2.0</span>
-        <a className="inline-flex min-h-11 items-center px-1 -mx-1 transition-colors hover:text-foreground sm:min-h-0 sm:px-0 sm:mx-0" href="/.well-known/agent-skills/mcut/SKILL.md">
+        <a
+          className="inline-flex min-h-11 items-center px-1 -mx-1 transition-colors hover:text-foreground sm:min-h-0 sm:px-0 sm:mx-0"
+          href="/.well-known/agent-skills/mcut/SKILL.md"
+        >
           Agent skill
         </a>
         <span className="ml-auto font-mono">@mcut/*</span>
