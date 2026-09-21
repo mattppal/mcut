@@ -329,7 +329,7 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
             >
               <div
                 className={cn(
-                  'absolute origin-top-left overflow-hidden rounded-xl bg-black will-change-transform transition-transform',
+                  'absolute origin-top-left overflow-hidden rounded-xl bg-neutral-950 will-change-transform transition-transform',
                   MOTION,
                   geometry === null && 'inset-0',
                 )}
@@ -346,7 +346,11 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                     title="mcut Studio"
                     allow="autoplay; fullscreen"
                     allowFullScreen
-                    className={cn('absolute top-0 left-0 border-0', geometry === null && 'size-full')}
+                    className={cn(
+                      'absolute top-0 left-0 border-0 transition-[opacity,filter] duration-700 ease-out motion-reduce:transition-none',
+                      isReady(state.phase) ? 'opacity-100 blur-0' : 'opacity-0 blur-md',
+                      geometry === null && 'size-full',
+                    )}
                     style={geometry === null ? undefined : { width: geometry.stageWidth, height: geometry.stageHeight }}
                   />
                 )}
@@ -355,7 +359,7 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                 )}
               </div>
             </div>
-            {state.phase !== 'live' && (
+            {state.phase === 'poster' && (
               <img
                 src={clip.poster}
                 alt=""
@@ -364,10 +368,9 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                 fetchPriority="high"
                 decoding="async"
                 className={cn(
-                  'pointer-events-none absolute rounded-xl object-cover transition-[top,left,width,height,opacity]',
+                  'pointer-events-none absolute rounded-xl object-cover transition-[top,left,width,height] sm:hidden',
                   MOTION,
                   geometry === null && 'inset-0 size-full',
-                  state.phase === 'fading' && 'opacity-0',
                 )}
                 style={
                   geometry === null
