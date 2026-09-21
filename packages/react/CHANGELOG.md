@@ -1,5 +1,11 @@
 # @mcut/react
 
+## 0.1.0-alpha.2
+
+### Patch Changes
+
+- [#127](https://github.com/mattppal/mcut/pull/127) [`a5ba65f`](https://github.com/mattppal/mcut/commit/a5ba65fc61ada09b3d0558272b8380fa7776e594) Thanks [@mattppal](https://github.com/mattppal)! - Add `useMediaQuery`, a sync hook that subscribes a component to a `window.matchMedia` query and reports `false` on the server.
+
 ## 0.1.0-alpha.1
 
 ### Minor Changes
