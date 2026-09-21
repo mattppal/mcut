@@ -5,7 +5,9 @@ export type ParentMessage =
   | { type: 'mcut:embed:request'; request: unknown }
   | { type: 'mcut:embed:reset' }
 
-export type EmbedResult = { type: 'mcut:embed:result'; id: string; ok: true; result: unknown } | { type: 'mcut:embed:result'; id: string; ok: false; message: string }
+export type EmbedResult =
+  | { type: 'mcut:embed:result'; id: string; ok: true; result: unknown }
+  | { type: 'mcut:embed:result'; id: string; ok: false; message: string }
 
 export type EmbedMessage = { type: 'mcut:embed:ready' } | { type: 'mcut:embed:playing'; playing: boolean } | EmbedResult
 

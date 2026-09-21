@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { AgentTrace } from '@/components/agent-trace'
+import { HeroCallout } from '@/components/hero-callout'
 import { handOff, type ReplayPhase, type TraceMode } from '@/lib/agent-replay'
 import { AGENT_PROMPT, AGENT_SCRIPT, LEAD_IN_MS } from '@/lib/agent-script'
 import type { DEMO_CLIP } from '@/lib/demo-clip'
@@ -291,61 +292,68 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
         className={cn('fixed inset-0 z-10 bg-overlay/50 transition-opacity', MOTION, state.expanded ? 'opacity-100' : 'pointer-events-none opacity-0')}
       />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_var(--trace-width)]" style={cssVariables({ '--trace-width': TRACE_WIDTH })}>
-        <div
-          ref={attachContainer}
-          className={cn('relative z-20 transition-[height]', MOTION, geometry === null && 'aspect-video w-full')}
-          style={geometry === null ? undefined : { height: geometry.wrapperHeight }}
-        >
+        <div className="flex min-w-0 flex-col">
           <div
-            key={geometry === null ? 'placeholder' : 'frame'}
-            className={cn(
-              'absolute top-0 left-0 rounded-2xl bg-card shadow-[0_24px_64px_-24px] shadow-overlay/45 will-change-transform transition-[width,height,transform,box-shadow]',
-              MOTION,
-              geometry === null && 'size-full',
-            )}
-            style={
-              geometry === null ? undefined : { width: geometry.frameWidth, height: geometry.frameHeight, transform: `translateX(${geometry.frameTranslateX}px)` }
-            }
+            ref={attachContainer}
+            className={cn('relative z-20 transition-[height]', MOTION, geometry === null && 'aspect-video w-full')}
+            style={geometry === null ? undefined : { height: geometry.wrapperHeight }}
           >
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-40 rounded-[inherit] bg-radial-[80%_100%_at_50%_0%] from-violet-500/15 to-transparent" />
             <div
+              key={geometry === null ? 'placeholder' : 'frame'}
               className={cn(
-                'absolute origin-top-left overflow-hidden rounded-lg bg-black will-change-transform transition-transform',
+                'absolute top-0 left-0 rounded-2xl bg-card shadow-[0_24px_64px_-24px] shadow-overlay/45 will-change-transform transition-[width,height,transform,box-shadow]',
                 MOTION,
-                geometry === null && 'inset-2',
+                geometry === null && 'size-full',
               )}
               style={
                 geometry === null
                   ? undefined
-                  : { top: FRAME_PAD, left: FRAME_PAD, width: geometry.stageWidth, height: geometry.stageHeight, transform: `scale(${geometry.scale})` }
+                  : { width: geometry.frameWidth, height: geometry.frameHeight, transform: `translateX(${geometry.frameTranslateX}px)` }
               }
             >
-              {state.phase !== 'poster' && (
-                <iframe
-                  ref={attachFrame}
-                  src={src}
-                  title="mcut Studio"
-                  allow="autoplay; fullscreen"
-                  allowFullScreen
-                  className={cn('absolute top-0 left-0 border-0', geometry === null && 'size-full')}
-                  style={geometry === null ? undefined : { width: geometry.stageWidth, height: geometry.stageHeight }}
-                />
-              )}
-              {state.phase !== 'live' && (
-                <img
-                  src={clip.poster}
-                  alt=""
-                  width={clip.width}
-                  height={clip.height}
-                  fetchPriority="high"
-                  decoding="async"
-                  className={cn('absolute inset-0 size-full object-cover transition-opacity duration-300', state.phase === 'fading' && 'opacity-0')}
-                />
-              )}
-              {!state.expanded && <button type="button" aria-label="Take over the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />}
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-40 rounded-[inherit] bg-radial-[80%_100%_at_50%_0%] from-violet-500/15 to-transparent" />
+              <div
+                className={cn(
+                  'absolute origin-top-left overflow-hidden rounded-lg bg-black will-change-transform transition-transform',
+                  MOTION,
+                  geometry === null && 'inset-2',
+                )}
+                style={
+                  geometry === null
+                    ? undefined
+                    : { top: FRAME_PAD, left: FRAME_PAD, width: geometry.stageWidth, height: geometry.stageHeight, transform: `scale(${geometry.scale})` }
+                }
+              >
+                {state.phase !== 'poster' && (
+                  <iframe
+                    ref={attachFrame}
+                    src={src}
+                    title="mcut Studio"
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                    className={cn('absolute top-0 left-0 border-0', geometry === null && 'size-full')}
+                    style={geometry === null ? undefined : { width: geometry.stageWidth, height: geometry.stageHeight }}
+                  />
+                )}
+                {state.phase !== 'live' && (
+                  <img
+                    src={clip.poster}
+                    alt=""
+                    width={clip.width}
+                    height={clip.height}
+                    fetchPriority="high"
+                    decoding="async"
+                    className={cn('absolute inset-0 size-full object-cover transition-opacity duration-300', state.phase === 'fading' && 'opacity-0')}
+                  />
+                )}
+                {!state.expanded && (
+                  <button type="button" aria-label="Take over the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />
+                )}
+              </div>
+              <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-b from-white/55 to-border to-45% p-px [mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]" />
             </div>
-            <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-b from-white/55 to-border to-45% p-px [mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]" />
           </div>
+          <HeroCallout hidden={state.expanded} />
         </div>
         <AgentTrace
           steps={AGENT_SCRIPT}

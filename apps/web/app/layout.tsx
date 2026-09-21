@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Instrument_Serif, Inter } from 'next/font/google'
+import { Caveat, Geist, Geist_Mono, Instrument_Serif, Inter } from 'next/font/google'
 import { RootProvider } from 'fumadocs-ui/provider/next'
 import './globals.css'
 import { cn } from '@/lib/utils'
@@ -11,6 +11,8 @@ const instrumentSerif = Instrument_Serif({
   weight: '400',
   variable: '--font-logo',
 })
+
+const caveat = Caveat({ subsets: ['latin'], weight: '600', variable: '--font-hand' })
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -75,7 +77,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn('h-full', 'antialiased', geistSans.variable, geistMono.variable, instrumentSerif.variable, 'font-sans', inter.variable)}
+      className={cn('h-full', 'antialiased', geistSans.variable, geistMono.variable, instrumentSerif.variable, caveat.variable, 'font-sans', inter.variable)}
     >
       <body className="min-h-full flex flex-col">
         <RootProvider>{children}</RootProvider>
