@@ -15,7 +15,7 @@
       "entry": ["registry/mcut/**/*.{ts,tsx}", "scripts/*.ts"],
       "ignore": ["components/ui/**", "components/kibo-ui/**"],
       "ignoreDependencies": ["@types/color", "mcut-editing-skill"],
-      "ignoreBinaries": ["ffmpeg"]
+      "ignoreBinaries": ["ffmpeg", "Xvfb"]
     },
     "apps/web": {
       "entry": ["worker/index.ts", "source.config.ts"],
