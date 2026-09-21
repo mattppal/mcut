@@ -66,6 +66,7 @@
     "u7-studio-effects",
     "u8-react-playback",
     "u9-boundary-parse",
-    "webgpu-player-default"
+    "webgpu-player-default",
+    "whisper-progress-unclamped"
   ]
 }

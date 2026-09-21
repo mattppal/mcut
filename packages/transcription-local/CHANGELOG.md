@@ -1,5 +1,11 @@
 # @mcut/transcription-local
 
+## 0.1.0-alpha.3
+
+### Patch Changes
+
+- [#122](https://github.com/mattppal/mcut/pull/122) [`bf02883`](https://github.com/mattppal/mcut/commit/bf028830b0d37012f937ac3764db6cb355359d32) Thanks [@mattppal](https://github.com/mattppal)! - Aggregated Whisper download progress no longer locks at 100% after the first small model file completes, and a rejected `navigator.gpu.requestAdapter()` falls back to `wasm` instead of failing the transcription.
+
 ## 0.1.0-alpha.2
 
 ### Minor Changes
