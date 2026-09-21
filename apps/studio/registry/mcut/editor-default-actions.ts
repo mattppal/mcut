@@ -19,7 +19,6 @@ import { defineAction, type ActionContext } from './action-registry'
 import { ASPECT_PRESETS } from './aspect-presets'
 import { openCommandPalette } from './command-palette-events'
 import { clearEditorLayoutStorage } from './editor-layout'
-import { TIMELINE_HEADER_WIDTH } from './editor-ui'
 import { trackOfSelection } from './editor-actions'
 import { copySelection, cutSelection, pasteAtPlayheadFromAnywhere } from './editor-clipboard'
 import { importMediaFiles, pickFiles } from './media-import'
@@ -523,7 +522,7 @@ defineAction({
     const scroller = ui.timelineScrollRef.current
     const durationMs = getProjectDurationMs(engine.project)
     if (!scroller || durationMs === 0) return
-    ui.setPxPerMs((scroller.clientWidth - TIMELINE_HEADER_WIDTH - 60) / durationMs)
+    ui.setPxPerMs((scroller.clientWidth - ui.timelineHeaderPx - 60) / durationMs)
     scroller.scrollLeft = 0
   },
 })

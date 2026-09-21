@@ -3,7 +3,6 @@
 import { useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { usePanelRef, type PanelImperativeHandle } from 'react-resizable-panels'
-import { CaptionsIcon, FolderOpenIcon, SearchIcon, SparklesIcon, TypeIcon } from '@/lib/icons'
 import { toast } from 'sonner'
 import { EditorProvider, useDocumentRootAttribute, useDocumentRootClass, useEditor, useWindowEvent } from '@mcut/react'
 import type { Project } from '@mcut/timeline'
@@ -16,12 +15,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import './editor-default-actions'
 import { actionForEvent, isActionEnabled, runEditorAction, type ActionContext } from './action-registry'
 import { editorClipboard } from './editor-clipboard'
-import { AnimationsPanel } from './animations-panel'
-import { CaptionsPanel } from './captions-panel'
-import { TranscriptPanel } from './transcript-panel'
 import { CommandPalette } from './command-palette'
+import { CompactWorkspace } from './compact-workspace'
 import { EDITOR_LAYOUT_KEYS } from './editor-layout'
-import { PanelCard, PanelHeader, PanelSectionLabel } from './editor-primitives'
+import { PanelCard } from './editor-primitives'
 import { SessionPersistence, usePersistedLayout } from './editor-session'
 import { EditorToolbar } from './editor-toolbar'
 import { CurveEditorHost } from './easing-editor'
@@ -29,13 +26,11 @@ import { EditorUIProvider, useEditorUI, type EditorTheme, type LeftTab } from '.
 import { EMBED_OMISSIONS, type EmbedOmission, type EmbedOptions } from './embed'
 import { EmbedShell } from './embed-shell'
 import { useProjectFontLoader } from './font-library'
+import { LEFT_TABS, LeftPanel } from './left-panel'
 import { LiveMcpBridge } from './live-mcp-bridge'
-import { MediaBin } from './media-bin'
-import { saveAssetBlob } from './persistence'
 import { PreviewArea, TrackSorter } from './preview-area'
 import { PropertiesPanel } from './properties-panel'
 import { host } from './studio-host'
-import { TextPanel } from './text-panel'
 import { TimelinePanel } from './timeline-panel'
 import { UpdateDialog } from './update-dialog'
 
@@ -95,14 +90,6 @@ export function useHasHydrated(): boolean {
   return useSyncExternalStore(subscribeHydration, clientHydrationSnapshot, serverHydrationSnapshot)
 }
 
-const LEFT_TABS: Array<{ id: LeftTab; label: string; icon: typeof FolderOpenIcon }> = [
-  { id: 'media', label: 'Media', icon: FolderOpenIcon },
-  { id: 'text', label: 'Text', icon: TypeIcon },
-  { id: 'animate', label: 'Animate', icon: SparklesIcon },
-  { id: 'captions', label: 'Captions', icon: CaptionsIcon },
-  { id: 'transcript', label: 'Find', icon: SearchIcon },
-]
-
 function ChromeRail({ tab, collapsed, onSelect }: { tab: LeftTab; collapsed: boolean; onSelect: (tab: LeftTab) => void }) {
   return (
     <div className="flex w-12 shrink-0 flex-col items-center gap-2">
@@ -132,38 +119,6 @@ function ChromeRail({ tab, collapsed, onSelect }: { tab: LeftTab; collapsed: boo
   )
 }
 
-function LeftPanel({ tab, transcribe, omitted }: { tab: LeftTab; omitted: ReadonlySet<EmbedOmission> } & Pick<EditorShellProps, 'transcribe'>) {
-  if (tab === 'media') {
-    return (
-      <PanelCard>
-        <MediaBin {...(!omitted.has('session-persistence') ? { onAssetImported: (asset, file) => void saveAssetBlob(asset, file) } : {})} />
-      </PanelCard>
-    )
-  }
-  if (tab === 'captions') {
-    return (
-      <PanelCard>
-        <CaptionsPanel transcribe={transcribe} />
-      </PanelCard>
-    )
-  }
-  if (tab === 'transcript') {
-    return (
-      <PanelCard>
-        <TranscriptPanel transcribe={transcribe} />
-      </PanelCard>
-    )
-  }
-  return (
-    <PanelCard className="flex flex-col">
-      <PanelHeader>
-        <PanelSectionLabel>{tab === 'text' ? 'Text' : 'Animate'}</PanelSectionLabel>
-      </PanelHeader>
-      <ScrollArea className="min-h-0 min-w-0 flex-1 scroll-mask-b">{tab === 'text' ? <TextPanel /> : <AnimationsPanel />}</ScrollArea>
-    </PanelCard>
-  )
-}
-
 function EditorDocumentTheme({ theme }: { theme: EditorTheme }) {
   useDocumentRootAttribute('data-editor', '')
   useDocumentRootAttribute('data-window-chrome', host.windowChrome)
@@ -177,14 +132,26 @@ export interface EditorShellProps {
   embed?: EmbedOptions
 }
 
-function Workspace({
-  transcribe,
-  leftPanelRef,
-  omitted,
-}: Pick<EditorShellProps, 'transcribe'> & {
+type WorkspaceProps = Pick<EditorShellProps, 'transcribe'> & {
   leftPanelRef: RefObject<PanelImperativeHandle | null>
   omitted: ReadonlySet<EmbedOmission>
-}) {
+}
+
+function Workspace({ transcribe, leftPanelRef, omitted }: WorkspaceProps) {
+  const { layout } = useEditorUI()
+  switch (layout) {
+    case 'full':
+      return <FullWorkspace transcribe={transcribe} leftPanelRef={leftPanelRef} omitted={omitted} />
+    case 'compact':
+      return <CompactWorkspace transcribe={transcribe} omitted={omitted} />
+    default: {
+      const exhaustive: never = layout
+      return exhaustive
+    }
+  }
+}
+
+function FullWorkspace({ transcribe, leftPanelRef, omitted }: WorkspaceProps) {
   const { leftTab: tab, setLeftTab: setTab, layoutResetToken } = useEditorUI()
   const panelsReady = useHasHydrated()
   const persistLayout = !omitted.has('session-persistence')

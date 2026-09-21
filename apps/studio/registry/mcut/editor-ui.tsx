@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
-import { useEditor, useEditorState, type PreviewQuality } from '@mcut/react'
+import { useEditor, useEditorState, useMediaQuery, type PreviewQuality } from '@mcut/react'
 import type { AnimatableProperty, ElementId } from '@mcut/timeline'
 import { parseEditorPrefs, type EditorPrefs } from './editor-prefs'
 import { clamp } from './math'
@@ -84,12 +84,23 @@ export type TimelineEditMode = 'normal' | 'overwrite' | 'insert'
 
 export type LeftTab = 'media' | 'text' | 'animate' | 'captions' | 'transcript'
 
+export type WorkspaceLayout = 'full' | 'compact'
+
+const COMPACT_LAYOUT_QUERY = '(max-width: 639px)'
+
+export const WORKSPACE_LAYOUT: Record<WorkspaceLayout, { trimHandlePx: number; trimHandlesAlwaysVisible: boolean; timelineHeaderPx: number }> = {
+  full: { trimHandlePx: 9, trimHandlesAlwaysVisible: false, timelineHeaderPx: 288 },
+  compact: { trimHandlePx: 20, trimHandlesAlwaysVisible: true, timelineHeaderPx: 112 },
+}
+
 export interface CurveEditorTarget {
   elementId: ElementId
   property: AnimatableProperty
 }
 
 export interface EditorUIValue {
+  layout: WorkspaceLayout
+  timelineHeaderPx: number
   theme: EditorTheme
   setTheme: (value: EditorTheme) => void
   mode: EditorMode
@@ -127,7 +138,6 @@ export interface EditorUIValue {
 
 export const MIN_PX_PER_MS = 0.004
 export const MAX_PX_PER_MS = 0.6
-export const TIMELINE_HEADER_WIDTH = 288
 
 const EditorUIContext = createContext<EditorUIValue | null>(null)
 
@@ -212,6 +222,7 @@ function setPreviewQuality(value: PreviewQuality): void {
 export function EditorUIProvider({ children, leftPanelRef }: { children: ReactNode; leftPanelRef?: RefObject<{ expand: () => void } | null> }) {
   const engine = useEditor()
   const prefs = useEditorPrefs()
+  const layout: WorkspaceLayout = useMediaQuery(COMPACT_LAYOUT_QUERY) ? 'compact' : 'full'
   const [timelineTool, setTimelineTool] = useState<TimelineTool>('select')
   const [editMode, setEditMode] = useState<TimelineEditMode>('normal')
   const [mode, setModeState] = useState<EditorMode>('edit')
@@ -224,8 +235,8 @@ export function EditorUIProvider({ children, leftPanelRef }: { children: ReactNo
   const setEditingLayoutId = useCallback(
     (value: string | null) => {
       setEditingLayoutIdState(value)
-      const layout = value ? engine.project.layouts.find((l) => l.id === value) : undefined
-      setEditingSlotIndex(layout ? layout.slots.length - 1 : null)
+      const editingLayout = value ? engine.project.layouts.find((l) => l.id === value) : undefined
+      setEditingSlotIndex(editingLayout ? editingLayout.slots.length - 1 : null)
     },
     [engine],
   )
@@ -278,6 +289,8 @@ export function EditorUIProvider({ children, leftPanelRef }: { children: ReactNo
 
   const value = useMemo<EditorUIValue>(
     () => ({
+      layout,
+      timelineHeaderPx: WORKSPACE_LAYOUT[layout].timelineHeaderPx,
       theme: prefs.theme,
       setTheme,
       mode,
@@ -313,6 +326,7 @@ export function EditorUIProvider({ children, leftPanelRef }: { children: ReactNo
       setSnapGuideMs,
     }),
     [
+      layout,
       prefs,
       mode,
       setMode,

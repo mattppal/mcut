@@ -325,6 +325,14 @@ function useDocumentRootAttribute(name: string, value: string): void
 
 Sets an attribute on `document.documentElement` and restores the previous value, or removes the attribute, on unmount.
 
+### useMediaQuery
+
+```ts
+function useMediaQuery(query: string): boolean
+```
+
+Subscribes to `window.matchMedia(query)` and returns whether it matches. The server snapshot is `false`.
+
 ### useDisposable
 
 ```ts

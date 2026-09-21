@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { MoonIcon, Redo2Icon, SunIcon, Undo2Icon } from '@/lib/icons'
 import { useEditor, useEditorState } from '@mcut/react'
 import { Button } from '@/components/ui/button'
@@ -11,14 +12,17 @@ import { ExportDialog } from './export-dialog'
 import { MainMenu } from './main-menu'
 import { ShortcutsDialog } from './shortcuts-dialog'
 
-function ProjectName() {
+function ProjectName({ className }: { className: string }) {
   const engine = useEditor()
   const name = useEditorState((s) => s.project.name)
   return (
     <input
       value={name}
       aria-label="Project name"
-      className="w-48 rounded-md border border-transparent bg-transparent px-2 py-0.5 text-center text-xs font-medium outline-none hover:border-border focus:border-foreground/20"
+      className={cn(
+        'rounded-md border border-transparent bg-transparent px-2 py-0.5 text-center text-xs font-medium outline-none hover:border-border focus:border-foreground/20',
+        className,
+      )}
       onChange={(e) => engine.dispatch({ type: 'updateProject', name: e.target.value || 'Untitled' }, { history: false })}
     />
   )
@@ -65,14 +69,12 @@ function ModeSwitch() {
   )
 }
 
-export function EditorToolbar() {
+function History() {
   const engine = useEditor()
   const canUndo = useEditorState((s) => s.canUndo)
   const canRedo = useEditorState((s) => s.canRedo)
-
   return (
-    <div data-slot="editor-toolbar" className="flex h-10 shrink-0 items-center gap-2 px-2 [-webkit-app-region:drag]">
-      <MainMenu />
+    <>
       <Tooltip>
         <TooltipTrigger render={<Button variant="ghost" size="icon-sm" disabled={!canUndo} onClick={() => engine.undo()} aria-label="Undo" />}>
           <Undo2Icon />
@@ -89,18 +91,49 @@ export function EditorToolbar() {
           Redo <Kbd>⇧⌘Z</Kbd>
         </TooltipContent>
       </Tooltip>
+    </>
+  )
+}
 
-      <div className="flex flex-1 items-center justify-center gap-2">
-        <ProjectName />
-        <ModeSwitch />
-      </div>
-
-      <span className="hidden items-center gap-1 text-2xs text-muted-foreground sm:flex">
-        <Kbd>⌘K</Kbd> commands
-      </span>
-      <ThemeToggle />
-      <ShortcutsDialog />
-      <ExportDialog />
+function Toolbar({ children }: { children: ReactNode }) {
+  return (
+    <div data-slot="editor-toolbar" className="flex h-10 shrink-0 items-center gap-2 px-2 [-webkit-app-region:drag]">
+      <MainMenu />
+      <History />
+      {children}
     </div>
   )
+}
+
+export function EditorToolbar() {
+  const { layout } = useEditorUI()
+  switch (layout) {
+    case 'full':
+      return (
+        <Toolbar>
+          <div className="flex flex-1 items-center justify-center gap-2">
+            <ProjectName className="w-48" />
+            <ModeSwitch />
+          </div>
+          <span className="hidden items-center gap-1 text-2xs text-muted-foreground lg:flex">
+            <Kbd>⌘K</Kbd> commands
+          </span>
+          <ThemeToggle />
+          <ShortcutsDialog />
+          <ExportDialog />
+        </Toolbar>
+      )
+    case 'compact':
+      return (
+        <Toolbar>
+          <ProjectName className="min-w-0 flex-1" />
+          <ThemeToggle />
+          <ExportDialog />
+        </Toolbar>
+      )
+    default: {
+      const exhaustive: never = layout
+      return exhaustive
+    }
+  }
 }

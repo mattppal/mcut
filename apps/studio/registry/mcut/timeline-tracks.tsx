@@ -14,12 +14,15 @@ import { Input } from '@/components/ui/input'
 import { getElementUI } from './element-ui'
 import { isSoloTrack, selectTrackElements, toggleSoloTrack } from './editor-actions'
 import { type LaneDropData } from './editor-dnd'
-import { TIMELINE_HEADER_WIDTH, useDropPreview } from './editor-ui'
+import { useDropPreview, useEditorUI, type WorkspaceLayout } from './editor-ui'
 import { formatTimecode } from './format'
 import { NEW_TRACK_LANE_HEIGHT, RULER_HEIGHT, TRACK_HEIGHT } from './timeline-drag'
 import { Clip } from './timeline-clip'
 
-export const HEADER_WIDTH = TIMELINE_HEADER_WIDTH
+const GRIP_TOUCH_TARGET: Record<WorkspaceLayout, string> = {
+  full: '',
+  compact: 'flex h-full min-w-7 items-center justify-center',
+}
 
 function trackIcon(track: Track) {
   const first = track.elements[0]?.type
@@ -33,22 +36,8 @@ function keepsTranscriptTimingSoNeverCompacts(track: Track): boolean {
 
 function TrackHeader({ track, gripProps }: { track: Track; gripProps?: Record<string, unknown> }) {
   const engine = useEditor()
+  const { layout, timelineHeaderPx } = useEditorUI()
   const [renaming, setRenaming] = useState(false)
-  const setFlag = (patch: Partial<Pick<Track, 'muted' | 'hidden' | 'locked' | 'magnetic'>>) =>
-    engine.dispatch({ type: 'setTrackFlags', trackId: track.id, ...patch })
-  const timelineMagnetEnabled = useEditorState((s) => s.project.tracks.some((candidate) => candidate.magnetic))
-  const solo = useEditorState(() => isSoloTrack(engine, track.id))
-  const setTimelineMagnet = (magnetic: boolean) => {
-    const tracks = [...engine.project.tracks]
-    engine.transact(() => {
-      for (const candidate of tracks) {
-        if (keepsTranscriptTimingSoNeverCompacts(candidate)) continue
-        if (candidate.magnetic !== magnetic) {
-          engine.dispatch({ type: 'setTrackFlags', trackId: candidate.id, magnetic })
-        }
-      }
-    })
-  }
 
   return (
     <ContextMenu>
@@ -56,7 +45,7 @@ function TrackHeader({ track, gripProps }: { track: Track; gripProps?: Record<st
         render={
           <div
             className="group/header sticky left-0 z-50 flex shrink-0 items-center gap-1 border-r border-foreground/10 bg-card pr-2 pl-0.5"
-            style={{ width: HEADER_WIDTH, height: TRACK_HEIGHT }}
+            style={{ width: timelineHeaderPx, height: TRACK_HEIGHT }}
             onClick={(event) => {
               if ((event.target as HTMLElement).closest('button, input')) return
               selectTrackElements(engine, track.id)
@@ -64,7 +53,12 @@ function TrackHeader({ track, gripProps }: { track: Track; gripProps?: Record<st
           />
         }
       >
-        <button type="button" className="cursor-grab touch-none text-muted-foreground/50 hover:text-muted-foreground" aria-label="Reorder track" {...gripProps}>
+        <button
+          type="button"
+          className={cn('cursor-grab touch-none text-muted-foreground/50 hover:text-muted-foreground', GRIP_TOUCH_TARGET[layout])}
+          aria-label="Reorder track"
+          {...gripProps}
+        >
           <GripVerticalIcon className="size-3.5" />
         </button>
         {createElement(trackIcon(track), {
@@ -92,60 +86,7 @@ function TrackHeader({ track, gripProps }: { track: Track; gripProps?: Record<st
             {track.name}
           </span>
         )}
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="size-5"
-          title={track.muted ? 'Unmute track' : 'Mute track'}
-          onClick={() => setFlag({ muted: !track.muted })}
-        >
-          {track.muted ? <VolumeXIcon className="text-destructive" /> : <Volume2Icon />}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="size-5"
-          title={track.hidden ? 'Show track' : 'Hide track'}
-          onClick={() => setFlag({ hidden: !track.hidden })}
-        >
-          {track.hidden ? <EyeOffIcon className="text-destructive" /> : <EyeIcon />}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="size-5"
-          title={track.locked ? 'Unlock track' : 'Lock track'}
-          onClick={() => setFlag({ locked: !track.locked })}
-        >
-          {track.locked ? <LockIcon className="text-destructive" /> : <LockOpenIcon />}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className={cn('size-5', timelineMagnetEnabled ? 'bg-primary/20 text-primary' : 'text-muted-foreground')}
-          title={timelineMagnetEnabled ? 'Disable timeline magnet' : 'Enable timeline magnet'}
-          onClick={() => setTimelineMagnet(!timelineMagnetEnabled)}
-        >
-          <MagnetIcon />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className={cn('size-5 font-mono text-2xs font-bold', solo ? 'bg-primary/20 text-primary' : 'text-muted-foreground')}
-          title="Solo track (mute all others)"
-          onClick={() => toggleSoloTrack(engine, track.id)}
-        >
-          S
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="size-5 opacity-0 transition-opacity group-hover/header:opacity-100 hover:text-destructive"
-          title="Delete track"
-          onClick={() => engine.dispatch({ type: 'removeTrack', trackId: track.id })}
-        >
-          <XIcon />
-        </Button>
+        <TrackFlags track={track} layout={layout} />
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={() => selectTrackElements(engine, track.id)}>Select clips</ContextMenuItem>
@@ -172,6 +113,97 @@ function TrackHeader({ track, gripProps }: { track: Track; gripProps?: Record<st
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
+  )
+}
+
+function TrackFlags({ track, layout }: { track: Track; layout: WorkspaceLayout }) {
+  switch (layout) {
+    case 'full':
+      return <TrackFlagButtons track={track} />
+    case 'compact':
+      return null
+    default: {
+      const exhaustive: never = layout
+      return exhaustive
+    }
+  }
+}
+
+function TrackFlagButtons({ track }: { track: Track }) {
+  const engine = useEditor()
+  const setFlag = (patch: Partial<Pick<Track, 'muted' | 'hidden' | 'locked' | 'magnetic'>>) =>
+    engine.dispatch({ type: 'setTrackFlags', trackId: track.id, ...patch })
+  const timelineMagnetEnabled = useEditorState((s) => s.project.tracks.some((candidate) => candidate.magnetic))
+  const solo = useEditorState(() => isSoloTrack(engine, track.id))
+  const setTimelineMagnet = (magnetic: boolean) => {
+    const tracks = [...engine.project.tracks]
+    engine.transact(() => {
+      for (const candidate of tracks) {
+        if (keepsTranscriptTimingSoNeverCompacts(candidate)) continue
+        if (candidate.magnetic !== magnetic) {
+          engine.dispatch({ type: 'setTrackFlags', trackId: candidate.id, magnetic })
+        }
+      }
+    })
+  }
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        className="size-5"
+        title={track.muted ? 'Unmute track' : 'Mute track'}
+        onClick={() => setFlag({ muted: !track.muted })}
+      >
+        {track.muted ? <VolumeXIcon className="text-destructive" /> : <Volume2Icon />}
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        className="size-5"
+        title={track.hidden ? 'Show track' : 'Hide track'}
+        onClick={() => setFlag({ hidden: !track.hidden })}
+      >
+        {track.hidden ? <EyeOffIcon className="text-destructive" /> : <EyeIcon />}
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        className="size-5"
+        title={track.locked ? 'Unlock track' : 'Lock track'}
+        onClick={() => setFlag({ locked: !track.locked })}
+      >
+        {track.locked ? <LockIcon className="text-destructive" /> : <LockOpenIcon />}
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        className={cn('size-5', timelineMagnetEnabled ? 'bg-primary/20 text-primary' : 'text-muted-foreground')}
+        title={timelineMagnetEnabled ? 'Disable timeline magnet' : 'Enable timeline magnet'}
+        onClick={() => setTimelineMagnet(!timelineMagnetEnabled)}
+      >
+        <MagnetIcon />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        className={cn('size-5 font-mono text-2xs font-bold', solo ? 'bg-primary/20 text-primary' : 'text-muted-foreground')}
+        title="Solo track (mute all others)"
+        onClick={() => toggleSoloTrack(engine, track.id)}
+      >
+        S
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        className="size-5 opacity-0 transition-opacity group-hover/header:opacity-100 hover:text-destructive"
+        title="Delete track"
+        onClick={() => engine.dispatch({ type: 'removeTrack', trackId: track.id })}
+      >
+        <XIcon />
+      </Button>
+    </>
   )
 }
 
@@ -216,6 +248,7 @@ export const SortableRow = memo(function SortableRow({ track, pxPerMs, contentWi
 })
 
 export function NewTrackLane({ contentWidth, dragActive }: { contentWidth: number; dragActive: boolean }) {
+  const { timelineHeaderPx } = useEditorUI()
   const { setNodeRef, isOver } = useDroppable({
     id: 'lane-new-track',
     data: { laneTrackId: 'new-track' } satisfies LaneDropData,
@@ -224,7 +257,7 @@ export function NewTrackLane({ contentWidth, dragActive }: { contentWidth: numbe
     <div className="flex">
       <div
         className="sticky left-0 z-50 flex shrink-0 items-center justify-center border-r border-foreground/10 bg-card text-2xs text-muted-foreground"
-        style={{ width: HEADER_WIDTH, height: NEW_TRACK_LANE_HEIGHT }}
+        style={{ width: timelineHeaderPx, height: NEW_TRACK_LANE_HEIGHT }}
       >
         <span className={cn('transition-opacity', dragActive ? 'opacity-100' : 'opacity-0')}>New track</span>
       </div>
@@ -243,6 +276,7 @@ export function NewTrackLane({ contentWidth, dragActive }: { contentWidth: numbe
 
 export function DropGhostOverlay({ rows, pxPerMs }: { rows: Array<{ track: Track }>; pxPerMs: number }) {
   const ghost = useDropPreview()
+  const { timelineHeaderPx } = useEditorUI()
   if (!ghost) return null
   let top = RULER_HEIGHT + 4
   let height = NEW_TRACK_LANE_HEIGHT - 8
@@ -257,7 +291,7 @@ export function DropGhostOverlay({ rows, pxPerMs }: { rows: Array<{ track: Track
       data-mcut-drop-ghost=""
       className="pointer-events-none absolute z-40 flex items-end gap-1.5 overflow-hidden rounded-lg border border-primary/80 bg-primary/25 px-1.5 py-0.5 shadow-[0_14px_32px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.14),inset_0_1px_0_rgba(255,255,255,0.18)] ring-1 ring-primary/35"
       style={{
-        left: HEADER_WIDTH + ghost.startMs * pxPerMs,
+        left: timelineHeaderPx + ghost.startMs * pxPerMs,
         top,
         height,
         width: Math.max(10, ghost.durationMs * pxPerMs),
