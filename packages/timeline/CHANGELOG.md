@@ -1,5 +1,11 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.2
+
+### Patch Changes
+
+- [#96](https://github.com/mattppal/mcut/pull/96) [`e50b13b`](https://github.com/mattppal/mcut/commit/e50b13b76ecfb5dc8e75ffa3d01625b644c84a33) Thanks [@mattppal](https://github.com/mattppal)! - `transformSchema` rejects unknown keys. A transform patch such as `{ position, scale }` now fails with a typed error instead of parsing to the identity transform.
+
 ## 0.1.0-alpha.1
 
 ### Minor Changes
