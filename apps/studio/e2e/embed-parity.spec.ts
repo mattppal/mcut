@@ -203,9 +203,10 @@ test('the homepage embed matches the desktop editor', async () => {
     await settle(embed.frame)
     const iframeBox = await embed.iframe.boundingBox()
     if (iframeBox === null) throw new Error('the hero iframe has no box')
+    const scrollY = await embed.page.evaluate(() => window.scrollY)
     const embedPng = await embed.page.screenshot({
       fullPage: true,
-      clip: { x: Math.round(iframeBox.x), y: Math.round(iframeBox.y), width: Math.round(iframeBox.width), height: Math.round(iframeBox.height) },
+      clip: { x: Math.round(iframeBox.x), y: Math.round(iframeBox.y + scrollY), width: Math.round(iframeBox.width), height: Math.round(iframeBox.height) },
     })
 
     const desktopMedia = desktopTabs.media

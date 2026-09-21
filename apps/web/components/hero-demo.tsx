@@ -4,13 +4,13 @@ import { useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { AgentTrace } from '@/components/agent-trace'
 import { HeroCallout } from '@/components/hero-callout'
 import { handOff, type ReplayPhase, type TraceMode } from '@/lib/agent-replay'
-import { AGENT_PROMPT, AGENT_SCRIPT, LEAD_IN_MS } from '@/lib/agent-script'
+import { AGENT_SCRIPT, LEAD_IN_MS } from '@/lib/agent-script'
 import type { DEMO_CLIP } from '@/lib/demo-clip'
 import { readEmbedMessage, type EmbedResult, type ParentMessage } from '@/lib/embed-protocol'
-import { FRAME_PAD, heroGeometry, measureWrapper, sameMetrics, type HeroMetrics } from '@/lib/hero-geometry'
+import { FRAME_PAD, expandedScrollTop, heroGeometry, measureWrapper, sameMetrics, type HeroMetrics } from '@/lib/hero-geometry'
 import { cn } from '@/lib/utils'
 
-const TRACE_WIDTH = '20rem'
+const GUTTER_WIDTH = '15rem'
 
 type Phase = 'poster' | 'loading' | 'slow' | 'fading' | 'live'
 
@@ -174,12 +174,15 @@ function createHeroEmbed() {
     post({ type: 'mcut:embed:collapsed', collapsed: true })
   }
 
+  const scrollTarget = () => (state.metrics === null ? 0 : expandedScrollTop(state.metrics))
+
   const arm = () => {
     window.clearTimeout(armTimer)
     armed = true
   }
 
   const expand = () => {
+    measure()
     window.clearTimeout(scriptTimer)
     const replay = handOff(state.replay)
     if (state.phase === 'poster') startLoading({ expanded: true, autoplay: false, replay })
@@ -188,7 +191,7 @@ function createHeroEmbed() {
     armed = false
     window.clearTimeout(armTimer)
     armTimer = window.setTimeout(arm, SCROLL_ARM_MS)
-    window.scrollTo({ top: 0, behavior: state.reducedMotion ? 'auto' : 'smooth' })
+    window.scrollTo({ top: scrollTarget(), behavior: state.reducedMotion ? 'auto' : 'smooth' })
   }
 
   const load = () => startLoading({ autoplay: true })
@@ -209,11 +212,12 @@ function createHeroEmbed() {
 
   const onScroll = () => {
     if (!state.expanded) return
+    const offset = Math.abs(window.scrollY - scrollTarget())
     if (!armed) {
-      if (window.scrollY <= 1) arm()
+      if (offset <= 1) arm()
       return
     }
-    if (window.scrollY > SCROLL_COLLAPSE_PX) collapse()
+    if (offset > SCROLL_COLLAPSE_PX) collapse()
   }
 
   const subscribe = (listener: () => void) => {
@@ -292,8 +296,19 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
         onClick={collapse}
         className={cn('fixed inset-0 z-10 bg-overlay/50 transition-opacity', MOTION, state.expanded ? 'opacity-100' : 'pointer-events-none opacity-0')}
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_var(--trace-width)]" style={cssVariables({ '--trace-width': TRACE_WIDTH })}>
-        <div className="flex min-w-0 flex-col">
+      <div className="grid gap-6 xl:grid-cols-[var(--gutter)_minmax(0,1fr)_var(--gutter)]" style={cssVariables({ '--gutter': GUTTER_WIDTH })}>
+        <div className="order-2 xl:order-1">
+          <AgentTrace
+            steps={AGENT_SCRIPT}
+            phase={state.replay}
+            mode={traceMode(state.phase)}
+            results={state.results}
+            onReplay={replay}
+            onLoad={state.phase === 'poster' ? load : null}
+            onRun={awaitingRun ? run : null}
+          />
+        </div>
+        <div className="order-1 flex min-w-0 flex-col xl:order-2">
           <div
             ref={attachContainer}
             className={cn('relative z-20 transition-[height]', MOTION, geometry === null && 'aspect-video w-full')}
@@ -302,7 +317,7 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
             <div
               key={geometry === null ? 'placeholder' : 'frame'}
               className={cn(
-                'absolute top-0 left-0 rounded-2xl bg-card shadow-[0_24px_64px_-24px] shadow-overlay/45 will-change-transform transition-[width,height,transform,box-shadow]',
+                'absolute top-0 left-0 rounded-xl shadow-[0_24px_64px_-24px] shadow-overlay/45 will-change-transform transition-[width,height,transform,box-shadow]',
                 MOTION,
                 geometry === null && 'size-full',
               )}
@@ -312,12 +327,11 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                   : { width: geometry.frameWidth, height: geometry.frameHeight, transform: `translateX(${geometry.frameTranslateX}px)` }
               }
             >
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-40 rounded-[inherit] bg-radial-[80%_100%_at_50%_0%] from-violet-500/15 to-transparent" />
               <div
                 className={cn(
-                  'absolute origin-top-left overflow-hidden rounded-lg bg-black will-change-transform transition-transform',
+                  'absolute origin-top-left overflow-hidden rounded-xl bg-black will-change-transform transition-transform',
                   MOTION,
-                  geometry === null && 'inset-2',
+                  geometry === null && 'inset-0',
                 )}
                 style={
                   geometry === null
@@ -340,7 +354,6 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                   <button type="button" aria-label="Take over the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />
                 )}
               </div>
-              <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-b from-white/55 to-border to-45% p-px [mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]" />
             </div>
             {state.phase !== 'live' && (
               <img
@@ -351,9 +364,9 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                 fetchPriority="high"
                 decoding="async"
                 className={cn(
-                  'pointer-events-none absolute rounded-lg object-cover transition-[top,left,width,height,opacity]',
+                  'pointer-events-none absolute rounded-xl object-cover transition-[top,left,width,height,opacity]',
                   MOTION,
-                  geometry === null && 'top-2 left-2 h-[calc(100%-1rem)] w-[calc(100%-1rem)]',
+                  geometry === null && 'inset-0 size-full',
                   state.phase === 'fading' && 'opacity-0',
                 )}
                 style={
@@ -369,18 +382,8 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
               />
             )}
           </div>
-          <HeroCallout hidden={state.expanded} />
         </div>
-        <AgentTrace
-          steps={AGENT_SCRIPT}
-          prompt={AGENT_PROMPT}
-          phase={state.replay}
-          mode={traceMode(state.phase)}
-          results={state.results}
-          onReplay={replay}
-          onLoad={state.phase === 'poster' ? load : null}
-          onRun={awaitingRun ? run : null}
-        />
+        <HeroCallout hidden={state.expanded} className="order-3" />
       </div>
     </>
   )
