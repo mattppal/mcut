@@ -317,7 +317,7 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
             <div
               key={geometry === null ? 'placeholder' : 'frame'}
               className={cn(
-                'absolute top-0 left-0 rounded-2xl bg-card shadow-[0_24px_64px_-24px] shadow-overlay/45 will-change-transform transition-[width,height,transform,box-shadow]',
+                'absolute top-0 left-0 rounded-xl shadow-[0_24px_64px_-24px] shadow-overlay/45 will-change-transform transition-[width,height,transform,box-shadow]',
                 MOTION,
                 geometry === null && 'size-full',
               )}
@@ -327,12 +327,11 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                   : { width: geometry.frameWidth, height: geometry.frameHeight, transform: `translateX(${geometry.frameTranslateX}px)` }
               }
             >
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-40 rounded-[inherit] bg-radial-[80%_100%_at_50%_0%] from-violet-500/15 to-transparent" />
               <div
                 className={cn(
-                  'absolute origin-top-left overflow-hidden rounded-lg bg-black will-change-transform transition-transform',
+                  'absolute origin-top-left overflow-hidden rounded-xl bg-black will-change-transform transition-transform',
                   MOTION,
-                  geometry === null && 'inset-2',
+                  geometry === null && 'inset-0',
                 )}
                 style={
                   geometry === null
@@ -355,7 +354,6 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                   <button type="button" aria-label="Take over the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />
                 )}
               </div>
-              <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-b from-white/55 to-border to-45% p-px [mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]" />
             </div>
             {state.phase !== 'live' && (
               <img
@@ -366,9 +364,9 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                 fetchPriority="high"
                 decoding="async"
                 className={cn(
-                  'pointer-events-none absolute rounded-lg object-cover transition-[top,left,width,height,opacity]',
+                  'pointer-events-none absolute rounded-xl object-cover transition-[top,left,width,height,opacity]',
                   MOTION,
-                  geometry === null && 'top-2 left-2 h-[calc(100%-1rem)] w-[calc(100%-1rem)]',
+                  geometry === null && 'inset-0 size-full',
                   state.phase === 'fading' && 'opacity-0',
                 )}
                 style={

@@ -16,7 +16,7 @@ interface HeroGeometry {
   wrapperHeight: number
 }
 
-export const FRAME_PAD = 8
+export const FRAME_PAD = 0
 const VIEWPORT_PAD = 16
 
 export function heroGeometry({ metrics, expanded }: { metrics: HeroMetrics | null; expanded: boolean }): HeroGeometry | null {
