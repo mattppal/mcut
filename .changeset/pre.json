@@ -69,6 +69,7 @@
     "u8-react-playback",
     "u9-boundary-parse",
     "webgpu-player-default",
+    "whisper-model-load-retry",
     "whisper-progress-unclamped"
   ]
 }

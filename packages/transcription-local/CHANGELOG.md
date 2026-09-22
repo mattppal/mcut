@@ -1,5 +1,11 @@
 # @mcut/transcription-local
 
+## 0.1.0-alpha.5
+
+### Patch Changes
+
+- [#144](https://github.com/mattppal/mcut/pull/144) [`70d0aac`](https://github.com/mattppal/mcut/commit/70d0aacc5364e6d966778c0a6ab2aa3dccfb0ee7) Thanks [@mattppal](https://github.com/mattppal)! - A failed Whisper model load no longer poisons the worker. The next `transcribe` call downloads again instead of replaying the first failure, and the error names the model and the host it was fetched from instead of a bare `Failed to fetch`.
+
 ## 0.1.0-alpha.4
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # mcut-studio
 
+## 0.1.1-alpha.7
+
+### Patch Changes
+
+- Updated dependencies [[`70d0aac`](https://github.com/mattppal/mcut/commit/70d0aacc5364e6d966778c0a6ab2aa3dccfb0ee7)]:
+  - @mcut/transcription-local@0.1.0-alpha.5
+
 ## 0.1.1-alpha.6
 
 ### Patch Changes
