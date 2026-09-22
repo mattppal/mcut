@@ -35,7 +35,7 @@ export default function Home() {
           </h1>
           <p className="max-w-md leading-relaxed text-muted-foreground">{copy.subhead}</p>
         </section>
-        <HeroDemo clip={DEMO_CLIP} />
+        <HeroDemo clip={DEMO_CLIP} traceIntro={copy.traceIntro} phoneHeroLabel={copy.phoneHeroLabel} />
         <section id="waitlist" className="mx-auto flex w-full max-w-2xl flex-col gap-6 pt-10 pb-12 sm:pt-12 sm:pb-16">
           <p className="max-w-md leading-relaxed text-muted-foreground">{copy.waitlistLead}</p>
           <SignupForm hint={copy.waitlistHint} button={copy.waitlistButton} joined={copy.waitlistJoined} />
