@@ -1,4 +1,3 @@
-import { AudioBufferSink } from 'mediabunny'
 import { inputFor, type MediaSourceLike } from './probe'
 import { valueAt } from './value-at'
 
@@ -54,10 +53,11 @@ export function crossCorrelateEnvelopes(a: Float32Array, b: Float32Array, maxLag
 }
 
 export async function extractEnvelope(src: MediaSourceLike, { windowS = 60, rateHz = 100, signal }: AudioSyncOptions = {}): Promise<Float32Array | null> {
-  const input = inputFor(src)
+  const input = await inputFor(src)
   try {
     const track = await input.getPrimaryAudioTrack()
     if (!track) return null
+    const { AudioBufferSink } = await import('mediabunny')
     const buckets = Math.ceil(windowS * rateHz)
     const sums = new Float64Array(buckets)
     const counts = new Float64Array(buckets)

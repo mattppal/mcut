@@ -1,9 +1,16 @@
 import { getProjectDurationMs, type Project } from '@mcut/timeline'
+import { containerFormats } from './container-formats'
 import { mixProjectAudio } from './export-audio'
-import { getExportSupport, resolveContainerFormat, runExportPipeline } from './export-core'
-import type { ExportFontFaceInit, ExportProjectOptions, ExportResult, ExportWorkerResponse, ExportWorkerStartMessage, MixedAudioData } from './export-types'
+import type {
+  ContainerFormatId,
+  ExportFontFaceInit,
+  ExportProjectOptions,
+  ExportResult,
+  ExportWorkerResponse,
+  ExportWorkerStartMessage,
+  MixedAudioData,
+} from './export-types'
 
-export { getExportSupport }
 export type { ContainerFormatId, ExportFontFaceInit, ExportProgress, ExportProjectOptions, ExportResult } from './export-types'
 
 function noteExportMode(mode: 'worker' | 'local'): void {
@@ -12,6 +19,11 @@ function noteExportMode(mode: 'worker' | 'local'): void {
 
 const WORKER_READY_TIMEOUT_MS = 15_000
 
+export async function getExportSupport(format: ContainerFormatId = 'mp4'): Promise<{ video: boolean; audio: boolean }> {
+  const core = await import('./export-core')
+  return core.getExportSupport(format)
+}
+
 class WorkerStartError extends Error {}
 
 export async function exportProject(project: Project, options: ExportProjectOptions = {}): Promise<ExportResult> {
@@ -19,7 +31,7 @@ export async function exportProject(project: Project, options: ExportProjectOpti
   signal?.throwIfAborted()
   const durationMs = getProjectDurationMs(project)
   if (durationMs <= 0) throw new Error('Cannot export an empty project')
-  const container = resolveContainerFormat(options.format)
+  const container = containerFormats[options.format ?? 'mp4']
 
   let mixedAudio: MixedAudioData | null = null
   const support = await getExportSupport(options.format)
@@ -52,6 +64,7 @@ export async function exportProject(project: Project, options: ExportProjectOpti
   }
 
   noteExportMode('local')
+  const { runExportPipeline } = await import('./export-core')
   const result = await runExportPipeline(project, {
     ...(options.format ? { format: options.format } : {}),
     ...(options.videoBitrate !== undefined ? { videoBitrate: options.videoBitrate } : {}),

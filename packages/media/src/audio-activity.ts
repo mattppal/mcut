@@ -1,4 +1,3 @@
-import { AudioBufferSink } from 'mediabunny'
 import { bucketPeaks } from './audio-peaks'
 import { inputFor, type MediaSourceLike } from './probe'
 
@@ -269,10 +268,11 @@ export function analyzeAudioSamples(samples: Float32Array, sampleRate: number, o
 
 export async function analyzeAudioActivity(src: MediaSourceLike, options: AudioActivityOptions = {}): Promise<AudioActivity | null> {
   const normalized = normalizeOptions(options)
-  const input = inputFor(src)
+  const input = await inputFor(src)
   try {
     const track = await input.getPrimaryAudioTrack()
     if (!track) return null
+    const { AudioBufferSink } = await import('mediabunny')
 
     const sourceEndMs = normalized.endMs ?? (await input.computeDuration()) * 1000
     const sourceStartMs = Math.min(normalized.startMs, sourceEndMs)

@@ -180,7 +180,7 @@ interface ContainerFormat {
   label: string
   extension: string
   mimeType: string
-  createOutputFormat: () => OutputFormat
+  createOutputFormat: () => Promise<OutputFormat>
 }
 ```
 

@@ -1,10 +1,10 @@
-import { MkvOutputFormat, Mp4OutputFormat, WebMOutputFormat, type OutputFormat } from 'mediabunny'
+import type { OutputFormat } from 'mediabunny'
 
 export interface ContainerFormat {
   label: string
   extension: string
   mimeType: string
-  createOutputFormat: () => OutputFormat
+  createOutputFormat: () => Promise<OutputFormat>
 }
 
 export const containerFormats = {
@@ -12,19 +12,19 @@ export const containerFormats = {
     label: 'MP4',
     extension: 'mp4',
     mimeType: 'video/mp4',
-    createOutputFormat: () => new Mp4OutputFormat(),
+    createOutputFormat: async () => new (await import('mediabunny')).Mp4OutputFormat(),
   },
   webm: {
     label: 'WebM',
     extension: 'webm',
     mimeType: 'video/webm',
-    createOutputFormat: () => new WebMOutputFormat(),
+    createOutputFormat: async () => new (await import('mediabunny')).WebMOutputFormat(),
   },
   mkv: {
     label: 'MKV',
     extension: 'mkv',
     mimeType: 'video/x-matroska',
-    createOutputFormat: () => new MkvOutputFormat(),
+    createOutputFormat: async () => new (await import('mediabunny')).MkvOutputFormat(),
   },
 } satisfies Record<string, ContainerFormat>
 

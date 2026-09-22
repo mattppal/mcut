@@ -1,4 +1,4 @@
-import { AudioBufferSink } from 'mediabunny'
+import type { AudioBufferSink } from 'mediabunny'
 import {
   getEffectiveVolume,
   getMulticamAudioSource,
@@ -141,10 +141,11 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
 
   for (const segment of segments) {
     signal?.throwIfAborted()
-    const input = inputFor(segment.src)
+    const input = await inputFor(segment.src)
     try {
       const track = await input.getPrimaryAudioTrack()
       if (!track) continue
+      const { AudioBufferSink } = await import('mediabunny')
       const sink = new AudioBufferSink(track)
       const segmentStartS = segment.startMs / 1000
       const segmentEndS = (segment.startMs + segment.durationMs) / 1000

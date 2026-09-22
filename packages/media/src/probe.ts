@@ -1,11 +1,12 @@
-import { ALL_FORMATS, BlobSource, EncodedPacketSink, Input, UrlSource } from 'mediabunny'
+import type { Input } from 'mediabunny'
 import { createAssetId, type AssetRef } from '@mcut/timeline'
 import { hashBlob } from './media-store'
 import { isMatroskaLike } from './video-capabilities'
 
 export type MediaSourceLike = Blob | string
 
-export function inputFor(src: MediaSourceLike): Input {
+export async function inputFor(src: MediaSourceLike): Promise<Input> {
+  const { ALL_FORMATS, BlobSource, Input, UrlSource } = await import('mediabunny')
   return new Input({
     formats: ALL_FORMATS,
     source: typeof src === 'string' ? new UrlSource(src) : new BlobSource(src),
@@ -164,6 +165,7 @@ async function hasNativeVideoPreview(origin: MediaOrigin, mimeType?: string): Pr
 }
 
 async function probeDurationSeconds(input: Input): Promise<number> {
+  const { EncodedPacketSink } = await import('mediabunny')
   const tracks = await input.getTracks()
   const firstPackets = await Promise.all(tracks.map((track) => new EncodedPacketSink(track).getFirstPacket({ metadataOnly: true })))
   const computed = await input.computeDuration(tracks.filter((_, index) => firstPackets[index] !== null))
@@ -172,7 +174,7 @@ async function probeDurationSeconds(input: Input): Promise<number> {
 }
 
 export async function probeMedia(src: MediaSourceLike): Promise<MediaProbe> {
-  const input = inputFor(src)
+  const input = await inputFor(src)
   try {
     const [durationSeconds, video, audio, mimeType] = await Promise.all([
       probeDurationSeconds(input),
