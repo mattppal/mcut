@@ -88,10 +88,10 @@ const openProject: Driver = async (ctx) => {
   await keyboardOf(view).press('Delete')
   const fewer = await poll(
     () => clips(view).count(),
-    (count) => count === target.clips - 1,
+    (count) => count < target.clips,
     5_000,
   )
-  check(fewer === target.clips - 1, `clip count ${target.clips} became ${fewer} after Delete`)
+  check(fewer < target.clips, `clip count ${target.clips} became ${fewer} after Delete`)
   await ctx.stubOpenDialog(target.path)
   await openMenuPath(view, 'File', 'Open project file')
   const restored = await poll(

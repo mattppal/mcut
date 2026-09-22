@@ -52,12 +52,12 @@ export const menuLabel = (label: string): RegExp => new RegExp(`^${escapeRegExp(
 
 const TITLEBAR_AREA_RECT = 'navigator.windowControlsOverlay?.visible ? navigator.windowControlsOverlay.getTitlebarAreaRect().toJSON() : undefined'
 
-export async function openMainMenu(view: View): Promise<string> {
+export async function openMainMenu(view: View, geometry: 'assert' | 'ignore'): Promise<string> {
   const button = view.getByRole('button', { name: 'Main menu' })
   const menu = boxSchema.parse(await button.boundingBox())
   const titlebar = boxSchema.optional().parse(await view.evaluate(TITLEBAR_AREA_RECT))
   let observed = 'Main menu opens'
-  if (titlebar !== undefined) {
+  if (geometry === 'assert' && titlebar !== undefined) {
     const inside = menu.x >= titlebar.x && menu.x + menu.width <= titlebar.x + titlebar.width
     observed = check(
       inside,
@@ -70,7 +70,7 @@ export async function openMainMenu(view: View): Promise<string> {
 }
 
 export async function openMenuPath(view: View, section: string, item: string): Promise<void> {
-  await openMainMenu(view)
+  await openMainMenu(view, 'ignore')
   await view.getByRole('menuitem', { name: section, exact: true }).click()
   const target = view.getByRole('menuitem', { name: menuLabel(item) })
   await target.waitFor({ state: 'visible', timeout: 5_000 })
@@ -225,7 +225,7 @@ const undoRedo: Driver = async ({ view }) => {
 }
 
 const mainMenu: Driver = async ({ view }) => {
-  const geometry = await openMainMenu(view)
+  const geometry = await openMainMenu(view, 'assert')
   await view.getByRole('menuitem', { name: 'File', exact: true }).click()
   const save = view.getByRole('menuitem', { name: menuLabel('Save project file') })
   await save.waitFor({ state: 'visible', timeout: 5_000 })
