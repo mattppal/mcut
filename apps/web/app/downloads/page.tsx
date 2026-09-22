@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { DownloadList } from '@/components/download-list'
 import { SiteFooter, SiteHeader } from '@/components/site-chrome'
 import { Button } from '@/components/ui/button'
-import { desktopRelease } from '@/lib/desktop-release.generated'
+import { STUDIO_RELEASED, publicRelease } from '@/lib/release-gate'
 
 const RELEASES_URL = 'https://github.com/mattppal/mcut/releases?q=mcut-desktop&expanded=true'
 
@@ -17,7 +18,8 @@ function formatReleaseDate(publishedAt: string): string {
 }
 
 export default function DownloadsPage() {
-  const release = desktopRelease
+  if (!STUDIO_RELEASED) notFound()
+  const release = publicRelease()
   const linuxName = release === null ? null : release.assets['linux-x86_64'].name
 
   return (

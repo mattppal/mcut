@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ASPECT_COMMAND, ASPECT_STEP } from '@/lib/agent-script'
 import { ASSET_TARGETS, type AssetKey, type DesktopRelease } from '@/lib/desktop-release'
+import { cn } from '@/lib/utils'
 
 const SDK_SNIPPET = `engine.dispatch(${JSON.stringify(ASPECT_COMMAND, null, 2)})`
 const AGENT_SNIPPET = JSON.stringify(ASPECT_STEP.request, null, 2)
@@ -24,16 +25,7 @@ function Line({ children }: { children: React.ReactNode }) {
   return <p className="text-sm leading-relaxed text-muted-foreground">{children}</p>
 }
 
-function StudioCard({ release }: { release: DesktopRelease | null }) {
-  if (release === null) {
-    return (
-      <Card title="Edit locally in Studio">
-        <Line>Studio for macOS and Linux is coming soon</Line>
-        <Line>Captions run on device</Line>
-        <Line>Projects stay on disk</Line>
-      </Card>
-    )
-  }
+function StudioCard({ release }: { release: DesktopRelease }) {
   return (
     <Card title="Edit locally in Studio">
       <Line>mcut Studio {release.version}</Line>
@@ -53,8 +45,8 @@ function StudioCard({ release }: { release: DesktopRelease | null }) {
 export function ThreeWaysIn({ release }: { release: DesktopRelease | null }) {
   return (
     <section className="flex flex-col gap-5">
-      <h2 className="text-2xl tracking-tight">Same edit, three ways in</h2>
-      <div className="grid gap-8 sm:grid-cols-3">
+      <h2 className="text-2xl tracking-tight">{release === null ? 'Same edit, two ways in' : 'Same edit, three ways in'}</h2>
+      <div className={cn('grid gap-8', release === null ? 'sm:grid-cols-2' : 'sm:grid-cols-3')}>
         <Card title="Build with the SDK">
           <Snippet code={SDK_SNIPPET} />
           <Line>{'The same JSON travels over MCP as apply_commands.'}</Line>
@@ -69,7 +61,7 @@ export function ThreeWaysIn({ release }: { release: DesktopRelease | null }) {
             Connect Cursor
           </Link>
         </Card>
-        <StudioCard release={release} />
+        {release !== null && <StudioCard release={release} />}
       </div>
     </section>
   )

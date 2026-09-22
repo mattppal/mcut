@@ -1,5 +1,6 @@
 import { createElement, type CSSProperties } from 'react'
 import { ImageResponse } from 'takumi-js/response'
+import { STUDIO_RELEASED } from '../lib/release-gate'
 
 type Env = {
   ASSETS: {
@@ -276,6 +277,10 @@ const worker = {
 
     if (url.pathname === '/og') {
       return handleOgImage(request)
+    }
+
+    if (!STUDIO_RELEASED && (url.pathname === '/downloads' || url.pathname === '/downloads.html')) {
+      return Response.redirect(new URL('/#waitlist', url).href, 302)
     }
 
     return env.ASSETS.fetch(request)

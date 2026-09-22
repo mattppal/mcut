@@ -1,5 +1,6 @@
 import { BrandMark } from '@/components/brand-mark'
 import Link from 'next/link'
+import { STUDIO_RELEASED } from '@/lib/release-gate'
 
 const NAV_LINK = 'inline-flex min-h-11 items-center px-1 -mx-1 text-muted-foreground transition-colors hover:text-foreground sm:min-h-0 sm:px-0 sm:mx-0'
 
@@ -8,9 +9,11 @@ export function SiteHeader() {
     <header className="mx-auto flex w-full max-w-2xl items-center justify-between px-6 py-4 sm:py-6">
       <BrandMark wordmark className="tracking-wide" />
       <nav className="flex items-center gap-3 text-sm sm:gap-5">
-        <Link className={NAV_LINK} href="/downloads">
-          Download
-        </Link>
+        {STUDIO_RELEASED && (
+          <Link className={NAV_LINK} href="/downloads">
+            Download
+          </Link>
+        )}
         <Link className={NAV_LINK} href="/docs">
           Docs
         </Link>
