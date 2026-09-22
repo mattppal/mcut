@@ -92,6 +92,9 @@ function markdown(report: Report): string {
 }
 
 async function main(): Promise<void> {
+  process.on('unhandledRejection', (reason: unknown) => {
+    console.error(`stray rejection: ${reason instanceof Error ? reason.message : String(reason)}`)
+  })
   const { values } = parseArgs({
     options: {
       surface: { type: 'string' },

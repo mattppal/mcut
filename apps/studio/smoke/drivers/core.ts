@@ -46,11 +46,33 @@ export async function selectFirstClip(view: View): Promise<void> {
     .click({ position: { x: clip.width / 2, y: clip.height / 2 } })
 }
 
-export async function openMenuPath(view: View, section: string, item: string): Promise<void> {
-  await view.getByRole('button', { name: 'Main menu' }).click()
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+export const menuLabel = (label: string): RegExp => new RegExp(`^${escapeRegExp(label)}`)
+
+const TITLEBAR_AREA_RECT = 'navigator.windowControlsOverlay?.visible ? navigator.windowControlsOverlay.getTitlebarAreaRect().toJSON() : undefined'
+
+export async function openMainMenu(view: View): Promise<string> {
+  const button = view.getByRole('button', { name: 'Main menu' })
+  const menu = boxSchema.parse(await button.boundingBox())
+  const titlebar = boxSchema.optional().parse(await view.evaluate(TITLEBAR_AREA_RECT))
+  let observed = 'Main menu opens'
+  if (titlebar !== undefined) {
+    const inside = menu.x >= titlebar.x && menu.x + menu.width <= titlebar.x + titlebar.width
+    observed = check(
+      inside,
+      `Main menu spans x ${Math.round(menu.x)}..${Math.round(menu.x + menu.width)} inside the titlebar area x ${Math.round(titlebar.x)}..${Math.round(titlebar.x + titlebar.width)}, clear of the window controls`,
+    )
+  }
+  await button.click()
   await view.getByRole('menuitem', { name: 'MCP tools' }).waitFor({ state: 'visible', timeout: 10_000 })
+  return observed
+}
+
+export async function openMenuPath(view: View, section: string, item: string): Promise<void> {
+  await openMainMenu(view)
   await view.getByRole('menuitem', { name: section, exact: true }).click()
-  const target = view.getByRole('menuitem', { name: item, exact: true })
+  const target = view.getByRole('menuitem', { name: menuLabel(item) })
   await target.waitFor({ state: 'visible', timeout: 5_000 })
   await target.click()
   await closeMenus(view)
@@ -203,13 +225,12 @@ const undoRedo: Driver = async ({ view }) => {
 }
 
 const mainMenu: Driver = async ({ view }) => {
-  await view.getByRole('button', { name: 'Main menu' }).click()
-  await view.getByRole('menuitem', { name: 'MCP tools' }).waitFor({ state: 'visible', timeout: 10_000 })
+  const geometry = await openMainMenu(view)
   await view.getByRole('menuitem', { name: 'File', exact: true }).click()
-  const save = view.getByRole('menuitem', { name: /^Save project file/ })
+  const save = view.getByRole('menuitem', { name: menuLabel('Save project file') })
   await save.waitFor({ state: 'visible', timeout: 5_000 })
   await closeMenus(view)
-  return pass('Main menu lists MCP tools and the File submenu lists Save project file…')
+  return pass(`${geometry}, lists MCP tools, and the File submenu lists Save project file…`)
 }
 
 export async function exportAs(ctx: SurfaceContext, format: 'WebM' | 'MP4' | 'MKV') {

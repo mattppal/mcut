@@ -114,7 +114,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE: ${{ inputs.release }}
         run: |
-          tag="${RELEASE:-$(gh release list --json tagName --jq '[.[] | select(.tagName | startswith("mcut-desktop@"))][0].tagName')}"
+          tag="${RELEASE:-$(gh release list --limit 200 --json tagName --jq '[.[] | select(.tagName | startswith("mcut-desktop@"))][0].tagName')}"
           echo "Smoking $tag"
           gh release download "$tag" --pattern '*.AppImage' --dir release
           chmod +x release/*.AppImage
@@ -150,7 +150,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE: ${{ inputs.release }}
         run: |
-          tag="${RELEASE:-$(gh release list --json tagName --jq '[.[] | select(.tagName | startswith("mcut-desktop@"))][0].tagName')}"
+          tag="${RELEASE:-$(gh release list --limit 200 --json tagName --jq '[.[] | select(.tagName | startswith("mcut-desktop@"))][0].tagName')}"
           echo "Smoking $tag"
           gh release download "$tag" --pattern '*-mac-arm64.dmg' --dir release
           hdiutil attach release/*.dmg -nobrowse -mountpoint "$RUNNER_TEMP/dmg"
