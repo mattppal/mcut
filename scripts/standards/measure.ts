@@ -115,7 +115,7 @@ function bucketOf(rel: string): Bucket | undefined {
   const extension = extname(rel)
   if (proseExtensions.has(extension)) return 'prose'
   if (!codeExtensions.has(extension)) return undefined
-  return /\.(test|spec)\.tsx?$/.test(rel) || rel.includes('/e2e/') ? 'tests' : 'code'
+  return /\.(test|spec)\.tsx?$/.test(rel) || rel.includes('/e2e/') || rel.includes('/smoke/') ? 'tests' : 'code'
 }
 
 const stripStrings = (line: string): string => line.replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '""')

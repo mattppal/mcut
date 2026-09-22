@@ -112,6 +112,7 @@ function launchEnvironment(configHome: string): Record<string, string> {
   }
   env.XDG_CONFIG_HOME = configHome
   env.MCUT_UPDATE_FEED_URL = DEAD_UPDATE_FEED
+  env.APPIMAGE_EXTRACT_AND_RUN = '1'
   return env
 }
 

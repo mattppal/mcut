@@ -112,6 +112,46 @@ bun run release:check
 `release:check` builds packages, typechecks, runs tests, runs package smoke
 checks, and validates package metadata.
 
+## Studio smoke by surface
+
+`apps/studio/smoke` drives every user-facing Studio feature the way a user
+does, on three surfaces. `embed` is the static export the homepage serves,
+opened in Chromium. `electron-dev` is `apps/desktop/dist` under the development
+Electron. `installed` is a packaged binary such as the released AppImage or the
+`.app` inside the DMG. `features.ts` is the one registry. It closes the feature
+ids and the surfaces, gives each feature a tier, and marks the cells a surface
+cannot offer, such as the AssemblyAI key field on the site. One driver per
+feature runs on every surface and asserts a literal, so the report has one
+pass, fail, blocked, or unsupported row per feature per surface, with a
+screenshot for each.
+
+```sh
+bun apps/studio/smoke/coverage.ts
+node --no-warnings apps/studio/smoke/run.ts --surface embed
+xvfb-run --auto-servernum -- node --no-warnings apps/studio/smoke/run.ts --surface electron-dev --tier fast
+xvfb-run --auto-servernum -- node --no-warnings apps/studio/smoke/run.ts --surface installed --electron release/mcut-studio.AppImage
+```
+
+`coverage.ts` prints the matrix and the cells with no driver, and fails with
+`--strict` when a gap exists. `run.ts` writes `report.md`, `report.json`, and
+one screenshot per feature under `reports/smoke/<surface>`. The runner runs
+under `node`, because Playwright's `_electron.launch` hangs under Bun.
+
+The on-device caption drivers download the Whisper model over the real network
+when `huggingface.co` answers. When it does not, set `MCUT_WHISPER_MIRROR` to a
+directory holding `onnx-community/<model>/...` and the harness serves it on
+127.0.0.1 and routes the Hub and jsDelivr requests there. Without either the
+row reports `blocked`. `ASSEMBLYAI_API_KEY` turns the AssemblyAI row into a
+real cloud transcription. `MCUT_CHROME_PATH` points the embed at Google Chrome
+for MP4 export.
+
+`.github/workflows/smoke.yml` runs the fast tier of `electron-dev` on every
+pull request that touches Studio, the desktop shell, or a package, and the full
+tier of every surface nightly and on `workflow_dispatch`. The installed jobs
+download the latest `mcut-desktop@*` release, or the tag given as the
+`release` input, and smoke the AppImage on Ubuntu and the arm64 DMG on
+`macos-15`.
+
 ## Website docs
 
 The website docs are written in `apps/web/content/docs`. The web app generates
