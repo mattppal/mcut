@@ -275,7 +275,8 @@
   padding-left: 5rem;
 }
 [data-window-chrome='linux'] [data-slot='editor-toolbar'] {
-  padding-right: calc(100% - env(titlebar-area-width, 100%));
+  padding-left: calc(0.5rem + env(titlebar-area-x, 0px));
+  padding-right: calc(100% - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100%));
 }
 [data-window-chrome='mac'] *,
 [data-window-chrome='linux'] * {
