@@ -169,9 +169,8 @@ export function createHeroEmbed() {
       update({ ...patch, expanded, animatingFrom: null })
       return
     }
-    const inFlow = wrapperRect(nodes.wrapper)
-    const from = resume ?? (expanded ? inFlow : geometry.expandedRect)
-    const to = expanded ? geometry.expandedRect : inFlow
+    const from = resume ?? (expanded ? wrapperRect(nodes.wrapper) : geometry.expandedRect)
+    const to = expanded ? () => geometry.expandedRect : () => wrapperRect(nodes.wrapper)
     activeZoom = runZoom(geometry, nodes, from, to, () => {
       activeZoom = null
       update({ animatingFrom: null })

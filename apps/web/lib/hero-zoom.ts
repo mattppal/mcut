@@ -34,13 +34,13 @@ export function wrapperRect(wrapper: HTMLElement): FrameRect {
   return { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
 }
 
-export function runZoom(geometry: HeroGeometry, nodes: ZoomNodes, from: FrameRect, to: FrameRect, onDone: () => void): Zoom {
+export function runZoom(geometry: HeroGeometry, nodes: ZoomNodes, from: FrameRect, to: () => FrameRect, onDone: () => void): Zoom {
   let current = from
   let handle = 0
   const began = performance.now()
   const tick = (now: number) => {
-    const p = easeOutExpo(Math.min(1, (now - began) / ZOOM_MS))
-    current = interpolate(from, to, p)
+    const p = easeOutExpo(Math.min(1, Math.max(0, now - began) / ZOOM_MS))
+    current = interpolate(from, to(), p)
     writeFixedFrame(nodes, geometry, current)
     if (p < 1) {
       handle = window.requestAnimationFrame(tick)
