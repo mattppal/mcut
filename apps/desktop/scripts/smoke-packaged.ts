@@ -19,8 +19,7 @@ const statusSchema = z.object({ ok: z.literal(true), result: z.object({ connecte
 const appFactsSchema = z.object({ version: z.string(), packaged: z.boolean() })
 const rectSchema = z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() })
 const titlebarAreaSchema = rectSchema.optional()
-const TITLEBAR_AREA_RECT =
-  'navigator.windowControlsOverlay?.visible ? navigator.windowControlsOverlay.getTitlebarAreaRect().toJSON() : undefined'
+const TITLEBAR_AREA_RECT = 'navigator.windowControlsOverlay?.visible ? navigator.windowControlsOverlay.getTitlebarAreaRect().toJSON() : undefined'
 
 type DownloadItemLike = {
   getFilename(): string
