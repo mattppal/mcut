@@ -1,4 +1,4 @@
-import { mkdir, stat } from 'node:fs/promises'
+import { mkdir, stat, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { _electron, type ElectronApplication, type Page } from '@playwright/test'
@@ -19,6 +19,14 @@ type DownloadItemLike = {
 }
 
 const UPSTREAM_LOG = 'MCUT_SMOKE_UPSTREAM_LOG'
+const GTK_CONTROLS_ON_THE_LEFT = '[Settings]\ngtk-decoration-layout=close,minimize,maximize:menu\n'
+
+async function placeWindowControlsOnTheLeft(configHome: string): Promise<void> {
+  if (process.platform !== 'linux') return
+  const dir = path.join(configHome, 'gtk-3.0')
+  await mkdir(dir, { recursive: true })
+  await writeFile(path.join(dir, 'settings.ini'), GTK_CONTROLS_ON_THE_LEFT)
+}
 
 function launchEnv(configHome: string): Record<string, string> {
   const env: Record<string, string> = {}
@@ -102,6 +110,7 @@ export function openElectron(surface: Surface): OpenSurface {
     const downloadDir = path.join(options.outDir, 'downloads')
     await mkdir(configHome, { recursive: true })
     await mkdir(downloadDir, { recursive: true })
+    await placeWindowControlsOnTheLeft(configHome)
     const launch = target(surface, options.electronPath)
     const app = await _electron.launch({ ...launch, cwd: repoRoot, env: launchEnv(configHome), chromiumSandbox: true })
     const page: Page = await app.firstWindow()
