@@ -42,7 +42,7 @@ const multicam: Driver = async (ctx) => {
     15_000,
   )
   check(after === before + 1, `multicam clip count ${before} became ${after}`)
-  await view.getByText(/Layouts · 1–/).waitFor({ state: 'visible', timeout: 5_000 })
+  await view.getByText(/Layouts · 1./).waitFor({ state: 'visible', timeout: 5_000 })
   const tiles = await view.getByTitle(/cuts while playing/).count()
   const totalAfter = await clips(view).count()
   await modeTab(view, 'Edit').click()

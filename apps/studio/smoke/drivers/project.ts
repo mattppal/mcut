@@ -2,7 +2,7 @@ import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { z } from 'zod'
 import { check, keyboardOf, pass, poll, type Driver, type SurfaceContext, type View } from '../context.ts'
-import { clips, closeMenus, selectFirstClip } from './core.ts'
+import { clips, closeMenus, openMenuPath, selectFirstClip } from './core.ts'
 
 const PROJECT_NAME = 'Smoke project'
 
@@ -26,23 +26,13 @@ async function readSavedProject(file: string): Promise<{ bytes: number; name: st
   return { bytes, name: project.name, elements }
 }
 
-async function runFileMenuItem(view: View, label: RegExp): Promise<void> {
-  await view.getByRole('button', { name: 'Main menu' }).click()
-  await view.getByRole('menuitem', { name: 'MCP tools' }).waitFor({ state: 'visible', timeout: 10_000 })
-  await view.getByRole('menuitem', { name: 'File', exact: true }).click()
-  const target = view.getByRole('menuitem', { name: label })
-  await target.waitFor({ state: 'visible', timeout: 5_000 })
-  await target.click()
-  await closeMenus(view)
-}
-
 async function saveThroughMenu(ctx: SurfaceContext): Promise<{ file: string; toast: string }> {
   const { view } = ctx
   switch (ctx.surface) {
     case 'embed': {
       const download = ctx.nextDownload(15_000)
       download.catch((error: unknown) => ctx.log(`save-project download did not arrive, ${String(error)}`))
-      await runFileMenuItem(view, /^Save project file/)
+      await openMenuPath(view, 'File', 'Save project file')
       const toast = view.getByText(/^Project file saved/)
       await toast.waitFor({ state: 'visible', timeout: 10_000 })
       const file = await download
@@ -53,7 +43,7 @@ async function saveThroughMenu(ctx: SurfaceContext): Promise<{ file: string; toa
     case 'installed': {
       const file = path.join(ctx.outDir, 'smoke.mcut.json')
       await ctx.stubSaveDialog(file)
-      await runFileMenuItem(view, /^Save project file/)
+      await openMenuPath(view, 'File', 'Save project file')
       const toast = view.getByText(/^Saved /)
       await toast.waitFor({ state: 'visible', timeout: 10_000 })
       const text = await toast.innerText()
@@ -103,7 +93,7 @@ const openProject: Driver = async (ctx) => {
   )
   check(fewer === target.clips - 1, `clip count ${target.clips} became ${fewer} after Delete`)
   await ctx.stubOpenDialog(target.path)
-  await runFileMenuItem(view, /^Open project file/)
+  await openMenuPath(view, 'File', 'Open project file')
   const restored = await poll(
     () => clips(view).count(),
     (count) => count === target.clips,

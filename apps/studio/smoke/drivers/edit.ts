@@ -146,7 +146,7 @@ const textTitle: Driver = async ({ view }) => {
   const textBefore = await view.locator(TEXT_CLIP).count()
   const lanesBefore = await lanes(view).count()
   await openRailTab(view, 'text')
-  await view.getByTitle(/^Title — drag/).click()
+  await view.getByTitle(/^Title .+ drag/).click()
   const textAfter = await poll(
     () => view.locator(TEXT_CLIP).count(),
     (count) => count === textBefore + 1,
