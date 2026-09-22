@@ -75,6 +75,12 @@ Run from the repository root unless the line says otherwise.
   fails on growth. The script is `scripts/standards/measure.ts`.
 - `bun run e2e` in `apps/studio` runs the Playwright suite. CI runs it nightly,
   not per pull request.
+- `node apps/studio/smoke/run.ts --surface <embed|electron-dev|installed>`
+ drives every feature in `apps/studio/smoke/features.ts` as a user on one
+ surface and writes one pass or fail row per feature. `bun
+ apps/studio/smoke/coverage.ts` lists the cells without a driver. CI runs the
+ fast tier of `electron-dev` per pull request and every surface nightly,
+ including the released AppImage and DMG.
 - `bun run desktop:check` builds, typechecks, and lints the desktop app,
   packages it with `electron-builder --dir`, and runs `smoke-packaged.ts`
   against the result.
