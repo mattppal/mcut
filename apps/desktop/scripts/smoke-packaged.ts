@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, stat } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { _electron, type ElectronApplication, type Page } from '@playwright/test'
@@ -17,6 +17,9 @@ const fixtureName = path.basename(fixture)
 const packageSchema = z.object({ version: z.string() })
 const statusSchema = z.object({ ok: z.literal(true), result: z.object({ connected: z.boolean() }) })
 const appFactsSchema = z.object({ version: z.string(), packaged: z.boolean() })
+const rectSchema = z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() })
+const titlebarAreaSchema = rectSchema.optional()
+const TITLEBAR_AREA_RECT = 'navigator.windowControlsOverlay?.visible ? navigator.windowControlsOverlay.getTitlebarAreaRect().toJSON() : undefined'
 
 type DownloadItemLike = {
   getFilename(): string
@@ -92,6 +95,16 @@ async function poll<T>(read: () => Promise<T>, accept: (value: T) => boolean, ti
   return last
 }
 
+const GTK_CONTROLS_ON_THE_LEFT = '[Settings]\ngtk-decoration-layout=close,minimize,maximize:menu\n'
+
+async function placeWindowControlsOnTheLeft(configHome: string): Promise<void> {
+  if (process.platform !== 'linux') return
+  const dir = path.join(configHome, 'gtk-3.0')
+  await mkdir(dir, { recursive: true })
+  await writeFile(path.join(dir, 'settings.ini'), GTK_CONTROLS_ON_THE_LEFT)
+  ok(`wrote ${path.join(dir, 'settings.ini')} so the window controls overlay sits on the left of the header`)
+}
+
 function launchEnvironment(configHome: string): Record<string, string> {
   const env: Record<string, string> = {}
   for (const [key, value] of Object.entries(process.env)) {
@@ -137,6 +150,23 @@ function nextDownload(app: ElectronApplication, dir: string, timeoutMs: number):
     timeoutMs,
     'download',
   )
+}
+
+async function openMainMenu(page: Page): Promise<void> {
+  const button = page.getByRole('button', { name: 'Main menu' })
+  const mainMenu = rectSchema.parse(await button.boundingBox())
+  const titlebarArea = titlebarAreaSchema.parse(await page.evaluate(TITLEBAR_AREA_RECT))
+  if (titlebarArea !== undefined) {
+    const inside = mainMenu.x >= titlebarArea.x && mainMenu.x + mainMenu.width <= titlebarArea.x + titlebarArea.width
+    check(
+      inside,
+      `Main menu spans x ${Math.round(mainMenu.x)}..${Math.round(mainMenu.x + mainMenu.width)} inside the titlebar area x ${Math.round(titlebarArea.x)}..${Math.round(titlebarArea.x + titlebarArea.width)}, clear of the window controls`,
+    )
+  }
+  await button.click()
+  await page.getByRole('menuitem', { name: 'MCP tools' }).waitFor({ state: 'visible', timeout: 10_000 })
+  ok('Main menu opens and lists MCP tools')
+  await page.keyboard.press('Escape')
 }
 
 async function importAndExport(app: ElectronApplication, page: Page, dir: string): Promise<void> {
@@ -191,6 +221,7 @@ async function main(): Promise<void> {
   const expectedVersion = packageSchema.parse(JSON.parse(await readFile(path.join(desktopDir, 'package.json'), 'utf8'))).version
   const dir = await mkdtemp(path.join(tmpdir(), 'mcut-smoke-'))
   const configHome = path.join(dir, 'config')
+  await placeWindowControlsOnTheLeft(configHome)
 
   const launchStarted = performance.now()
   const app = await raceBound(
@@ -228,6 +259,7 @@ async function main(): Promise<void> {
     const name = await page.getByLabel('Project name').inputValue()
     check(name === 'Untitled', `project name input reads "${name}"`)
 
+    await openMainMenu(page)
     await importAndExport(app, page, dir)
 
     const facts = appFactsSchema.parse(
