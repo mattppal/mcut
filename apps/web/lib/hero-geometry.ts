@@ -2,58 +2,55 @@ export interface HeroMetrics {
   viewportWidth: number
   viewportHeight: number
   containerWidth: number
-  wrapperTop: number
-  wrapperLeft: number
+}
+
+export interface FrameRect {
+  top: number
+  left: number
+  width: number
+  height: number
 }
 
 export interface HeroGeometry {
   stageWidth: number
   stageHeight: number
-  scale: number
-  frameWidth: number
-  frameHeight: number
-  frameTranslateX: number
-  wrapperHeight: number
+  collapsedHeight: number
+  expandedRect: FrameRect
 }
 
-export const FRAME_PAD = 0
 const VIEWPORT_PAD = 16
 
-export function heroGeometry({ metrics, expanded }: { metrics: HeroMetrics | null; expanded: boolean }): HeroGeometry | null {
+export function heroGeometry(metrics: HeroMetrics | null): HeroGeometry | null {
   if (metrics === null) return null
-  const availableWidth = metrics.viewportWidth - 2 * VIEWPORT_PAD - 2 * FRAME_PAD
-  const availableHeight = metrics.viewportHeight - 2 * VIEWPORT_PAD - 2 * FRAME_PAD
+  const availableWidth = metrics.viewportWidth - 2 * VIEWPORT_PAD
+  const availableHeight = metrics.viewportHeight - 2 * VIEWPORT_PAD
   const stageWidth = Math.floor(Math.min(availableWidth, (availableHeight * 16) / 9))
   const stageHeight = Math.round((stageWidth * 9) / 16)
-  const scale = expanded ? 1 : (metrics.containerWidth - 2 * FRAME_PAD) / stageWidth
-  const frameWidth = expanded ? stageWidth + 2 * FRAME_PAD : metrics.containerWidth
-  const frameHeight = stageHeight * scale + 2 * FRAME_PAD
-  const frameTranslateX = expanded ? (metrics.viewportWidth - frameWidth) / 2 - metrics.wrapperLeft : 0
-  return { stageWidth, stageHeight, scale, frameWidth, frameHeight, frameTranslateX, wrapperHeight: frameHeight }
+  return {
+    stageWidth,
+    stageHeight,
+    collapsedHeight: Math.round((metrics.containerWidth * 9) / 16),
+    expandedRect: {
+      top: Math.round((metrics.viewportHeight - stageHeight) / 2),
+      left: Math.round((metrics.viewportWidth - stageWidth) / 2),
+      width: stageWidth,
+      height: stageHeight,
+    },
+  }
 }
 
-export function centeredScrollTop(metrics: HeroMetrics, frameHeight: number): number {
-  return Math.max(0, Math.round(metrics.wrapperTop - (metrics.viewportHeight - frameHeight) / 2))
+export function stageScale(geometry: HeroGeometry, rect: FrameRect): number {
+  return rect.width / geometry.stageWidth
 }
 
 export function measureWrapper(wrapper: HTMLDivElement): HeroMetrics {
-  const rect = wrapper.getBoundingClientRect()
   return {
     viewportWidth: document.documentElement.clientWidth,
     viewportHeight: window.innerHeight,
-    containerWidth: rect.width,
-    wrapperTop: rect.top + window.scrollY,
-    wrapperLeft: rect.left,
+    containerWidth: wrapper.getBoundingClientRect().width,
   }
 }
 
 export function sameMetrics(a: HeroMetrics | null, b: HeroMetrics): boolean {
-  return (
-    a !== null &&
-    a.viewportWidth === b.viewportWidth &&
-    a.viewportHeight === b.viewportHeight &&
-    a.containerWidth === b.containerWidth &&
-    a.wrapperTop === b.wrapperTop &&
-    a.wrapperLeft === b.wrapperLeft
-  )
+  return a !== null && a.viewportWidth === b.viewportWidth && a.viewportHeight === b.viewportHeight && a.containerWidth === b.containerWidth
 }
