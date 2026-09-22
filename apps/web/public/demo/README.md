@@ -1,1 +1,1 @@
-Drop your own clip in as `sample.mp4` with a matching `poster.jpg` frame, or point `apps/web/lib/demo-clip.ts` elsewhere, and replace `LICENSE.md`.
+Drop your own clip in as `sample.mp4`, regenerate `studio-phone.webp` (a 1434x1120 top left crop of the editor at 1280x720, scaled to 1100 wide), or point `apps/web/lib/demo-clip.ts` elsewhere, and replace `LICENSE.md`.
