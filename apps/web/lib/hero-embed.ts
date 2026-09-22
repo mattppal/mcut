@@ -1,8 +1,8 @@
 import { handOff, type ReplayPhase, type TraceMode } from './agent-replay'
 import { AGENT_SCRIPT, LEAD_IN_MS } from './agent-script'
 import { readEmbedMessage, type EmbedResult, type ParentMessage } from './embed-protocol'
-import { measureWrapper, sameMetrics, type HeroMetrics } from './hero-geometry'
-import { runZoom, zoomScrollTop, type ZoomNodes } from './hero-zoom'
+import { measureWrapper, sameMetrics, type HeroGeometry, type HeroMetrics } from './hero-geometry'
+import { runZoom, zoomScrollTop, type Zoom, type ZoomNodes } from './hero-zoom'
 
 export type Phase = 'poster' | 'loading' | 'slow' | 'fading' | 'live'
 
@@ -14,7 +14,7 @@ export interface HeroState {
   userPaused: boolean
   reducedMotion: boolean
   metrics: HeroMetrics | null
-  animating: boolean
+  animatingFrom: HeroGeometry | null
   replay: ReplayPhase
   results: ReadonlyMap<string, unknown>
 }
@@ -27,7 +27,7 @@ const INITIAL_STATE: HeroState = {
   userPaused: false,
   reducedMotion: false,
   metrics: null,
-  animating: false,
+  animatingFrom: null,
   replay: { kind: 'waiting' },
   results: new Map(),
 }
@@ -59,7 +59,7 @@ export function createHeroEmbed() {
   let frameCard: HTMLDivElement | null = null
   let stage: HTMLDivElement | null = null
   let poster: HTMLImageElement | null = null
-  let cancelZoom: (() => void) | null = null
+  let activeZoom: Zoom | null = null
   let visible = false
   let armed = false
   let readyTimer = 0
@@ -80,7 +80,7 @@ export function createHeroEmbed() {
   }
 
   const measure = () => {
-    if (wrapper === null || state.animating) return
+    if (wrapper === null || state.animatingFrom !== null) return
     const metrics = measureWrapper(wrapper)
     if (!sameMetrics(state.metrics, metrics)) update({ metrics })
   }
@@ -163,24 +163,28 @@ export function createHeroEmbed() {
   const zoomNodes = (): ZoomNodes | null => (wrapper === null || frameCard === null || stage === null ? null : { wrapper, frame: frameCard, stage, poster })
 
   const zoom = (expanded: boolean, patch: Partial<HeroState>) => {
-    cancelZoom?.()
-    cancelZoom = null
+    const resume = activeZoom?.cancel() ?? null
+    activeZoom = null
     armed = false
     measure()
     const { metrics } = state
     const nodes = zoomNodes()
-    if (metrics === null || nodes === null || state.reducedMotion) {
-      update({ ...patch, expanded, animating: false })
+    const started =
+      metrics === null || nodes === null || state.reducedMotion
+        ? null
+        : runZoom(metrics, expanded, nodes, resume, () => {
+            activeZoom = null
+            update({ animatingFrom: null })
+            armed = expanded
+          })
+    if (started === null) {
+      update({ ...patch, expanded, animatingFrom: null })
       if (metrics !== null) window.scrollTo(0, zoomScrollTop(metrics, expanded))
       armed = expanded
       return
     }
-    update({ ...patch, expanded, animating: true })
-    cancelZoom = runZoom(metrics, expanded, nodes, () => {
-      cancelZoom = null
-      update({ animating: false })
-      armed = expanded
-    })
+    activeZoom = started
+    update({ ...patch, expanded, animatingFrom: started.from.geometry })
   }
 
   const collapse = () => {
@@ -213,7 +217,7 @@ export function createHeroEmbed() {
   }
 
   const onScroll = () => {
-    if (!state.expanded || state.animating || !armed || state.metrics === null) return
+    if (!state.expanded || state.animatingFrom !== null || !armed || state.metrics === null) return
     if (Math.abs(window.scrollY - zoomScrollTop(state.metrics, true)) > SCROLL_COLLAPSE_PX) collapse()
   }
 
@@ -229,7 +233,7 @@ export function createHeroEmbed() {
     document.addEventListener('visibilitychange', onVisibility)
     return () => {
       listeners.delete(listener)
-      cancelZoom?.()
+      activeZoom?.cancel()
       window.clearTimeout(scriptTimer)
       window.clearTimeout(readyTimer)
       window.removeEventListener('message', onMessage)

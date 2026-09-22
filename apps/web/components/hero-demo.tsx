@@ -35,7 +35,7 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
     },
   ] = useState(createHeroEmbed)
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
-  const geometry = heroGeometry({ metrics: state.metrics, expanded: state.animating ? !state.expanded : state.expanded })
+  const geometry = state.animatingFrom ?? heroGeometry(state)
   const src = `/embed?clip=${encodeURIComponent(clip.url)}${state.autoplay ? '&autoplay=1' : ''}&muted=1`
   const awaitingRun = isReady(state.phase) && state.reducedMotion && state.replay.kind === 'waiting'
 

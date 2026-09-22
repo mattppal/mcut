@@ -37,27 +37,38 @@ export function writeGeometry({ wrapper, frame, stage, poster }: ZoomNodes, geom
   poster.style.height = `${geometry.stageHeight * geometry.scale}px`
 }
 
-export function zoomScrollTop(metrics: HeroMetrics, expanded: boolean): number {
-  const geometry = heroGeometry({ metrics, expanded })
-  return geometry === null ? 0 : centeredScrollTop(metrics, geometry.wrapperHeight)
+export interface ZoomSnapshot {
+  geometry: HeroGeometry
+  scrollY: number
 }
 
-export function runZoom(metrics: HeroMetrics, expanded: boolean, nodes: ZoomNodes, onDone: () => void): () => void {
-  const from = heroGeometry({ metrics, expanded: !expanded })
+export interface Zoom {
+  from: ZoomSnapshot
+  cancel: () => ZoomSnapshot
+}
+
+export function zoomScrollTop(metrics: HeroMetrics, expanded: boolean): number {
+  const geometry = heroGeometry({ metrics, expanded })
+  if (geometry === null) return 0
+  const maxScroll = Math.max(0, document.documentElement.scrollHeight - metrics.viewportHeight)
+  return Math.min(maxScroll, centeredScrollTop(metrics, geometry.wrapperHeight))
+}
+
+export function runZoom(metrics: HeroMetrics, expanded: boolean, nodes: ZoomNodes, resume: ZoomSnapshot | null, onDone: () => void): Zoom | null {
+  const start = resume ?? { geometry: heroGeometry({ metrics, expanded: !expanded }), scrollY: window.scrollY }
   const to = heroGeometry({ metrics, expanded })
-  if (from === null || to === null) {
-    onDone()
-    return () => {}
-  }
-  const scrollFrom = window.scrollY
+  if (start.geometry === null || to === null) return null
+  const from: ZoomSnapshot = { geometry: start.geometry, scrollY: start.scrollY }
   const scrollTo = zoomScrollTop(metrics, expanded)
+  let current = from
   let handle = 0
-  let start = 0
+  let began = 0
   const tick = (now: number) => {
-    if (start === 0) start = now
-    const p = easeOutExpo(Math.min(1, (now - start) / ZOOM_MS))
-    writeGeometry(nodes, interpolate(from, to, p))
-    window.scrollTo(0, Math.round(lerp(scrollFrom, scrollTo, p)))
+    if (began === 0) began = now
+    const p = easeOutExpo(Math.min(1, (now - began) / ZOOM_MS))
+    current = { geometry: interpolate(from.geometry, to, p), scrollY: Math.round(lerp(from.scrollY, scrollTo, p)) }
+    writeGeometry(nodes, current.geometry)
+    window.scrollTo(0, current.scrollY)
     if (p < 1) {
       handle = window.requestAnimationFrame(tick)
       return
@@ -66,5 +77,11 @@ export function runZoom(metrics: HeroMetrics, expanded: boolean, nodes: ZoomNode
     onDone()
   }
   handle = window.requestAnimationFrame(tick)
-  return () => window.cancelAnimationFrame(handle)
+  return {
+    from,
+    cancel: () => {
+      window.cancelAnimationFrame(handle)
+      return current
+    },
+  }
 }
