@@ -12,16 +12,18 @@ const instrumentSerif = Instrument_Serif({
   variable: '--font-logo',
 })
 
-const caveat = Caveat({ subsets: ['latin'], weight: '600', variable: '--font-hand' })
+const caveat = Caveat({ subsets: ['latin'], weight: '600', variable: '--font-hand', preload: false })
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
+  preload: false,
 })
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+  preload: false,
 })
 
 const ogTitle = 'Open source video editing for agents'
