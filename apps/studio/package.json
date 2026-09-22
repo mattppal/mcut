@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test registry/mcut",
     "e2e": "playwright test",
+    "smoke": "node --no-warnings smoke/run.ts",
+    "smoke:coverage": "bun smoke/coverage.ts",
     "parity": "playwright test e2e/embed-parity.spec.ts",
     "fuzz:media": "playwright test e2e/media-fuzz.spec.ts"
   },

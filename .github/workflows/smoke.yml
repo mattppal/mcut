@@ -1,0 +1,168 @@
+name: smoke
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Desktop release tag to smoke on the installed surface, for example mcut-desktop@0.1.1. Leave empty for the latest mcut-desktop release.
+        required: false
+        type: string
+      tier:
+        description: fast or full
+        required: false
+        default: full
+        type: string
+  pull_request:
+    paths:
+      - apps/studio/**
+      - apps/desktop/**
+      - packages/**
+      - .github/workflows/smoke.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SMOKE_TIER: ${{ github.event_name == 'pull_request' && 'fast' || inputs.tier || 'full' }}
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - run: bun apps/studio/smoke/coverage.ts | tee -a "$GITHUB_STEP_SUMMARY"
+
+  electron-dev:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: sudo apt-get install -y xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
+      # Ubuntu 24.04 restricts unprivileged user namespaces through AppArmor, which blocks the Chromium sandbox. https://github.com/microsoft/playwright/issues/34251
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: xvfb-run --auto-servernum --server-args="-screen 0 1600x1000x24" -- node --no-warnings apps/studio/smoke/run.ts --surface electron-dev --tier "$SMOKE_TIER" --out reports/smoke/electron-dev
+      - run: cat reports/smoke/electron-dev/report.md >> "$GITHUB_STEP_SUMMARY"
+        if: always()
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: smoke-electron-dev
+          path: reports/smoke/electron-dev
+          retention-days: 14
+
+  embed:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: bunx playwright install --with-deps chromium
+        working-directory: apps/studio
+      - run: node --no-warnings apps/studio/smoke/run.ts --surface embed --tier "$SMOKE_TIER" --out reports/smoke/embed
+      - run: cat reports/smoke/embed/report.md >> "$GITHUB_STEP_SUMMARY"
+        if: always()
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: smoke-embed
+          path: reports/smoke/embed
+          retention-days: 14
+
+  installed-linux:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bunx turbo run build --filter=mcut-studio
+      - name: Download the released AppImage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          tag="${RELEASE:-$(gh release list --json tagName --jq '[.[] | select(.tagName | startswith("mcut-desktop@"))][0].tagName')}"
+          echo "Smoking $tag"
+          gh release download "$tag" --pattern '*.AppImage' --dir release
+          chmod +x release/*.AppImage
+          echo "tag=$tag" >> "$GITHUB_ENV"
+      - run: sudo apt-get install -y xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: xvfb-run --auto-servernum --server-args="-screen 0 1600x1000x24" -- node --no-warnings apps/studio/smoke/run.ts --surface installed --tier "$SMOKE_TIER" --electron release/*.AppImage --out reports/smoke/installed-linux
+      - run: printf '## %s on Linux\n\n' "$tag" >> "$GITHUB_STEP_SUMMARY" && cat reports/smoke/installed-linux/report.md >> "$GITHUB_STEP_SUMMARY"
+        if: always()
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: smoke-installed-linux
+          path: reports/smoke/installed-linux
+          retention-days: 14
+
+  installed-mac:
+    if: github.event_name != 'pull_request'
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bunx turbo run build --filter=mcut-studio
+      - name: Download and mount the released DMG
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          tag="${RELEASE:-$(gh release list --json tagName --jq '[.[] | select(.tagName | startswith("mcut-desktop@"))][0].tagName')}"
+          echo "Smoking $tag"
+          gh release download "$tag" --pattern '*-mac-arm64.dmg' --dir release
+          hdiutil attach release/*.dmg -nobrowse -mountpoint "$RUNNER_TEMP/dmg"
+          cp -R "$RUNNER_TEMP/dmg/mcut Studio.app" release/
+          hdiutil detach "$RUNNER_TEMP/dmg"
+          echo "tag=$tag" >> "$GITHUB_ENV"
+      - run: node --no-warnings apps/studio/smoke/run.ts --surface installed --tier "$SMOKE_TIER" --electron "release/mcut Studio.app/Contents/MacOS/mcut Studio" --out reports/smoke/installed-mac
+      - run: printf '## %s on macOS\n\n' "$tag" >> "$GITHUB_STEP_SUMMARY" && cat reports/smoke/installed-mac/report.md >> "$GITHUB_STEP_SUMMARY"
+        if: always()
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: smoke-installed-mac
+          path: reports/smoke/installed-mac
+          retention-days: 14
