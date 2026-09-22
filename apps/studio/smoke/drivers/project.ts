@@ -71,7 +71,11 @@ const saveProject: Driver = async (ctx) => {
   const { view } = ctx
   const nameInput = view.getByLabel('Project name')
   await nameInput.fill(PROJECT_NAME)
-  const name = await poll(() => nameInput.inputValue(), (value) => value === PROJECT_NAME, 3_000)
+  const name = await poll(
+    () => nameInput.inputValue(),
+    (value) => value === PROJECT_NAME,
+    3_000,
+  )
   check(name === PROJECT_NAME, `Project name input reads "${name}"`)
   const count = await clips(view).count()
   const { file, toast } = await saveThroughMenu(ctx)
@@ -81,7 +85,9 @@ const saveProject: Driver = async (ctx) => {
   check(onDisk.elements === count, `saved file holds ${onDisk.elements} element(s), timeline shows ${count}`)
   if (ctx.surface === 'embed') check(path.basename(file) === `${PROJECT_NAME}.mcut.json`, `download named ${path.basename(file)}`)
   saved = { path: file, name: onDisk.name, clips: count }
-  return pass(`${path.basename(file)} has ${onDisk.bytes} bytes, name "${onDisk.name}", ${onDisk.elements} element(s) matching ${count} clip(s), toast "${toast}"`)
+  return pass(
+    `${path.basename(file)} has ${onDisk.bytes} bytes, name "${onDisk.name}", ${onDisk.elements} element(s) matching ${count} clip(s), toast "${toast}"`,
+  )
 }
 
 const openProject: Driver = async (ctx) => {
@@ -90,15 +96,25 @@ const openProject: Driver = async (ctx) => {
   const target = saved
   await selectFirstClip(view)
   await keyboardOf(view).press('Delete')
-  const fewer = await poll(() => clips(view).count(), (count) => count === target.clips - 1, 5_000)
+  const fewer = await poll(
+    () => clips(view).count(),
+    (count) => count === target.clips - 1,
+    5_000,
+  )
   check(fewer === target.clips - 1, `clip count ${target.clips} became ${fewer} after Delete`)
   await ctx.stubOpenDialog(target.path)
   await runFileMenuItem(view, /^Open project file/)
-  const restored = await poll(() => clips(view).count(), (count) => count === target.clips, 10_000)
+  const restored = await poll(
+    () => clips(view).count(),
+    (count) => count === target.clips,
+    10_000,
+  )
   check(restored === target.clips, `clip count ${fewer} became ${restored} after opening ${path.basename(target.path)}`)
   const name = await view.getByLabel('Project name').inputValue()
   check(name === target.name, `Project name input reads "${name}", file says "${target.name}"`)
-  return pass(`clip count ${target.clips} dropped to ${fewer} after Delete and returned to ${restored} after opening ${path.basename(target.path)}, project name "${name}"`)
+  return pass(
+    `clip count ${target.clips} dropped to ${fewer} after Delete and returned to ${restored} after opening ${path.basename(target.path)}, project name "${name}"`,
+  )
 }
 
 const commandPalette: Driver = async ({ view }) => {
@@ -111,7 +127,11 @@ const commandPalette: Driver = async ({ view }) => {
   await item.waitFor({ state: 'visible', timeout: 5_000 })
   await item.click()
   await input.waitFor({ state: 'hidden', timeout: 5_000 })
-  const after = await poll(() => clips(view).count(), (count) => count === before + 1, 5_000)
+  const after = await poll(
+    () => clips(view).count(),
+    (count) => count === before + 1,
+    5_000,
+  )
   return pass(check(after === before + 1, `${before} clip(s) became ${after} after picking Add text at playhead from the palette`))
 }
 
@@ -136,10 +156,18 @@ const settingsTheme: Driver = async ({ view }) => {
   const before = await darkClass(view)
   const toggle = view.getByRole('button', { name: 'Toggle theme' })
   await toggle.click()
-  const flipped = await poll(() => darkClass(view), (value) => value !== before, 3_000)
+  const flipped = await poll(
+    () => darkClass(view),
+    (value) => value !== before,
+    3_000,
+  )
   check(flipped !== before, `html.dark ${before} became ${flipped} after Toggle theme`)
   await toggle.click()
-  const restored = await poll(() => darkClass(view), (value) => value === before, 3_000)
+  const restored = await poll(
+    () => darkClass(view),
+    (value) => value === before,
+    3_000,
+  )
   return pass(check(restored === before, `html.dark ${before} became ${flipped} after Toggle theme, then ${restored} after toggling back`))
 }
 
