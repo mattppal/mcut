@@ -66,17 +66,28 @@ function aggregateDownloadProgress(onProgress: (progress: number) => void): (eve
 let asrKey: string | null = null
 let asrPromise: Promise<AsrPipeline> | null = null
 
+function modelLoadError(model: string, error: unknown): Error {
+  const reason = error instanceof Error ? error.message : String(error)
+  const host = new URL(env.remoteHost).host
+  return new Error(`Could not load the Whisper model ${model} from ${host} (${reason}). Check the connection and try again.`)
+}
+
 async function ensurePipeline(config: WhisperWorkerConfig, onProgress: (progress: number) => void): Promise<AsrPipeline> {
   const device = await resolveDevice(config.device)
   const key = `${config.model}|${device}|${config.dtype}|${config.ortWasmPaths?.mjs ?? ''}|${config.ortWasmPaths?.wasm ?? ''}`
   if (asrKey !== key || !asrPromise) {
     asrKey = key
     applyOrtWasmPaths(config.ortWasmPaths)
-    asrPromise = pipeline('automatic-speech-recognition', config.model, {
+    const loading = pipeline('automatic-speech-recognition', config.model, {
       device,
       dtype: config.dtype,
       progress_callback: aggregateDownloadProgress(onProgress),
     }) as unknown as Promise<AsrPipeline>
+    const guarded = loading.catch((error: unknown) => {
+      if (asrPromise === guarded) asrPromise = null
+      throw modelLoadError(config.model, error)
+    })
+    asrPromise = guarded
   }
   return asrPromise
 }
