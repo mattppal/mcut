@@ -13,6 +13,8 @@
     "smoke": "node --no-warnings smoke/run.ts",
     "smoke:coverage": "bun smoke/coverage.ts",
     "parity": "playwright test e2e/embed-parity.spec.ts",
+    "poster:phone": "playwright test e2e/phone-poster.spec.ts",
+    "poster:phone:write": "WRITE_PHONE_POSTER=1 playwright test e2e/phone-poster.spec.ts",
     "fuzz:media": "playwright test e2e/media-fuzz.spec.ts"
   },
   "dependencies": {

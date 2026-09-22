@@ -7,6 +7,7 @@ import { AGENT_SCRIPT } from '@/lib/agent-script'
 import type { DEMO_CLIP } from '@/lib/demo-clip'
 import { createHeroEmbed, isReady, traceMode } from '@/lib/hero-embed'
 import { heroGeometry, stageScale, type FrameRect, type HeroGeometry } from '@/lib/hero-geometry'
+import { STUDIO_RELEASED } from '@/lib/release-gate'
 import { cn } from '@/lib/utils'
 
 const GUTTER_WIDTH = '15rem'
@@ -43,7 +44,7 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
         className={cn('fixed inset-0 z-10 bg-overlay/50 transition-opacity', MOTION, state.expanded ? 'opacity-100' : 'pointer-events-none opacity-0')}
       />
       <div className="grid gap-6 xl:grid-cols-[var(--gutter)_minmax(0,1fr)_var(--gutter)]" style={cssVariables({ '--gutter': GUTTER_WIDTH })}>
-        <div className="order-2 xl:order-1">
+        <div className="order-2 hidden sm:block xl:order-1">
           <AgentTrace
             steps={AGENT_SCRIPT}
             phase={state.replay}
@@ -97,7 +98,7 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                 decoding="async"
                 className="pointer-events-none absolute inset-0 size-full object-cover object-left-top sm:hidden"
               />
-              <a href="/downloads" aria-label="Get mcut Studio for desktop" className="absolute inset-0 z-10 sm:hidden" />
+              <a href={STUDIO_RELEASED ? '/downloads' : '#waitlist'} aria-label="mcut Studio for desktop" className="absolute inset-0 z-10 sm:hidden" />
             </div>
           </div>
         </div>

@@ -7,7 +7,7 @@
     "dev": "bun run sync:desktop-release && bun run sync:docs-md && bun run sync:registry && next dev",
     "build": "bun run sync:desktop-release && bun run sync:docs-md && bun run sync:registry && bun run source:docs && next build && bun run sync:studio",
     "lint": "eslint",
-    "test": "bun run --cwd ../studio parity",
+    "test": "bun run --cwd ../studio parity && bun run --cwd ../studio poster:phone",
     "typecheck": "bun run sync:desktop-release && bun run source:docs && tsc --noEmit",
     "source:docs": "fumadocs-mdx",
     "sync:desktop-release": "bun run scripts/sync-desktop-release.ts",

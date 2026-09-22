@@ -4,7 +4,7 @@ import { SignupForm } from '@/components/signup-form'
 import { SiteFooter, SiteHeader } from '@/components/site-chrome'
 import { ThreeWaysIn } from '@/components/three-ways-in'
 import { DEMO_CLIP } from '@/lib/demo-clip'
-import { desktopRelease } from '@/lib/desktop-release.generated'
+import { publicRelease } from '@/lib/release-gate'
 
 function Serif({ children }: { children: React.ReactNode }) {
   return (
@@ -20,7 +20,7 @@ function Serif({ children }: { children: React.ReactNode }) {
 }
 
 export default function Home() {
-  const release = desktopRelease
+  const release = publicRelease()
 
   return (
     <div className="flex flex-1 flex-col overflow-x-clip bg-background text-foreground">
@@ -36,7 +36,7 @@ export default function Home() {
           </p>
         </section>
         <HeroDemo clip={DEMO_CLIP} />
-        <section className="mx-auto flex w-full max-w-2xl flex-col gap-6 pt-10 pb-12 sm:pt-12 sm:pb-16">
+        <section id="waitlist" className="mx-auto flex w-full max-w-2xl flex-col gap-6 pt-10 pb-12 sm:pt-12 sm:pb-16">
           <p className="max-w-md leading-relaxed text-muted-foreground">
             {release === null
               ? 'The full editor is coming soon. Join the waitlist for early access.'
