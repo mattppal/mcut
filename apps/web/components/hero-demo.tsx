@@ -7,7 +7,8 @@ import { AGENT_SCRIPT } from '@/lib/agent-script'
 import type { DEMO_CLIP } from '@/lib/demo-clip'
 import { createHeroEmbed, isReady, traceMode } from '@/lib/hero-embed'
 import { heroGeometry, stageScale, type FrameRect, type HeroGeometry } from '@/lib/hero-geometry'
-import { STUDIO_RELEASED } from '@/lib/release-gate'
+import { landerCopy } from '@/lib/lander-copy'
+import { STUDIO_RELEASED, publicRelease } from '@/lib/release-gate'
 import { cn } from '@/lib/utils'
 
 const GUTTER_WIDTH = '15rem'
@@ -53,6 +54,7 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
             onReplay={replay}
             onLoad={state.phase === 'poster' ? load : null}
             onRun={awaitingRun ? run : null}
+            intro={landerCopy(publicRelease()).traceIntro}
           />
         </div>
         <div className="order-1 flex min-w-0 flex-col xl:order-2">
@@ -98,7 +100,11 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                 decoding="async"
                 className="pointer-events-none absolute inset-0 size-full object-cover object-left-top sm:hidden"
               />
-              <a href={STUDIO_RELEASED ? '/downloads' : '#waitlist'} aria-label="mcut Studio for desktop" className="absolute inset-0 z-10 sm:hidden" />
+              <a
+                href={STUDIO_RELEASED ? '/downloads' : '#waitlist'}
+                aria-label={landerCopy(publicRelease()).phoneHeroLabel}
+                className="absolute inset-0 z-10 sm:hidden"
+              />
             </div>
           </div>
         </div>

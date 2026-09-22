@@ -7,11 +7,9 @@ import { Input } from "@/components/ui/input";
 
 type SignupState = "idle" | "submitting" | "success" | "error";
 
-export function SignupForm() {
+export function SignupForm({ hint, button, joined }: { hint: string; button: string; joined: string }) {
   const [state, setState] = useState<SignupState>("idle");
-  const [message, setMessage] = useState(
-    "Join the editor waitlist. The open-source SDK is available now on GitHub and npm.",
-  );
+  const [message, setMessage] = useState(hint);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -22,7 +20,7 @@ export function SignupForm() {
     const website = String(formData.get("website") ?? "");
 
     setState("submitting");
-    setMessage("Joining the waitlist...");
+    setMessage("Joining the waitlist.");
 
     try {
       const response = await fetch("/api/waitlist", {
@@ -43,7 +41,7 @@ export function SignupForm() {
 
       form.reset();
       setState("success");
-      setMessage("You're on the editor waitlist.");
+      setMessage(joined);
     } catch (error) {
       setState("error");
       setMessage(error instanceof Error ? error.message : "Unable to join right now.");
@@ -51,7 +49,7 @@ export function SignupForm() {
   }
 
   return (
-    <form aria-label="Join the mcut editor waitlist" className="max-w-md" onSubmit={onSubmit}>
+    <form aria-label="Join the mcut waitlist" className="max-w-md" onSubmit={onSubmit}>
       <div className="hidden" aria-hidden="true">
         <label htmlFor="signup-website">Website</label>
         <input
@@ -77,7 +75,7 @@ export function SignupForm() {
           required
         />
         <Button type="submit" size="lg" className="h-10 sm:h-9 sm:w-auto" disabled={state === "submitting"}>
-          {state === "submitting" ? "Joining..." : "Join editor waitlist"}
+          {state === "submitting" ? "Joining" : button}
         </Button>
       </div>
       <p

@@ -4,6 +4,7 @@ import { SignupForm } from '@/components/signup-form'
 import { SiteFooter, SiteHeader } from '@/components/site-chrome'
 import { ThreeWaysIn } from '@/components/three-ways-in'
 import { DEMO_CLIP } from '@/lib/demo-clip'
+import { landerCopy } from '@/lib/lander-copy'
 import { publicRelease } from '@/lib/release-gate'
 
 function Serif({ children }: { children: React.ReactNode }) {
@@ -21,6 +22,7 @@ function Serif({ children }: { children: React.ReactNode }) {
 
 export default function Home() {
   const release = publicRelease()
+  const copy = landerCopy(release)
 
   return (
     <div className="flex flex-1 flex-col overflow-x-clip bg-background text-foreground">
@@ -31,18 +33,12 @@ export default function Home() {
           <h1 className="text-4xl leading-[1.12] tracking-tight text-balance sm:text-5xl">
             Open source video editing for <Serif>agents</Serif>
           </h1>
-          <p className="max-w-md leading-relaxed text-muted-foreground">
-            This is the real Studio build. An agent is editing it through the same MCP tools it would use on your desktop.
-          </p>
+          <p className="max-w-md leading-relaxed text-muted-foreground">{copy.subhead}</p>
         </section>
         <HeroDemo clip={DEMO_CLIP} />
         <section id="waitlist" className="mx-auto flex w-full max-w-2xl flex-col gap-6 pt-10 pb-12 sm:pt-12 sm:pb-16">
-          <p className="max-w-md leading-relaxed text-muted-foreground">
-            {release === null
-              ? 'The full editor is coming soon. Join the waitlist for early access.'
-              : `mcut Studio ${release.version} is out for macOS and Linux. Join the waitlist for updates.`}
-          </p>
-          <SignupForm />
+          <p className="max-w-md leading-relaxed text-muted-foreground">{copy.waitlistLead}</p>
+          <SignupForm hint={copy.waitlistHint} button={copy.waitlistButton} joined={copy.waitlistJoined} />
         </section>
         <div className="mx-auto w-full max-w-5xl">
           <ThreeWaysIn release={release} />

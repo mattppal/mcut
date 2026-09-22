@@ -27,16 +27,18 @@ const geistMono = Geist_Mono({
 })
 
 const ogTitle = 'Open source video editing for agents'
-const ogDescription = 'TypeScript packages for timelines, media, captions, CLI workflows, and MCP tools.'
+const ogDescription = 'A TypeScript timeline engine, an MCP server, and an editor built on them.'
 const ogImage = `/og?title=${encodeURIComponent(ogTitle)}&description=${encodeURIComponent(ogDescription)}`
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://mcut.com'),
-  title: 'mcut — open source video SDK and editor',
-  description: 'Open-source video editing SDK for TypeScript apps. Use the mcut packages today, then join the waitlist for the full editor.',
+  title: 'mcut, open source video editing for agents',
+  description:
+    'A TypeScript timeline engine, an MCP server, and an editor built on them. Agents edit through the same commands you do, and every edit stays undoable.',
   openGraph: {
-    title: 'mcut — open source video SDK and editor',
-    description: 'Open-source video editing SDK for TypeScript apps. Use the mcut packages today, then join the waitlist for the full editor.',
+    title: 'mcut, open source video editing for agents',
+    description:
+      'A TypeScript timeline engine, an MCP server, and an editor built on them. Agents edit through the same commands you do, and every edit stays undoable.',
     siteName: 'mcut',
     type: 'website',
     images: [
@@ -50,8 +52,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'mcut — open source video SDK and editor',
-    description: 'Open-source video editing SDK for TypeScript apps. Use the mcut packages today, then join the waitlist for the full editor.',
+    title: 'mcut, open source video editing for agents',
+    description:
+      'A TypeScript timeline engine, an MCP server, and an editor built on them. Agents edit through the same commands you do, and every edit stays undoable.',
     images: [ogImage],
   },
   icons: {
