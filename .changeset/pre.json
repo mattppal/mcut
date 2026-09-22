@@ -30,6 +30,7 @@
     "desktop-update-state",
     "duplicate-element-ids",
     "edge-trim-safe-integer",
+    "lazy-mediabunny",
     "live-bridge-app-origin",
     "live-bridge-not-connected-message",
     "live-bridge-reconnect",

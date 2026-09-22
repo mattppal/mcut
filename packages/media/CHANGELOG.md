@@ -1,5 +1,11 @@
 # @mcut/media
 
+## 0.1.0-alpha.3
+
+### Patch Changes
+
+- [#146](https://github.com/mattppal/mcut/pull/146) [`4235b69`](https://github.com/mattppal/mcut/commit/4235b69965989581aa1674049144c9b633704856) Thanks [@mattppal](https://github.com/mattppal)! - Load Mediabunny on first use instead of at import. `inputFor` and `ContainerFormat.createOutputFormat` are async now, and `exportProject` and `getExportSupport` load the export pipeline on demand, so an app that imports `@mcut/media` for the preview pool no longer ships the demuxers, muxers, and export code in its startup bundle. `preloadMediabunny` warms the download after first paint.
+
 ## 0.1.0-alpha.2
 
 ### Patch Changes
