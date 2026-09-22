@@ -5,6 +5,10 @@ import { isMatroskaLike } from './video-capabilities'
 
 export type MediaSourceLike = Blob | string
 
+export async function preloadMediabunny(): Promise<void> {
+  await import('mediabunny')
+}
+
 export async function inputFor(src: MediaSourceLike): Promise<Input> {
   const { ALL_FORMATS, BlobSource, Input, UrlSource } = await import('mediabunny')
   return new Input({
