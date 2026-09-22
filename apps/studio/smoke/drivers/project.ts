@@ -2,7 +2,7 @@ import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { z } from 'zod'
 import { check, keyboardOf, pass, poll, type Driver, type SurfaceContext, type View } from '../context.ts'
-import { clips, closeMenus, openMenuPath, selectFirstClip } from './core.ts'
+import { clips, closeMenus, selectFirstClip } from './core.ts'
 
 const PROJECT_NAME = 'Smoke project'
 
@@ -26,12 +26,23 @@ async function readSavedProject(file: string): Promise<{ bytes: number; name: st
   return { bytes, name: project.name, elements }
 }
 
+async function runFileMenuItem(view: View, label: RegExp): Promise<void> {
+  await view.getByRole('button', { name: 'Main menu' }).click()
+  await view.getByRole('menuitem', { name: 'MCP tools' }).waitFor({ state: 'visible', timeout: 10_000 })
+  await view.getByRole('menuitem', { name: 'File', exact: true }).click()
+  const target = view.getByRole('menuitem', { name: label })
+  await target.waitFor({ state: 'visible', timeout: 5_000 })
+  await target.click()
+  await closeMenus(view)
+}
+
 async function saveThroughMenu(ctx: SurfaceContext): Promise<{ file: string; toast: string }> {
   const { view } = ctx
   switch (ctx.surface) {
     case 'embed': {
       const download = ctx.nextDownload(15_000)
-      await openMenuPath(view, 'File', 'Save project file…')
+      download.catch((error: unknown) => ctx.log(`save-project download did not arrive, ${String(error)}`))
+      await runFileMenuItem(view, /^Save project file/)
       const toast = view.getByText(/^Project file saved/)
       await toast.waitFor({ state: 'visible', timeout: 10_000 })
       const file = await download
@@ -42,7 +53,7 @@ async function saveThroughMenu(ctx: SurfaceContext): Promise<{ file: string; toa
     case 'installed': {
       const file = path.join(ctx.outDir, 'smoke.mcut.json')
       await ctx.stubSaveDialog(file)
-      await openMenuPath(view, 'File', 'Save project file…')
+      await runFileMenuItem(view, /^Save project file/)
       const toast = view.getByText(/^Saved /)
       await toast.waitFor({ state: 'visible', timeout: 10_000 })
       const text = await toast.innerText()
@@ -82,7 +93,7 @@ const openProject: Driver = async (ctx) => {
   const fewer = await poll(() => clips(view).count(), (count) => count === target.clips - 1, 5_000)
   check(fewer === target.clips - 1, `clip count ${target.clips} became ${fewer} after Delete`)
   await ctx.stubOpenDialog(target.path)
-  await openMenuPath(view, 'File', 'Open project file…')
+  await runFileMenuItem(view, /^Open project file/)
   const restored = await poll(() => clips(view).count(), (count) => count === target.clips, 10_000)
   check(restored === target.clips, `clip count ${fewer} became ${restored} after opening ${path.basename(target.path)}`)
   const name = await view.getByLabel('Project name').inputValue()
@@ -111,11 +122,12 @@ const shortcutsDialog: Driver = async ({ view }) => {
   await heading.waitFor({ state: 'visible', timeout: 5_000 })
   const title = await heading.innerText()
   const description = await dialog.getByText('Everything is reachable without the mouse.').innerText()
-  const split = await dialog.getByText('Split at playhead', { exact: true }).count()
-  check(split === 1, `dialog lists Split at playhead ${split} time(s)`)
+  const row = dialog.locator('div', { hasText: /^Split selection at playhead/ }).last()
+  const keys = await row.locator('kbd').innerText()
+  check(keys === 'S', `Split selection at playhead row shows key "${keys}"`)
   await keyboardOf(view).press('Escape')
   await dialog.waitFor({ state: 'hidden', timeout: 5_000 })
-  return pass(`dialog heading reads "${title}", description "${description}", lists Split at playhead, closed with Escape`)
+  return pass(`dialog heading reads "${title}", description "${description}", Split selection at playhead row shows "${keys}", closed with Escape`)
 }
 
 const darkClass = (view: View): Promise<boolean> => view.evaluate(() => document.documentElement.classList.contains('dark'))
