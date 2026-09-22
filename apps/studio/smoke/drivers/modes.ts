@@ -36,13 +36,19 @@ const multicam: Driver = async (ctx) => {
   await setup.getByText('New multicam').waitFor({ state: 'visible', timeout: 5_000 })
   const screen = await setup.locator('span.truncate').first().innerText()
   await setup.getByRole('button', { name: 'Create multicam' }).click()
-  const after = await poll(() => multicamClips.count(), (count) => count === before + 1, 15_000)
+  const after = await poll(
+    () => multicamClips.count(),
+    (count) => count === before + 1,
+    15_000,
+  )
   check(after === before + 1, `multicam clip count ${before} became ${after}`)
   await view.getByText(/Layouts · 1–/).waitFor({ state: 'visible', timeout: 5_000 })
   const tiles = await view.getByTitle(/cuts while playing/).count()
   const totalAfter = await clips(view).count()
   await modeTab(view, 'Edit').click()
-  return pass(`multicam clips ${before} became ${after} from ${clip} and ${speech} with "${screen}" as the screen, ${total} clip(s) became ${totalAfter}, layout bank lists ${tiles} tiles`)
+  return pass(
+    `multicam clips ${before} became ${after} from ${clip} and ${speech} with "${screen}" as the screen, ${total} clip(s) became ${totalAfter}, layout bank lists ${tiles} tiles`,
+  )
 }
 
 const collage: Driver = async (ctx) => {
@@ -76,7 +82,9 @@ const collage: Driver = async (ctx) => {
   await setup.getByText('Top', { exact: true }).waitFor({ state: 'visible', timeout: 5_000 })
   const lanesAfter = await lanes(view).count()
   await modeTab(view, 'Edit').click()
-  return pass(`toast "${text}", confirm "${confirms.join('') || 'none'}" accepted, ${lanesBefore} lane(s) became ${lanesAfter} named ${JSON.stringify(collageNames)}, stack order lists Bottom and Top`)
+  return pass(
+    `toast "${text}", confirm "${confirms.join('') || 'none'}" accepted, ${lanesBefore} lane(s) became ${lanesAfter} named ${JSON.stringify(collageNames)}, stack order lists Bottom and Top`,
+  )
 }
 
 const aspectPresets: Driver = async ({ view }) => {
@@ -85,8 +93,16 @@ const aspectPresets: Driver = async ({ view }) => {
   const widthBefore = await numberField(view, 'Width').inputValue()
   const heightBefore = await numberField(view, 'Height').inputValue()
   await view.getByRole('button', { name: '9:16', exact: true }).click()
-  const width = await poll(() => numberField(view, 'Width').inputValue(), (value) => value === '1080', 5_000)
-  const height = await poll(() => numberField(view, 'Height').inputValue(), (value) => value === '1920', 5_000)
+  const width = await poll(
+    () => numberField(view, 'Width').inputValue(),
+    (value) => value === '1080',
+    5_000,
+  )
+  const height = await poll(
+    () => numberField(view, 'Height').inputValue(),
+    (value) => value === '1920',
+    5_000,
+  )
   check(width === '1080' && height === '1920', `Width ${width} px, Height ${height} px after 9:16`)
   return pass(`Width ${widthBefore} px, Height ${heightBefore} px became Width ${width} px, Height ${height} px after clicking 9:16`)
 }
