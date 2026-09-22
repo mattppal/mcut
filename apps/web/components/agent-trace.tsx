@@ -71,7 +71,7 @@ function TraceFooter({ phase, onReplay, onLoad, onRun }: Pick<AgentTraceProps, '
   }
   if (onLoad !== null) {
     return (
-      <Button size="sm" onClick={onLoad}>
+      <Button size="sm" className="hidden sm:inline-flex" onClick={onLoad}>
         Load the live editor (6 MB)
       </Button>
     )

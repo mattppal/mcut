@@ -55,8 +55,12 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
           />
         </div>
         <div className="order-1 flex min-w-0 flex-col xl:order-2">
-          <div ref={attachContainer} className="relative z-20 aspect-video w-full">
-            <div ref={attachFrameCard} className="absolute inset-0 rounded-xl shadow-[0_24px_64px_-24px] shadow-overlay/45" style={frameStyle(lifted)}>
+          <div ref={attachContainer} className="relative z-20 aspect-[1100/859] w-[calc(100%+1.5rem)] sm:aspect-video sm:w-full">
+            <div
+              ref={attachFrameCard}
+              className="absolute inset-0 overflow-hidden rounded-l-xl shadow-[0_24px_64px_-24px] shadow-overlay/45 sm:overflow-visible sm:rounded-xl"
+              style={frameStyle(lifted)}
+            >
               <div
                 ref={attachStage}
                 className={cn(
@@ -80,21 +84,20 @@ export function HeroDemo({ clip }: { clip: typeof DEMO_CLIP }) {
                     style={geometry === null ? undefined : { width: geometry.stageWidth, height: geometry.stageHeight }}
                   />
                 )}
-                {state.phase === 'poster' && (
-                  <img
-                    src={clip.poster}
-                    alt=""
-                    width={clip.width}
-                    height={clip.height}
-                    fetchPriority="high"
-                    decoding="async"
-                    className="pointer-events-none absolute inset-0 size-full object-cover sm:hidden"
-                  />
-                )}
                 {!state.expanded && (
-                  <button type="button" aria-label="Take over the editor" className="absolute inset-0 z-10 cursor-pointer" onClick={expand} />
+                  <button type="button" aria-label="Take over the editor" className="absolute inset-0 z-10 hidden cursor-pointer sm:block" onClick={expand} />
                 )}
               </div>
+              <img
+                src={clip.phonePoster.url}
+                alt="mcut Studio with the demo clip loaded"
+                width={clip.phonePoster.width}
+                height={clip.phonePoster.height}
+                fetchPriority="high"
+                decoding="async"
+                className="pointer-events-none absolute inset-0 size-full object-cover object-left-top sm:hidden"
+              />
+              <a href="/downloads" aria-label="Get mcut Studio for desktop" className="absolute inset-0 z-10 sm:hidden" />
             </div>
           </div>
         </div>
