@@ -1,8 +1,8 @@
 import { handOff, type ReplayPhase, type TraceMode } from './agent-replay'
 import { AGENT_SCRIPT, LEAD_IN_MS } from './agent-script'
 import { readEmbedMessage, type EmbedResult, type ParentMessage } from './embed-protocol'
-import { measureWrapper, sameMetrics, type HeroGeometry, type HeroMetrics } from './hero-geometry'
-import { runZoom, zoomScrollTop, type Zoom, type ZoomNodes } from './hero-zoom'
+import { heroGeometry, measureWrapper, sameMetrics, type FrameRect, type HeroMetrics } from './hero-geometry'
+import { runZoom, wrapperRect, type Zoom, type ZoomNodes } from './hero-zoom'
 
 export type Phase = 'poster' | 'loading' | 'slow' | 'fading' | 'live'
 
@@ -14,7 +14,7 @@ export interface HeroState {
   userPaused: boolean
   reducedMotion: boolean
   metrics: HeroMetrics | null
-  animatingFrom: HeroGeometry | null
+  animatingFrom: FrameRect | null
   replay: ReplayPhase
   results: ReadonlyMap<string, unknown>
 }
@@ -34,7 +34,6 @@ const INITIAL_STATE: HeroState = {
 const VISIBLE_RATIO = 0.25
 const POSTER_FADE_MS = 600
 const READY_TIMEOUT_MS = 8000
-const SCROLL_COLLAPSE_PX = 48
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 const AUTOPLAY_WIDTH_QUERY = '(min-width: 640px)'
 
@@ -58,10 +57,8 @@ export function createHeroEmbed() {
   let wrapper: HTMLDivElement | null = null
   let frameCard: HTMLDivElement | null = null
   let stage: HTMLDivElement | null = null
-  let poster: HTMLImageElement | null = null
   let activeZoom: Zoom | null = null
   let visible = false
-  let armed = false
   let readyTimer = 0
   let scriptTimer = 0
   const listeners = new Set<() => void>()
@@ -160,31 +157,26 @@ export function createHeroEmbed() {
     else resume()
   }
 
-  const zoomNodes = (): ZoomNodes | null => (wrapper === null || frameCard === null || stage === null ? null : { wrapper, frame: frameCard, stage, poster })
+  const zoomNodes = (): ZoomNodes | null => (wrapper === null || frameCard === null || stage === null ? null : { wrapper, frame: frameCard, stage })
 
   const zoom = (expanded: boolean, patch: Partial<HeroState>) => {
     const resume = activeZoom?.cancel() ?? null
     activeZoom = null
-    armed = false
     measure()
-    const { metrics } = state
+    const geometry = heroGeometry(state.metrics)
     const nodes = zoomNodes()
-    const started =
-      metrics === null || nodes === null || state.reducedMotion
-        ? null
-        : runZoom(metrics, expanded, nodes, resume, () => {
-            activeZoom = null
-            update({ animatingFrom: null })
-            armed = expanded
-          })
-    if (started === null) {
+    if (geometry === null || nodes === null || state.reducedMotion) {
       update({ ...patch, expanded, animatingFrom: null })
-      if (metrics !== null) window.scrollTo(0, zoomScrollTop(metrics, expanded))
-      armed = expanded
       return
     }
-    activeZoom = started
-    update({ ...patch, expanded, animatingFrom: started.from.geometry })
+    const inFlow = wrapperRect(nodes.wrapper)
+    const from = resume ?? (expanded ? inFlow : geometry.expandedRect)
+    const to = expanded ? geometry.expandedRect : inFlow
+    activeZoom = runZoom(geometry, nodes, from, to, () => {
+      activeZoom = null
+      update({ animatingFrom: null })
+    })
+    update({ ...patch, expanded, animatingFrom: from })
   }
 
   const collapse = () => {
@@ -216,11 +208,6 @@ export function createHeroEmbed() {
     if (event.key === 'Escape' && state.expanded) collapse()
   }
 
-  const onScroll = () => {
-    if (!state.expanded || state.animatingFrom !== null || !armed || state.metrics === null) return
-    if (Math.abs(window.scrollY - zoomScrollTop(state.metrics, true)) > SCROLL_COLLAPSE_PX) collapse()
-  }
-
   const subscribe = (listener: () => void) => {
     listeners.add(listener)
     const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY).matches
@@ -229,7 +216,6 @@ export function createHeroEmbed() {
     window.addEventListener('message', onMessage)
     window.addEventListener('keydown', onKeydown)
     window.addEventListener('resize', measure)
-    window.addEventListener('scroll', onScroll)
     document.addEventListener('visibilitychange', onVisibility)
     return () => {
       listeners.delete(listener)
@@ -239,7 +225,6 @@ export function createHeroEmbed() {
       window.removeEventListener('message', onMessage)
       window.removeEventListener('keydown', onKeydown)
       window.removeEventListener('resize', measure)
-      window.removeEventListener('scroll', onScroll)
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }
@@ -277,10 +262,6 @@ export function createHeroEmbed() {
     stage = node
   }
 
-  const attachPoster = (node: HTMLImageElement | null) => {
-    poster = node
-  }
-
   return {
     getSnapshot: () => state,
     getServerSnapshot: () => INITIAL_STATE,
@@ -289,7 +270,6 @@ export function createHeroEmbed() {
     attachFrame,
     attachFrameCard,
     attachStage,
-    attachPoster,
     expand,
     collapse,
     load,
