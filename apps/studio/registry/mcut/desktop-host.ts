@@ -2,7 +2,7 @@
 
 import { toast } from 'sonner'
 import { readDesktopApi, type DesktopApi, type DesktopErrorShape, type DesktopResult, type MenuAction, type UpdateState } from '@mcut/desktop-ipc'
-import { loadMediaBlob } from '@mcut/media'
+import { loadMediaBlob, preloadMediabunny } from '@mcut/media'
 import type { Project } from '@mcut/timeline'
 import type { DesktopUpdates, StudioHost } from './studio-host'
 
@@ -67,6 +67,7 @@ function createDesktopUpdates(api: DesktopApi): DesktopUpdates {
 export function createDesktopHost(): StudioHost | null {
   const api = readDesktopApi()
   if (api === null) return null
+  requestIdleCallback(() => void preloadMediabunny())
   const filePaths = new Map<string, string>()
 
   api.onMenu((action) => {
