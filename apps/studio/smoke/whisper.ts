@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http'
 import path from 'node:path'
 import type { WhisperNetwork } from './context.ts'
 
-export const HUB_PROBE = 'https://huggingface.co/onnx-community/whisper-tiny.en/resolve/main/config.json'
+export const HUB_PROBE = 'https://huggingface.co/onnx-community/whisper-base/resolve/main/config.json'
 export const UPSTREAM_HOSTS = ['huggingface.co', 'hf.co', 'cdn.jsdelivr.net']
 const PROBE_TIMEOUT_MS = 6_000
 

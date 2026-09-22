@@ -84,7 +84,11 @@ async function cachedModelFiles(view: View): Promise<string> {
 async function openRailTab(view: View, tab: LeftTab): Promise<void> {
   const button = view.locator(`[data-rail-tab="${tab}"]`)
   if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click()
-  const pressed = await poll(() => button.getAttribute('aria-pressed'), (value) => value === 'true', 5_000)
+  const pressed = await poll(
+    () => button.getAttribute('aria-pressed'),
+    (value) => value === 'true',
+    5_000,
+  )
   check(pressed === 'true', `rail tab "${tab}" reads aria-pressed ${pressed}`)
 }
 
@@ -97,7 +101,11 @@ async function setOnDevice(view: View, enabled: boolean): Promise<void> {
   const toggle = onDeviceSwitch(view)
   const wanted = String(enabled)
   if ((await toggle.getAttribute('aria-checked')) !== wanted) await toggle.click()
-  const state = await poll(() => toggle.getAttribute('aria-checked'), (value) => value === wanted, 3_000)
+  const state = await poll(
+    () => toggle.getAttribute('aria-checked'),
+    (value) => value === wanted,
+    3_000,
+  )
   check(state === wanted, `"Transcribe on this device" switch reads aria-checked ${state} after switching it ${enabled ? 'on' : 'off'}`)
 }
 
@@ -155,8 +163,12 @@ function describeToasts(toasts: readonly string[]): string {
   const transcribe = percentRange(toasts, TRANSCRIBE_TOAST)
   const rest = toasts.filter((text) => !DOWNLOAD_TOAST.test(text) && !TRANSCRIBE_TOAST.test(text))
   const parts = [
-    download.updates > 0 ? `"Downloading Whisper model… N% (one-time, cached after this)" ${download.updates} update(s) from ${download.min}% to ${download.max}%` : 'no Downloading toast',
-    transcribe.updates > 0 ? `"Transcribing on this device… N%" ${transcribe.updates} update(s) from ${transcribe.min}% to ${transcribe.max}%` : 'no Transcribing toast',
+    download.updates > 0
+      ? `"Downloading Whisper model… N% (one-time, cached after this)" ${download.updates} update(s) from ${download.min}% to ${download.max}%`
+      : 'no Downloading toast',
+    transcribe.updates > 0
+      ? `"Transcribing on this device… N%" ${transcribe.updates} update(s) from ${transcribe.min}% to ${transcribe.max}%`
+      : 'no Transcribing toast',
     rest.length > 0 ? `other toasts ${quote(rest)}` : 'no other toasts',
   ]
   return parts.join(', ')
@@ -193,11 +205,18 @@ const captionsOnDevice: Driver = async (ctx) => {
   const card = view.getByTitle(name).first()
   await card.waitFor({ state: 'visible', timeout: 15_000 })
   await card.dblclick()
-  const after = await poll(() => clips(view).count(), (count) => count === before + 1, 15_000)
+  const after = await poll(
+    () => clips(view).count(),
+    (count) => count === before + 1,
+    15_000,
+  )
   check(after === before + 1, `${before} clip(s) became ${after} after double-clicking the "${name}" card`)
   await selectSpeechClip(ctx)
   await openRailTab(view, 'captions')
-  await view.getByRole('button', { name: /Auto-caption|Transcribing…/ }).first().waitFor({ state: 'visible', timeout: 10_000 })
+  await view
+    .getByRole('button', { name: /Auto-caption|Transcribing…/ })
+    .first()
+    .waitFor({ state: 'visible', timeout: 10_000 })
   const gate = await readGate(view)
   const gateText = `navigator.gpu ${gate.gpu ? 'present' : 'absent'}, deviceMemory ${gate.deviceMemory ?? 'undefined'}, ${gate.adapter}`
   ctx.log(`gate: ${gateText}, ${gate.userAgent}`)
@@ -210,24 +229,31 @@ const captionsOnDevice: Driver = async (ctx) => {
   if (ctx.whisper.mode === 'offline') {
     const run = await runAutoCaption(view, 90_000)
     ctx.log(`offline toasts: ${quote(run.toasts)}`)
-    const seen = run.error === undefined ? `no error toast within ${run.ms} ms, toasts ${quote(run.toasts)}` : `the user sees the toast "${run.error}" after ${run.ms} ms`
+    const seen =
+      run.error === undefined ? `no error toast within ${run.ms} ms, toasts ${quote(run.toasts)}` : `the user sees the toast "${run.error}" after ${run.ms} ms`
     return blocked(`${ctx.whisper.reason}; ${seen}; ${describeUpstream(await ctx.upstreamRequests()).summary}`)
   }
   const run = await runAutoCaption(view, WHISPER_WAIT_MS)
   ctx.log(`toasts: ${quote(run.toasts)}`)
   const upstream = describeUpstream(await ctx.upstreamRequests())
   ctx.log(upstream.summary)
-  if (run.error !== undefined) throw new Error(`Auto-caption failed with the toast "${run.error}" after ${run.ms} ms, ${describeToasts(run.toasts)}, ${upstream.summary}`)
+  if (run.error !== undefined)
+    throw new Error(`Auto-caption failed with the toast "${run.error}" after ${run.ms} ms, ${describeToasts(run.toasts)}, ${upstream.summary}`)
   check(run.captions.length > 0, `${run.captions.length} caption clip(s) on the timeline after ${run.ms} ms, ${describeToasts(run.toasts)}`)
   const rows = await view.getByTitle('Delete caption').count()
   check(rows === run.captions.length, `${rows} caption row(s) in the panel for ${run.captions.length} caption clip(s)`)
-  check(run.captions.some((text) => CAPTION_WORDS.test(text)), `caption text ${quote(run.captions)} contains welcome, mcut or video`)
+  check(
+    run.captions.some((text) => CAPTION_WORDS.test(text)),
+    `caption text ${quote(run.captions)} contains welcome, mcut or video`,
+  )
   check(upstream.onnx.length > 0, `upstream requests name the model files (${upstream.summary})`)
   const observed = `${run.captions.length} caption(s) ${quote(run.captions)} in ${run.ms} ms, ${describeToasts(run.toasts)}, ${upstream.summary}, ${gateText}, ${await cachedModelFiles(view)}`
   const download = percentRange(run.toasts, DOWNLOAD_TOAST)
   if (download.updates > 0 && download.max > 0) return pass(observed)
   if (ctx.whisper.mode === 'mirror') {
-    return blocked(`the Downloading toast never showed a percentage although ${upstream.onnx.length} .onnx file(s) came from the mirror at ${ctx.whisper.url}, so the model arrived within one render frame and download progress cannot be judged here; ${observed}`)
+    return blocked(
+      `the Downloading toast never showed a percentage although ${upstream.onnx.length} .onnx file(s) came from the mirror at ${ctx.whisper.url}, so the model arrived within one render frame and download progress cannot be judged here; ${observed}`,
+    )
   }
   throw new Error(`the Downloading toast never showed a percentage while ${upstream.onnx.length} .onnx file(s) downloaded from the network; ${observed}`)
 }
@@ -240,7 +266,11 @@ const captionsOnDeviceCached: Driver = async (ctx) => {
   const before = await captionClips(view).count()
   check(before > 0, `${before} caption clip(s) on the timeline before Undo`)
   await view.getByRole('button', { name: 'Undo' }).click()
-  const cleared = await poll(() => captionClips(view).count(), (count) => count === 0, 5_000)
+  const cleared = await poll(
+    () => captionClips(view).count(),
+    (count) => count === 0,
+    5_000,
+  )
   check(cleared === 0, `${before} caption clip(s) became ${cleared} after Undo`)
   await selectSpeechClip(ctx)
   await setOnDevice(view, true)
@@ -249,10 +279,13 @@ const captionsOnDeviceCached: Driver = async (ctx) => {
   ctx.log(`toasts: ${quote(run.toasts)}`)
   const upstream = describeUpstream(await ctx.upstreamRequests())
   ctx.log(upstream.summary)
-  if (run.error !== undefined) throw new Error(`second Auto-caption failed with the toast "${run.error}" after ${run.ms} ms, ${describeToasts(run.toasts)}, ${upstream.summary}`)
+  if (run.error !== undefined)
+    throw new Error(`second Auto-caption failed with the toast "${run.error}" after ${run.ms} ms, ${describeToasts(run.toasts)}, ${upstream.summary}`)
   check(run.captions.length > 0, `${run.captions.length} caption clip(s) after the second Auto-caption, ${describeToasts(run.toasts)}`)
   check(upstream.onnx.length === 0, `upstream .onnx requests during the cached run: ${upstream.onnx.join(', ') || 'none'} (${upstream.summary})`)
-  return pass(`${run.captions.length} caption(s) ${quote(run.captions)} again in ${run.ms} ms with ${upstream.summary}, ${describeToasts(run.toasts)}, ${await cachedModelFiles(view)}`)
+  return pass(
+    `${run.captions.length} caption(s) ${quote(run.captions)} again in ${run.ms} ms with ${upstream.summary}, ${describeToasts(run.toasts)}, ${await cachedModelFiles(view)}`,
+  )
 }
 
 const captionsAssemblyAi: Driver = async (ctx) => {
@@ -273,12 +306,18 @@ const captionsAssemblyAi: Driver = async (ctx) => {
   const outcome =
     ctx.assemblyAiKey === null
       ? check(
-          run.error !== undefined && !/^Failed to fetch$/i.test(run.error) && !/\b404\b/.test(run.error) && !/^Transcription failed(?: \(\d+\))?$/.test(run.error),
+          run.error !== undefined &&
+            !/^Failed to fetch$/i.test(run.error) &&
+            !/\b404\b/.test(run.error) &&
+            !/^Transcription failed(?: \(\d+\))?$/.test(run.error),
           run.error === undefined
             ? `an error toast names the failure for an invalid key (none within ${run.ms} ms, toasts ${quote(run.toasts)})`
             : `toast "${run.error}" after ${run.ms} ms names the failure for an invalid key`,
         )
-      : check(run.error === undefined && run.captions.length > 0, `${run.captions.length} caption(s) ${quote(run.captions)} from AssemblyAI after ${run.ms} ms${run.error === undefined ? '' : `, toast "${run.error}"`}`)
+      : check(
+          run.error === undefined && run.captions.length > 0,
+          `${run.captions.length} caption(s) ${quote(run.captions)} from AssemblyAI after ${run.ms} ms${run.error === undefined ? '' : `, toast "${run.error}"`}`,
+        )
   await field.getByRole('button', { name: 'Remove' }).click()
   await view.getByText('AssemblyAI key removed').waitFor({ state: 'visible', timeout: 10_000 })
   await field.getByText('Configured', { exact: true }).waitFor({ state: 'hidden', timeout: 5_000 })
@@ -321,7 +360,11 @@ const transcriptPanel: Driver = async ({ view }) => {
   const word = captions.flatMap((text) => text.split(/\s+/)).find((candidate) => /^[a-z]{4,}$/i.test(candidate)) ?? ''
   await search.fill(word)
   const counterSpan = search.locator('..').locator('xpath=following-sibling::span[1]')
-  const counter = await poll(() => counterSpan.innerText({ timeout: 2_000 }), (text) => /^\d+\/[1-9]\d*$/.test(text), 5_000)
+  const counter = await poll(
+    () => counterSpan.innerText({ timeout: 2_000 }),
+    (text) => /^\d+\/[1-9]\d*$/.test(text),
+    5_000,
+  )
   await search.fill('')
   return pass(check(/^\d+\/[1-9]\d*$/.test(counter), `heading "${heading}", ${rows} row(s), searching "${word}" shows the match counter "${counter}"`))
 }
