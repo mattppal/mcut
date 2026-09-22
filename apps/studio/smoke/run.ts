@@ -13,7 +13,8 @@ const repoRoot = path.resolve(import.meta.dirname, '..', '..', '..')
 const FIXTURE_DIR = path.join(repoRoot, 'apps/studio/e2e/fixtures')
 const FEATURE_TIMEOUT_MS = 180_000
 const WHISPER_TIMEOUT_MS = 900_000
-const USAGE = 'usage: node apps/studio/smoke/run.ts --surface <embed|electron-dev|installed> [--tier fast|full] [--out <dir>] [--electron <binary>] [--only <feature,...>]'
+const USAGE =
+  'usage: node apps/studio/smoke/run.ts --surface <embed|electron-dev|installed> [--tier fast|full] [--out <dir>] [--electron <binary>] [--only <feature,...>]'
 
 function isSurface(value: string): value is Surface {
   return SURFACES.some((surface) => surface === value)
@@ -57,7 +58,9 @@ async function runFeature(feature: Feature, ctx: SurfaceContext, index: number):
   const started = performance.now()
   const ms = () => Math.round(performance.now() - started)
   await settle(ctx)
-  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`timed out after ${timeoutFor(feature)} ms`)), timeoutFor(feature)).unref())
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`timed out after ${timeoutFor(feature)} ms`)), timeoutFor(feature)).unref(),
+  )
   const file = path.join(ctx.outDir, `${String(index).padStart(2, '0')}-${feature.id}.png`)
   const screenshot = () =>
     ctx.page
@@ -125,7 +128,15 @@ async function main(): Promise<void> {
     log,
   })
   console.log(`target: ${handle.target}`)
-  const report: Report = { surface, tier, target: handle.target, startedAt: new Date().toISOString(), whisper: network, rows: [], pageErrors: handle.pageErrors }
+  const report: Report = {
+    surface,
+    tier,
+    target: handle.target,
+    startedAt: new Date().toISOString(),
+    whisper: network,
+    rows: [],
+    pageErrors: handle.pageErrors,
+  }
   try {
     const features = featuresForTier(tier).filter((feature) => only === null || only.has(feature.id))
     for (const [index, feature] of features.entries()) {
@@ -143,7 +154,9 @@ async function main(): Promise<void> {
   await writeFile(path.join(outDir, 'report.md'), markdown(report))
   const counts = summarize(report.rows)
   console.log(`\nreport: ${path.join(outDir, 'report.md')}`)
-  console.log(`RESULT ${counts.fail === 0 ? 'PASS' : 'FAIL'} pass=${counts.pass} fail=${counts.fail} blocked=${counts.blocked} unsupported=${counts.unsupported} missing=${counts['missing-driver']}`)
+  console.log(
+    `RESULT ${counts.fail === 0 ? 'PASS' : 'FAIL'} pass=${counts.pass} fail=${counts.fail} blocked=${counts.blocked} unsupported=${counts.unsupported} missing=${counts['missing-driver']}`,
+  )
   process.exit(counts.fail === 0 ? 0 : 1)
 }
 

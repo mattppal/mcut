@@ -81,10 +81,6 @@ export interface Report {
   pageErrors: string[]
 }
 
-export function statusOf(outcome: Outcome): Outcome['status'] {
-  return outcome.status
-}
-
 export function summarize(rows: readonly Row[]): Record<Outcome['status'], number> {
   const counts: Record<Outcome['status'], number> = { pass: 0, fail: 0, blocked: 0, unsupported: 0, 'missing-driver': 0 }
   for (const row of rows) counts[row.outcome.status] += 1

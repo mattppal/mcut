@@ -48,7 +48,13 @@ export function startMirror(dir: string): Promise<Mirror> {
       response.writeHead(404, { 'access-control-allow-origin': '*' }).end('not found')
       return
     }
-    const type = file.endsWith('.json') ? 'application/json' : file.endsWith('.mjs') ? 'text/javascript' : file.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream'
+    const type = file.endsWith('.json')
+      ? 'application/json'
+      : file.endsWith('.mjs')
+        ? 'text/javascript'
+        : file.endsWith('.wasm')
+          ? 'application/wasm'
+          : 'application/octet-stream'
     response.writeHead(200, { 'content-type': type, 'content-length': statSync(file).size, 'access-control-allow-origin': '*' })
     createReadStream(file).pipe(response)
   })

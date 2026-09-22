@@ -40,7 +40,10 @@ export async function discardRestoredSession(view: View): Promise<void> {
 
 export async function selectFirstClip(view: View): Promise<void> {
   const clip = await box(view, '[data-mcut-clip]')
-  await view.locator('[data-mcut-clip]').first().click({ position: { x: clip.width / 2, y: clip.height / 2 } })
+  await view
+    .locator('[data-mcut-clip]')
+    .first()
+    .click({ position: { x: clip.width / 2, y: clip.height / 2 } })
 }
 
 export async function openMenuPath(view: View, section: string, item: string): Promise<void> {
@@ -82,9 +85,17 @@ const importMedia: Driver = async (ctx) => {
 const addToTimeline: Driver = async (ctx) => {
   const before = await clips(ctx.view).count()
   await ctx.view.getByTitle(path.basename(ctx.fixtures.clip)).first().dblclick()
-  const after = await poll(() => clips(ctx.view).count(), (count) => count === before + 1, 15_000)
+  const after = await poll(
+    () => clips(ctx.view).count(),
+    (count) => count === before + 1,
+    15_000,
+  )
   check(after === before + 1, `timeline shows ${after} clip(s) after double-clicking the card, ${before} before`)
-  const lit = await poll(() => previewLit(ctx.view), (value) => value > 100, 15_000)
+  const lit = await poll(
+    () => previewLit(ctx.view),
+    (value) => value > 100,
+    15_000,
+  )
   return pass(check(lit > 100, `${after} clip(s) on the timeline, preview canvas has ${lit} lit samples`))
 }
 
@@ -93,7 +104,11 @@ const playback: Driver = async ({ view }) => {
   const start = await timecode(view)
   await view.locator('[data-mcut-player]').click()
   await keyboardOf(view).press('Space')
-  const moving = await poll(() => timecode(view), (value) => value !== start, 5_000)
+  const moving = await poll(
+    () => timecode(view),
+    (value) => value !== start,
+    5_000,
+  )
   check(moving !== start, `timecode left "${start}" after Space, reads "${moving}"`)
   await keyboardOf(view).press('Space')
   await view.waitForTimeout(600)
@@ -115,10 +130,18 @@ const seek: Driver = async ({ view }) => {
   await mouse.down()
   await mouse.move(clip.x + clip.width * 0.3, y, { steps: 12 })
   await mouse.up()
-  const scrubbed = await poll(() => timecode(view), (value) => value !== start, 3_000)
+  const scrubbed = await poll(
+    () => timecode(view),
+    (value) => value !== start,
+    3_000,
+  )
   check(scrubbed !== start, `timecode after scrub reads "${scrubbed}"`)
   await keyboardOf(view).press('Shift+ArrowRight')
-  const nudged = await poll(() => timecode(view), (value) => value !== scrubbed, 3_000)
+  const nudged = await poll(
+    () => timecode(view),
+    (value) => value !== scrubbed,
+    3_000,
+  )
   const delta = parseTimecode(nudged) - parseTimecode(scrubbed)
   return pass(check(delta === 1_000, `timecode "${start}" then "${scrubbed}" after scrub then "${nudged}" after Shift+ArrowRight`))
 }
@@ -133,28 +156,49 @@ const trim: Driver = async ({ view }) => {
   await mouse.move(before.x + before.width - 30, y, { steps: 6 })
   await mouse.move(before.x + before.width - 60, y, { steps: 6 })
   await mouse.up()
-  const after = await poll(() => box(view, '[data-mcut-clip]'), (value) => value.width < before.width - 20, 5_000)
-  return pass(check(after.width < before.width - 20, `clip width ${Math.round(before.width)} px shrank to ${Math.round(after.width)} px after dragging the right edge`))
+  const after = await poll(
+    () => box(view, '[data-mcut-clip]'),
+    (value) => value.width < before.width - 20,
+    5_000,
+  )
+  return pass(
+    check(after.width < before.width - 20, `clip width ${Math.round(before.width)} px shrank to ${Math.round(after.width)} px after dragging the right edge`),
+  )
 }
 
 const split: Driver = async ({ view }) => {
   const before = await clips(view).count()
   const clip = await box(view, '[data-mcut-clip]')
   const ruler = await box(view, 'div.cursor-col-resize.bg-card')
-  await view.locator('div.cursor-col-resize.bg-card').first().click({ position: { x: clip.x - ruler.x + clip.width / 2, y: ruler.height / 2 } })
+  await view
+    .locator('div.cursor-col-resize.bg-card')
+    .first()
+    .click({ position: { x: clip.x - ruler.x + clip.width / 2, y: ruler.height / 2 } })
   await selectFirstClip(view)
   await keyboardOf(view).press('s')
-  const after = await poll(() => clips(view).count(), (count) => count === before + 1, 5_000)
+  const after = await poll(
+    () => clips(view).count(),
+    (count) => count === before + 1,
+    5_000,
+  )
   return pass(check(after === before + 1, `${before} clip(s) became ${after} after pressing S with the playhead inside the clip`))
 }
 
 const undoRedo: Driver = async ({ view }) => {
   const before = await clips(view).count()
   await view.getByRole('button', { name: 'Undo' }).click()
-  const undone = await poll(() => clips(view).count(), (count) => count !== before, 5_000)
+  const undone = await poll(
+    () => clips(view).count(),
+    (count) => count !== before,
+    5_000,
+  )
   check(undone !== before, `clip count ${before} changed to ${undone} after Undo`)
   await view.getByRole('button', { name: 'Redo' }).click()
-  const redone = await poll(() => clips(view).count(), (count) => count === before, 5_000)
+  const redone = await poll(
+    () => clips(view).count(),
+    (count) => count === before,
+    5_000,
+  )
   return pass(check(redone === before, `clip count ${before}, ${undone} after Undo, ${redone} after Redo`))
 }
 

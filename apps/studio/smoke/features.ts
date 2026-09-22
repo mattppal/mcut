@@ -85,7 +85,9 @@ export const FEATURE_TABLE: readonly Feature[] = [
     'captions-assemblyai',
     'Save an AssemblyAI key and caption through the cloud provider',
     'full',
-    desktopOnly('The AssemblyAI key lives in the desktop main process behind safeStorage. The site has no secret store, so the captions panel has no key field.'),
+    desktopOnly(
+      'The AssemblyAI key lives in the desktop main process behind safeStorage. The site has no secret store, so the captions panel has no key field.',
+    ),
   ),
   feature('captions-export', 'Download the captions as SRT and VTT', 'full'),
   feature('transcript-panel', 'Open the Transcript tab', 'full'),
@@ -102,7 +104,12 @@ export const FEATURE_TABLE: readonly Feature[] = [
   feature('shortcuts-dialog', 'Open the keyboard shortcuts dialog', 'full'),
   feature('settings-theme', 'Toggle the theme', 'full'),
   feature('settings-snapping', 'Toggle snapping from the View menu', 'full'),
-  feature('mcp-bridge', 'The live MCP bridge reports the editor connected', 'full', desktopOnly('The live bridge is a 127.0.0.1 server in the desktop main process, which the site has no equivalent of.')),
+  feature(
+    'mcp-bridge',
+    'The live MCP bridge reports the editor connected',
+    'full',
+    desktopOnly('The live bridge is a 127.0.0.1 server in the desktop main process, which the site has no equivalent of.'),
+  ),
 ]
 
 export function featuresForTier(tier: Tier): readonly Feature[] {
