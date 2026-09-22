@@ -2,6 +2,7 @@ export {
   createAsset,
   inputFor,
   mediabunnyProber,
+  preloadMediabunny,
   MediaProbeError,
   probeImage,
   probeMedia,

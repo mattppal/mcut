@@ -53,24 +53,24 @@ const containerFormats = {
     label: 'MP4',
     extension: 'mp4',
     mimeType: 'video/mp4',
-    createOutputFormat: () => new Mp4OutputFormat(),
+    createOutputFormat: () => Promise<Mp4OutputFormat>,
   },
   webm: {
     label: 'WebM',
     extension: 'webm',
     mimeType: 'video/webm',
-    createOutputFormat: () => new WebMOutputFormat(),
+    createOutputFormat: () => Promise<WebMOutputFormat>,
   },
   mkv: {
     label: 'MKV',
     extension: 'mkv',
     mimeType: 'video/x-matroska',
-    createOutputFormat: () => new MkvOutputFormat(),
+    createOutputFormat: () => Promise<MkvOutputFormat>,
   },
 } satisfies Record<string, ContainerFormat>
 ```
 
-The closed table of export containers, MP4, WebM, and MKV, each muxed by the matching Mediabunny output format.
+The closed table of export containers, MP4, WebM, and MKV, each muxed by the matching Mediabunny output format. Each factory is `async () => new (await import('mediabunny')).Mp4OutputFormat()` and so on, because Mediabunny loads on first use.
 
 ## Functions
 
@@ -90,13 +90,21 @@ async function createAsset(origin: MediaOrigin, prober: MediaProber = mediabunny
 
 Probes a media origin with the given prober and returns an `AssetRef` with an object URL as `src` and a SHA-256 `hash` when the blob is small enough to hash. Image origins skip the prober and are measured with `probeImage`.
 
+### preloadMediabunny
+
+```ts
+async function preloadMediabunny(): Promise<void>
+```
+
+Loads Mediabunny ahead of the first media call. Call it once the shell has painted so the first import or preview does not wait on the download.
+
 ### inputFor
 
 ```ts
-function inputFor(src: MediaSourceLike): Input
+async function inputFor(src: MediaSourceLike): Promise<Input>
 ```
 
-Opens a Mediabunny `Input` over a blob or a blob or HTTP URL.
+Opens a Mediabunny `Input` over a blob or a blob or HTTP URL. Mediabunny itself loads on the first call, so nothing in `@mcut/media` pulls the demuxers and muxers into an app's startup bundle.
 
 ### probeImage
 

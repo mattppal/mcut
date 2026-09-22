@@ -1,4 +1,3 @@
-import { CanvasSink } from 'mediabunny'
 import { createCanvasSurface, getNativeVideoFilmstrip, type CanvasSurface } from './native-video'
 import { inputFor, type MediaSourceLike } from './probe'
 
@@ -20,10 +19,11 @@ export interface Filmstrip {
 async function getCanvasSinkFilmstrip(src: MediaSourceLike, options: FilmstripOptions): Promise<Filmstrip | null> {
   const frameWidth = options.frameWidth ?? 80
   const frameCount = Math.max(1, Math.round(options.frameCount))
-  const input = inputFor(src)
+  const input = await inputFor(src)
   try {
     const track = await input.getPrimaryVideoTrack()
     if (!track) return null
+    const { CanvasSink } = await import('mediabunny')
     const durationMs = options.endMs ?? (await input.computeDuration()) * 1000
     const startMs = options.startMs ?? 0
     const spanMs = Math.max(1, durationMs - startMs)

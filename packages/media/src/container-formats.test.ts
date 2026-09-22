@@ -6,11 +6,11 @@ describe('container formats', () => {
     expect(listContainerFormats().map((f) => f.id)).toEqual(['mp4', 'webm', 'mkv'])
   })
 
-  test('mkv entry muxes Matroska', () => {
+  test('mkv entry muxes Matroska', async () => {
     const mkv = containerFormats.mkv
     expect(mkv.extension).toBe('mkv')
     expect(mkv.mimeType).toBe('video/x-matroska')
-    const output = mkv.createOutputFormat()
+    const output = await mkv.createOutputFormat()
     expect(output.mimeType).toBe('video/x-matroska')
     expect(output.fileExtension).toBe('.mkv')
     expect(output.getSupportedVideoCodecs().length).toBeGreaterThan(0)

@@ -1,4 +1,4 @@
-import { CanvasSink } from 'mediabunny'
+import type { CanvasSink, Input } from 'mediabunny'
 import type { FrameSource } from '@mcut/compositor'
 import { ScrubFrameCache } from './scrub-cache'
 import { inputFor } from './probe'
@@ -125,7 +125,7 @@ const DECODED_INIT_RETRY_MS = 3000
 
 interface DecodedVideoState {
   src: string | null
-  input: ReturnType<typeof inputFor> | null
+  input: Input | null
   sink: CanvasSink | null
   frames: Map<number, CanvasImageSource>
   pendingKey: number | null
@@ -424,7 +424,7 @@ export class PreviewMediaPool implements FrameSource {
   private async decodeVideoFrame(asset: AssetRef, sourceTimeMs: number): Promise<CanvasImageSource | null> {
     const state = this.ensureDecodedVideoState(asset.id, asset)
     if (!state.sink) {
-      const input = inputFor(asset.src)
+      const input = await inputFor(asset.src)
       try {
         const track = await input.getPrimaryVideoTrack()
         if (!track || !(await track.canDecode())) {
@@ -432,6 +432,7 @@ export class PreviewMediaPool implements FrameSource {
           input.dispose()
           return null
         }
+        const { CanvasSink } = await import('mediabunny')
         state.sink = new CanvasSink(track, {
           width: Math.min(1280, asset.width ?? 1280),
           fit: 'contain',

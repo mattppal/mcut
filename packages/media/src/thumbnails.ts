@@ -1,4 +1,3 @@
-import { CanvasSink } from 'mediabunny'
 import { getNativeVideoFrame } from './native-video'
 import { inputFor, type MediaSourceLike } from './probe'
 
@@ -8,10 +7,11 @@ export interface ThumbnailOptions {
 }
 
 async function getCanvasSinkThumbnail(src: MediaSourceLike, options: ThumbnailOptions = {}): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
-  const input = inputFor(src)
+  const input = await inputFor(src)
   try {
     const track = await input.getPrimaryVideoTrack()
     if (!track) return null
+    const { CanvasSink } = await import('mediabunny')
     const sink = new CanvasSink(track, { width: options.width ?? 160 })
     const wrapped = await sink.getCanvas((options.timeMs ?? 0) / 1000)
     return wrapped?.canvas ?? null

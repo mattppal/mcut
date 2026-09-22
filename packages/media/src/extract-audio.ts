@@ -1,4 +1,4 @@
-import { BufferTarget, Conversion, Output, WavOutputFormat, type ConversionAudioOptions } from 'mediabunny'
+import type { ConversionAudioOptions } from 'mediabunny'
 import { inputFor, type MediaSourceLike } from './probe'
 
 export interface ExtractAudioOptions {
@@ -15,7 +15,8 @@ export class AudioNotDecodableError extends Error {
 }
 
 async function runWavConversion(src: MediaSourceLike, audio: ConversionAudioOptions, onProgress?: (progress: number) => void): Promise<Blob | null> {
-  const input = inputFor(src)
+  const { BufferTarget, Conversion, Output, WavOutputFormat } = await import('mediabunny')
+  const input = await inputFor(src)
   try {
     const target = new BufferTarget()
     const output = new Output({ format: new WavOutputFormat(), target })
@@ -43,7 +44,7 @@ async function runWavConversion(src: MediaSourceLike, audio: ConversionAudioOpti
 }
 
 export async function extractAudioToWav(src: MediaSourceLike, options: ExtractAudioOptions = {}): Promise<Blob | null> {
-  const probe = inputFor(src)
+  const probe = await inputFor(src)
   try {
     const audioTrack = await probe.getPrimaryAudioTrack()
     if (!audioTrack) return null

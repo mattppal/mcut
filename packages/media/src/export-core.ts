@@ -20,7 +20,7 @@ import { ensureFallbackAudioEncoders } from './encoders'
 import { inputFor } from './probe'
 import { AUDIO_SAMPLE_RATE, type ContainerFormatId, type ExportProgress, type MixedAudioData } from './export-types'
 
-export function resolveContainerFormat(id: ContainerFormatId = 'mp4'): ContainerFormat {
+function resolveContainerFormat(id: ContainerFormatId = 'mp4'): ContainerFormat {
   return containerFormats[id]
 }
 
@@ -32,7 +32,7 @@ export async function getExportSupport(format: ContainerFormatId = 'mp4'): Promi
     return { video: false, audio: false }
   }
   await ensureFallbackAudioEncoders()
-  const outputFormat = resolveContainerFormat(format).createOutputFormat()
+  const outputFormat = await resolveContainerFormat(format).createOutputFormat()
   const [video, audio] = await Promise.all([
     getFirstEncodableVideoCodec(outputFormat.getSupportedVideoCodecs(), {
       width: 1920,
@@ -85,7 +85,7 @@ export async function runExportPipeline(project: Project, options: ExportPipelin
   const totalFrames = Math.max(1, Math.round((durationMs / 1000) * fps))
 
   const container = resolveContainerFormat(options.format)
-  const format = container.createOutputFormat()
+  const format = await container.createOutputFormat()
   const target = new BufferTarget()
   const output = new Output({ format, target })
 
@@ -239,7 +239,7 @@ class ExportFrameSource implements FrameSource {
     if (!asset) {
       return null
     }
-    const input = inputFor(asset.src)
+    const input = await inputFor(asset.src)
     const track = await input.getPrimaryVideoTrack()
     const sink = track ? new VideoSampleSink(track) : null
     this.inputs.set(assetId, { input, sink })
