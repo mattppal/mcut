@@ -5,8 +5,18 @@ export const metadata: Metadata = {
   robots: { index: false },
 }
 
+const PRELOAD_CLIP = `
+const clip = new URLSearchParams(location.search).get('clip')
+if (clip) window.mcutEmbedClip = fetch(clip, { priority: 'low' })
+`
+
 export default async function EmbedPage() {
   const { EmbedClient } = await import('./embed-client')
 
-  return <EmbedClient />
+  return (
+    <>
+      <script dangerouslySetInnerHTML={{ __html: PRELOAD_CLIP }} />
+      <EmbedClient />
+    </>
+  )
 }

@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEditor, useEngineSubscription, useWindowEvent } from '@mcut/react'
 import { getElementLocation, getProjectDurationMs, type EditorEngine, type ElementId, type Project } from '@mcut/timeline'
+import { preloadMediabunny } from '@mcut/media'
 import { z } from 'zod'
 import { bridgeRequestSchema } from './bridge-request'
 import { elementForAsset, insertElementAtPlayhead } from './editor-actions'
@@ -11,20 +12,28 @@ import { useEditorUI } from './editor-ui'
 import { handleLiveMcpRequest } from './live-mcp-bridge'
 import { importMediaFiles } from './media-import'
 
+declare global {
+  interface Window {
+    mcutEmbedClip?: Promise<Response>
+  }
+}
+
 function clipFileName(clip: string): string {
   const last = new URL(clip, window.location.href).pathname.split('/').pop() ?? ''
   return last.length > 0 ? decodeURIComponent(last) : 'clip'
 }
 
 async function fetchClipFile(clip: string): Promise<File> {
-  const response = await fetch(clip)
+  const response = await (window.mcutEmbedClip ?? fetch(clip))
+  window.mcutEmbedClip = undefined
   if (!response.ok) throw new Error(`Could not load the clip (${response.status})`)
   const blob = await response.blob()
   return new File([blob], clipFileName(clip), { type: blob.type })
 }
 
 async function bootstrapEmbed(engine: EditorEngine, options: EmbedOptions): Promise<{ elementId: ElementId; project: Project }> {
-  const [asset] = await importMediaFiles(engine, [await fetchClipFile(options.clip)])
+  const [file] = await Promise.all([fetchClipFile(options.clip), preloadMediabunny()])
+  const [asset] = await importMediaFiles(engine, [file])
   if (!asset) throw new Error('Could not import the clip')
   if (asset.width !== undefined && asset.height !== undefined) {
     engine.dispatch({ type: 'updateProject', width: asset.width, height: asset.height }, { history: false })
