@@ -4,7 +4,8 @@ import type { DesktopSettings } from './settings'
 const TRANSCRIBE_TIMEOUT_MS = 10 * 60 * 1000
 
 function failureMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
+  if (!(error instanceof Error)) return String(error)
+  return error.cause instanceof Error ? `${error.message} (${error.cause.message})` : error.message
 }
 
 function transcribeOptions(language: string | undefined, signal: AbortSignal): { language?: string; signal: AbortSignal } {
