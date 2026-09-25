@@ -384,7 +384,7 @@ describe('split + flatten', () => {
     const camLayoutId = next.layouts.find((l) => l.name === 'Camera')?.id
     next = applyCommand(next, { type: 'addAngleCut', elementId: 'e-mc', atMs: 12_000, layoutId: camLayoutId })
     next = applyCommand(next, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { id: 'z-screen', source: 'screen', atMs: 1000 } })
-    next = applyCommand(next, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { id: 'z-cam', source: 'camera', atMs: 10_000, inMs: 1000, holdMs: 4000, outMs: 1000 } })
+    next = applyCommand(next, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { id: 'z-cam', source: 'camera', atMs: 10_000, holdMs: 4600 } })
     next = applyCommand(next, { type: 'flattenMulticam', elementId: 'e-mc' })
 
     expect(listZoomRegions(next).map(({ id, atMs, startMs, endMs }) => ({ id, atMs, startMs, endMs }))).toEqual([

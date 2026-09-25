@@ -96,7 +96,17 @@ describe('zoom regions on a clip', () => {
   })
 
   test('a whole zooms array written by updateElement or addElement cannot overlap on one target', () => {
-    const zoom = (id: string, atMs: number): ZoomRegion => ({ id, atMs, inMs: 700, holdMs: 1600, outMs: 700, focus: { x: 0.5, y: 0.5 }, scale: 1.15, easing: 'easeOutExpo', motionBlur: 0.5 })
+    const zoom = (id: string, atMs: number): ZoomRegion => ({
+      id,
+      atMs,
+      inMs: 700,
+      holdMs: 1600,
+      outMs: 700,
+      focus: { x: 0.5, y: 0.5 },
+      scale: 1.15,
+      easing: 'easeOutExpo',
+      motionBlur: 0.5,
+    })
     const project = applyCommand(projectWithScreenAndCam(), { type: 'addTrack' })
     const freeTrack = project.tracks[2]?.id ?? 't-default'
     const clashing = [zoom('z-late', 2000), zoom('z-open', 0)]
@@ -132,8 +142,24 @@ describe('zoom regions on a clip', () => {
 
   test.each([
     ['splitElement', () => ({ type: 'splitElement', elementId: 'e-screen', atMs: 10_500 })],
-    ['an insert edit', (trackId: string) => ({ type: 'addElement', trackId, editMode: 'insert', element: { type: 'video', assetId: 'a-cam', startMs: 10_500, durationMs: 1000 } })],
-    ['an overwrite edit', (trackId: string) => ({ type: 'addElement', trackId, editMode: 'overwrite', element: { type: 'video', assetId: 'a-cam', startMs: 10_500, durationMs: 100 } })],
+    [
+      'an insert edit',
+      (trackId: string) => ({
+        type: 'addElement',
+        trackId,
+        editMode: 'insert',
+        element: { type: 'video', assetId: 'a-cam', startMs: 10_500, durationMs: 1000 },
+      }),
+    ],
+    [
+      'an overwrite edit',
+      (trackId: string) => ({
+        type: 'addElement',
+        trackId,
+        editMode: 'overwrite',
+        element: { type: 'video', assetId: 'a-cam', startMs: 10_500, durationMs: 100 },
+      }),
+    ],
   ])('the right piece of a cut through a zoom by %s gets its own zoom id', (_, cut) => {
     const project = applyCommand(projectWithScreenAndCam(), {
       type: 'addZoomRegion',

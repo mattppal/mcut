@@ -224,7 +224,12 @@ export interface ZoomRegionRef extends ZoomRegion {
 
 export function zoomRegionRefs(element: ZoomableElement): ZoomRegionRef[] {
   const onTimeline = (localMs: number) => element.startMs + Math.min(element.durationMs, Math.max(0, localMs))
-  return (element.zooms ?? []).map((region) => ({ ...region, elementId: element.id, startMs: onTimeline(region.atMs), endMs: onTimeline(zoomRegionEndMs(region)) }))
+  return (element.zooms ?? []).map((region) => ({
+    ...region,
+    elementId: element.id,
+    startMs: onTimeline(region.atMs),
+    endMs: onTimeline(zoomRegionEndMs(region)),
+  }))
 }
 
 export function listZoomRegions(project: Project): ZoomRegionRef[] {
