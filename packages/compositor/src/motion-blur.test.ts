@@ -53,7 +53,7 @@ describe('motion blur', () => {
       expect(pass.globalCompositeOperation).toBe('lighter')
     }
 
-    const xs = scratch.callsTo('translate').map((c) => c.args[0] as number)
+    const xs = scratch.callsTo('translate').map((c) => Number(c.args[0]))
     expect(xs).toHaveLength(4)
     for (let i = 1; i < xs.length; i++) expect(xs[i]!).toBeGreaterThan(xs[i - 1]!)
     expect(xs[0]!).toBeCloseTo(960 + 197.5, 1)
@@ -160,7 +160,7 @@ describe('zoom motion blur', () => {
       [0.125, 'lighter'],
       [0.125, 'lighter'],
     ])
-    const widths = passes.map((p) => p.args[3] as number)
+    const widths = passes.map((p) => Number(p.args[3]))
     for (let i = 1; i < widths.length; i++) expect(widths[i] ?? 0).toBeLessThan(widths[i - 1] ?? 0)
     expect(main.callsTo('drawImage')).toHaveLength(1)
   })
