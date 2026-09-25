@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinition, type OperatorId } from '@mcut/editor'
+import { centerPersonOptionsSchema, operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
 import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
 
@@ -52,6 +52,7 @@ export const MCP_AGENT_TOOL_NAMES = [
   'lint_project',
   'list_zooms',
   'edit_zooms',
+  'center_person',
   'list_presets',
   'list_operators',
   'run_operator',
@@ -116,6 +117,11 @@ export const MCP_TOOL_INPUTS = {
   lint_project: EMPTY_INPUT,
   list_zooms: EMPTY_INPUT,
   edit_zooms: z.strictObject({ edits: z.array(zoomCommandSchema).min(1) }),
+  center_person: z.strictObject({
+    elementId: elementIdSchema.describe('Optional video or multicam element id. Defaults to the selected clip.').optional(),
+    source: z.string().min(1).describe('Multicam only. The source key to follow. Defaults to "camera", then the first video source.').optional(),
+    ...centerPersonOptionsSchema.shape,
+  }),
   list_presets: EMPTY_INPUT,
   list_operators: EMPTY_INPUT,
   run_operator: z.strictObject({ operatorId: z.string(), input: TOOL_INPUT }),
@@ -167,6 +173,11 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
     'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.5x) with rect or focus on the discussed screen region. ' +
     'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the screen key so the camera overlay stays put.',
+  center_person:
+    'Live bridge only: find the face on device in the connected editor and keep the person in frame as one undoable edit. Waits for the analysis. ' +
+    'On a video, it crops to aspect, 9:16 by default, and the crop follows the face. ' +
+    'On a head overlay multicam, run it on the camera source, which is the default. The layout slot rect keeps its size and aspect, and the camera framing inside it follows the face. ' +
+    'Returns the target, the sample count, the key count, and the source range the keys cover. Undo removes it in one step.',
   list_presets: 'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',
   list_operators:
     'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' + 'use raw command tools for low-level document edits.',
@@ -208,6 +219,7 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('lint_project'),
   staticToolCall('list_zooms'),
   staticToolCall('edit_zooms'),
+  staticToolCall('center_person'),
   staticToolCall('list_presets'),
   staticToolCall('list_operators'),
   staticToolCall('list_actions'),

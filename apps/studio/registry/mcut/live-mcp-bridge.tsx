@@ -26,6 +26,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { formatShortcut, getEditorAction, isActionEnabled, listEditorActions, runEditorAction } from './action-registry'
 import { parseBridgeFrame, type BridgeRequest } from './bridge-request'
+import { centerPerson } from './center-person'
 import { editorClipboard } from './editor-clipboard'
 import { useEditorUI } from './editor-ui'
 import { ensureTranscriptForBridge } from './live-mcp-transcript'
@@ -251,6 +252,8 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
       return searchProjectTranscript(engine.project, request.payload.query)
     case 'ensure_transcript':
       return await ensureTranscriptForBridge(engine, request.payload)
+    case 'center_person':
+      return await centerPerson(engine, request.payload)
     case 'get_audio_activity':
       return await handleGetAudioActivity(engine, request.payload)
     case 'list_commands':

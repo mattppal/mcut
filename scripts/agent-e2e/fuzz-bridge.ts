@@ -26,7 +26,7 @@ const DEFAULT_SEQUENCES = 20
 const DEFAULT_LENGTH = 20
 const EXIT_FAILED = 1
 
-const SLOW_TOOLS = new Set(['ensure_transcript'])
+const SLOW_TOOLS = new Set(['ensure_transcript', 'center_person'])
 
 interface Options {
   seeds: number[]

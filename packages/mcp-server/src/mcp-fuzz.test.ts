@@ -111,25 +111,9 @@ test('operator_media_insertAssetAtPlayhead rejects a missing asset as a typed Op
 test('seed 1 always yields the same second step over the stdio tool list', () => {
   const plan = generatePlan({ seed: 1, tools, length: 2, overrides: commandOverrides })
   expect(plan.steps[1]).toEqual({
-    tool: 'addElement',
+    tool: 'addAsset',
     args: {
-      trackId: { $slot: 'track', index: 3 },
-      element: {
-        id: 'e-fzee5432',
-        type: 'audio',
-        startMs: 3197,
-        durationMs: 1655,
-        keyframes: {},
-        assetId: { $slot: 'asset', index: 1 },
-        timeMap: [
-          { timeMs: 0, value: 0 },
-          { timeMs: 2630, value: 2139 },
-          { timeMs: 6062, value: 3863 },
-          { timeMs: 7289, value: 6543 },
-        ],
-        reversed: false,
-        muted: true,
-      },
+      asset: { id: 'a-fz8737ea', kind: 'image', src: 'clip', mimeType: 'intro' },
     },
   })
 })

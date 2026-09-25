@@ -132,7 +132,7 @@ grok -p "Register apps/studio/e2e/fixtures/fixture-vp9.mkv as a video asset and 
 
 ## Fuzzing the bridge
 
-`bun run fuzz:mcp:bridge` (`scripts/agent-e2e/fuzz-bridge.ts`) opens the same Electron session, connects the MCP fuzz client from `packages/mcp-server/src/fuzz` over Streamable HTTP, and runs 20 random sequences of 20 tool calls against the app, resetting the project between seeds and checking the project invariants from `packages/timeline/src/fuzz`. `ensure_transcript` is left out because transcription can take minutes. A violated invariant is minimized and printed with the `MCUT_FUZZ_SEED=<n>` line that reproduces it. `--seeds`, `--length`, and `--seed`, or `MCUT_FUZZ_SEQUENCES`, `MCUT_FUZZ_LENGTH`, and `MCUT_FUZZ_SEED`, resize the window.
+`bun run fuzz:mcp:bridge` (`scripts/agent-e2e/fuzz-bridge.ts`) opens the same Electron session, connects the MCP fuzz client from `packages/mcp-server/src/fuzz` over Streamable HTTP, and runs 20 random sequences of 20 tool calls against the app, resetting the project between seeds and checking the project invariants from `packages/timeline/src/fuzz`. `ensure_transcript` and `center_person` are left out because transcription and face detection can take minutes. A violated invariant is minimized and printed with the `MCUT_FUZZ_SEED=<n>` line that reproduces it. `--seeds`, `--length`, and `--seed`, or `MCUT_FUZZ_SEQUENCES`, `MCUT_FUZZ_LENGTH`, and `MCUT_FUZZ_SEED`, resize the window.
 
 ## CI
 
