@@ -229,6 +229,15 @@ const RULES: CheckRule[] = [
     },
   ],
   [
+    /^head overlay follows the person$/,
+    ({ after }) => {
+      const keys = new Set(headOverlays(after).map((slot) => slot.source))
+      const tracked = (multicamOf(after)?.sources ?? []).filter((source) => keys.has(source.key))
+      const detail = tracked.map((source) => `${source.key} reframe ${source.reframe ? `${source.reframe.length} keys` : 'none'}`).join('; ') || 'no overlay slot in a used layout'
+      return outcome(tracked.some((source) => (source.reframe?.length ?? 0) >= 2), detail, detail)
+    },
+  ],
+  [
     /^angle cuts (\d+)$/,
     ({ after }, match) => {
       const multicam = multicamOf(after)
