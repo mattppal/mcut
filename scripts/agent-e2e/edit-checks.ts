@@ -98,6 +98,14 @@ const RULES: [RegExp, Test][] = [
     },
   ],
   [
+    /^duration shorter by at most (\d+(?:\.\d+)?)s$/,
+    ({ before, after }, match) => {
+      const cut = getProjectDurationMs(before) - getProjectDurationMs(after)
+      const detail = `cut ${seconds(cut)} (duration ${seconds(getProjectDurationMs(before))} to ${seconds(getProjectDurationMs(after))})`
+      return outcome(cut <= Number(match[1]) * 1000, detail, detail)
+    },
+  ],
+  [
     /^text "(.+)"$/,
     ({ after }, match) => {
       const texts = [...ofType(after, 'text'), ...ofType(after, 'caption')].map((element) => element.text)

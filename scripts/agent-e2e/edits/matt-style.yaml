@@ -18,7 +18,7 @@ edits:
     note: A vague revision. The slot rect of the active layout is the control, via saveLayout or setAngleLayout.
   - id: 03-retakes
     ask: Find the retakes and remove them, keeping the good take. At each join, cut to the head-only shot so it reads as one continuous take.
-    checks: [duration shorter by 2s, angle cuts 2]
+    checks: [duration shorter by 2s, duration shorter by at most 60s, angle cuts 2]
     capability: partial
     note: No retake detection. The transcript plus split and delete can do it by hand.
   - id: 04-captions
