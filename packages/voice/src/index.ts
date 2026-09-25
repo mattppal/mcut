@@ -1,3 +1,5 @@
+export const VOICE_MODEL = 'dfn3-cli-thresholds-1'
+
 export { VOICE_SAMPLE_RATE, planChunks, type Chunk } from './chunks'
 export { mixVoice } from './mix'
 export {

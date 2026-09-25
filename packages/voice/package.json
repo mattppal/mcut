@@ -10,6 +10,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
     }
   },
   "files": [
@@ -24,7 +32,8 @@
     "dev": "tsdown --watch --no-clean",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "build:wasm": "sh scripts/build-wasm.sh"
+    "build:wasm": "sh scripts/build-wasm.sh",
+    "fixtures": "bun scripts/make-fixtures.ts"
   },
   "repository": {
     "type": "git",
