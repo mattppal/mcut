@@ -4,7 +4,7 @@ import { EditorEngine } from './engine'
 import { createProject, splitElementAt, type MulticamElement, type Project, type VideoElement } from './model'
 import { getElement } from './selectors'
 import { thrownBy } from './test-helpers'
-import { getClipView, getSlotView, getZoomShutterMs, listZoomRegions } from './zoom-regions'
+import { getClipView, getSlotView, getZoomShutterMs, listZoomRegions, type ZoomRegion } from './zoom-regions'
 
 function projectWithScreenAndCam(): Project {
   let project = createProject({ width: 1280, height: 720 })
@@ -92,6 +92,27 @@ describe('zoom regions on a clip', () => {
     expect(thrownBy(() => applyCommand(project, { type: 'addZoomRegion', elementId: 'e-screen', zoom: { atMs: 5000, source: 'screen' } }))).toMatchObject({
       code: 'invalid-payload',
     })
+  })
+
+  test('a whole zooms array written by updateElement or addElement cannot overlap on one target', () => {
+    const zoom = (id: string, atMs: number): ZoomRegion => ({ id, atMs, inMs: 700, holdMs: 1600, outMs: 700, focus: { x: 0.5, y: 0.5 }, scale: 1.15, easing: 'easeOutExpo', motionBlur: 0.5 })
+    const project = applyCommand(projectWithScreenAndCam(), { type: 'addTrack' })
+    const freeTrack = project.tracks[2]?.id ?? 't-default'
+    const clashing = [zoom('z-late', 2000), zoom('z-open', 0)]
+    expect(thrownBy(() => applyCommand(project, { type: 'updateElement', elementId: 'e-screen', patch: { zooms: clashing } }))).toMatchObject({
+      message: expect.stringContaining('overlap'),
+    })
+    expect(
+      thrownBy(() =>
+        applyCommand(project, {
+          type: 'addElement',
+          trackId: freeTrack,
+          element: { type: 'video', id: 'e-extra', assetId: 'a-screen', startMs: 0, durationMs: 10_000, zooms: clashing },
+        }),
+      ),
+    ).toMatchObject({ message: expect.stringContaining('overlap') })
+    const apart = applyCommand(project, { type: 'updateElement', elementId: 'e-screen', patch: { zooms: [zoom('z-open', 0), zoom('z-late', 3000)] } })
+    expect(listZoomRegions(apart).map((z) => z.id)).toEqual(['z-open', 'z-late'])
   })
 
   test('a split through a zoom keeps the picture on both sides of the cut', () => {
