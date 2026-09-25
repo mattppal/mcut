@@ -330,7 +330,9 @@ const captionsAssemblyAi: Driver = async (ctx) => {
   await field.getByText('Configured', { exact: true }).waitFor({ state: 'hidden', timeout: 5_000 })
   await view.getByRole('dialog').getByRole('button', { name: 'Close' }).click()
   await status.waitFor({ state: 'visible', timeout: 5_000 })
-  return pass(`"AssemblyAI key saved" and Configured in Settings after Save, ${outcome}, "AssemblyAI key removed" and the captions panel points to Settings again after Remove`)
+  return pass(
+    `"AssemblyAI key saved" and Configured in Settings after Save, ${outcome}, "AssemblyAI key removed" and the captions panel points to Settings again after Remove`,
+  )
 }
 
 async function downloadSubtitles(ctx: SurfaceContext, format: 'SRT' | 'VTT'): Promise<string> {
