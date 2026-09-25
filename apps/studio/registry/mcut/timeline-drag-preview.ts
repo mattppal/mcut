@@ -21,7 +21,7 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-export function rowCenterPx(row: number): number {
+function rowCenterPx(row: number): number {
   return row === NEW_TRACK_ABOVE_ROW ? -NEW_TRACK_LANE_HEIGHT / 2 : row * TRACK_HEIGHT + TRACK_HEIGHT / 2
 }
 
@@ -35,13 +35,17 @@ export function glide(node: HTMLElement, from: Glide, durationMs: number, token:
   if (Math.abs(from.x) < 0.5 && Math.abs(from.y) < 0.5 && from.width === undefined) return
   if (prefersReducedMotion()) return
   const width = from.width
-  node.animate(
+  node.setAttribute('data-settling', '')
+  const animation = node.animate(
     [
       { translate: `${from.x}px ${from.y}px`, ...(width ? { width: `${width.from}px` } : {}) },
       { translate: '0px 0px', ...(width ? { width: `${width.to}px` } : {}) },
     ],
     { duration: durationMs, easing: motionEase(token) },
   )
+  const lower = () => node.removeAttribute('data-settling')
+  animation.addEventListener('finish', lower)
+  animation.addEventListener('cancel', lower)
 }
 
 function clipWidthPx(durationMs: number, pxPerMs: number): number {
@@ -49,25 +53,21 @@ function clipWidthPx(durationMs: number, pxPerMs: number): number {
 }
 
 export class ClipPreviewLayer {
-  private readonly nodes = new Map<ElementId, { node: HTMLElement; width: string }>()
-  private readonly lanes = new Map<string, HTMLElement>()
-  private readonly newTrackLane: HTMLElement | null
+  private readonly nodes = new Map<ElementId, HTMLElement>()
   private highlighted: HTMLElement | null = null
 
-  constructor(private readonly root: HTMLElement) {
-    for (const lane of root.querySelectorAll<HTMLElement>('[data-mcut-lane]')) {
-      const trackId = lane.dataset.mcutLane
-      if (trackId) this.lanes.set(trackId, lane)
-    }
-    this.newTrackLane = root.querySelector<HTMLElement>('[data-mcut-new-track-lane]')
+  constructor(private readonly root: HTMLElement) {}
+
+  private find(selector: string): HTMLElement | null {
+    return this.root.querySelector<HTMLElement>(selector)
   }
 
   private clipNode(id: ElementId): HTMLElement | null {
     const known = this.nodes.get(id)
-    if (known?.node.isConnected) return known.node
-    const node = this.root.querySelector<HTMLElement>(`[data-mcut-element-id="${CSS.escape(id)}"]`)
+    if (known?.isConnected) return known
+    const node = this.find(`[data-mcut-element-id="${CSS.escape(id)}"]`)
     if (!node) return null
-    this.nodes.set(id, { node, width: node.style.width })
+    this.nodes.set(id, node)
     node.setAttribute('data-dragging', '')
     return node
   }
@@ -76,25 +76,26 @@ export class ClipPreviewLayer {
     for (const preview of plan.previews) {
       const base = bases.get(preview.id)
       const node = this.clipNode(preview.id)
-      const entry = this.nodes.get(preview.id)
-      if (!base || !node || !entry) continue
+      if (!base || !node) continue
       const dx = (preview.startMs - base.startMs) * pxPerMs
       const dy = rowCenterPx(preview.row) - rowCenterPx(visualRow(project, base.trackIndex))
       node.style.translate = `${dx}px ${dy}px`
-      node.style.width = preview.durationMs === base.durationMs ? entry.width : `${clipWidthPx(preview.durationMs, pxPerMs)}px`
+      node.style.width = `${clipWidthPx(preview.durationMs, pxPerMs)}px`
       node.toggleAttribute('data-drop-invalid', !plan.valid)
     }
     const target = plan.target
-    const lane = target === null ? null : target.kind === 'new-track' ? this.newTrackLane : (this.lanes.get(target.trackId) ?? null)
+    const lane =
+      target === null ? null : this.find(target.kind === 'new-track' ? '[data-mcut-new-track-lane]' : `[data-mcut-lane="${CSS.escape(target.trackId)}"]`)
     if (lane !== this.highlighted) this.highlighted?.removeAttribute('data-drop-target')
     this.highlighted = lane
     lane?.setAttribute('data-drop-target', plan.valid ? 'valid' : 'invalid')
   }
 
-  release(): void {
-    for (const { node, width } of this.nodes.values()) {
+  release(project: Project, pxPerMs: number): void {
+    for (const [id, node] of this.nodes) {
+      const element = getElementLocation(project, id)?.element
       node.style.translate = ''
-      node.style.width = width
+      if (element) node.style.width = `${clipWidthPx(element.durationMs, pxPerMs)}px`
       node.removeAttribute('data-dragging')
       node.removeAttribute('data-drop-invalid')
     }
@@ -109,7 +110,7 @@ export class ClipPreviewLayer {
       const after = project()
       for (const preview of previews) {
         const location = getElementLocation(after, preview.id)
-        const node = this.root.querySelector<HTMLElement>(`[data-mcut-element-id="${CSS.escape(preview.id)}"]`)
+        const node = this.find(`[data-mcut-element-id="${CSS.escape(preview.id)}"]`)
         if (!location || !node) continue
         const { element } = location
         glide(

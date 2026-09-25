@@ -11,7 +11,7 @@ export interface ClipPreview {
   row: number
 }
 
-export type DropTarget = { kind: 'lane'; trackId: TrackId } | { kind: 'new-track' } | null
+type DropTarget = { kind: 'lane'; trackId: TrackId } | { kind: 'new-track' } | null
 
 export interface DragPlan {
   previews: ClipPreview[]
@@ -21,9 +21,11 @@ export interface DragPlan {
   guideMs: number | null
 }
 
-export interface PlanInput {
+export type PreviewMode = Extract<ClipDragMode, 'move' | 'trim-start' | 'trim-end'>
+
+interface PlanInput {
   project: Project
-  mode: ClipDragMode
+  mode: PreviewMode
   ids: readonly ElementId[]
   bases: ReadonlyMap<ElementId, ClipDragBase>
   ignore: ReadonlySet<string>
@@ -70,7 +72,9 @@ function planMove(input: PlanInput): DragPlan {
       const base = mustBase(bases, id)
       return { id, base, startMs: base.startMs + deltaMs, track: project.tracks[base.trackIndex] }
     })
-    const valid = moves.every(({ base, startMs, track }) => track && (track.magnetic || canPlaceIgnoring(track, startMs, base.durationMs, ignore)))
+    const valid = moves.every(
+      ({ base, startMs, track }) => track && !track.locked && (track.magnetic || canPlaceIgnoring(track, startMs, base.durationMs, ignore)),
+    )
     return {
       previews: moves.map(({ id, base, startMs }) => preview(project, id, base, startMs, base.durationMs)),
       commands: deltaMs === 0 ? [] : moves.map(({ id, startMs }) => ({ type: 'moveElement', elementId: id, startMs })),
@@ -163,7 +167,7 @@ function planTrim(input: PlanInput, edge: 'start' | 'end'): DragPlan {
   }))
   const valid = shaped.every(({ base, startMs, durationMs }) => {
     const track = project.tracks[base.trackIndex]
-    return track !== undefined && canPlaceIgnoring(track, startMs, durationMs, ignore)
+    return track !== undefined && !track.locked && canPlaceIgnoring(track, startMs, durationMs, ignore)
   })
   return {
     previews: shaped.map(({ id, base, startMs, durationMs }) => preview(project, id, base, startMs, durationMs)),
@@ -174,7 +178,7 @@ function planTrim(input: PlanInput, edge: 'start' | 'end'): DragPlan {
   }
 }
 
-export function isPreviewMode(mode: ClipDragMode): mode is 'move' | 'trim-start' | 'trim-end' {
+export function isPreviewMode(mode: ClipDragMode): mode is PreviewMode {
   return mode === 'move' || mode === 'trim-start' || mode === 'trim-end'
 }
 
@@ -186,13 +190,6 @@ export function planClipDrag(input: PlanInput): DragPlan {
       return planTrim(input, 'start')
     case 'trim-end':
       return planTrim(input, 'end')
-    case 'ripple-start':
-    case 'ripple-end':
-    case 'roll-start':
-    case 'roll-end':
-    case 'slip':
-    case 'slide':
-      return { previews: [], commands: [], target: null, valid: false, guideMs: null }
     default: {
       const exhaustive: never = input.mode
       return exhaustive

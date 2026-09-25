@@ -7,14 +7,14 @@ function edgeSpeed(pos: number, min: number, max: number): number {
   return 0
 }
 
-export interface AutoScrollBounds {
+interface AutoScrollBounds {
   left: number
   right: number
   top: number
   bottom: number
 }
 
-export interface AutoScrollSource {
+interface AutoScrollSource {
   scroller: HTMLElement
   bounds: AutoScrollBounds
   pointer: () => { x: number; y: number } | null

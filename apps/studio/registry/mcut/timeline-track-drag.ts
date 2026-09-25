@@ -32,6 +32,7 @@ export class TrackDragController {
   private gesture: TrackGesture | null = null
   private frame: number | null = null
   private listening: AbortController | null = null
+  private transitionReset: ReturnType<typeof setTimeout> | null = null
   private readonly autoScroll = new EdgeAutoScroll()
 
   constructor(
@@ -61,6 +62,7 @@ export class TrackDragController {
     window.addEventListener('pointerup', this.onPointerUp, { signal })
     window.addEventListener('pointercancel', this.onPointerCancel, { signal })
     window.addEventListener('keydown', this.onKeyDown, { signal, capture: true })
+    window.addEventListener('blur', () => this.finish(false), { signal })
   }
 
   nudge(trackId: TrackId, rows: -1 | 1): void {
@@ -75,6 +77,13 @@ export class TrackDragController {
 
   dispose(): void {
     this.cancel()
+    this.clearTransitionReset()
+  }
+
+  private clearTransitionReset(): void {
+    if (this.transitionReset === null) return
+    clearTimeout(this.transitionReset)
+    this.transitionReset = null
   }
 
   private visualRow(trackId: TrackId): number {
@@ -95,6 +104,10 @@ export class TrackDragController {
   private onPointerMove = (event: PointerEvent) => {
     const gesture = this.gesture
     if (!gesture || event.pointerId !== gesture.pointerId) return
+    if ((event.buttons & 1) === 0) {
+      this.finish(true)
+      return
+    }
     gesture.lastClientY = event.clientY
     if (!gesture.active) {
       if (Math.abs(event.clientY - gesture.startClientY) < DRAG_THRESHOLD_PX) return
@@ -125,6 +138,7 @@ export class TrackDragController {
   private activate(gesture: TrackGesture): void {
     const scroller = this.scrollerRef.current
     gesture.active = true
+    this.clearTransitionReset()
     gesture.rows = scroller ? [...scroller.querySelectorAll<HTMLElement>('[data-mcut-track-row]')] : []
     const shift = `translate ${ROW_SHIFT_MS}ms ${motionEase('--ease-out')}`
     for (const [row, node] of gesture.rows.entries()) {
@@ -193,7 +207,8 @@ export class TrackDragController {
       dragged.removeAttribute('data-dragging')
     }
     if (!moved) {
-      setTimeout(() => {
+      this.transitionReset = setTimeout(() => {
+        this.transitionReset = null
         for (const node of gesture.rows) node.style.transition = ''
       }, ROW_SHIFT_MS)
     }

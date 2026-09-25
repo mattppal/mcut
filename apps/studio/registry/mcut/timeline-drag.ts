@@ -74,6 +74,7 @@ interface ClipDragGesture {
   scrollerRect: DOMRect | null
   layer: ClipPreviewLayer | null
   plan: DragPlan | null
+  lastValidPlan: DragPlan | null
 }
 
 export class ClipDragController {
@@ -118,6 +119,7 @@ export class ClipDragController {
       scrollerRect: null,
       layer: null,
       plan: null,
+      lastValidPlan: null,
     }
     this.attach()
   }
@@ -126,9 +128,7 @@ export class ClipDragController {
     return this.gesture?.active ?? false
   }
 
-  dispose(): void {
-    this.cancel()
-  }
+  dispose = (): void => this.cancel()
 
   private onPointerMove = (event: PointerEvent) => {
     const gesture = this.gesture
@@ -168,9 +168,7 @@ export class ClipDragController {
     this.cancel()
   }
 
-  private onWindowBlur = () => {
-    this.cancel()
-  }
+  private onWindowBlur = () => this.cancel()
 
   private listening: AbortController | null = null
 
@@ -251,12 +249,14 @@ export class ClipDragController {
     if (!gesture.active) return
     const { engine, setSnapGuideMs } = this.deps
     setSnapGuideMs(null)
-    const plan = gesture.plan
+    const { pxPerMs, autoCrossfade } = this.deps.prefs()
+    const pushedIntoNeighbour = autoCrossfade && gesture.mode === 'move' && gesture.ids.length === 1 && gesture.plan?.valid === false
+    const plan = pushedIntoNeighbour ? gesture.lastValidPlan : gesture.plan
     if (isPreviewMode(gesture.mode)) {
-      gesture.layer?.release()
+      gesture.layer?.release(engine.project, pxPerMs)
       if (!plan || !this.commit(plan)) {
         engine.cancelTransaction()
-        if (plan) gesture.layer?.settle(plan.previews, () => engine.project, this.deps.prefs().pxPerMs, false)
+        if (gesture.plan) gesture.layer?.settle(gesture.plan.previews, () => engine.project, pxPerMs, false)
         return
       }
     }
@@ -272,7 +272,7 @@ export class ClipDragController {
       }
     }
     engine.endTransaction()
-    if (plan) gesture.layer?.settle(plan.previews, () => engine.project, this.deps.prefs().pxPerMs, true)
+    if (gesture.plan) gesture.layer?.settle(gesture.plan.previews, () => engine.project, pxPerMs, true)
   }
 
   private commit(plan: DragPlan): boolean {
@@ -309,7 +309,7 @@ export class ClipDragController {
     this.detach()
     if (!gesture.active) return
     const { engine } = this.deps
-    gesture.layer?.release()
+    gesture.layer?.release(engine.project, this.deps.prefs().pxPerMs)
     engine.cancelTransaction()
     this.deps.setSnapGuideMs(null)
     if (gesture.plan) gesture.layer?.settle(gesture.plan.previews, () => engine.project, this.deps.prefs().pxPerMs, false)
@@ -357,13 +357,14 @@ export class ClipDragController {
         newTrackId: gesture.createdTrackIds.length === 0 ? gesture.newTrackId : null,
       })
       gesture.plan = plan
+      if (plan.valid) gesture.lastValidPlan = plan
       gesture.layer?.render(plan, gesture.bases, engine.project, pxPerMs)
       setSnapGuideMs(plan.guideMs)
       return
     }
 
     try {
-      setSnapGuideMs(stepLiveGesture(engine, gesture, { deltaRawMs, snapping, thresholdMs }))
+      setSnapGuideMs(stepLiveGesture(engine, gesture.mode, gesture, { deltaRawMs, snapping, thresholdMs }))
     } catch (error) {
       rethrowUnlessRejected(error)
     }
