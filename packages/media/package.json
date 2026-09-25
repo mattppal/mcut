@@ -33,7 +33,8 @@
     "@mcut/timeline": "workspace:*",
     "@mediabunny/aac-encoder": "1.46.0",
     "mediabunny": "1.46.0",
-    "signalsmith-stretch": "1.3.2"
+    "signalsmith-stretch": "1.3.2",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@mcut/editor": "workspace:*"
