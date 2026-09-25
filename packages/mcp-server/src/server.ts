@@ -10,6 +10,7 @@ import {
   planSilenceCuts,
   runOperator,
   summarizeEngine,
+  withPlayheadDefaults,
   type OperatorId,
 } from '@mcut/editor'
 import {
@@ -142,7 +143,7 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
       return result
     },
     dispatchCommand: async (commandName, input) => {
-      engine.dispatch(parseCommand(Object.assign({}, input, { type: commandName })))
+      engine.dispatch(withPlayheadDefaults(engine, parseCommand(Object.assign({}, input, { type: commandName }))))
       await onChange()
     },
     applyCommands: async (commands) => {
