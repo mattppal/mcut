@@ -1,5 +1,5 @@
 import type { FrameSource } from '@mcut/compositor'
-import type { Input, VideoSampleSink } from 'mediabunny'
+import type { Input, VideoSample, VideoSampleSink } from 'mediabunny'
 import {
   assertNever,
   getElementLocation,
@@ -83,6 +83,12 @@ function requireSolo(project: Project, timeMs: number, elementId: ElementId, vis
   const start = location.element.startMs
   const end = start + location.element.durationMs
   throw new Error(`Element ${elementId} is not on screen at ${secondsText(timeMs)} s. It spans ${secondsText(start)} to ${secondsText(end)} s.`)
+}
+
+async function sampleBitmap(sample: VideoSample): Promise<ImageBitmap> {
+  const image = new ImageData(sample.visibleRect.width, sample.visibleRect.height)
+  await sample.copyTo(image.data, { format: 'RGBA' })
+  return createImageBitmap(image, { resizeWidth: sample.squarePixelWidth, resizeHeight: sample.squarePixelHeight })
 }
 
 function outputSize(projectWidth: number, projectHeight: number, maxWidth: number | undefined): { width: number; height: number; scale: number } {
@@ -169,7 +175,7 @@ class StillFrameSource implements FrameSource {
     const sample = await sink.getSample(Math.max(0, sourceTimeMs / 1000))
     if (!sample) throw new Error(`Asset ${assetId} has no video frame at ${sourceTimeMs} ms.`)
     try {
-      const bitmap = await createImageBitmap(sample.toCanvasImageSource())
+      const bitmap = await sampleBitmap(sample)
       this.bitmaps.push(bitmap)
       this.frames.set(key, bitmap)
     } finally {
