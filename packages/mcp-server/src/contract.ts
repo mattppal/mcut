@@ -183,7 +183,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
     'Required before transcript-based silence removal when captions are missing.',
   list_commands: 'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
-  apply_commands: 'Apply one or more serializable timeline commands in one undoable transaction, then return an updated project summary.',
+  apply_commands:
+    'Apply one or more serializable timeline commands in one undoable transaction, then return an updated project summary. ' +
+    'To mix commands with operators or actions in one undo step, use transact.',
   apply_captions:
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
     'Pass elementId to caption only the source span one video/audio clip plays, at its timeline position. ' +
@@ -207,7 +209,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   list_presets: 'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',
   list_operators:
     'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' + 'use raw command tools for low-level document edits.',
-  run_operator: 'Run a user-level editor operator by id. Use list_operators first when you need the available ids and input schemas.',
+  run_operator:
+    'Run a user-level editor operator by id. Use list_operators first when you need the available ids and input schemas. ' +
+    'Several calls for one user request go in one transact.',
   list_actions:
     'List browser editor actions available in the live editor, including menu/palette/hotkey actions. ' +
     'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close. ' +
@@ -215,12 +219,13 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   run_action:
     'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette. ' +
     'Prefer high-level actions over hand-authored command sequences when available. ' +
+    'Several calls for one user request go in one transact. ' +
     'To export or render the finished video, call export_video, then get_export until it is done.',
   transact:
-    'Apply 1 to 100 tool calls as one undo step. If any call fails, nothing stays applied. ' +
-    'Wrap one intent in one transact, for example a fade in and a fade out, so undo removes the whole intent. ' +
+    'When one user request needs more than one edit call, send them all in one transact, for example "make it square and fill the frame" or a fade in plus a fade out. ' +
+    'Applies 1 to 100 tool calls as one undo step, so "undo that" removes the whole request. If any call fails, nothing stays applied. ' +
     'Each call is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.',
-  undo: 'Undo the most recent edit. One undo step is one tool call or one whole transact.',
+  undo: 'Undo the most recent edit. One undo step is one tool call or one whole transact, so a request made of separate calls outside transact only loses its last call.',
   redo: 'Redo the most recently undone edit.',
   export_video:
     'Live bridge only: render the whole timeline to a video file in Studio and write it to disk through the bridge. No dialog opens. ' +
