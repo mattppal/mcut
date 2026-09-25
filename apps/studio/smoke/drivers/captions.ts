@@ -40,7 +40,7 @@ const CACHE_PROBE = `(async () => {
 
 const quote = (list: readonly string[]): string => list.map((item) => `"${item}"`).join(', ')
 
-async function watchToasts(view: View): Promise<void> {
+export async function watchToasts(view: View): Promise<void> {
   await view.evaluate(() => {
     const root = document.documentElement
     if (root.dataset.mcutSmokeToasts !== undefined) return
@@ -63,7 +63,7 @@ async function watchToasts(view: View): Promise<void> {
   })
 }
 
-async function toastsSeen(view: View): Promise<string[]> {
+export async function toastsSeen(view: View): Promise<string[]> {
   const raw: unknown = await view.evaluate(() => JSON.parse(document.documentElement.dataset.mcutSmokeToasts ?? '[]'))
   return toastLogSchema.parse(raw)
 }
@@ -150,7 +150,7 @@ async function runAutoCaption(view: View, timeoutMs: number): Promise<AutoCaptio
   return { toasts: result.toasts, error: result.error, captions: result.captions, ms: Date.now() - started }
 }
 
-function percentRange(toasts: readonly string[], pattern: RegExp): { updates: number; min: number; max: number } {
+export function percentRange(toasts: readonly string[], pattern: RegExp): { updates: number; min: number; max: number } {
   const values = toasts.flatMap((text) => {
     const match = pattern.exec(text)
     return match === null ? [] : [Number(match[1])]
