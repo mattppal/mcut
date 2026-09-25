@@ -224,6 +224,18 @@ const RULES: CheckRule[] = [
     },
   ],
   [
+    /^head overlay matches reference$/,
+    ({ after }) => {
+      const overlays = headOverlays(after)
+      const off = overlays.map(rectOffReference)
+      const detail =
+        overlays.length === 0
+          ? 'no overlay slot in a used layout'
+          : `slot off reference by ${Math.max(...off).toFixed(3)}, tolerance ${REFERENCE_LOOK.rectTolerance}`
+      return outcome(overlays.length > 0 && off.every((value) => value <= REFERENCE_LOOK.rectTolerance), detail, detail)
+    },
+  ],
+  [
     /^head overlay without border$/,
     ({ after }) => {
       const overlays = headOverlays(after)

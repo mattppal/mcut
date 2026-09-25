@@ -7,15 +7,10 @@ edits:
     capability: missing
     note: createMulticam accepts only video elements and audio follows a video source, so an audio-only file cannot be the multicam audio source.
   - id: 02-layout
-    ask: Make the base layout the screen recording full frame with my head overlaid in the bottom right corner, the head cropped narrow and tall, a little less tall than 9:16. Keep the slightly rounded corners and the drop shadow on the head shot, but no border stroke.
-    checks: [head overlay aspect 0.62-0.70, head overlay without border, head overlay styled]
+    ask: Make the base layout the screen recording full frame with my head overlaid in the bottom right corner. Make the head shot narrow and tall, about 0.66 wide over tall (a touch wider than 9:16), about 16% of the frame width and 43% of its height, with about a 2% margin from the right and bottom edges. Give it slightly rounded corners and a drop shadow, with no border stroke.
+    checks: [head overlay aspect 0.62-0.70, head overlay matches reference, head overlay without border, head overlay styled]
     capability: exists
-    note: saveLayout with a narrow slot rect and cover fit crops the head.
-  - id: 02b-narrower
-    ask: Make the shot of me narrower.
-    checks: [head overlay narrower]
-    capability: exists
-    note: A vague revision. The slot rect of the active layout is the control, via saveLayout or setAngleLayout.
+    note: saveLayout with a narrow slot rect and cover fit crops the head. The size and margins are Matt's approved reference look.
   - id: 02c-center-person
     ask: Keep my head centered in the overlay when I move around.
     checks: [head overlay follows the person]
@@ -41,10 +36,10 @@ edits:
     capability: partial
     note: No named exponential easing, a cubicBezier can approximate it.
   - id: 07-detail-zoom
-    ask: When the Daily Brief page is on screen, zoom into it on the screen recording with the same easing and motion blur, hold while I talk about it, then zoom back out.
-    checks: [zoom in hold out, subtle zoom, exponential easing, motion blur, zoom on screen source]
+    ask: Each time the Daily Brief page is on screen, zoom into it on the screen recording with the same easing and motion blur, keep the zoom subtle, hold while it stays on screen, then zoom back out before it leaves.
+    checks: [zoom in hold out, subtle zoom, exponential easing, motion blur, zoom on screen source, zoom covers 0-44.9s 99.3-138.7s 235.9-251.9s]
     capability: partial
-    note: The agent cannot see frames, so it has to guess where and when the Daily Brief page shows.
+    note: find_scene_changes and get_contact_sheet locate the page's visits. The full page is on screen 0 to 44.9 s, 99.3 to 138.7 s, and 235.9 to 251.9 s in Matt's footage. Chat views with a small thumbnail of the page don't count.
   - id: 08-export
     ask: Export the video.
     checks: [export job done, exported overlay styled]
