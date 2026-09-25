@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.7
+
+### Patch Changes
+
+- [#164](https://github.com/mattppal/mcut/pull/164) [`1cc9630`](https://github.com/mattppal/mcut/commit/1cc963001005ace3da7b856cd300dc6b2794f0e3) Thanks [@mattppal](https://github.com/mattppal)! - The live bridge answers a request with a malformed URL or Host header with 400 instead of crashing.
+
 ## 0.1.0-alpha.6
 
 ### Minor Changes
