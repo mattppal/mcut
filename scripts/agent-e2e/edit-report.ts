@@ -65,7 +65,10 @@ export function editMarkdown(report: EditReport): string {
       row.failure ?? '',
       String(row.toolCalls.length),
       String(row.toolErrors.length),
-      list(row.checks.map((check) => `${check.pass ? '✓' : '✗'} ${check.check}. ${check.detail}`), ''),
+      list(
+        row.checks.map((check) => `${check.pass ? '✓' : '✗'} ${check.check}. ${check.detail}`),
+        '',
+      ),
       list(row.changes.slice(0, 4), 'nothing'),
     ].join(' | '),
   )

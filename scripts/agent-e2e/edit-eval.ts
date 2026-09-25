@@ -109,7 +109,10 @@ function snapshot(runDir: string, file: string, project: Project): string {
   return path
 }
 
-async function runStep(step: EditStep, context: { mcp: McpSession; page: StudioPage; driver: Driver; recorder: ReturnType<typeof startMcpRecorder>; runDir: string }): Promise<EditRow> {
+async function runStep(
+  step: EditStep,
+  context: { mcp: McpSession; page: StudioPage; driver: Driver; recorder: ReturnType<typeof startMcpRecorder>; runDir: string },
+): Promise<EditRow> {
   const { mcp, page, driver, recorder, runDir } = context
   const startedAt = Date.now()
   const before = await mcp.getProject()
@@ -117,7 +120,13 @@ async function runStep(step: EditStep, context: { mcp: McpSession; page: StudioP
   const mark = recorder.mark()
   const turn = await driver(step.id, { system: SYSTEM, user: step.ask }).catch((error: unknown): AgentTurn => {
     if (error instanceof CursorAgentAuthError || error instanceof GrokBuildAuthError) throw error
-    return { toolCalls: [], stop: { stoppedBy: 'error', detail: error instanceof Error ? error.message : String(error) }, steps: 0, tokens: { input: 0, output: 0 }, model: 'driver crashed' }
+    return {
+      toolCalls: [],
+      stop: { stoppedBy: 'error', detail: error instanceof Error ? error.message : String(error) },
+      steps: 0,
+      tokens: { input: 0, output: 0 },
+      model: 'driver crashed',
+    }
   })
   await Bun.sleep(SETTLE_MS)
   const after = await mcp.getProject()
@@ -159,7 +168,9 @@ function rescore(runDir: string, steps: EditStep[]): number {
     if (step === undefined) return row
     const checks = step.checks.map((check) => runCheck(check, { before: load(row.beforeFile), after: load(row.afterFile), calls: row.toolCalls }))
     const pass = row.stoppedBy === 'model' && checks.every((check) => check.pass)
-    log(`${row.id} ${row.pass === pass ? 'unchanged' : 'changed'}: ${pass ? 'PASS' : 'FAIL'} ${checks.map((check) => `${check.pass ? '+' : '-'}${check.check}`).join(', ')}`)
+    log(
+      `${row.id} ${row.pass === pass ? 'unchanged' : 'changed'}: ${pass ? 'PASS' : 'FAIL'} ${checks.map((check) => `${check.pass ? '+' : '-'}${check.check}`).join(', ')}`,
+    )
     return { ...row, checks, pass, failure: pass ? null : classifyFailure(step, row.toolCalls, row.finalMessage) }
   })
   log(`report ${writeEditReport(report, runDir).markdown}`)
@@ -210,7 +221,13 @@ async function main(argv: string[]): Promise<number> {
     await page.screenshot(join(runDir, '00-start.png'))
     const projectDir = mkdtempSync(join(tmpdir(), 'mcut-edit-eval-'))
     const driver = createDriver(values.driver, projectDir, recorder.url, runDir, caps)
-    const report: EditReport = { generatedAt: new Date().toISOString(), driver: values.driver, app: target.label, media: spec.media.map((path) => basename(path)), rows: [] }
+    const report: EditReport = {
+      generatedAt: new Date().toISOString(),
+      driver: values.driver,
+      app: target.label,
+      media: spec.media.map((path) => basename(path)),
+      rows: [],
+    }
     let files = writeEditReport(report, runDir)
     for (const step of steps) {
       log(`${step.id}: ${step.ask}`)

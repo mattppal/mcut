@@ -23,8 +23,26 @@ export function rectOffReference(slot: LayoutSlot): number {
 const PATCH = 1
 
 function frameAt(file: string, timeMs: number, width: number, height: number): Uint8Array {
-  const proc = Bun.spawnSync(['ffmpeg', '-v', 'error', '-ss', (timeMs / 1000).toFixed(3), '-i', file, '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${width}x${height}`, '-'])
-  if (proc.exitCode !== 0 || proc.stdout.length !== width * height * 3) throw new Error(`could not read a ${width}x${height} frame at ${timeMs} ms from ${file}. ${proc.stderr.toString().slice(-300)}`)
+  const proc = Bun.spawnSync([
+    'ffmpeg',
+    '-v',
+    'error',
+    '-ss',
+    (timeMs / 1000).toFixed(3),
+    '-i',
+    file,
+    '-frames:v',
+    '1',
+    '-f',
+    'rawvideo',
+    '-pix_fmt',
+    'rgb24',
+    '-s',
+    `${width}x${height}`,
+    '-',
+  ])
+  if (proc.exitCode !== 0 || proc.stdout.length !== width * height * 3)
+    throw new Error(`could not read a ${width}x${height} frame at ${timeMs} ms from ${file}. ${proc.stderr.toString().slice(-300)}`)
   return new Uint8Array(proc.stdout)
 }
 
@@ -53,12 +71,21 @@ export function sampleOverlay(file: string, timeMs: number, slot: LayoutSlot, wi
   const x0 = slot.rect.x * width
   const y0 = slot.rect.y * height
   const x1 = x0 + slot.rect.w * width
-  const radius = slot.cornerRadius > 0 ? slot.cornerRadius * Math.min(slot.rect.w * width, slot.rect.h * height) : 0.06 * Math.min(slot.rect.w * width, slot.rect.h * height)
+  const radius =
+    slot.cornerRadius > 0 ? slot.cornerRadius * Math.min(slot.rect.w * width, slot.rect.h * height) : 0.06 * Math.min(slot.rect.w * width, slot.rect.h * height)
   const inset = Math.max(2, radius * 0.12)
   const along = radius + 10
   const corners = [
-    { corner: patch(frame, width, height, x0 + inset, y0 + inset), above: patch(frame, width, height, x0 + inset, y0 - 6), row: patch(frame, width, height, x0 + along, y0 + inset) },
-    { corner: patch(frame, width, height, x1 - inset, y0 + inset), above: patch(frame, width, height, x1 - inset, y0 - 6), row: patch(frame, width, height, x1 - along, y0 + inset) },
+    {
+      corner: patch(frame, width, height, x0 + inset, y0 + inset),
+      above: patch(frame, width, height, x0 + inset, y0 - 6),
+      row: patch(frame, width, height, x0 + along, y0 + inset),
+    },
+    {
+      corner: patch(frame, width, height, x1 - inset, y0 + inset),
+      above: patch(frame, width, height, x1 - inset, y0 - 6),
+      row: patch(frame, width, height, x1 - along, y0 + inset),
+    },
   ]
   const contrasts = corners.map(({ corner, above, row }) => distance(corner, row) - distance(corner, above))
   const rows = [0.3, 0.45, 0.6].map((fraction) => y0 + slot.rect.h * height * fraction)

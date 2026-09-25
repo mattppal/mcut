@@ -88,7 +88,8 @@ export async function connectStudioPage(cdpUrl: string): Promise<StudioPage> {
     }
     if (method === 'Runtime.exceptionThrown') {
       const entry = exceptionEvent.safeParse(params)
-      if (entry.success) consoleErrors.push(`exception: ${entry.data.exceptionDetails.exception?.description ?? entry.data.exceptionDetails.text}`.slice(0, 400))
+      if (entry.success)
+        consoleErrors.push(`exception: ${entry.data.exceptionDetails.exception?.description ?? entry.data.exceptionDetails.text}`.slice(0, 400))
     }
   }
   await new Promise<void>((resolve, reject) => {
@@ -115,14 +116,17 @@ export async function connectStudioPage(cdpUrl: string): Promise<StudioPage> {
   return {
     importFiles: async (paths) => {
       const document = z.object({ root: z.object({ nodeId: z.number() }) }).parse(await send('DOM.getDocument', { depth: -1, pierce: true }))
-      const inputs = z.object({ nodeIds: z.array(z.number()) }).parse(await send('DOM.querySelectorAll', { nodeId: document.root.nodeId, selector: 'input[type=file]' }))
+      const inputs = z
+        .object({ nodeIds: z.array(z.number()) })
+        .parse(await send('DOM.querySelectorAll', { nodeId: document.root.nodeId, selector: 'input[type=file]' }))
       const input = inputs.nodeIds[0]
       if (input === undefined) throw new StudioCdpError('the media bin has no file input to import through')
       await send('DOM.setFileInputFiles', { nodeId: input, files: paths })
       for (const path of paths) {
         const name = basename(path)
         for (let attempt = 0; attempt < 60; attempt++) {
-          if ((await evaluate(`[...document.querySelectorAll('[role=button]')].some((node) => node.textContent.includes(${JSON.stringify(name)}))`)) === true) break
+          if ((await evaluate(`[...document.querySelectorAll('[role=button]')].some((node) => node.textContent.includes(${JSON.stringify(name)}))`)) === true)
+            break
           await sleep(250)
         }
       }

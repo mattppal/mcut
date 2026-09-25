@@ -28,10 +28,14 @@ const MEDIA_EXTENSIONS = new Set(['.mp4', '.mov', '.mkv', '.webm', '.m4v', '.wav
 
 const VALIDATION_ERROR = /invalid|expected|required|unknown tool|unrecognized|not found|does not exist|no element|no asset|zod|must be/i
 
-const CANNOT = /\b(cannot|can't|can not|unable|not (?:possible|supported|available)|no (?:tool|way|support)|doesn't support|does not support|isn't supported|lack)/i
+const CANNOT =
+  /\b(cannot|can't|can not|unable|not (?:possible|supported|available)|no (?:tool|way|support)|doesn't support|does not support|isn't supported|lack)/i
 
 const stepSchema = z.object({
-  id: z.string().regex(/^[a-z0-9-]+$/).optional(),
+  id: z
+    .string()
+    .regex(/^[a-z0-9-]+$/)
+    .optional(),
   ask: z.string().min(1),
   checks: z.array(z.string()).default(['changed']),
   capability: z.enum(['exists', 'partial', 'missing']).default('exists'),
@@ -45,7 +49,11 @@ const specSchema = z.object({
 })
 
 const slug = (text: string, index: number): string =>
-  `${String(index + 1).padStart(2, '0')}-${text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32)}`
+  `${String(index + 1).padStart(2, '0')}-${text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 32)}`
 
 function readDocument(file: string): unknown {
   const raw = readFileSync(file, 'utf8')
