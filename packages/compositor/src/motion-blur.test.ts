@@ -170,7 +170,7 @@ describe('zoom motion blur', () => {
       [640, 360],
     ])
     expect(sample.callsTo('setTransform').map((c) => c.args)).toEqual([[0.5, 0, 0, 0.5, 0, 0]])
-    expect(main.callsTo('drawImage').map((c) => c.args)).toEqual([[accumulate.canvas, 0, 0, 1280, 720]])
+    expect(main.callsTo('drawImage').map((c) => [c.args[0] === accumulate.canvas, ...c.args.slice(1)])).toEqual([[true, 0, 0, 1280, 720]])
   })
 
   test('a hold draws one sharp pass straight into the frame', () => {
