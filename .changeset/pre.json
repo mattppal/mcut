@@ -41,6 +41,8 @@
     "edge-trim-safe-integer",
     "expo-easing",
     "export-audio-encoder-delay",
+    "export-audio-one-buffer",
+    "export-job-socket-races",
     "export-job",
     "find-retakes",
     "import-media",
