@@ -1,5 +1,16 @@
 # @mcut/editor
 
+## 0.1.0-alpha.7
+
+### Minor Changes
+
+- [#165](https://github.com/mattppal/mcut/pull/165) [`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33) Thanks [@mattppal](https://github.com/mattppal)! - Add `planZoomRegionDrag` and `planZoomAtPlayhead` to `@mcut/editor`, the headless planners behind the Studio zoom lane. A drag moves the whole zoom, its start, the inner edge of either ramp, or its end. Every drag keeps valid ramp and hold lengths, and a move or outer edge drag also stops at the element edges and at neighboring zooms on its target. `planZoomAtPlayhead` starts a preset or an explicit zoom shape at the playhead and picks the `screen` source on a multicam. `@mcut/timeline` now exports `isZoomable`, `ZoomableElement`, and `zoomRegionEndMs`.
+
+### Patch Changes
+
+- Updated dependencies [[`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33), [`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33)]:
+  - @mcut/timeline@0.1.0-alpha.7
+
 ## 0.1.0-alpha.6
 
 ### Patch Changes
