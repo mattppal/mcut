@@ -8,8 +8,12 @@ import { defineCommand, mustLocate, replaceTrack } from './shared'
 
 type VisualElement = TimelineElement & { type: 'video' | 'image' | 'text' | 'multicam' }
 
+export function isVisualElement(element: TimelineElement): element is VisualElement {
+  return element.type === 'video' || element.type === 'image' || element.type === 'text' || element.type === 'multicam'
+}
+
 function mustBeVisual(element: TimelineElement): asserts element is VisualElement {
-  if (element.type !== 'video' && element.type !== 'image' && element.type !== 'text' && element.type !== 'multicam') {
+  if (!isVisualElement(element)) {
     throw new CommandError('invalid-payload', `"${element.type}" elements have no effects/blending/transitions`)
   }
 }

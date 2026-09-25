@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { CommandError } from '../errors'
+import { getElementAssetIds } from '../media-clip'
 import { assetIdSchema, assetRefSchema } from '../model'
 import { compactTimelineIfMagnetic } from '../placement'
 import { propertyPresetSchema } from '../presets'
@@ -58,7 +59,7 @@ export const removeAsset = defineCommand({
     delete assets[payload.assetId]
     const tracks = project.tracks.map((track) => ({
       ...track,
-      elements: track.elements.filter((e) => !('assetId' in e) || e.assetId !== payload.assetId),
+      elements: track.elements.filter((e) => !getElementAssetIds(e).includes(payload.assetId)),
     }))
     return compactTimelineIfMagnetic({ ...project, assets, tracks })
   },

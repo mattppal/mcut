@@ -168,6 +168,17 @@ describe('multicam sources', () => {
     const late = thrownBy(() => applyCommand(withMulticam(), { type: 'trimElement', elementId: 'e-mc', trimStartMs: 50_000 }))
     expect(late).toMatchObject({ code: 'out-of-bounds' })
   })
+
+  test('removeAsset removes a multicam that reads the asset through a source', () => {
+    const project = applyCommand(withMulticam(), { type: 'removeAsset', assetId: 'a-cam' })
+    expect(getElement(project, 'e-mc')).toBeUndefined()
+    expect(Object.keys(project.assets).sort()).toEqual(['a-mic', 'a-screen', 'a-still'])
+  })
+
+  test('a fast animation preset enables motion blur on a multicam', () => {
+    const project = applyCommand(withMulticam(), { type: 'applyAnimationPreset', elementId: 'e-mc', preset: 'punch-zoom' })
+    expect(multicam(project).motionBlur).toEqual({ enabled: true, shutterAngle: 180 })
+  })
 })
 
 describe('angle cuts on the source clock', () => {

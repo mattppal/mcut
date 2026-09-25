@@ -1,7 +1,7 @@
 import { assertNever } from './errors'
 import { animatableProperties, getKeyframes } from './keyframes'
 import { summarizeLayouts } from './layout-summary'
-import type { MediaClip } from './media-clip'
+import { isMediaClip, type MediaClip } from './media-clip'
 import type { AudioElement, ImageElement, MulticamElement, Project, TimelineElement, VideoElement } from './model'
 import { getVisibleAngleCuts } from './multicam'
 import { getProjectDurationMs } from './selectors'
@@ -21,6 +21,14 @@ function describeWindow(clip: MediaClip): string {
   }
   if (clip.reversed) what += ' (reversed)'
   return what
+}
+
+function describeFades(clip: MediaClip): string {
+  const fadeIn = clip.fadeInMs ?? 0
+  const fadeOut = clip.fadeOutMs ?? 0
+  if (fadeIn === 0 && fadeOut === 0) return ''
+  const fades = [fadeIn > 0 && `in ${seconds(fadeIn)}`, fadeOut > 0 && `out ${seconds(fadeOut)}`].filter(Boolean).join(', ')
+  return ` [fade: ${fades}]`
 }
 
 function describeMulticam(project: Project, element: MulticamElement): string {
@@ -68,12 +76,7 @@ function describeElement(project: Project, element: TimelineElement): string {
   if ('transition' in element && element.transition) {
     suffix += ` [→ ${element.transition.type} ${element.transition.durationMs}ms]`
   }
-  const fadeIn = 'fadeInMs' in element ? (element.fadeInMs ?? 0) : 0
-  const fadeOut = 'fadeOutMs' in element ? (element.fadeOutMs ?? 0) : 0
-  if (fadeIn > 0 || fadeOut > 0) {
-    const fades = [fadeIn > 0 && `in ${seconds(fadeIn)}`, fadeOut > 0 && `out ${seconds(fadeOut)}`].filter(Boolean).join(', ')
-    suffix += ` [fade: ${fades}]`
-  }
+  if (isMediaClip(element)) suffix += describeFades(element)
   return `${element.id} ${what} @ ${range}${suffix}`
 }
 
