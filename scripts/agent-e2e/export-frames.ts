@@ -9,6 +9,17 @@ export interface OverlaySample {
 
 type Rgb = [number, number, number]
 
+export const REFERENCE_LOOK = {
+  rect: { x: 0.82, y: 0.5472, w: 0.1609, h: 0.4333 },
+  shadowDelta: 45,
+  rectTolerance: 0.02,
+}
+
+export function rectOffReference(slot: LayoutSlot): number {
+  const { rect } = REFERENCE_LOOK
+  return Math.max(Math.abs(slot.rect.x - rect.x), Math.abs(slot.rect.y - rect.y), Math.abs(slot.rect.w - rect.w), Math.abs(slot.rect.h - rect.h))
+}
+
 const PATCH = 1
 
 function frameAt(file: string, timeMs: number, width: number, height: number): Uint8Array {

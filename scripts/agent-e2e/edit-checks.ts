@@ -1,5 +1,5 @@
 import { getProjectDurationMs, type Keyframe, type LayoutSlot, type MulticamElement, type Project, type TimelineElement } from '@mcut/timeline'
-import { sampleOverlay } from './export-frames'
+import { REFERENCE_LOOK, rectOffReference, sampleOverlay } from './export-frames'
 import type { ToolCall } from './types'
 
 export interface CheckInput {
@@ -24,7 +24,6 @@ type Test = (input: CheckInput, match: RegExpExecArray) => Outcome
 export class UnknownCheckError extends Error {}
 
 const SUBTLE_ZOOM_MAX = 1.35
-const SHADOW_MIN_DELTA = 8
 const STYLED_RADIUS = { min: 0.04, max: 0.12 }
 const OPENING_WINDOW_MS = 2_000
 const HOLD_MIN_MS = 500
@@ -267,9 +266,10 @@ const RULES: [RegExp, Test][] = [
       if (spans.length === 0) return { pass: false, detail: 'no screen plus head span to sample' }
       const samples = spans.map((span) => sampleOverlay(path, span.midMs, span.slot, after.width, after.height))
       const rounded = samples.filter((sample) => sample.rounded).length
-      const shadowed = samples.filter((sample) => sample.shadowDelta >= SHADOW_MIN_DELTA).length
-      const detail = samples.map((sample) => `${(sample.timeMs / 1000).toFixed(1)}s corner ${sample.cornerContrast.toFixed(0)} shadow ${sample.shadowDelta.toFixed(0)}`).join(', ')
-      return outcome(rounded * 2 > samples.length && shadowed * 2 > samples.length, `rounded ${rounded}/${samples.length}, shadow ${shadowed}/${samples.length}. ${detail}`, `rounded ${rounded}/${samples.length}, shadow ${shadowed}/${samples.length}. ${detail}`)
+      const shadowed = samples.filter((sample) => sample.shadowDelta >= REFERENCE_LOOK.shadowDelta / 2).length
+      const off = Math.max(...spans.map((span) => rectOffReference(span.slot)))
+      const detail = `rounded ${rounded}/${samples.length}, shadow ${shadowed}/${samples.length} (reference ${REFERENCE_LOOK.shadowDelta}), slot off reference by ${off.toFixed(3)}. ${samples.map((sample) => `${(sample.timeMs / 1000).toFixed(1)}s corner ${sample.cornerContrast.toFixed(0)} shadow ${sample.shadowDelta.toFixed(0)}`).join(', ')}`
+      return outcome(rounded * 2 > samples.length && shadowed * 2 > samples.length && off <= REFERENCE_LOOK.rectTolerance, detail, detail)
     },
   ],
   [
