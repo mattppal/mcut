@@ -74,6 +74,14 @@ For clip-to-clip transitions, use `setTransition` only on the left clip of an
 exact butt cut. Built-ins: `dissolve`, `fade-black`, `fade-white`, `slide-left`,
 `slide-right`, `wipe-left`, `wipe-right`.
 
+### Clean up a noisy voice
+
+Turn cleanup on with `updateElement` and `{ "voice": { "enabled": true, "amount": 1 } }`
+in the patch, or with `operator_audio_cleanVoice` on the selection. Then call
+`ensure_voice_stems` and export only after every clip reads `ready`, because
+playback and export use the original audio until then. It removes background
+noise, not room echo. Do not fall back to ffmpeg audio filters.
+
 ## Timing rules
 
 - All project times are integer milliseconds.
