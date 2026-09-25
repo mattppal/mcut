@@ -1,5 +1,12 @@
 # @mcut/react
 
+## 0.1.0-alpha.19
+
+### Patch Changes
+
+- Updated dependencies [[`c5aed4a`](https://github.com/mattppal/mcut/commit/c5aed4a4615a3fd5dcb1d76c385cd28ea3574b40)]:
+  - @mcut/media@0.1.0-alpha.18
+
 ## 0.1.0-alpha.18
 
 ### Patch Changes

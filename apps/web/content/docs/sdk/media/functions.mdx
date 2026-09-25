@@ -201,6 +201,22 @@ Resolves with whether the browser can encode video and audio for the given conta
 
 Renders one timeline frame to a PNG blob. A `timeMs` past the project end throws, and the error names the project duration. A `timeMs` at the project end renders the last frame. `soloElementId` draws only that element, including a multicam composite, and throws when that element is not on screen. `width` caps the PNG width and keeps the project aspect ratio. Omit it to render at the project size. The result carries the PNG blob, the pixel size, and the ids of the elements drawn.
 
+### findSceneChanges
+
+```ts
+async function findSceneChanges(project: Project, options?: SceneChangeOptions): Promise<SceneChangeReport>
+```
+
+Reports the timeline times where the picture of one video clip or one multicam source changes. It decodes the source, downscales every frame it samples to 64 by 36 luma, and compares each sample with the one `stepMs` before it. A pair counts as a change when the fraction of cells whose luma moves by more than 24 of 255 reaches the threshold for `sensitivity`. It then decodes every frame between that pair and puts the change on the frame with the largest difference. The report lists the changes with the fraction that changed, and the segments between them.
+
+### renderContactSheet
+
+```ts
+async function renderContactSheet(project: Project, options?: ContactSheetOptions): Promise<ContactSheet>
+```
+
+Renders a PNG grid of thumbnails of one video clip or one multicam source, one tile per time, each labelled with its timeline time in seconds. Pass `timesMs` for exact times, or `count` to spread tiles evenly over the range. Times outside the range are dropped, and the call throws when none is left.
+
 ### listContainerFormats
 
 ```ts

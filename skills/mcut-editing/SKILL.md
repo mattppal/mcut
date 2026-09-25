@@ -150,6 +150,27 @@ elements in it, so you can find a button or a region in a screen recording
 before you set the zoom. Pass `elementId` to render one element. A multicam
 element renders its composite. `maxWidth` defaults to 1280.
 
+### Find when something is on screen
+
+Don't step `get_frame` through time to find when a page or a window is on
+screen. Call `find_scene_changes` first. In one call it compares downscaled
+frames over the clip and returns each change refined to the frame, plus the
+stable `segments` between changes, all in timeline milliseconds.
+
+```json
+{ "elementId": "e-...", "source": "screen" }
+```
+
+On a multicam it reads the `screen` source by default, so the camera overlay
+doesn't count. `sensitivity` runs from 0 to 1 and defaults to 0.5, which
+reports new pages and cuts but not scrolling. Raise it to catch smaller
+changes. Pass `startMs` and `endMs` to scan part of the clip.
+
+Then call `get_contact_sheet` with `timesMs` set to each segment's start and
+midpoint. It returns one PNG with a labelled thumbnail per time, so one look
+tells you which segments show the region. Place a detail zoom's in, hold, and
+out inside that segment, and end it before the next change.
+
 ### Punch-ins and detail zooms
 
 Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
@@ -167,7 +188,8 @@ Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
 Keep zooms subtle (1.1x to 1.5x), keep `easeOutExpo`, and keep `motionBlur` on.
 On a multicam, set `source` to the screen key so the camera overlay stays put.
 Place a detail zoom over the words that discuss the region, found with
-`search_transcript`. When asked to tone zooms down, lower `scale` rather than
+`search_transcript`, and inside the `find_scene_changes` segment that shows the
+region. When asked to tone zooms down, lower `scale` rather than
 removing zooms or turning off motion blur.
 
 ### Keep a person in frame
