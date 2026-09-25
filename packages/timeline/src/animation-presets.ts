@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { getStaticValue, upsertKeyframe, type AnimatableProperty, type Easing, type Keyframe, type KeyframeMap } from './keyframes'
+import { ANIMATABLE_PROPERTIES, getStaticValue, upsertKeyframe, type AnimatableProperty, type Easing, type Keyframe, type KeyframeMap } from './keyframes'
 import type { TimelineElement } from './model'
 
 export const animationPresetSchema = z.enum([
@@ -336,14 +336,43 @@ const generators: Record<AnimationPreset, (ctx: PresetContext) => TrackPatch> = 
   },
 }
 
-export function expandAnimationPreset(element: TimelineElement, preset: AnimationPreset, options: AnimationPresetOptions = {}): KeyframeMap {
+const WHOLE_CLIP_PRESETS: ReadonlySet<AnimationPreset> = new Set(['ken-burns', 'pulse', 'breathe', 'float', 'sway'])
+
+function shiftPatch(patch: TrackPatch, deltaMs: number): TrackPatch {
+  const shifted: TrackPatch = {}
+  for (const property of ANIMATABLE_PROPERTIES) {
+    const track = patch[property]
+    if (track) shifted[property] = track.map((keyframe) => ({ ...keyframe, timeMs: keyframe.timeMs + deltaMs }))
+  }
+  return shifted
+}
+
+function clampMs(value: number, max: number): number {
+  return Math.max(0, Math.min(Math.round(value), max))
+}
+
+function placedPatch(ctx: PresetContext, preset: AnimationPreset, atMs: number): TrackPatch {
+  const end = ctx.element.durationMs
+  if (WHOLE_CLIP_PRESETS.has(preset)) {
+    const start = clampMs(atMs, end - ctx.durationMs)
+    return shiftPatch(generators[preset]({ ...ctx, element: { ...ctx.element, durationMs: end - start } }), start)
+  }
+  const patch = generators[preset](ctx)
+  const times = Object.values(patch).flatMap((track) => track.map((keyframe) => keyframe.timeMs))
+  const first = Math.min(...times)
+  const span = Math.max(...times) - first
+  const anchor = ANIMATION_PRESET_CATEGORIES.out.includes(preset) ? atMs - span : atMs
+  return shiftPatch(patch, clampMs(anchor, end - span) - first)
+}
+
+export function expandAnimationPreset(element: TimelineElement, preset: AnimationPreset, options: AnimationPresetOptions = {}, atMs?: number): KeyframeMap {
   const ctx: PresetContext = {
     element,
     durationMs: Math.min(options.durationMs ?? ANIMATION_PRESET_DEFAULT_DURATION_MS[preset], element.durationMs),
     direction: options.direction ?? (preset === 'slide-out' ? 'down' : preset === 'whip-in' || preset === 'whip-out' ? 'left' : 'up'),
     intensity: options.intensity ?? 1,
   }
-  const patch = generators[preset](ctx)
+  const patch = atMs === undefined ? generators[preset](ctx) : placedPatch(ctx, preset, atMs)
   const existing = ('keyframes' in element ? element.keyframes : undefined) ?? {}
   const merged: KeyframeMap = { ...existing }
   for (const [property, additions] of Object.entries(patch) as Array<[AnimatableProperty, Keyframe[]]>) {
