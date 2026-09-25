@@ -3,6 +3,7 @@ import { applyCommand, CommandError } from './commands'
 import { getFrameRequests } from './frame-requests'
 import { createProject, type MulticamElement, type Project } from './model'
 import { getActiveAngleIndex, getActiveLayout, getAngleTransitionAt, getMulticamSourceTimeMs } from './multicam'
+import { getReframeCenter } from './reframe'
 import { getElement } from './selectors'
 
 function projectWithRecordings(): { project: Project; trackId: `t-${string}` } {
@@ -366,5 +367,32 @@ describe('split + flatten', () => {
     expect(audios).toHaveLength(1)
     expect(audios[0]).toMatchObject({ assetId: 'a-cam', startMs: 0, durationMs: 30_000 })
     expect(videos.every((v) => v.type === 'video' && v.muted)).toBe(true)
+  })
+
+  test('flatten carries the camera reframe track onto every camera clip', () => {
+    const { project } = projectWithRecordings()
+    let next = createMc(project)
+    const reframe = [
+      { sourceMs: 0, x: 0.2, y: 0.4 },
+      { sourceMs: 20_000, x: 0.8, y: 0.6 },
+    ]
+    next = applyCommand(next, {
+      type: 'updateElement',
+      elementId: 'e-mc',
+      patch: { sources: mc(next).sources.map((s) => (s.key === 'camera' ? { ...s, reframe } : s)) },
+    })
+    const multicam = mc(next)
+    const camLayout = next.layouts.find((l) => l.name === 'Camera')!
+    next = applyCommand(next, { type: 'addAngleCut', elementId: 'e-mc', atMs: 12_000, layoutId: camLayout.id })
+    next = applyCommand(next, { type: 'flattenMulticam', elementId: 'e-mc' })
+
+    const cameraClips = next.tracks.flatMap((t) => t.elements).filter((e) => e.type === 'video' && e.assetId === 'a-cam')
+    expect(cameraClips.length).toBeGreaterThan(0)
+    for (const clip of cameraClips) {
+      if (clip.type !== 'video') throw new Error('expected a video clip')
+      expect(clip.reframe).toEqual(reframe)
+      const t = clip.startMs + Math.floor(clip.durationMs / 2)
+      expect(getReframeCenter(clip, undefined, t)).toEqual(getReframeCenter(multicam, 'camera', t))
+    }
   })
 })

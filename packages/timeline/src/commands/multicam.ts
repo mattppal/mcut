@@ -282,6 +282,7 @@ export const flattenMulticam = defineCommand({
           opacity: 1,
           volume: 1,
           muted: true,
+          ...(source.reframe ? { reframe: source.reframe } : {}),
         })
       })
     }
