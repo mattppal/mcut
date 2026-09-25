@@ -5,12 +5,17 @@ import { LinkIcon } from '@/lib/icons'
 import { useEditor, useEditorState } from '@mcut/react'
 import {
   getAverageSpeed,
+  getElementLocation,
   getGroupedElementIds,
   getLinkedElementIds,
+  getMulticamGroupTimeMs,
+  getVisibleAngleCuts,
   isZoomable,
+  resolveElementAudioSource,
   TRANSITION_TYPES,
   type AssetRef,
   type BuiltinCommand,
+  type MulticamElement,
   type TimelineElement,
   type Track,
 } from '@mcut/timeline'
@@ -33,6 +38,7 @@ import { getElementUI } from './element-ui'
 import { KeyframeMarkers, VolumeBand } from './clip-keyframes'
 import { duplicateElement, removeSelection, splitSelectionAtPlayhead, unlinkElements } from './editor-actions'
 import { useEditorUI, WORKSPACE_LAYOUT } from './editor-ui'
+import { multicamSourcesInSelection } from './multicam-ui'
 import { TRACK_HEIGHT, useClipDrag, type ClipDragMode } from './timeline-drag'
 
 function clipLabel(element: TimelineElement, asset?: AssetRef): string {
@@ -54,18 +60,18 @@ function canTrimFromTimeline(element: TimelineElement): boolean {
   return element.type === 'video' && !isFlatFreezeVideo(element)
 }
 
-function MulticamWaveform({ element, widthPx, heightPx }: { element: TimelineElement & { type: 'multicam' }; widthPx: number; heightPx: number }) {
-  const source = element.sources.find((s) => s.key === element.audioSource)
-  const asset = useEditorState((s) => (source ? s.project.assets[source.assetId] : undefined))
-  if (!source || !asset) return null
+function MulticamWaveform({ element, widthPx, heightPx }: { element: MulticamElement; widthPx: number; heightPx: number }) {
+  const audio = useEditorState((s) => resolveElementAudioSource(s.project, element.id))
+  if (!audio) return null
   return (
     <AudioWaveform
-      asset={asset}
+      asset={audio.asset}
       widthPx={widthPx}
       heightPx={Math.round(heightPx * 0.35)}
-      trimStartMs={source.trimStartMs}
-      durationMs={element.durationMs}
-      timeMap={element.timeMap}
+      trimStartMs={audio.sourceStartMs}
+      durationMs={audio.timelineDurationMs}
+      timeMap={audio.timeMap}
+      reversed={audio.reversed}
       variant="strip"
       color="rgba(255, 255, 255, 0.65)"
     />
@@ -76,59 +82,57 @@ function tickKeyStableAcrossRetiming(cutIndex: number): string {
   return `tick-${cutIndex}`
 }
 
-function MulticamCutTicks({ element, pxPerMs }: { element: TimelineElement & { type: 'multicam' }; pxPerMs: number }) {
+function groupMsInsideWindow(element: MulticamElement, localMs: number): number {
+  const edgesMs = [0, element.durationMs].map((ms) => getMulticamGroupTimeMs(element, element.startMs + ms))
+  const groupMs = Math.round(getMulticamGroupTimeMs(element, element.startMs + localMs))
+  return Math.min(Math.ceil(Math.max(...edgesMs)) - 1, Math.max(Math.floor(Math.min(...edgesMs)) + 1, groupMs))
+}
+
+function MulticamCutTicks({ element, pxPerMs }: { element: MulticamElement; pxPerMs: number }) {
   const engine = useEditor()
   const layouts = useEditorState((s) => s.project.layouts)
-  const dragRef = useRef<{ fromMs: number; startClientX: number } | null>(null)
+  const dragRef = useRef<{ angleIndex: number; atMs: number; fromLocalMs: number; startClientX: number } | null>(null)
+  const cuts = getVisibleAngleCuts(element)
 
   const layoutName = (layoutId: string) => layouts.find((l) => l.id === layoutId)?.name ?? '?'
 
   return (
     <>
-      {element.angles.map((cut, i) => {
-        const nextAt = element.angles[i + 1]?.atMs ?? element.durationMs
-        const width = Math.max(0, (nextAt - cut.atMs) * pxPerMs)
+      {cuts.map((cut, i) => {
+        const width = Math.max(0, ((cuts[i + 1]?.localMs ?? element.durationMs) - cut.localMs) * pxPerMs)
         return (
           <span
-            key={`span-${cut.atMs}`}
+            key={`span-${cut.localMs}`}
             className="pointer-events-none absolute bottom-0.5 z-10 truncate px-1.5 text-2xs text-overlay-foreground/75"
-            style={{ left: cut.atMs * pxPerMs, maxWidth: width }}
+            style={{ left: cut.localMs * pxPerMs, maxWidth: width }}
           >
             {layoutName(cut.layoutId)}
           </span>
         )
       })}
-      {element.angles.slice(1).map((cut, i) => (
+      {cuts.slice(1).map((cut, i) => (
         <span
           key={tickKeyStableAcrossRetiming(i)}
           title="Drag to retime the cut · ⌥-click to remove"
           className="absolute inset-y-0 z-30 w-[7px] -translate-x-1/2 cursor-col-resize"
-          style={{ left: cut.atMs * pxPerMs }}
+          style={{ left: cut.localMs * pxPerMs }}
           onPointerDown={(event) => {
             event.stopPropagation()
             if (event.altKey) {
-              try {
-                engine.dispatch({ type: 'removeAngleCut', elementId: element.id, atMs: cut.atMs })
-              } catch {}
+              engine.dispatch({ type: 'removeAngleCut', elementId: element.id, atMs: cut.atMs })
               return
             }
-            dragRef.current = { fromMs: cut.atMs, startClientX: event.clientX }
+            const angleIndex = element.angles.findIndex((angle) => angle.atMs === cut.atMs)
+            dragRef.current = { angleIndex, atMs: cut.atMs, fromLocalMs: cut.localMs, startClientX: event.clientX }
             engine.beginTransaction()
             event.currentTarget.setPointerCapture(event.pointerId)
           }}
           onPointerMove={(event) => {
             const drag = dragRef.current
             if (!drag) return
-            const toMs = Math.round(drag.fromMs + (event.clientX - drag.startClientX) / pxPerMs)
-            try {
-              engine.dispatch({
-                type: 'moveAngleCut',
-                elementId: element.id,
-                fromMs: drag.fromMs,
-                toMs,
-              })
-              drag.fromMs = Math.max(1, toMs)
-            } catch {}
+            const toMs = groupMsInsideWindow(element, drag.fromLocalMs + (event.clientX - drag.startClientX) / pxPerMs)
+            const moved = getElementLocation(engine.dispatch({ type: 'moveAngleCut', elementId: element.id, fromMs: drag.atMs, toMs }), element.id)?.element
+            if (moved?.type === 'multicam') drag.atMs = moved.angles[drag.angleIndex]?.atMs ?? drag.atMs
           }}
           onPointerUp={(event) => {
             if (!dragRef.current) return
@@ -423,12 +427,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
           {centered && <ContextMenuItem onClick={stopCentering}>Stop centering</ContextMenuItem>}
           {element.type === 'video' && multiSelected && (
             <ContextMenuItem
-              onClick={() => {
-                const videoIds = engine.selection.elementIds.filter((id) =>
-                  engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video')),
-                )
-                dispatchSafe({ type: 'createMulticam', elementIds: videoIds })
-              }}
+              onClick={() => dispatchSafe({ type: 'createMulticam', sources: multicamSourcesInSelection(engine.project, engine.selection.elementIds) })}
             >
               Create multicam from selection
             </ContextMenuItem>

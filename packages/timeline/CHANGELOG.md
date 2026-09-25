@@ -1,5 +1,35 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.13
+
+### Patch Changes
+
+- [#197](https://github.com/mattppal/mcut/pull/197) [`fa6f581`](https://github.com/mattppal/mcut/commit/fa6f581da9ce078b05916c46bfa5159e61b341a5) Thanks [@mattppal](https://github.com/mattppal)! - `createMulticam` keeps the sync of a clip placed after the others. Each source offset is that clip's media time at timeline 0 relative to the earliest source, and the multicam covers the span every source is placed on.
+
+## 0.1.0-alpha.12
+
+### Minor Changes
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - A layout slot takes the frame style of a video clip, with `crop`, `cornerRadius`, `stroke`, and `shadow`. The slot `focus` and the boolean `shadow` are removed, and the v1 to v2 migration turns `shadow: true` into the shadow it drew. The compositor draws video clips and layout slots through one framed media path, and a multicam's own crop and corner radius frame its composite.
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - `saveLayout` merges each slot by source into the saved slot. An omitted field keeps its value, `null` clears a frame style field, and `rect` is required only for a source new to the layout, so re-saving a slot with a new rect keeps its corner radius and shadow. An overlay slot new to a layout that sets none of `cornerRadius`, `stroke`, and `shadow` gets the picture-in-picture look, a 0.12 corner radius and a soft shadow sized to the slot. The `saveLayout` and `resizeLayoutSlot` tool results list each style change field by field and warn when an overlay loses its corner radius or its shadow.
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - A multicam is a media clip. It shares `trimStartMs`, `timeMap`, `reversed`, volume, mute, and fades with video and audio elements, so trims, splits, slips, speed changes, reverse, `detachAudio`, `removeAsset`, and motion blur presets treat it like a video clip. Each source carries `offsetMs`, its media time at source clock 0. Angle cuts sit on that source clock, so a cut stays on the same content through every window edit.
+
+  Breaking changes follow. `createMulticam` takes `sources: [{ elementId, key? }]` and an optional `audioSource`, accepts audio elements as audio-only sources, and syncs the sources as placed on the timeline. `setMulticamSourceTrim` is now `setMulticamSourceOffset { sourceKey, offsetMs }`. `angles[].atMs` and every angle command time are on the source clock. `PROJECT_VERSION` is 2, and `parseProject` migrates v1 documents. `splitAngles`, `getMulticamAudioSource`, and `ElementAudioSourceType` are removed, and `ElementAudioSource` drops `elementType` and `multicamSourceKey`. The media context reports multicam source `offsetMs` and counts only the angle spans a clip plays.
+
+  New exports are `MediaClip`, `isMediaClip`, `getMediaSourceDurationMs`, `getElementAssetIds`, `getMulticamGroupTimeMs`, `getVisibleAngleCuts`, `isAudioOnlySource`, and `getLocalTimeMs`.
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - A multicam slot zoom frames inside the slot's crop. The slot's cover or contain fit is measured over its crop, the zoom scales that fit, and the target lands inside the crop window, so a zoom never shows source the crop cuts away. Outside a zoom, `getSlotView` returns the center at scale 1, because the slot's crop now sets its framing. Zoom `focus` and `rect` are 0 to 1 across the cropped frame of the clip or slot. `VisibleFraction`, the type of the `visible` argument of `getSlotView`, is exported.
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - A reframe track on a multicam source slides the crop of every slot that shows the source onto the subject, so a tight face crop follows the face. Once the crop meets the frame edge, the part the slot's fit shows keeps moving toward the subject inside the crop. `getSlotView` takes a `rest` focus, the view outside a zoom and where a zoom starts, and the compositor passes the reframed focus there.
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - Add the `resizeLayoutSlot` command. It resizes one layout slot around an anchor by aspect, pixel size, or scale, so the slot keeps its place instead of jumping to another corner. The MCP tool result shows each slot before and after the resize, as it does for `saveLayout`.
+
+### Patch Changes
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - `flattenMulticam` copies each source's `reframe` track onto every video clip cut from that source, so a flattened camera keeps following the person. The track is keyed by the source's media time, which the clip shares, so it copies without retiming.
+
 ## 0.1.0-alpha.11
 
 ### Patch Changes

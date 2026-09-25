@@ -1,6 +1,9 @@
 import { getAverageSpeed, getSourceSpanMs } from './speed'
 import { getProjectDurationMs } from './selectors'
-import type { AssetRef, AudioElement, CaptionElement, Marker, MulticamElement, Project, TimelineElement, Track, VideoElement } from './model'
+import { assertNever } from './errors'
+import { getElementAssetIds, isMediaClip, type MediaClip } from './media-clip'
+import type { AssetRef, CaptionElement, Marker, MulticamElement, Project, TimelineElement, Track } from './model'
+import { getVisibleAngleCuts } from './multicam'
 import type { PlaybackState } from './engine'
 
 export interface ProjectCaptionRef {
@@ -129,7 +132,7 @@ export interface ProjectMediaElementContext {
       key: string
       assetId: string
       assetName?: string
-      trimStartMs: number
+      offsetMs: number
     }>
   }
   effects?: string[]
@@ -248,10 +251,7 @@ function collectAssetUsage(project: Project): Map<string, Set<string>> {
   }
   for (const track of project.tracks) {
     for (const element of track.elements) {
-      if ('assetId' in element) add(element.assetId, element.id)
-      if (element.type === 'multicam') {
-        for (const source of element.sources) add(source.assetId, element.id)
-      }
+      for (const assetId of getElementAssetIds(element)) add(assetId, element.id)
     }
   }
   return usedBy
@@ -296,31 +296,29 @@ function elementContext(
     }
   }
 
-  if (element.type === 'video' || element.type === 'audio') {
-    addAssetContext(base, project, element.assetId)
-    addSourceContext(base, element)
-    return base
+  if (isMediaClip(element)) addSourceContext(base, element)
+  switch (element.type) {
+    case 'video':
+    case 'audio':
+    case 'image':
+      addAssetContext(base, project, element.assetId)
+      return base
+    case 'text':
+      base.text = element.text
+      return base
+    case 'caption':
+      base.text = element.text
+      base.caption = {
+        hasWordTimings: (element.words?.length ?? 0) > 0,
+        wordCount: element.words?.length ?? 0,
+      }
+      return base
+    case 'multicam':
+      addMulticamContext(base, project, element)
+      return base
+    default:
+      return assertNever(element)
   }
-  if (element.type === 'image') {
-    addAssetContext(base, project, element.assetId)
-    return base
-  }
-  if (element.type === 'text') {
-    base.text = element.text
-    return base
-  }
-  if (element.type === 'caption') {
-    base.text = element.text
-    base.caption = {
-      hasWordTimings: (element.words?.length ?? 0) > 0,
-      wordCount: element.words?.length ?? 0,
-    }
-    return base
-  }
-  if (element.type === 'multicam') {
-    addMulticamContext(base, project, element)
-  }
-  return base
 }
 
 function addAssetContext(target: ProjectMediaElementContext, project: Project, assetId: string): void {
@@ -341,37 +339,25 @@ function addAssetContext(target: ProjectMediaElementContext, project: Project, a
   }
 }
 
-function addSourceContext(target: ProjectMediaElementContext, element: VideoElement | AudioElement): void {
-  const sourceStartMs = element.trimStartMs
-  const sourceDurationMs = getSourceSpanMs(element)
+function addSourceContext(target: ProjectMediaElementContext, clip: MediaClip): void {
+  const sourceDurationMs = getSourceSpanMs(clip)
   target.source = {
-    startMs: sourceStartMs,
-    endMs: sourceStartMs + sourceDurationMs,
+    startMs: clip.trimStartMs,
+    endMs: clip.trimStartMs + sourceDurationMs,
     durationMs: sourceDurationMs,
-    averageSpeed: getAverageSpeed(element),
-    hasTimeMap: !!element.timeMap,
-    reversed: !!element.reversed,
+    averageSpeed: getAverageSpeed(clip),
+    hasTimeMap: clip.timeMap !== undefined,
+    reversed: clip.reversed === true,
   }
 }
 
 function addMulticamContext(target: ProjectMediaElementContext, project: Project, element: MulticamElement): void {
-  const sourceDurationMs = getSourceSpanMs(element)
-  target.source = {
-    startMs: 0,
-    endMs: sourceDurationMs,
-    durationMs: sourceDurationMs,
-    averageSpeed: getAverageSpeed(element),
-    hasTimeMap: !!element.timeMap,
-    reversed: false,
-  }
   target.multicam = {
     ...(element.audioSource ? { audioSource: element.audioSource } : {}),
-    angleCount: element.angles.length,
-    sources: element.sources.map((source) => ({
-      key: source.key,
-      assetId: source.assetId,
-      ...(project.assets[source.assetId]?.name ? { assetName: project.assets[source.assetId]!.name } : {}),
-      trimStartMs: source.trimStartMs,
-    })),
+    angleCount: getVisibleAngleCuts(element).length,
+    sources: element.sources.map((source) => {
+      const assetName = project.assets[source.assetId]?.name
+      return { key: source.key, assetId: source.assetId, ...(assetName ? { assetName } : {}), offsetMs: source.offsetMs }
+    }),
   }
 }

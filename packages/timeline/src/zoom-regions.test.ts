@@ -205,21 +205,29 @@ describe('zoom regions on a clip', () => {
 
 describe('zoom regions on a multicam slot', () => {
   test('the screen slot zooms while the camera slot keeps its framing', () => {
-    let project = applyCommand(projectWithScreenAndCam(), { type: 'createMulticam', elementIds: ['e-screen', 'e-cam'], multicamId: 'e-mc' })
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
     project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0, holdMs: 1000, focus: { x: 0.2, y: 0.3 } } })
     const layout = project.layouts.find((l) => l.name === 'Screen + Cam')
     const screenSlot = layout?.slots.find((s) => s.source === 'screen')
     const camSlot = layout?.slots.find((s) => s.source === 'camera')
     if (!screenSlot || !camSlot) throw new Error('default layout lost its slots')
     expect(getSlotView(multicam(project), screenSlot, 1000).scale).toBe(1.15)
-    expect(getSlotView(multicam(project), camSlot, 1000)).toEqual({ scale: 1, focus: camSlot.focus })
+    expect(getSlotView(multicam(project), camSlot, 1000)).toEqual({ scale: 1, focus: { x: 0.5, y: 0.5 } })
     expect(thrownBy(() => applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { atMs: 5000 } }))).toMatchObject({
       message: expect.stringContaining('screen'),
     })
   })
 
   test('the target center lands in the middle of a slot narrower than the video', () => {
-    let project = applyCommand(projectWithScreenAndCam(), { type: 'createMulticam', elementIds: ['e-screen', 'e-cam'], multicamId: 'e-mc' })
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
     project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0, scale: 1.5, focus: { x: 0.43, y: 0.5 } } })
     const slot = project.layouts.find((l) => l.name === 'Screen + Cam 3:4')?.slots.find((s) => s.source === 'screen')
     if (!slot) throw new Error('3:4 layout lost its screen slot')
@@ -230,9 +238,30 @@ describe('zoom regions on a multicam slot', () => {
   })
 
   test('renaming a source key carries its zooms along', () => {
-    let project = applyCommand(projectWithScreenAndCam(), { type: 'createMulticam', elementIds: ['e-screen', 'e-cam'], multicamId: 'e-mc' })
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
     project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0 } })
     project = applyCommand(project, { type: 'setMulticamSourceKey', elementId: 'e-mc', sourceKey: 'screen', newKey: 'display' })
     expect(listZoomRegions(project).map((z) => z.source)).toEqual(['display'])
+  })
+
+  test('swapping two source keys keeps each zoom on its own footage', () => {
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
+    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { id: 'z-screen', source: 'screen', atMs: 0 } })
+    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { id: 'z-cam', source: 'camera', atMs: 5000 } })
+    project = applyCommand(project, { type: 'setMulticamSourceKey', elementId: 'e-mc', sourceKey: 'screen', newKey: 'camera' })
+    const sources = multicam(project).sources
+    const footage = listZoomRegions(project).map((z) => [z.id, z.source, sources.find((s) => s.key === z.source)?.assetId])
+    expect(footage).toEqual([
+      ['z-screen', 'camera', 'a-screen'],
+      ['z-cam', 'screen', 'a-cam'],
+    ])
   })
 })

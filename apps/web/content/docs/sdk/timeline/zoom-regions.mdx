@@ -7,7 +7,8 @@ A zoom region is one punch-in on a video, image, or multicam element. It zooms
 in over `inMs`, holds for `holdMs`, and zooms back out over `outMs`, all in
 element-local time. A multicam zoom names a `source` key, so every slot showing
 that source zooms and the other slots keep their framing. The screen can zoom
-while the camera overlay stays put.
+while the camera overlay stays put. A slot zooms inside its crop, so a zoom
+never shows source the crop cuts away.
 
 Regions on one target never overlap. The zoom commands keep the region they add
 or change inside the element. A split copies a region that crosses the cut into
@@ -46,8 +47,9 @@ instant. `scale` multiplies the fit scale. `focus` is the anchor point from 0 to
 
 ### VisibleFraction
 
-`VisibleFraction` is `{ x, y }`, the fraction of the source frame each axis shows
-at scale 1. An axis where the clip or slot shows the whole frame is 1.
+`VisibleFraction` is `{ x, y }`, the share of a slot's cropped source each axis
+shows at scale 1 after the slot's fit. A cover slot shows less than 1 on the
+axis it cuts, and a contain slot shows more than 1 on the axis it letterboxes.
 `getSlotView` and `centeredFocus` take it.
 
 ## Schemas
@@ -60,7 +62,7 @@ at scale 1. An axis where the clip or slot shows the whole frame is 1.
 | `source` | string, optional | Multicam source key whose slots zoom. Absent on clips |
 | `atMs` | integer ms | Element-local start of the zoom-in, negative on the right half of a split through a zoom |
 | `inMs`, `holdMs`, `outMs` | integer ms | Ramp in, hold, ramp out |
-| `focus` | `{ x, y }` from 0 to 1 | Target center, across the cropped frame of a clip or across the source frame of a multicam slot |
+| `focus` | `{ x, y }` from 0 to 1 | Target center, across the cropped frame of a clip or multicam slot |
 | `scale` | 1 to 8 | Scale at the hold |
 | `easing` | `Easing` | Applied to both ramps |
 | `motionBlur` | 0 to 1 | Shutter as a fraction of one frame while the zoom moves. 0 turns it off |
@@ -97,7 +99,7 @@ Explicit fields override the preset. A `rect` aims the zoom at its center and fi
 
 ### getSlotView
 
-`getSlotView(element, slot, timelineMs, visible)` returns the `ContentView` of one multicam layout slot. It is the one place a renderer reads a slot's framing. `visible` is the fraction of the source each axis shows at scale 1, which differs from 1 when the slot's shape differs from the video, and it defaults to the full frame. Outside a zoom it returns the slot's own focus at scale 1.
+`getSlotView(element, slot, timelineMs, visible, rest)` returns the `ContentView` of one multicam layout slot. It is the one place a renderer reads a slot's framing. `visible` is the `VisibleFraction` of the slot, which differs from 1 when the slot's shape differs from its crop, and it defaults to the full frame. `rest` is the focus outside a zoom, where a zoom starts and ends, and it defaults to the center. The compositor passes the reframed focus from `centeredFocus` for a source with a reframe track. With neither a zoom nor a track, the view is the center at scale 1, so the slot's crop alone sets its framing.
 
 ### getClipView
 

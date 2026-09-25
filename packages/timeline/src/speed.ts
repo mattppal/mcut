@@ -21,7 +21,7 @@ export interface TimeMappedElement {
   reversed?: boolean | undefined
 }
 
-const hasTimeMap = (element: { timeMap?: TimeMap | undefined }): element is { timeMap: TimeMap } =>
+export const hasTimeMap = (element: { timeMap?: TimeMap | undefined }): element is { timeMap: TimeMap } =>
   Array.isArray(element.timeMap) && element.timeMap.length >= 2
 
 export function getSourceTimeMs(element: TimeMappedElement, localMs: number): number {
@@ -30,6 +30,23 @@ export function getSourceTimeMs(element: TimeMappedElement, localMs: number): nu
     return element.trimStartMs + Math.max(0, getSourceSpanMs(element) - mapped)
   }
   return element.trimStartMs + mapped
+}
+
+export function getLocalTimeMs(element: TimeMappedElement, sourceMs: number): number {
+  const offsetMs = sourceMs - element.trimStartMs
+  const mappedMs = element.reversed ? getSourceSpanMs(element) - offsetMs : offsetMs
+  if (!hasTimeMap(element)) return Math.min(element.durationMs, Math.max(0, mappedMs))
+  const { timeMap } = element
+  let lo = 0
+  let hi = element.durationMs
+  if (interpolateTrack(timeMap, lo) >= mappedMs) return lo
+  if (interpolateTrack(timeMap, hi) < mappedMs) return hi
+  while (hi - lo > 0.001) {
+    const mid = (lo + hi) / 2
+    if (interpolateTrack(timeMap, mid) >= mappedMs) hi = mid
+    else lo = mid
+  }
+  return hi
 }
 
 export function getSourceSpanMs(element: { durationMs: number; timeMap?: TimeMap | undefined }): number {

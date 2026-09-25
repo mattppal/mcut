@@ -1,7 +1,7 @@
 import { assertNever } from './errors'
 import { getLayout } from './layouts'
 import type { MulticamElement, Project, TimelineElement } from './model'
-import { getActiveLayout, getAngleTransitionAt, getMulticamSourceTimeMs } from './multicam'
+import { getActiveLayout, getAngleTransitionAt, getMulticamGroupTimeMs, getMulticamSourceTimeMs, isAudioOnlySource } from './multicam'
 import { getSourceTimeMs } from './speed'
 
 export interface FrameRequest {
@@ -10,7 +10,7 @@ export interface FrameRequest {
 }
 
 function multicamFrameRequests(project: Project, element: MulticamElement, timelineMs: number): FrameRequest[] {
-  const window = getAngleTransitionAt(element, timelineMs - element.startMs)
+  const window = getAngleTransitionAt(element, getMulticamGroupTimeMs(element, timelineMs))
   const layouts = window
     ? [getLayout(project.layouts, window.fromLayoutId), getLayout(project.layouts, window.toLayoutId)]
     : [getActiveLayout(project, element, timelineMs)]
@@ -19,7 +19,7 @@ function multicamFrameRequests(project: Project, element: MulticamElement, timel
   for (const layout of layouts) {
     for (const slot of layout?.slots ?? []) {
       const source = element.sources.find((s) => s.key === slot.source)
-      if (!source || seen.has(source.key)) continue
+      if (!source || seen.has(source.key) || isAudioOnlySource(project, source)) continue
       seen.add(source.key)
       requests.push({
         assetId: source.assetId,

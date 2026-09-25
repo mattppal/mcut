@@ -150,4 +150,60 @@ describe('getProjectMediaContext', () => {
       endMs: 3000,
     })
   })
+
+  test('reports the source window, source offsets, and only the angle spans a multicam plays', () => {
+    const slot = (source: string) => ({ source, rect: { x: 0, y: 0, w: 1, h: 1 } })
+    const project = parseProject({
+      version: 2,
+      id: 'p-multicam',
+      name: 'Multicam context',
+      width: 1920,
+      height: 1080,
+      fps: 30,
+      assets: {
+        'a-screen': { id: 'a-screen', kind: 'video', src: 'blob:screen', name: 'screen.mp4', durationMs: 20_000 },
+        'a-camera': { id: 'a-camera', kind: 'video', src: 'blob:camera', durationMs: 20_000 },
+      },
+      layouts: [
+        { id: 'lay-screen', name: 'Screen', slots: [slot('screen')] },
+        { id: 'lay-camera', name: 'Camera', slots: [slot('camera')] },
+      ],
+      tracks: [
+        {
+          id: 't-video',
+          name: 'Video',
+          elements: [
+            {
+              id: 'e-multicam',
+              type: 'multicam',
+              startMs: 0,
+              durationMs: 4000,
+              trimStartMs: 4000,
+              sources: [
+                { key: 'screen', assetId: 'a-screen' },
+                { key: 'camera', assetId: 'a-camera', offsetMs: 300 },
+              ],
+              angles: [
+                { atMs: 0, layoutId: 'lay-screen' },
+                { atMs: 2000, layoutId: 'lay-camera' },
+                { atMs: 5000, layoutId: 'lay-screen' },
+                { atMs: 9000, layoutId: 'lay-camera' },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(getProjectMediaContext(project).tracks[0]?.elements[0]).toMatchObject({
+      source: { startMs: 4000, endMs: 8000, durationMs: 4000, averageSpeed: 1, hasTimeMap: false, reversed: false },
+      multicam: {
+        angleCount: 2,
+        sources: [
+          { key: 'screen', assetId: 'a-screen', assetName: 'screen.mp4', offsetMs: 0 },
+          { key: 'camera', assetId: 'a-camera', offsetMs: 300 },
+        ],
+      },
+    })
+  })
 })

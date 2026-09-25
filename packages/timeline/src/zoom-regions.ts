@@ -33,11 +33,11 @@ const presetSchema = z.enum(['subtlePunchIn', 'detailZoom'])
 const rectSchema = z.object({ x: unit, y: unit, w: z.number().gt(0).max(1), h: z.number().gt(0).max(1) })
 
 const targetShape = {
-  focus: focusSchema.describe('Point to zoom into, 0 to 1 across the clip or the slot source frame.').optional(),
+  focus: focusSchema.describe('Point to zoom into, 0 to 1 across the cropped frame of the clip or slot.').optional(),
   scale: z.number().min(1).max(8).optional(),
   rect: rectSchema
     .describe(
-      'Region to zoom toward, 0 to 1 in source frame coordinates. Sets focus to its center and fills it up to the preset scale; pass focus and scale instead for a stronger zoom.',
+      'Region to zoom toward, 0 to 1 across the cropped frame of the clip or slot. Sets focus to its center and fills it up to the preset scale; pass focus and scale instead for a stronger zoom.',
     )
     .optional(),
 }
@@ -153,34 +153,41 @@ export interface VisibleFraction {
 
 const FULL_FRAME: VisibleFraction = { x: 1, y: 1 }
 
+const CENTER: ContentView['focus'] = { x: 0.5, y: 0.5 }
+
 function zoomViewAt(
   zooms: readonly ZoomRegion[] | undefined,
   source: string | undefined,
   localMs: number,
-  base: ContentView,
   visible: VisibleFraction,
+  rest: ContentView['focus'],
 ): ContentView {
   const phase = phaseAt(zooms, source, localMs)
-  if (!phase) return base
+  if (!phase) return { scale: 1, focus: rest }
   const amount = amountAt(phase)
   const { scale, focus } = phase.region
   const lerp = (from: number, to: number) => from + (to - from) * amount
-  const holdScale = base.scale * scale
   return {
-    scale: base.scale * lerp(1, scale),
+    scale: lerp(1, scale),
     focus: {
-      x: lerp(base.focus.x, anchorOf(focus.x, visible.x / holdScale)),
-      y: lerp(base.focus.y, anchorOf(focus.y, visible.y / holdScale)),
+      x: lerp(rest.x, anchorOf(focus.x, visible.x / scale)),
+      y: lerp(rest.y, anchorOf(focus.y, visible.y / scale)),
     },
   }
 }
 
-export function getSlotView(element: MulticamElement, slot: LayoutSlot, timelineMs: number, visible: VisibleFraction = FULL_FRAME): ContentView {
-  return zoomViewAt(element.zooms, slot.source, timelineMs - element.startMs, { scale: 1, focus: slot.focus }, visible)
+export function getSlotView(
+  element: MulticamElement,
+  slot: LayoutSlot,
+  timelineMs: number,
+  visible: VisibleFraction = FULL_FRAME,
+  rest: ContentView['focus'] = CENTER,
+): ContentView {
+  return zoomViewAt(element.zooms, slot.source, timelineMs - element.startMs, visible, rest)
 }
 
 export function getClipView(element: VideoElement | ImageElement, timelineMs: number): ContentView {
-  return zoomViewAt(element.zooms, undefined, timelineMs - element.startMs, { scale: 1, focus: { x: 0.5, y: 0.5 } }, FULL_FRAME)
+  return zoomViewAt(element.zooms, undefined, timelineMs - element.startMs, FULL_FRAME, CENTER)
 }
 
 export function getZoomShutterMs(element: TimelineElement, timelineMs: number, frameMs: number): number {

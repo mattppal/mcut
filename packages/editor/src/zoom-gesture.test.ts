@@ -24,7 +24,7 @@ function engineWithMulticam(): EditorEngine {
   const engine = engineWithVideo()
   engine.dispatch({ type: 'addTrack', id: 't-cam' })
   engine.dispatch({ type: 'addElement', trackId: 't-cam', element: { type: 'video', id: 'e-cam', assetId: 'a-cam', startMs: 1000, durationMs: 10_000 } })
-  engine.dispatch({ type: 'createMulticam', elementIds: ['e-clip', 'e-cam'], multicamId: 'e-mc' })
+  engine.dispatch({ type: 'createMulticam', sources: [{ elementId: 'e-clip' }, { elementId: 'e-cam' }], multicamId: 'e-mc' })
   return engine
 }
 

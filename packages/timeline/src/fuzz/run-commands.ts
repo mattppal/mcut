@@ -28,6 +28,7 @@ export interface RunResult {
 export interface RunCommandOptions {
   engine?: EditorEngine
   known?: readonly KnownFailure[]
+  onApplied?: (command: FuzzCommand, before: Project, after: Project) => void
 }
 
 type Outcome = { kind: 'applied'; project: Project } | { kind: 'rejected'; error: CommandError } | { kind: 'threw'; error: unknown }
@@ -67,6 +68,7 @@ export function runCommandPlan(plan: Plan, options: RunCommandOptions = {}): Run
 
     applied++
     const after = outcome.project
+    options.onApplied?.(command, before, after)
     const violations = checkProjectInvariants(after)
     if (after !== before) {
       engine.undo()

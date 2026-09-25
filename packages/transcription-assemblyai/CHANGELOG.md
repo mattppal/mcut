@@ -1,5 +1,19 @@
 # @mcut/transcription-assemblyai
 
+## 1.0.0-alpha.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.14
+
+## 1.0.0-alpha.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.13
+
 ## 1.0.0-alpha.12
 
 ### Patch Changes

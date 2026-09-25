@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError } from './commands'
 import { createProject, type Project, type VideoElement } from './model'
 import { getElement } from './selectors'
-import { getAverageSpeed, getSourceSpanMs, getSourceTimeMs, getSpeedAt, makeConstantSpeedMap, splitTimeMap, timeMapSchema } from './speed'
+import { getAverageSpeed, getLocalTimeMs, getSourceSpanMs, getSourceTimeMs, getSpeedAt, makeConstantSpeedMap, splitTimeMap, timeMapSchema } from './speed'
 
 function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
   let project = createProject({ name: 'speed' })
@@ -74,6 +74,54 @@ describe('source time mapping', () => {
     expect(getSourceTimeMs(el, 1250)).toBe(1500)
     expect(getSpeedAt(el, 1250)).toBe(0)
     expect(getSpeedAt(el, 500)).toBeCloseTo(1, 5)
+  })
+})
+
+describe('local time from source time', () => {
+  const base = { startMs: 0, durationMs: 2000, trimStartMs: 500 }
+
+  test('without a map it subtracts the trim and clamps to the clip', () => {
+    expect(getLocalTimeMs(base, 750)).toBe(250)
+    expect(getLocalTimeMs(base, 100)).toBe(0)
+    expect(getLocalTimeMs(base, 9000)).toBe(2000)
+  })
+
+  test('reversed clips count back from the end of the window', () => {
+    const el = { ...base, reversed: true }
+    expect(getLocalTimeMs(el, 2500)).toBe(0)
+    expect(getLocalTimeMs(el, 1000)).toBe(1500)
+    expect(getSourceTimeMs(el, 1500)).toBe(1000)
+  })
+
+  test('a 2x map lands halfway in local time', () => {
+    const el = { ...base, timeMap: makeConstantSpeedMap(2000, 2) }
+    expect(getLocalTimeMs(el, 2500)).toBeCloseTo(1000, 2)
+    expect(getLocalTimeMs(el, 4500)).toBe(2000)
+  })
+
+  test('a freeze resolves to the first local moment that reaches the source time', () => {
+    const el = {
+      ...base,
+      timeMap: [
+        { timeMs: 0, value: 0 },
+        { timeMs: 1000, value: 1000 },
+        { timeMs: 1500, value: 1000 },
+        { timeMs: 2000, value: 1500 },
+      ],
+    }
+    expect(getLocalTimeMs(el, 1500)).toBeCloseTo(1000, 2)
+    expect(getLocalTimeMs(el, 1750)).toBeCloseTo(1750, 2)
+  })
+
+  test('an eased ramp round-trips through getSourceTimeMs', () => {
+    const el = {
+      ...base,
+      timeMap: [
+        { timeMs: 0, value: 0, easing: 'easeInOut' as const },
+        { timeMs: 2000, value: 3000 },
+      ],
+    }
+    expect(getSourceTimeMs(el, getLocalTimeMs(el, 1700))).toBeCloseTo(1700, 1)
   })
 })
 

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "p-talking-head",
   "name": "Talking head",
   "width": 1920,
@@ -41,6 +41,8 @@
           "durationMs": 90000,
           "assetId": "a-camera",
           "trimStartMs": 0,
+          "volume": 1,
+          "muted": false,
           "transform": {
             "x": 0,
             "y": 0,
@@ -48,9 +50,7 @@
             "scaleY": 1,
             "rotation": 0
           },
-          "opacity": 1,
-          "volume": 1,
-          "muted": false
+          "opacity": 1
         }
       ]
     }

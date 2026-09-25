@@ -4,7 +4,6 @@ import { Trash2Icon } from '@/lib/icons'
 import { useEditor, usePlayback, useProject, useSelectedElement } from '@mcut/react'
 import { getElementDisplaySize, getElementNaturalSize, getTransformForDisplaySize } from '@mcut/compositor'
 import {
-  DEFAULT_SHADOW,
   getElement,
   getGroupedElementIds,
   getAnimatedValue,
@@ -454,10 +453,7 @@ export function PropertiesPanel({ className }: { className?: string }) {
                 const patchValues: Record<string, unknown> = {}
                 if (preset.cornerRadius !== undefined) patchValues.cornerRadius = preset.cornerRadius
                 if (preset.stroke !== undefined) patchValues.stroke = preset.stroke ?? undefined
-                if (preset.shadow !== undefined) {
-                  patchValues.shadow =
-                    preset.shadow === true ? { ...DEFAULT_SHADOW } : preset.shadow === false || preset.shadow === null ? undefined : preset.shadow
-                }
+                if (preset.shadow !== undefined) patchValues.shadow = preset.shadow ?? undefined
                 patch(patchValues)
               }}
             />

@@ -174,8 +174,8 @@ describe('voice', () => {
         startMs: 8000,
         durationMs: 4000,
         sources: [
-          { key: 'screen', assetId: 'a-vid', trimStartMs: 0 },
-          { key: 'camera', assetId: 'a-cam', trimStartMs: 0 },
+          { key: 'screen', assetId: 'a-vid' },
+          { key: 'camera', assetId: 'a-cam' },
         ],
         angles: [{ atMs: 0, layoutId: 'lay-1' }],
         audioSource: 'camera',
@@ -189,7 +189,7 @@ describe('voice', () => {
         id: 'e-quiet',
         startMs: 12_000,
         durationMs: 2000,
-        sources: [{ key: 'screen', assetId: 'a-vid', trimStartMs: 0 }],
+        sources: [{ key: 'screen', assetId: 'a-vid' }],
         angles: [{ atMs: 0, layoutId: 'lay-1' }],
       },
     })

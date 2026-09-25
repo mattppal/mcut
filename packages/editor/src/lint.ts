@@ -1,4 +1,4 @@
-import { getProjectDurationMs, type Project, type TimelineElement, type Track } from '@mcut/timeline'
+import { getElementAssetIds, getProjectDurationMs, getVisibleAngleCuts, type Project, type TimelineElement, type Track } from '@mcut/timeline'
 
 export interface LintIssue {
   severity: 'error' | 'warning'
@@ -54,8 +54,8 @@ interface Reporters {
 }
 
 function lintElement(project: Project, track: Track, element: TimelineElement, sorted: TimelineElement[], index: number, { error, warn }: Reporters): void {
-  if ('assetId' in element && !project.assets[element.assetId]) {
-    error('missing-asset', `element "${element.id}" references missing asset "${element.assetId}"`)
+  for (const assetId of getElementAssetIds(element)) {
+    if (!project.assets[assetId]) error('missing-asset', `element "${element.id}" references missing asset "${assetId}"`)
   }
 
   if ('keyframes' in element && element.keyframes) {
@@ -87,20 +87,9 @@ function lintElement(project: Project, track: Track, element: TimelineElement, s
   }
 
   if (element.type === 'multicam') {
-    if (element.angles.length === 0 || element.angles[0]!.atMs !== 0) {
-      error('multicam-first-angle', `multicam "${element.id}" must have an angle cut at 0ms`)
-    }
-    for (const angle of element.angles) {
-      if (!project.layouts.some((layout) => layout.id === angle.layoutId)) {
-        error('missing-layout', `multicam "${element.id}" cuts to unknown layout "${angle.layoutId}" at ${angle.atMs}ms`)
-      }
-      if (angle.atMs >= element.durationMs) {
-        warn('angle-beyond-end', `multicam "${element.id}" has an angle cut at ${angle.atMs}ms, at or beyond its ` + `${element.durationMs}ms duration`)
-      }
-    }
-    for (const source of element.sources) {
-      if (!project.assets[source.assetId]) {
-        error('missing-asset', `multicam "${element.id}" source "${source.key}" references missing asset "${source.assetId}"`)
+    for (const cut of getVisibleAngleCuts(element)) {
+      if (!project.layouts.some((layout) => layout.id === cut.layoutId)) {
+        error('missing-layout', `multicam "${element.id}" cuts to unknown layout "${cut.layoutId}" at ${Math.round(cut.localMs)}ms`)
       }
     }
     if (element.audioSource !== undefined && !element.sources.some((source) => source.key === element.audioSource)) {

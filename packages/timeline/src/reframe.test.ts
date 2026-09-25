@@ -33,7 +33,7 @@ function projectWithClips(): Project {
 }
 
 function withMulticam(project: Project): Project {
-  return applyCommand(project, { type: 'createMulticam', elementIds: ['e-screen', 'e-cam'], multicamId: 'e-mc' })
+  return applyCommand(project, { type: 'createMulticam', sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }], multicamId: 'e-mc' })
 }
 
 function video(project: Project, id: `e-${string}`): VideoElement {
@@ -142,12 +142,12 @@ describe('getReframeCenter', () => {
     expect(getReframeCenter(fast, undefined, 2500)).toEqual({ x: 0.5, y: 0.375 })
   })
 
-  test('a multicam source reads its own track through its sync trim', () => {
+  test('a multicam source reads its own track through its sync offset', () => {
     let project = withMulticam(projectWithClips())
-    project = applyCommand(project, { type: 'setMulticamSourceTrim', elementId: 'e-mc', sourceKey: 'camera', trimStartMs: 1000 })
+    project = applyCommand(project, { type: 'setMulticamSourceOffset', elementId: 'e-mc', sourceKey: 'camera', offsetMs: 1000 })
     project = applyCommand(project, { type: 'setReframe', elementId: 'e-mc', source: 'camera', track })
-    expect(multicam(project).startMs).toBe(0)
-    expect(getReframeCenter(multicam(project), 'camera', 500)).toEqual({ x: 0.5, y: 0.375 })
+    expect(multicam(project).startMs).toBe(2000)
+    expect(getReframeCenter(multicam(project), 'camera', 2000)).toEqual({ x: 0.5, y: 0.375 })
     expect(getReframeCenter(multicam(project), 'screen', 500)).toBeNull()
   })
 })

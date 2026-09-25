@@ -95,6 +95,13 @@ const failure = (value: string) => ({ ...text(value), isError: true })
 const targetProject = async (target: McutMcpTarget): Promise<Project> => parseProject(await target.getProject())
 
 const savedLayoutArgs = z.object({ layout: z.object({ id: z.string() }) })
+const resizedSlotArgs = z.object({ layoutId: z.string() })
+
+function changedLayoutId(name: string, args: unknown): string | undefined {
+  if (name === 'saveLayout') return savedLayoutArgs.safeParse(args).data?.layout.id
+  if (name === 'resizeLayoutSlot') return resizedSlotArgs.safeParse(args).data?.layoutId
+  return undefined
+}
 
 type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure> | ReturnType<typeof frameContent>
 
@@ -366,7 +373,7 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
         const result = await target.runOperator(operatorId, args ?? {})
         return text(`${withResult(`OK: operator ${operatorId} applied.`, result)}\n\n${await target.getSummary()}`)
       }
-      const layoutId = name === 'saveLayout' ? savedLayoutArgs.safeParse(args).data?.layout.id : undefined
+      const layoutId = changedLayoutId(name, args)
       const before = layoutId ? await targetProject(target) : null
       await target.dispatchCommand(name, args ?? {})
       const change = before && layoutId ? describeLayoutChange(before, await targetProject(target), layoutId) : []

@@ -128,7 +128,11 @@ describe('planCenterPerson', () => {
   })
 
   test('a multicam source keeps the raw face center, gets no crop, and ignores fill', () => {
-    const project = applyCommand(projectWithCamera(), { type: 'createMulticam', elementIds: ['e-screen', 'e-cam'], multicamId: 'e-mc' })
+    const project = applyCommand(projectWithCamera(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
     expect(
       planCenterPerson(
         project,

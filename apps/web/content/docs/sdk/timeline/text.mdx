@@ -55,6 +55,14 @@ type Stroke = z.infer<typeof strokeSchema>
 
 An outline as inferred from `strokeSchema`.
 
+### FrameStyle
+
+```ts
+type FrameStyle = z.infer<typeof frameStyleSchema>
+```
+
+A frame style as inferred from `frameStyleSchema`.
+
 ### CaptionStylePreset
 
 ```ts
@@ -133,6 +141,19 @@ const strokeSchema = z.object({
 ```
 
 Zod schema for an outline drawn on the owner's silhouette, a color defaulting to black and a positive width.
+
+### frameStyleSchema
+
+```ts
+const frameStyleSchema = z.object({
+  crop: cropSchema.optional(),
+  cornerRadius: z.number().min(0).max(0.5).optional(),
+  stroke: strokeSchema.optional(),
+  shadow: shadowSchema.optional(),
+})
+```
+
+Zod schema for the frame around a piece of media, shared by video, image, and multicam elements and by layout slots. The crop picks the source region, the corner radius is a fraction of the frame's shorter side, the stroke is an inside border, and the shadow is filled behind the frame.
 
 ## Constants
 

@@ -12,6 +12,8 @@ const isFullFrame = (slot: LayoutSlot): boolean => slot.rect.w >= 0.99 && slot.r
 
 const inBottomRight = (slot: LayoutSlot): boolean => slot.rect.w < 0.5 && slot.rect.x + slot.rect.w / 2 > 0.5 && slot.rect.y + slot.rect.h / 2 > 0.5
 
+const shadowOf = (slot: LayoutSlot): string => (slot.shadow === undefined ? 'none' : JSON.stringify(slot.shadow))
+
 function headOverlays(project: Project): LayoutSlot[] {
   const used = new Set(multicamOf(project)?.angles.map((angle) => angle.layoutId) ?? [])
   return project.layouts
@@ -172,17 +174,15 @@ const RULES: CheckRule[] = [
     /^head overlay styled$/,
     ({ after }) => {
       const overlays = headOverlays(after)
-      const styled = overlays.filter(
-        (slot) =>
-          slot.cornerRadius >= STYLED_RADIUS.min &&
-          slot.cornerRadius <= STYLED_RADIUS.max &&
-          slot.shadow &&
-          (slot.stroke === undefined || slot.stroke.width === 0),
-      )
+      const styled = overlays.filter((slot) => {
+        const radius = slot.cornerRadius ?? 0
+        return radius >= STYLED_RADIUS.min && radius <= STYLED_RADIUS.max && slot.shadow !== undefined && (slot.stroke === undefined || slot.stroke.width === 0)
+      })
       const detail =
         overlays
           .map(
-            (slot) => `${slot.source} cornerRadius ${slot.cornerRadius} shadow ${slot.shadow} stroke ${slot.stroke === undefined ? 'none' : slot.stroke.width}`,
+            (slot) =>
+              `${slot.source} cornerRadius ${slot.cornerRadius ?? 0} shadow ${shadowOf(slot)} stroke ${slot.stroke === undefined ? 'none' : slot.stroke.width}`,
           )
           .join('; ') || 'no overlay slot in a used layout'
       return outcome(overlays.length > 0 && styled.length === overlays.length, detail, detail)
@@ -242,7 +242,7 @@ const RULES: CheckRule[] = [
       const overlays = headOverlays(after)
       const bordered = overlays.filter((slot) => slot.stroke !== undefined && slot.stroke.width > 0)
       const detail = overlays
-        .map((slot) => `${slot.source} stroke ${slot.stroke === undefined ? 'none' : JSON.stringify(slot.stroke)} shadow ${slot.shadow}`)
+        .map((slot) => `${slot.source} stroke ${slot.stroke === undefined ? 'none' : JSON.stringify(slot.stroke)} shadow ${shadowOf(slot)}`)
         .join('; ')
       return outcome(overlays.length > 0 && bordered.length === 0, detail, overlays.length === 0 ? 'no overlay slot in a used layout' : detail)
     },

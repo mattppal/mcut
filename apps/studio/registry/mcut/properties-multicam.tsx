@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useEditor } from '@mcut/react'
-import { TRANSITION_TYPES, transitionTypeSchema, type BuiltinCommand, type TimelineElement } from '@mcut/timeline'
+import { getVisibleAngleCuts, TRANSITION_TYPES, transitionTypeSchema, type BuiltinCommand, type TimelineElement } from '@mcut/timeline'
 import { findSyncOffsetMs } from '@mcut/media'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -10,12 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from './editor-primitives'
 import { NumberField, Section } from './inspector-fields'
 
-function trimCompensatingALaterStart(referenceTrimStartMs: number, startedAfterReferenceMs: number): number {
-  return referenceTrimStartMs - startedAfterReferenceMs
+function offsetCompensatingALaterStart(referenceOffsetMs: number, startedAfterReferenceMs: number): number {
+  return referenceOffsetMs - startedAfterReferenceMs
 }
 
-function liftThatKeepsEveryTrimNonNegative(trims: Iterable<number>): number {
-  return Math.max(0, -Math.min(...trims))
+function liftThatKeepsEveryOffsetNonNegative(offsets: Iterable<number>): number {
+  return Math.max(0, -Math.min(...offsets))
 }
 
 export function MulticamSection({ element }: { element: TimelineElement & { type: 'multicam' } }) {
@@ -37,7 +37,7 @@ export function MulticamSection({ element }: { element: TimelineElement & { type
       const reference = element.sources[0]!
       const referenceAsset = assets[reference.assetId]
       if (!referenceAsset) throw new Error('Reference media is missing')
-      const trims = new Map<string, number>([[reference.key, reference.trimStartMs]])
+      const offsets = new Map<string, number>([[reference.key, reference.offsetMs]])
       let lowConfidence = false
       for (const source of element.sources.slice(1)) {
         const asset = assets[source.assetId]
@@ -45,16 +45,16 @@ export function MulticamSection({ element }: { element: TimelineElement & { type
         const result = await findSyncOffsetMs(referenceAsset.src, asset.src)
         if (!result) throw new Error(`"${source.key}" has no audio track to sync with`)
         if (result.confidence < 1.3) lowConfidence = true
-        trims.set(source.key, trimCompensatingALaterStart(reference.trimStartMs, result.offsetMs))
+        offsets.set(source.key, offsetCompensatingALaterStart(reference.offsetMs, result.offsetMs))
       }
-      const lift = liftThatKeepsEveryTrimNonNegative(trims.values())
+      const lift = liftThatKeepsEveryOffsetNonNegative(offsets.values())
       engine.transact(() => {
-        for (const [sourceKey, trimStartMs] of trims) {
+        for (const [sourceKey, offsetMs] of offsets) {
           dispatch({
-            type: 'setMulticamSourceTrim',
+            type: 'setMulticamSourceOffset',
             elementId: element.id,
             sourceKey,
-            trimStartMs: Math.round(trimStartMs + lift),
+            offsetMs: Math.round(offsetMs + lift),
           })
         }
       })
@@ -68,6 +68,7 @@ export function MulticamSection({ element }: { element: TimelineElement & { type
     }
   }
 
+  const cutCount = getVisibleAngleCuts(element).length
   const roleOptions = Array.from(
     new Set([...engine.project.layouts.flatMap((layout) => layout.slots.map((slot) => slot.source)), ...element.sources.map((source) => source.key)]),
   )
@@ -141,16 +142,16 @@ export function MulticamSection({ element }: { element: TimelineElement & { type
         <NumberField
           key={source.key}
           label={`${source.key} sync`}
-          value={source.trimStartMs / 1000}
+          value={source.offsetMs / 1000}
           step={0.05}
           min={0}
           unit="s"
           onCommit={(seconds) =>
             dispatch({
-              type: 'setMulticamSourceTrim',
+              type: 'setMulticamSourceOffset',
               elementId: element.id,
               sourceKey: source.key,
-              trimStartMs: Math.round(seconds * 1000),
+              offsetMs: Math.round(seconds * 1000),
             })
           }
         />
@@ -210,8 +211,8 @@ export function MulticamSection({ element }: { element: TimelineElement & { type
         />
       )}
       <p className="text-2xs text-muted-foreground">
-        {element.angles.length} cut{element.angles.length === 1 ? '' : 's'} — switch with 1–9 in Multicam mode (cuts while playing, corrects while paused). The
-        cut style applies to every switch.
+        {cutCount} cut{cutCount === 1 ? '' : 's'} — switch with 1–9 in Multicam mode (cuts while playing, corrects while paused). The cut style applies to every
+        switch.
       </p>
       <Button variant="outline" size="xs" onClick={() => dispatch({ type: 'flattenMulticam', elementId: element.id })}>
         Flatten to plain clips

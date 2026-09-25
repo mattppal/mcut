@@ -7,7 +7,7 @@ import { getActiveAngleIndex, type Layout, type MulticamElement, type Project } 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { PanelSectionLabel } from './editor-primitives'
-import { findTargetMulticam, switchToLayout } from './multicam-ui'
+import { findTargetMulticam, multicamSourcesInSelection, switchToLayout } from './multicam-ui'
 import { useEditorUI } from './editor-ui'
 
 const TILE_FPS_MS = 120
@@ -108,7 +108,7 @@ export function LayoutBank({ className }: { className?: string }) {
           disabled={count === 0}
           onClick={() => {
             try {
-              engine.dispatch({ type: 'createMulticam', elementIds: selectedVideos })
+              engine.dispatch({ type: 'createMulticam', sources: multicamSourcesInSelection(project, selection.elementIds) })
             } catch {}
           }}
         >
