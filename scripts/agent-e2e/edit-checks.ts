@@ -1,4 +1,5 @@
 import { getProjectDurationMs, type Keyframe, type LayoutSlot, type MulticamElement, type Project, type TimelineElement } from '@mcut/timeline'
+import { sampleOverlay } from './export-frames'
 import type { ToolCall } from './types'
 
 export interface CheckInput {
@@ -23,6 +24,8 @@ type Test = (input: CheckInput, match: RegExpExecArray) => Outcome
 export class UnknownCheckError extends Error {}
 
 const SUBTLE_ZOOM_MAX = 1.35
+const SHADOW_MIN_DELTA = 8
+const STYLED_RADIUS = { min: 0.04, max: 0.12 }
 const OPENING_WINDOW_MS = 2_000
 const HOLD_MIN_MS = 500
 
@@ -97,6 +100,11 @@ function zooms(project: Project): Zoom[] {
 }
 
 const labels = (list: Zoom[]): string => list.map((zoom) => zoom.label).join('; ')
+
+function addedZooms(before: Project, after: Project): Zoom[] {
+  const existing = new Set(zooms(before).map((zoom) => zoom.label))
+  return zooms(after).filter((zoom) => !existing.has(zoom.label))
+}
 
 function multicamOf(project: Project): MulticamElement | undefined {
   return ofType(project, 'multicam')[0]
@@ -236,6 +244,35 @@ const RULES: [RegExp, Test][] = [
     },
   ],
   [
+    /^head overlay styled$/,
+    ({ after }) => {
+      const overlays = headOverlays(after)
+      const styled = overlays.filter((slot) => slot.cornerRadius >= STYLED_RADIUS.min && slot.cornerRadius <= STYLED_RADIUS.max && slot.shadow && (slot.stroke === undefined || slot.stroke.width === 0))
+      const detail = overlays.map((slot) => `${slot.source} cornerRadius ${slot.cornerRadius} shadow ${slot.shadow} stroke ${slot.stroke === undefined ? 'none' : slot.stroke.width}`).join('; ') || 'no overlay slot in a used layout'
+      return outcome(overlays.length > 0 && styled.length === overlays.length, detail, detail)
+    },
+  ],
+  [
+    /^exported overlay styled$/,
+    ({ after, calls }) => {
+      const done = calls.find((call) => call.name === 'get_export' && !call.isError && /"state":\s*"done"/.test(call.result))
+      const path = done === undefined ? undefined : /"outputPath":\s*"([^"]+)"/.exec(done.result)?.[1]
+      const multicam = multicamOf(after)
+      if (path === undefined || multicam === undefined) return { pass: false, detail: path === undefined ? 'no finished export to sample' : 'no multicam element' }
+      const spans = multicam.angles
+        .map((angle, index) => ({ angle, endMs: multicam.angles[index + 1]?.atMs ?? multicam.durationMs }))
+        .map(({ angle, endMs }) => ({ midMs: multicam.startMs + (angle.atMs + endMs) / 2, slot: after.layouts.find((layout) => layout.id === angle.layoutId && layout.slots.some(isFullFrame))?.slots.find(inBottomRight) }))
+        .filter((span): span is { midMs: number; slot: LayoutSlot } => span.slot !== undefined)
+        .slice(0, 3)
+      if (spans.length === 0) return { pass: false, detail: 'no screen plus head span to sample' }
+      const samples = spans.map((span) => sampleOverlay(path, span.midMs, span.slot, after.width, after.height))
+      const rounded = samples.filter((sample) => sample.rounded).length
+      const shadowed = samples.filter((sample) => sample.shadowDelta >= SHADOW_MIN_DELTA).length
+      const detail = samples.map((sample) => `${(sample.timeMs / 1000).toFixed(1)}s corner ${sample.cornerContrast.toFixed(0)} shadow ${sample.shadowDelta.toFixed(0)}`).join(', ')
+      return outcome(rounded * 2 > samples.length && shadowed * 2 > samples.length, `rounded ${rounded}/${samples.length}, shadow ${shadowed}/${samples.length}. ${detail}`, `rounded ${rounded}/${samples.length}, shadow ${shadowed}/${samples.length}. ${detail}`)
+    },
+  ],
+  [
     /^head overlay without border$/,
     ({ after }) => {
       const overlays = headOverlays(after)
@@ -270,10 +307,10 @@ const RULES: [RegExp, Test][] = [
   ],
   [
     /^zoom in hold out$/,
-    ({ after }) => {
-      const found = zooms(after)
+    ({ before, after }) => {
+      const found = addedZooms(before, after)
       const hits = found.filter((zoom) => zoom.ratio > 1 && zoom.holdMs >= HOLD_MIN_MS && zoom.returns)
-      return outcome(hits.length > 0, `in, hold, out on ${labels(hits)}`, found.length > 0 ? `no zoom holds and returns. ${labels(found)}` : 'no zoom')
+      return outcome(hits.length > 0, `in, hold, out on ${labels(hits)}`, found.length > 0 ? `no new zoom holds and returns. ${labels(found)}` : 'no new zoom in this step')
     },
   ],
   [
@@ -302,12 +339,12 @@ const RULES: [RegExp, Test][] = [
   ],
   [
     /^zoom on screen source$/,
-    ({ after }) => {
+    ({ before, after }) => {
       const multicam = multicamOf(after)
       const screenKeys = new Set(multicam?.sources.filter((source) => /screen|tscc/i.test(`${source.key} ${after.assets[source.assetId]?.name ?? ''}`)).map((source) => source.key) ?? [])
-      const found = zooms(after).filter((zoom) => zoom.ratio > 1)
+      const found = addedZooms(before, after).filter((zoom) => zoom.ratio > 1)
       const onScreen = found.filter((zoom) => zoom.source !== undefined && screenKeys.has(zoom.source))
-      return outcome(found.length > 0 && onScreen.length === found.length, `every zoom targets the screen source. ${labels(onScreen)}`, found.length === 0 ? 'no zoom' : `${found.length - onScreen.length} zoom(s) scale the whole composite or the camera. ${labels(found)}`)
+      return outcome(found.length > 0 && onScreen.length === found.length, `every zoom targets the screen source. ${labels(onScreen)}`, found.length === 0 ? 'no new zoom in this step' : `${found.length - onScreen.length} zoom(s) scale the whole composite or the camera. ${labels(found)}`)
     },
   ],
   [
@@ -317,21 +354,6 @@ const RULES: [RegExp, Test][] = [
       const probed = assets.filter((asset) => asset.kind === 'image' || (asset.durationMs ?? 0) > 0)
       const names = assets.map((asset) => `${asset.name ?? asset.id} (${asset.kind}, ${asset.durationMs ?? 'unprobed'} ms, ${asset.src.slice(0, 40)})`)
       return outcome(probed.length >= Number(match[1]), names.join(', '), names.length === 0 ? 'no assets' : names.join(', '))
-    },
-  ],
-  [
-    /^more elements$/,
-    ({ before, after }) => {
-      const detail = `${elements(before).length} to ${elements(after).length} elements`
-      return outcome(elements(after).length > elements(before).length, detail, detail)
-    },
-  ],
-  [
-    /^action (\S+)$/,
-    ({ calls }, match) => {
-      const runs = calls.filter((call) => call.name === 'run_action' && call.args.actionId === match[1])
-      const ok = runs.find((call) => !call.isError)
-      return outcome(ok !== undefined, ok?.result.slice(0, 160) ?? '', runs[0] !== undefined ? `failed. ${runs[0].result.slice(0, 160)}` : `run_action ${match[1]} was never called`)
     },
   ],
   [
