@@ -1,5 +1,18 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.16
+
+### Minor Changes
+
+- [#180](https://github.com/mattppal/mcut/pull/180) [`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928) Thanks [@mattppal](https://github.com/mattppal)! - Add the `center_person` MCP tool. In a live bridge session it finds the face on device in the connected editor and keeps the person in frame as one undoable edit, on a video crop or on one multicam source, which defaults to `camera`. On a video whose crop matches the project aspect within 1%, it also scales the clip to fill the frame, and the optional `fill` input forces or disables that. It returns the target, the sample and key counts, the source range the keys cover, and whether it filled the frame. The live bridge waits for it as long as for `ensure_transcript`, and a headless server rejects it with a message that a live bridge is required. `McutMcpTarget` gains an optional `centerPerson` method.
+
+### Patch Changes
+
+- Updated dependencies [[`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928)]:
+  - @mcut/timeline@0.1.0-alpha.10
+  - @mcut/editor@0.1.0-alpha.10
+  - @mcut/transcription@0.1.0-alpha.11
+
 ## 0.1.0-alpha.15
 
 ### Minor Changes
