@@ -165,7 +165,7 @@ Zod schema for a project marker, a named point on the time ruler with an optiona
 const multicamElementSchema = composeFull('multicam', multicamShape)
 ```
 
-Zod schema for a multicam element, the shared id and timing fields plus synced sources, angle cuts, angle transition, audio source, time map, transform, audio fields, and an optional voice mix.
+Zod schema for a multicam element, the shared id and timing fields plus synced sources, angle cuts on the source clock, angle transition, audio source, trim, time map, reversal, transform, opacity, audio fields, an optional voice mix, visual effects, and frame styling. It is a media clip like a video element, and its trim, time map, and reversal read the source clock that every source shares.
 
 ### projectSchema
 

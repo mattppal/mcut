@@ -1,6 +1,7 @@
 import { assertNever } from './errors'
-import type { Layout, LayoutSlot } from './layouts'
+import type { Layout, LayoutSlot, SlotAnchor } from './layouts'
 import type { Project } from './model'
+import { FRAME_STYLE_FIELDS, type FrameStyle } from './style'
 
 type SlotRole = 'full-frame' | 'overlay' | 'panel'
 
@@ -23,7 +24,7 @@ function coversFrame(slot: LayoutSlot): boolean {
   return x <= 0 && y <= 0 && x + w >= 1 && y + h >= 1
 }
 
-function slotRole(layout: Layout, index: number): SlotRole {
+export function slotRole(layout: Layout, index: number): SlotRole {
   const slot = layout.slots[index]
   if (slot === undefined || coversFrame(slot)) return 'full-frame'
   return layout.slots.slice(0, index).some(coversFrame) ? 'overlay' : 'panel'
@@ -37,10 +38,67 @@ function layoutRole(layout: Layout): string {
   return 'split'
 }
 
-function corner(slot: LayoutSlot): string {
+function corner(slot: LayoutSlot): Exclude<SlotAnchor, 'center'> {
   const cx = slot.rect.x + slot.rect.w / 2
   const cy = slot.rect.y + slot.rect.h / 2
   return `${cy < 0.5 ? 'top' : 'bottom'}-${cx < 0.5 ? 'left' : 'right'}`
+}
+
+export function defaultSlotAnchor(layout: Layout, index: number): SlotAnchor {
+  const slot = layout.slots[index]
+  return slot !== undefined && slotRole(layout, index) === 'overlay' ? corner(slot) : 'center'
+}
+
+function cornerWarnings(prev: Layout, next: Layout): string[] {
+  return next.slots.flatMap((slot, i) => {
+    const j = prev.slots.findIndex((s) => s.source === slot.source)
+    const old = prev.slots[j]
+    if (old === undefined || slotRole(prev, j) !== 'overlay' || slotRole(next, i) !== 'overlay' || corner(old) === corner(slot)) return []
+    return [`Warning: ${slot.source} moved from ${corner(old)} to ${corner(slot)}. Use resizeLayoutSlot to change size or aspect in place.`]
+  })
+}
+
+type Fields = Record<string, string | number>
+
+const fieldsText = (value: Fields) =>
+  Object.entries(value)
+    .map(([key, field]) => `${key} ${field}`)
+    .join(', ')
+
+function fieldsChange<T extends Fields>(label: string, old: T | undefined, next: T | undefined, text: (value: T) => string = fieldsText): string[] {
+  if (old === undefined) return next === undefined ? [] : [`${label} added (${text(next)})`]
+  if (next === undefined) return [`${label} removed`]
+  return Object.keys(next)
+    .filter((key) => old[key] !== next[key])
+    .map((key) => `${label} ${key} ${old[key]} → ${next[key]}`)
+}
+
+const STYLE_CHANGES: Record<keyof FrameStyle, (old: FrameStyle, next: FrameStyle) => string[]> = {
+  crop: (old, next) => fieldsChange('crop', old.crop, next.crop),
+  cornerRadius: ({ cornerRadius: from = 0 }, { cornerRadius: to = 0 }) => (from === to ? [] : [`corner radius ${from} → ${to}`]),
+  stroke: (old, next) => fieldsChange('stroke', old.stroke, next.stroke, (stroke) => `${stroke.width} px ${stroke.color}`),
+  shadow: (old, next) => fieldsChange('shadow', old.shadow, next.shadow),
+}
+
+function styleChanges(old: LayoutSlot, next: LayoutSlot): string[] {
+  const fit = old.fit === next.fit ? [] : [`fit ${old.fit} → ${next.fit}`]
+  return [...fit, ...FRAME_STYLE_FIELDS.flatMap((key) => STYLE_CHANGES[key](old, next))]
+}
+
+function lostStyleWarnings(prev: Layout, next: Layout): string[] {
+  return next.slots.flatMap((slot, i) => {
+    const old = prev.slots.find((s) => s.source === slot.source)
+    if (old === undefined || slotRole(next, i) !== 'overlay') return []
+    const lostRadius = (old.cornerRadius ?? 0) > 0 && (slot.cornerRadius ?? 0) === 0
+    const lostShadow = old.shadow !== undefined && slot.shadow === undefined
+    const lost = [lostRadius && 'corner radius', lostShadow && 'shadow'].filter((name) => name !== false)
+    if (lost.length === 0) return []
+    const restore = { source: slot.source, ...(lostRadius && { cornerRadius: old.cornerRadius }), ...(lostShadow && { shadow: old.shadow }) }
+    return [
+      `Warning: the ${slot.source} overlay lost its ${lost.join(' and ')}. ` +
+        `To restore ${lost.length > 1 ? 'them' : 'it'}, save this layout with ${JSON.stringify(restore)} as the ${slot.source} slot.`,
+    ]
+  })
 }
 
 function pixels(slot: LayoutSlot, frame: Frame): string {
@@ -95,18 +153,20 @@ export function describeLayoutChange(before: Project, after: Project, layoutId: 
       return
     }
     const was = describeSlot(prev, prev.slots.indexOf(old), before)
+    const style = styleChanges(old, slot)
     if (was === now) {
       const moved = old.rect.x !== slot.rect.x || old.rect.y !== slot.rect.y
-      const restyled = JSON.stringify({ ...old, rect: null }) !== JSON.stringify({ ...slot, rect: null })
-      const change = [moved && `moved from x ${old.rect.x}, y ${old.rect.y} to x ${slot.rect.x}, y ${slot.rect.y}`, restyled && 'restyled'].filter(Boolean)
+      const change = [...(moved ? [`moved from x ${old.rect.x}, y ${old.rect.y} to x ${slot.rect.x}, y ${slot.rect.y}`] : []), ...style]
       lines.push(`  ${now} (${change.length > 0 ? change.join(', ') : 'unchanged'})`)
       return
     }
-    lines.push(`  ${was} → ${now} (width ${percentChange(old.rect.w, slot.rect.w)}, height ${percentChange(old.rect.h, slot.rect.h)})`)
+    const resize = [`width ${percentChange(old.rect.w, slot.rect.w)}`, `height ${percentChange(old.rect.h, slot.rect.h)}`]
+    lines.push(`  ${was} → ${now} (${[...resize, ...style].join(', ')})`)
   })
   for (const slot of prev.slots) {
     if (!next.slots.some((s) => s.source === slot.source)) lines.push(`  removed ${slot.source} slot`)
   }
+  lines.push(...cornerWarnings(prev, next), ...lostStyleWarnings(prev, next))
   const [prevOnly] = prev.slots
   const [nextOnly] = next.slots
   if (prev.slots.length === 1 && next.slots.length === 1 && prevOnly && nextOnly && coversFrame(prevOnly) && !coversFrame(nextOnly)) {

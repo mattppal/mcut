@@ -54,7 +54,7 @@ function zoomedMulticam(): Project {
   project = applyCommand(project, { type: 'addTrack' })
   const top = project.tracks[1]?.id ?? base
   project = applyCommand(project, { type: 'addElement', trackId: top, element: { type: 'video', id: 'e-cam', assetId: 'a-cam', startMs: 0, durationMs: 5000 } })
-  project = applyCommand(project, { type: 'createMulticam', elementIds: ['e-screen', 'e-cam'], multicamId: 'e-mc' })
+  project = applyCommand(project, { type: 'createMulticam', sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }], multicamId: 'e-mc' })
   return applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { preset: 'subtlePunchIn', source: 'screen', atMs: 0 } })
 }
 

@@ -2,12 +2,12 @@
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useEditor, useEditorState, useWindowEvent } from '@mcut/react'
-import type { EditorEngine, Layout, LayoutSlot } from '@mcut/timeline'
+import type { CommandOfType, Crop, EditorEngine, Layout, LayoutSlot } from '@mcut/timeline'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useEditorUI } from './editor-ui'
-import { clamp, clamp01, roundTo } from './math'
-import { findTargetMulticam } from './multicam-ui'
+import { clamp, roundTo } from './math'
+import { findTargetMulticam, multicamSourceSize, panSlotWindow, slotCoverWindow } from './multicam-ui'
 
 const MIN_SIZE = 0.05
 const CLICK_SLOP_PX = 4
@@ -34,7 +34,9 @@ export function roundRect(rect: LayoutSlot['rect']): LayoutSlot['rect'] {
   }
 }
 
-export function saveLayoutSlot(engine: EditorEngine, layout: Layout, index: number, patch: Partial<LayoutSlot>, options?: { history?: boolean }): void {
+export type SlotEdit = Omit<CommandOfType<'saveLayout'>['layout']['slots'][number], 'source'>
+
+export function saveLayoutSlot(engine: EditorEngine, layout: Layout, index: number, patch: SlotEdit, options?: { history?: boolean }): void {
   try {
     engine.dispatch(
       {
@@ -122,33 +124,24 @@ function SlotBox({
     startX: number
     startY: number
     rect: LayoutSlot['rect']
-    focus: { x: number; y: number }
-    overflow: { x: number; y: number }
+    window: Crop | null
     container: DOMRect
     moved: boolean
   } | null>(null)
 
-  const save = (patch: Partial<LayoutSlot>) => saveLayoutSlot(engine, layout, index, patch)
+  const save = (patch: SlotEdit) => saveLayoutSlot(engine, layout, index, patch)
 
   const begin = (mode: 'move' | 'resize' | 'crop', event: ReactPointerEvent<HTMLElement>, handle: HandleId | null = null) => {
     event.stopPropagation()
     const container = (event.currentTarget.closest('[data-mcut-slot-editor]') as HTMLElement).getBoundingClientRect()
-    const overflow = { x: 0, y: 0 }
-    if (mode === 'crop' && sourceSize) {
-      const slotW = slot.rect.w * container.width
-      const slotH = slot.rect.h * container.height
-      const scale = Math.max(slotW / sourceSize.width, slotH / sourceSize.height)
-      overflow.x = sourceSize.width * scale - slotW
-      overflow.y = sourceSize.height * scale - slotH
-    }
+    const box = { width: slot.rect.w * engine.project.width, height: slot.rect.h * engine.project.height }
     dragRef.current = {
       mode,
       handle,
       startX: event.clientX,
       startY: event.clientY,
       rect: slot.rect,
-      focus: slot.focus ?? { x: 0.5, y: 0.5 },
-      overflow,
+      window: mode === 'crop' && sourceSize ? slotCoverWindow(slot, box, sourceSize) : null,
       container,
       moved: false,
     }
@@ -165,9 +158,12 @@ function SlotBox({
     if (!drag.moved) return
 
     if (drag.mode === 'crop') {
-      const fx = drag.overflow.x > 1 ? clamp01(drag.focus.x - dxPx / drag.overflow.x) : drag.focus.x
-      const fy = drag.overflow.y > 1 ? clamp01(drag.focus.y - dyPx / drag.overflow.y) : drag.focus.y
-      save({ focus: { x: roundTo(fx, 3), y: roundTo(fy, 3) } })
+      const view = drag.window
+      if (view) {
+        const x = view.x - (dxPx / (drag.rect.w * drag.container.width)) * view.w
+        const y = view.y - (dyPx / (drag.rect.h * drag.container.height)) * view.h
+        save({ crop: panSlotWindow(view, x, y) })
+      }
       return
     }
 
@@ -273,7 +269,7 @@ function SlotBox({
         top: `${slot.rect.y * 100}%`,
         width: `${slot.rect.w * 100}%`,
         height: `${slot.rect.h * 100}%`,
-        borderRadius: `${slot.cornerRadius * 100}%`,
+        borderRadius: `${(slot.cornerRadius ?? 0) * 100}%`,
       }}
       onPointerDown={(event) => begin(cropping ? 'crop' : 'move', event)}
       onPointerMove={onPointerMove}
@@ -354,11 +350,6 @@ function LayoutEditor({ layout }: { layout: Layout }) {
   )
 
   const target = findTargetMulticam(engine.project, selectedIds, engine.playback.state.currentTimeMs)
-  const sourceSize = (key: string) => {
-    const source = target?.element.sources.find((s) => s.key === key)
-    const asset = source ? engine.project.assets[source.assetId] : undefined
-    return asset?.width && asset?.height ? { width: asset.width, height: asset.height } : null
-  }
 
   const safe = safeAreaRect(engine.project.width, engine.project.height)
 
@@ -393,7 +384,7 @@ function LayoutEditor({ layout }: { layout: Layout }) {
           index={index}
           selected={editingSlotIndex === index}
           cropping={cropIndex === index}
-          sourceSize={sourceSize(slot.source)}
+          sourceSize={multicamSourceSize(engine.project, target?.element, slot.source)}
           onSelect={(i) => {
             setEditingSlotIndex(i)
             if (cropIndex !== null && cropIndex !== i) setCropIndex(null)

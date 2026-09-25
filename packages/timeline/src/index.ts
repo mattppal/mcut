@@ -17,7 +17,9 @@ export {
 
 export { getEffectiveVolume, getFadeGain, hasFades, type FadeableElement } from './audio'
 
-export { getVoiceSource, resolveElementAudioSource, type ElementAudioSource, type ElementAudioSourceType } from './audio-source'
+export { getVoiceSource, resolveElementAudioSource, type ElementAudioSource } from './audio-source'
+
+export { getElementAssetIds, getMediaSourceDurationMs, isMediaClip, type MediaClip } from './media-clip'
 
 export { migrateProject, ProjectFormatError, PROJECT_VERSION } from './migrations'
 
@@ -39,17 +41,19 @@ export {
   type TextRunStylePatch,
 } from './rich-text'
 
-export { cropSchema, DEFAULT_SHADOW, shadowSchema, strokeSchema, type Crop, type Shadow, type Stroke } from './style'
+export { cropSchema, DEFAULT_SHADOW, frameStyleSchema, shadowSchema, strokeSchema, type Crop, type FrameStyle, type Shadow, type Stroke } from './style'
 
 export {
   getActiveAngleIndex,
   getActiveLayout,
   getAngleTransitionAt,
-  getMulticamAudioSource,
+  getMulticamGroupTimeMs,
   getMulticamSourceTimeMs,
-  splitAngles,
+  getVisibleAngleCuts,
+  isAudioOnlySource,
   type AngleCut,
   type AngleTransitionWindow,
+  type VisibleAngleCut,
 } from './multicam'
 
 export { getFrameRequests, type FrameRequest } from './frame-requests'
@@ -120,6 +124,7 @@ export {
 
 export {
   getAverageSpeed,
+  getLocalTimeMs,
   getSourceSpanMs,
   getSourceTimeMs,
   getSpeedAt,

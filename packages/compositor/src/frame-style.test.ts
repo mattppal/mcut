@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { applyCommand, createProject, type Project } from '@mcut/timeline'
+import { applyCommand, createProject, type LayoutSlot, type Project } from '@mcut/timeline'
 import { getElementDisplaySize, getElementNaturalSize } from './geometry'
 import { renderFrame } from './render-frame'
 import { FakeContext2D } from './test-utils'
@@ -30,6 +30,31 @@ function projectWithVideo(patch: Record<string, unknown> = {}): Project {
 }
 
 const asCtx = (fake: FakeContext2D): Canvas2D => fake as unknown as Canvas2D
+
+function projectWithMulticam(size: { width: number; height: number }, slot: Partial<LayoutSlot>, element: object = {}): Project {
+  let project = createProject(size)
+  project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000 } })
+  const full = { x: 0, y: 0, w: 1, h: 1 }
+  project = applyCommand(project, { type: 'saveLayout', layout: { id: 'l-cam', name: 'Camera', slots: [{ source: 'camera', rect: full, ...slot }] } })
+  return applyCommand(project, {
+    type: 'addElement',
+    trackId: 't-default',
+    element: {
+      id: 'e-mc',
+      type: 'multicam',
+      startMs: 0,
+      durationMs: 5000,
+      sources: [{ key: 'camera', assetId: 'a-cam' }],
+      angles: [{ atMs: 0, layoutId: 'l-cam' }],
+      ...element,
+    },
+  })
+}
+
+const frameCalls = (fake: FakeContext2D) =>
+  fake.calls
+    .filter((c) => c.method === 'roundRect' || c.method === 'clip' || c.method === 'fill' || c.method === 'stroke')
+    .map((c) => (c.method === 'fill' ? { method: c.method, shadow: c.shadow } : { method: c.method, args: c.args }))
 
 describe('frame style rendering', () => {
   test('crop draws the kept source region into the shrunken frame', () => {
@@ -111,6 +136,83 @@ describe('frame style rendering', () => {
     const draw = ctx.callsTo('drawImage').at(-1)!
     expect(draw.args).toHaveLength(5)
     expect(ctx.callsTo('stroke')).toHaveLength(0)
+  })
+
+  test('a slot and a video clip with the same frame style draw the same frame', () => {
+    const style = {
+      cornerRadius: 0.1,
+      stroke: { color: '#ffffff', width: 4 },
+      shadow: { color: 'rgba(0,0,0,0.5)', blur: 20, offsetX: 0, offsetY: 8 },
+    }
+    const clip = new FakeContext2D()
+    renderFrame(asCtx(clip), projectWithVideo(style), 1000, { source: new FakeSource() })
+    const slot = new FakeContext2D()
+    renderFrame(asCtx(slot), projectWithMulticam({ width: 1280, height: 720 }, style), 1000, { source: new FakeSource() })
+    const box = [-640, -360, 1280, 720, 72]
+    expect(frameCalls(slot)).toEqual([
+      { method: 'roundRect', args: box },
+      { method: 'fill', shadow: style.shadow },
+      { method: 'roundRect', args: box },
+      { method: 'clip', args: [] },
+      { method: 'roundRect', args: box },
+      { method: 'clip', args: [] },
+      { method: 'roundRect', args: box },
+      { method: 'stroke', args: [] },
+    ])
+    expect(frameCalls(clip)).toEqual(frameCalls(slot))
+  })
+
+  test('a slot crop picks the source region that covers the slot', () => {
+    const project = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
+    const ctx = new FakeContext2D()
+    renderFrame(asCtx(ctx), project, 1000, { source: new FakeSource() })
+    expect(ctx.callsTo('drawImage').map((c) => c.args.slice(1))).toEqual([[320, 90, 320, 180, -960, -540, 1920, 1080]])
+  })
+
+  test('a slot zoom frames its target inside the slot crop, out to the crop edges', () => {
+    const drawAt = (focus: { x: number; y: number }) => {
+      const cropped = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
+      const project = applyCommand(cropped, {
+        type: 'addZoomRegion',
+        elementId: 'e-mc',
+        zoom: { source: 'camera', atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus },
+      })
+      const ctx = new FakeContext2D()
+      renderFrame(asCtx(ctx), project, 1500, { source: new FakeSource() })
+      return ctx.callsTo('drawImage').map((c) => c.args.slice(1))
+    }
+    expect(drawAt({ x: 1, y: 1 })).toEqual([[480, 270, 160, 90, -960, -540, 1920, 1080]])
+    expect(drawAt({ x: 0, y: 0 })).toEqual([[320, 0, 160, 90, -960, -540, 1920, 1080]])
+  })
+
+  test('a reframe track slides a slot crop onto the subject, and the fitted part keeps following once the crop meets the frame edge', () => {
+    const cropped = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
+    const project = applyCommand(cropped, {
+      type: 'setReframe',
+      elementId: 'e-mc',
+      source: 'camera',
+      track: [
+        { sourceMs: 0, x: 0.375, y: 0.5 },
+        { sourceMs: 4000, x: 0.375, y: 0.1 },
+      ],
+    })
+    const sourceRectsAt = (timeMs: number) => {
+      const ctx = new FakeContext2D()
+      renderFrame(asCtx(ctx), project, timeMs, { source: new FakeSource() })
+      return ctx.callsTo('drawImage').map((c) => c.args.slice(1, 5))
+    }
+    expect(sourceRectsAt(0)).toEqual([[80, 90, 320, 180]])
+    expect(sourceRectsAt(4000)).toEqual([[80, 0, 320, 180]])
+  })
+
+  test('a multicam draws its own crop and corner radius around the composite', () => {
+    const project = projectWithMulticam({ width: 1920, height: 1080 }, {}, { cornerRadius: 0.1, crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } })
+    const ctx = new FakeContext2D()
+    renderFrame(asCtx(ctx), project, 1000, { source: new FakeSource() })
+    expect(ctx.callsTo('roundRect').map((c) => c.args)).toEqual([[-480, -270, 960, 540, 54]])
+    expect(ctx.callsTo('rect').map((c) => c.args)).toEqual([[-480, -270, 960, 540]])
+    expect(ctx.callsTo('translate').at(-1)?.args).toEqual([-480, -270])
+    expect(ctx.callsTo('drawImage').map((c) => c.args.slice(5))).toEqual([[-960, -540, 1920, 1080]])
   })
 
   test('crop shrinks natural and display size for layout/handles', () => {

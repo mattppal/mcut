@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { Rng } from './rng'
 
-export type SlotKind = 'track' | 'element' | 'asset' | 'marker' | 'layout' | 'preset'
+export type SlotKind = 'track' | 'element' | 'asset' | 'media' | 'marker' | 'layout' | 'preset'
 
 export interface Slot {
   $slot: SlotKind
@@ -17,7 +17,7 @@ export interface GenerateOptions {
   wrongTypeRate?: number
 }
 
-const SLOT_KINDS: readonly SlotKind[] = ['track', 'element', 'asset', 'marker', 'layout', 'preset']
+const SLOT_KINDS: readonly SlotKind[] = ['track', 'element', 'asset', 'media', 'marker', 'layout', 'preset']
 
 export interface JsonObject {
   [key: string]: unknown
@@ -163,7 +163,7 @@ function idPrefixOf(pattern: string | undefined): string | undefined {
   return match?.[1]
 }
 
-function slot(kind: SlotKind, rng: Rng): Slot {
+export function slot(kind: SlotKind, rng: Rng): Slot {
   return { $slot: kind, index: rng.int(0, SLOT_INDEX_MAX) }
 }
 

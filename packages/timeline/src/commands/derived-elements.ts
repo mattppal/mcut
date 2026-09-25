@@ -1,18 +1,28 @@
 import { z } from 'zod'
+import { resolveElementAudioSource } from '../audio-source'
 import { CommandError } from '../errors'
-import { createLinkId, createTrackId } from '../id'
+import { createLinkId, createTrackId, type ElementId } from '../id'
 import { createDefaultLayouts } from '../layouts'
+import { getMediaSourceDurationMs } from '../media-clip'
 import {
   captionStyleSchema,
   captionWordSchema,
   elementIdSchema,
   MIN_ELEMENT_DURATION_MS,
   trackIdSchema,
+  validateElement,
+  type AudioElement,
   type CaptionElement,
+  type MulticamElement,
+  type MulticamSource,
+  type Project,
   type TimelineElement,
   type Track,
+  type VideoElement,
 } from '../model'
+import { isAudioOnlySource } from '../multicam'
 import { isTimelineMagnetic, placementFor } from '../placement'
+import type { ElementLocation } from '../selectors'
 import { applyThumbnailTemplate, thumbnailTemplateSchema } from '../thumbnails'
 import { defineCommand, insertSorted, mintElementId, mustGetTrack, mustLocate, replaceTrack } from './shared'
 
@@ -87,73 +97,132 @@ export const applyCaptions = defineCommand({
   },
 })
 
+interface PlacedSource {
+  location: ElementLocation
+  element: VideoElement | AudioElement
+  key: string | undefined
+}
+
+function mustPlaceSources(project: Project, sources: readonly { elementId: ElementId; key?: string | undefined }[]): PlacedSource[] {
+  const seen = new Set<ElementId>()
+  return sources.map(({ elementId, key }) => {
+    if (seen.has(elementId)) throw new CommandError('invalid-payload', `"${elementId}" is listed twice`)
+    seen.add(elementId)
+    const location = mustLocate(project, elementId)
+    const { element } = location
+    if (element.type !== 'video' && element.type !== 'audio') {
+      throw new CommandError('invalid-payload', `"${element.id}" is not a video or audio element`)
+    }
+    if (element.timeMap || element.reversed) {
+      throw new CommandError('invalid-payload', `multicam sources play at 1x forward; clear the speed and reverse on "${element.id}" first`)
+    }
+    return { location, element, key }
+  })
+}
+
+function videoRoles(videos: readonly PlacedSource[]): string[] {
+  if (videos.length === 1) return ['camera']
+  if (videos.length === 2) {
+    const screen = (videos[0]?.location.trackIndex ?? 0) <= (videos[1]?.location.trackIndex ?? 0) ? 0 : 1
+    return videos.map((_, i) => (i === screen ? 'screen' : 'camera'))
+  }
+  return videos.map((_, i) => `cam-${i + 1}`)
+}
+
+function freeKey(preferred: readonly string[], taken: ReadonlySet<string>): string {
+  const free = preferred.find((key) => !taken.has(key))
+  if (free !== undefined) return free
+  const base = preferred[0] ?? 'source'
+  let n = 2
+  while (taken.has(`${base}-${n}`)) n += 1
+  return `${base}-${n}`
+}
+
+function withSourceKeys(placed: readonly PlacedSource[]): Array<PlacedSource & { key: string }> {
+  const taken = new Set<string>()
+  for (const { key } of placed) {
+    if (key === undefined) continue
+    if (taken.has(key)) throw new CommandError('invalid-payload', `two multicam sources share the key "${key}"`)
+    taken.add(key)
+  }
+  const videos = placed.filter((source) => source.element.type === 'video')
+  const roles = videoRoles(videos)
+  return placed.map((source) => {
+    if (source.key !== undefined) return { ...source, key: source.key }
+    const role = roles[videos.indexOf(source)]
+    const key = freeKey(role === undefined ? ['audio'] : [role, ...roles], taken)
+    taken.add(key)
+    return { ...source, key }
+  })
+}
+
+function pickAudioSource(project: Project, sources: readonly MulticamSource[], requested: string | undefined): string | undefined {
+  if (requested === undefined) {
+    return (sources.find((source) => isAudioOnlySource(project, source)) ?? sources.find((source) => source.key === 'camera') ?? sources[0])?.key
+  }
+  if (!sources.some((source) => source.key === requested)) throw new CommandError('unknown-source', `no multicam source "${requested}"`)
+  return requested
+}
+
 export const createMulticam = defineCommand({
   type: 'createMulticam',
   description:
-    'Combine 1+ video elements into one multicam clip: sources are synced by ' +
-    'their current timeline alignment, originals are removed, and the project ' +
-    'is seeded with default talking-head layouts (screen + camera) when it has ' +
-    'none. Source keys: with two sources the bottom layer becomes "screen" and ' +
-    'the top layer "camera" (roles can be reassigned afterwards); audio follows ' +
-    'the camera.',
+    'Combine video and audio elements into one multicam clip whose layouts switch between the video sources. ' +
+    '`sources` lists the elements, each with an optional role `key` that layout slots match on; at least one must be video. ' +
+    'Without a key, two videos become "screen" (bottom layer) and "camera" (top layer), one video is "camera", more are ' +
+    '"cam-1", "cam-2", and so on, and an audio element is "audio". An audio source is never drawn and can carry the program audio. ' +
+    '`audioSource` names the source whose audio plays, defaulting to the first audio-only source, then "camera", then the first source. ' +
+    'The sources are synced as placed on the timeline; clips recorded together and placed at the same start sync at offset 0. ' +
+    'Sources must play at 1x forward. The multicam spans the placed clips, cut short to the shortest source, the originals ' +
+    'are removed, and default talking-head layouts are seeded when the project has none.',
   payloadSchema: z.object({
-    elementIds: z.array(elementIdSchema).min(1),
+    sources: z.array(z.object({ elementId: elementIdSchema, key: z.string().min(1).optional() })).min(1),
+    audioSource: z.string().min(1).optional(),
     multicamId: elementIdSchema.optional(),
   }),
   reduce: (project, payload) => {
-    const located = payload.elementIds.map((id) => mustLocate(project, id))
-    const videos = located.map(({ element }) => {
-      if (element.type !== 'video') {
-        throw new CommandError('invalid-payload', `"${element.id}" is not a video element`)
-      }
-      return element
-    })
+    const placed = withSourceKeys(mustPlaceSources(project, payload.sources))
+    const host = placed.find((source) => source.element.type === 'video')
+    if (!host) throw new CommandError('invalid-payload', 'a multicam needs at least one video source')
 
-    const startMs = Math.min(...videos.map((v) => v.startMs))
-    const endMs = Math.max(...videos.map((v) => v.startMs + v.durationMs))
+    const startMs = Math.min(...placed.map(({ element }) => element.startMs))
+    const endMs = Math.max(...placed.map(({ element }) => element.startMs + element.durationMs))
+    const alignedMs = (element: VideoElement | AudioElement) => Math.max(0, element.trimStartMs - (element.startMs - startMs))
+    const trimStartMs = Math.min(...placed.map(({ element }) => alignedMs(element)))
+    const sources = placed.map(({ element, key }) => ({ key, assetId: element.assetId, offsetMs: alignedMs(element) - trimStartMs }))
 
-    let keys: string[]
-    if (videos.length === 2) {
-      const screen = located[0]!.trackIndex <= located[1]!.trackIndex ? 0 : 1
-      keys = videos.map((_, i) => (i === screen ? 'screen' : 'camera'))
-    } else if (videos.length === 1) {
-      keys = ['camera']
-    } else {
-      keys = videos.map((_, i) => `cam-${i + 1}`)
-    }
-
-    let next = project
-    if (next.layouts.length === 0) {
-      next = { ...next, layouts: createDefaultLayouts() }
-    }
-
-    const sources = videos.map((video, i) => ({
-      key: keys[i]!,
-      assetId: video.assetId,
-      trimStartMs: Math.max(0, video.trimStartMs - (video.startMs - startMs)),
-    }))
-
-    const audioKey = keys.includes('camera') ? 'camera' : keys[0]!
-    const element: TimelineElement = {
+    const layouts = project.layouts.length > 0 ? project.layouts : createDefaultLayouts(project)
+    const [opening] = layouts
+    if (!opening) throw new CommandError('invalid-payload', 'a multicam needs at least one layout')
+    const audioSource = pickAudioSource(project, sources, payload.audioSource)
+    const element: MulticamElement = {
       id: mintElementId(project, payload.multicamId),
       type: 'multicam',
       startMs,
       durationMs: endMs - startMs,
+      trimStartMs,
       sources,
-      angles: [{ atMs: 0, layoutId: next.layouts[0]!.id }],
-      audioSource: audioKey,
+      angles: [{ atMs: trimStartMs, layoutId: opening.id }],
+      ...(audioSource === undefined ? {} : { audioSource }),
       transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
       opacity: 1,
       volume: 1,
       muted: false,
     }
-
-    const ids = new Set(payload.elementIds)
-    next = {
-      ...next,
-      tracks: next.tracks.map((t) => ({ ...t, elements: t.elements.filter((e) => !ids.has(e.id)) })),
+    const coverageMs = getMediaSourceDurationMs(project, element)
+    if (coverageMs !== undefined) element.durationMs = Math.min(element.durationMs, coverageMs - trimStartMs)
+    if (element.durationMs < MIN_ELEMENT_DURATION_MS) {
+      throw new CommandError('out-of-bounds', `the sources share less than ${MIN_ELEMENT_DURATION_MS}ms of media`)
     }
-    const targetTrack = mustGetTrack(next, located[0]!.track.id)
+    validateElement(project, element)
+
+    const ids = new Set(payload.sources.map((source) => source.elementId))
+    const next = {
+      ...project,
+      layouts,
+      tracks: project.tracks.map((t) => ({ ...t, elements: t.elements.filter((e) => !ids.has(e.id)) })),
+    }
+    const targetTrack = mustGetTrack(next, host.location.track.id)
     const policy = placementFor(targetTrack)
     policy.assertCanPlace(targetTrack, element)
     return replaceTrack(next, targetTrack.id, (t) => ({
@@ -163,13 +232,26 @@ export const createMulticam = defineCommand({
   },
 })
 
+function withoutAudioMix<E extends VideoElement | MulticamElement>(element: E, linkId: string): E {
+  const next: E = { ...element, muted: true, volume: 1, linkId }
+  delete next.fadeInMs
+  delete next.fadeOutMs
+  if (next.keyframes?.volume) {
+    const keyframes = { ...next.keyframes }
+    delete keyframes.volume
+    if (Object.keys(keyframes).length === 0) delete next.keyframes
+    else next.keyframes = keyframes
+  }
+  return next
+}
+
 export const detachAudio = defineCommand({
   type: 'detachAudio',
   description:
-    "Detach a video element's audio onto its own audio element. The video is " +
-    'muted, volume keyframes move to the new audio element, and both share a ' +
-    '`linkId` so UIs can select/move them together. Creates a track for the ' +
-    'audio when `toTrackId` is omitted.',
+    'Detach the audio of a video or multicam element onto its own audio element; a multicam detaches its audio source. ' +
+    'The original is muted, its volume, volume keyframes, and fades move to the new audio element, which keeps the ' +
+    'same window, speed, and reverse, and both share a `linkId` so UIs can select and move them together. Creates a ' +
+    'track for the audio when `toTrackId` is omitted.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     toTrackId: trackIdSchema.optional(),
@@ -177,11 +259,16 @@ export const detachAudio = defineCommand({
   }),
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
-    if (element.type !== 'video') {
+    if (element.type !== 'video' && element.type !== 'multicam') {
       throw new CommandError('invalid-payload', `"${element.type}" elements have no audio to detach`)
     }
     if (element.muted) {
-      throw new CommandError('invalid-payload', `video "${element.id}" is muted; nothing to detach`)
+      throw new CommandError('invalid-payload', `${element.type} "${element.id}" is muted; nothing to detach`)
+    }
+    const source = resolveElementAudioSource(project, element.id)
+    if (!source) {
+      const hint = element.type === 'multicam' ? '; setMulticamAudio picks one' : ''
+      throw new CommandError('invalid-payload', `${element.type} "${element.id}" has no audio source to detach${hint}`)
     }
     const linkId = element.linkId ?? createLinkId()
     const volumeKeyframes = element.keyframes?.volume
@@ -191,25 +278,23 @@ export const detachAudio = defineCommand({
       type: 'audio',
       startMs: element.startMs,
       durationMs: element.durationMs,
-      trimStartMs: element.trimStartMs,
-      assetId: element.assetId,
+      trimStartMs: source.sourceStartMs,
+      assetId: source.assetId,
       volume: element.volume,
       muted: false,
       linkId,
-      ...(element.timeMap ? { timeMap: element.timeMap } : {}),
+      ...(source.timeMap ? { timeMap: source.timeMap } : {}),
+      ...(source.reversed ? { reversed: true } : {}),
+      ...(element.fadeInMs === undefined ? {} : { fadeInMs: element.fadeInMs }),
+      ...(element.fadeOutMs === undefined ? {} : { fadeOutMs: element.fadeOutMs }),
       ...(volumeKeyframes ? { keyframes: { volume: volumeKeyframes } } : {}),
     }
-    const video: TimelineElement = { ...element, muted: true, volume: 1, linkId }
-    if (video.type === 'video' && video.keyframes?.volume) {
-      const keyframes = { ...video.keyframes }
-      delete keyframes.volume
-      if (Object.keys(keyframes).length === 0) delete video.keyframes
-      else video.keyframes = keyframes
-    }
+    validateElement(project, audio)
+    const original = withoutAudioMix(element, linkId)
 
     let next = replaceTrack(project, track.id, (t) => ({
       ...t,
-      elements: t.elements.map((e) => (e.id === element.id ? video : e)),
+      elements: t.elements.map((e) => (e.id === element.id ? original : e)),
     }))
 
     if (payload.toTrackId) {

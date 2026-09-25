@@ -20,7 +20,6 @@ test('multicam: create from selection, style a slot shadow without crashing', as
 
   await page.getByRole('button', { name: 'Go to start' }).click()
   await page.keyboard.press('ArrowDown')
-  await page.keyboard.press('Shift+ArrowRight')
   await page.waitForTimeout(1000)
   expect(await previewPixels(page), 'baseline preview').toBeGreaterThan(0)
 

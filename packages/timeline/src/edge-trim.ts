@@ -1,14 +1,11 @@
 import { CommandError } from './errors'
 import type { AnimatableProperty, Keyframe, KeyframeMap } from './keyframes'
-import { MIN_ELEMENT_DURATION_MS, splitElementAt, type MulticamElement, type Project, type TimelineElement } from './model'
-import { getSourceSpanMs, type TimeMap } from './speed'
+import { getMediaSourceDurationMs, isMediaClip, type MediaClip } from './media-clip'
+import { MIN_ELEMENT_DURATION_MS, splitElementAt, type Project, type TimelineElement } from './model'
+import { getSourceSpanMs, hasTimeMap } from './speed'
 import { shiftZoomRegions } from './zoom-regions'
 
 export type TrimEdge = 'start' | 'end'
-
-const hasTimeMap = (element: TimelineElement): boolean => 'timeMap' in element && Array.isArray(element.timeMap) && element.timeMap.length >= 2
-
-const isReversed = (element: TimelineElement): boolean => 'reversed' in element && element.reversed === true
 
 export function applyEdgeTrim(element: TimelineElement, edge: TrimEdge, deltaMs: number): TimelineElement {
   if (deltaMs === 0) return element
@@ -36,12 +33,10 @@ function shrinkViaSplit(element: TimelineElement, keep: 'left' | 'right', offset
 
 function growEnd(element: TimelineElement, growMs: number): TimelineElement {
   const next: TimelineElement = { ...element, durationMs: element.durationMs + growMs }
-  if (hasTimeMap(element)) return next
-  if (isReversed(element) && 'trimStartMs' in next) {
-    next.trimStartMs = next.trimStartMs - growMs
-    if (next.trimStartMs < 0) {
-      throw new CommandError('out-of-bounds', `"${element.id}" has no media before its trim start`)
-    }
+  if (!isMediaClip(next) || hasTimeMap(next) || !next.reversed) return next
+  next.trimStartMs = next.trimStartMs - growMs
+  if (next.trimStartMs < 0) {
+    throw new CommandError('out-of-bounds', `"${element.id}" has no media before its trim start`)
   }
   return next
 }
@@ -52,7 +47,7 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
     startMs: element.startMs - growMs,
     durationMs: element.durationMs + growMs,
   }
-  if ('keyframes' in next && next.keyframes) {
+  if (next.keyframes) {
     const shifted: KeyframeMap = {}
     for (const [property, track] of Object.entries(next.keyframes) as Array<[AnimatableProperty, Keyframe[] | undefined]>) {
       if (!track) continue
@@ -62,8 +57,8 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
   }
   if ('zooms' in next && next.zooms) next.zooms = shiftZoomRegions(next.zooms, growMs)
 
-  if (element.type === 'caption') {
-    if ('words' in next && next.words) {
+  if (next.type === 'caption') {
+    if (next.words) {
       next.words = next.words.map((w) => ({
         ...w,
         startMs: w.startMs + growMs,
@@ -73,47 +68,27 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
     return next
   }
 
-  if (element.type === 'multicam') {
-    const multicam = next as MulticamElement
-    if (hasTimeMap(element)) {
-      throw new CommandError('unsupported', `cannot extend the start of speed-ramped multicam "${element.id}"`)
+  if (!isMediaClip(next)) return next
+  return revealBeforeWindow(next, growMs)
+}
+
+function revealBeforeWindow(clip: MediaClip, growMs: number): MediaClip {
+  if (clip.reversed) {
+    if (hasTimeMap(clip)) {
+      throw new CommandError('unsupported', `cannot extend the start of reversed speed-ramped clip "${clip.id}"`)
     }
-    multicam.sources = multicam.sources.map((source) => {
-      const trimStartMs = source.trimStartMs - growMs
-      if (trimStartMs < 0) {
-        throw new CommandError('out-of-bounds', `multicam source "${source.key}" has no media before its trim start`)
-      }
-      return { ...source, trimStartMs }
-    })
-    const angles = multicam.angles.map((a) => ({ ...a, atMs: a.atMs + growMs }))
-    if (angles[0]) angles[0] = { ...angles[0], atMs: 0 }
-    multicam.angles = angles
-    return multicam
+    return clip
   }
-
-  if (!('trimStartMs' in next)) return next
-
-  if (isReversed(element)) {
-    if (hasTimeMap(element)) {
-      throw new CommandError('unsupported', `cannot extend the start of reversed speed-ramped clip "${element.id}"`)
-    }
-    return next
-  }
-
-  const trimStartMs = next.trimStartMs - growMs
+  const trimStartMs = clip.trimStartMs - growMs
   if (trimStartMs < 0) {
-    throw new CommandError('out-of-bounds', `"${element.id}" has no media before its trim start`)
+    throw new CommandError('out-of-bounds', `"${clip.id}" has no media before its trim start`)
   }
-  next.trimStartMs = trimStartMs
-  if (hasTimeMap(next) && next.timeMap) {
-    const rebased = next.timeMap.map((k) => ({
-      ...k,
-      timeMs: k.timeMs + growMs,
-      value: k.value + growMs,
-    }))
-    next.timeMap = [{ timeMs: 0, value: 0 }, ...rebased] as TimeMap
+  clip.trimStartMs = trimStartMs
+  if (clip.timeMap) {
+    const rebased = clip.timeMap.map((k) => ({ ...k, timeMs: k.timeMs + growMs, value: k.value + growMs }))
+    clip.timeMap = [{ timeMs: 0, value: 0 }, ...rebased]
   }
-  return next
+  return clip
 }
 
 export interface EdgeTrimRange {
@@ -121,44 +96,28 @@ export interface EdgeTrimRange {
   maxDeltaMs: number
 }
 
+function remainingAfterWindowMs(project: Project, clip: MediaClip): number {
+  const sourceDurationMs = getMediaSourceDurationMs(project, clip)
+  return sourceDurationMs === undefined ? Infinity : sourceDurationMs - clip.trimStartMs - getSourceSpanMs(clip)
+}
+
+function endGrowLimitMs(project: Project, clip: MediaClip): number {
+  if (hasTimeMap(clip)) return Infinity
+  return clip.reversed ? clip.trimStartMs : remainingAfterWindowMs(project, clip)
+}
+
+function startGrowLimitMs(project: Project, clip: MediaClip): number {
+  if (!clip.reversed) return clip.trimStartMs
+  return hasTimeMap(clip) ? 0 : remainingAfterWindowMs(project, clip)
+}
+
 export function getEdgeTrimRange(project: Project, element: TimelineElement, edge: TrimEdge): EdgeTrimRange {
   const shrinkLimitMs = element.durationMs - MIN_ELEMENT_DURATION_MS
-  const assetDurationMs = 'assetId' in element ? project.assets[element.assetId]?.durationMs : undefined
-  const trimStartMs = 'trimStartMs' in element ? element.trimStartMs : 0
-  const mapped = hasTimeMap(element)
-  const reversed = isReversed(element)
-
   if (edge === 'end') {
-    let growLimitMs = Infinity
-    if (element.type === 'video' || element.type === 'audio') {
-      if (mapped) {
-        growLimitMs = Infinity
-      } else if (reversed) {
-        growLimitMs = trimStartMs
-      } else if (assetDurationMs !== undefined) {
-        growLimitMs = assetDurationMs - trimStartMs - getSourceSpanMs(element)
-      }
-    } else if (element.type === 'multicam' && !mapped) {
-      growLimitMs = Math.min(
-        ...element.sources.map((source) => {
-          const duration = project.assets[source.assetId]?.durationMs
-          return duration === undefined ? Infinity : duration - source.trimStartMs - element.durationMs
-        }),
-      )
-    }
+    const growLimitMs = isMediaClip(element) ? endGrowLimitMs(project, element) : Infinity
     return { minDeltaMs: -shrinkLimitMs, maxDeltaMs: Math.max(0, growLimitMs) }
   }
-
-  let growLimitMs = Infinity
-  if (element.type === 'video' || element.type === 'audio') {
-    if (reversed) {
-      growLimitMs = mapped ? 0 : assetDurationMs === undefined ? Infinity : assetDurationMs - trimStartMs - getSourceSpanMs(element)
-    } else {
-      growLimitMs = trimStartMs
-    }
-  } else if (element.type === 'multicam') {
-    growLimitMs = mapped ? 0 : Math.min(...element.sources.map((source) => source.trimStartMs))
-  }
+  const growLimitMs = isMediaClip(element) ? startGrowLimitMs(project, element) : Infinity
   return {
     minDeltaMs: -Math.max(0, Math.min(growLimitMs, element.startMs)),
     maxDeltaMs: shrinkLimitMs,

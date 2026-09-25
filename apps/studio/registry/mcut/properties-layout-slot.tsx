@@ -1,19 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { useEditor, useProject } from '@mcut/react'
+import { useEditor, useEditorState, useProject } from '@mcut/react'
 import { createLayoutId, type Layout, type LayoutSlot } from '@mcut/timeline'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import { useEditorUI } from './editor-ui'
-import { roundRect, safeAreaRect, saveLayoutSlot } from './layout-slot-editor'
+import { roundRect, safeAreaRect, saveLayoutSlot, type SlotEdit } from './layout-slot-editor'
 import { ChoiceRow, FieldRow, NumberField, Section } from './inspector-fields'
 import { FrameFields, type FrameTarget } from './frame-section'
+import { findTargetMulticam, multicamSourceSize, panSlotWindow, slotCoverWindow } from './multicam-ui'
 import { NameDialog } from './name-dialog'
 import { PresetMenu } from './preset-menu'
-import { RadiusRow, readStylePreset, StrokeFields } from './style-fields'
+import { RadiusRow, readStylePreset, ShadowFields, StrokeFields } from './style-fields'
 
 export const SLOT_ASPECTS: ReadonlyArray<readonly [label: string, ratio: number]> = [
   ['1:1', 1],
@@ -23,18 +23,26 @@ export const SLOT_ASPECTS: ReadonlyArray<readonly [label: string, ratio: number]
   ['9:16', 9 / 16],
 ]
 
+const focusOf = (offset: number, size: number) => (size < 1 ? offset / (1 - size) : 0.5)
+
+const withoutDefaults = (slot: LayoutSlot) => ({ cornerRadius: null, stroke: null, shadow: null, ...slot })
+
 export function LayoutSlotInspector({ layout, className }: { layout: Layout; className?: string }) {
   const engine = useEditor()
   const project = useProject()
   const { editingSlotIndex, setEditingSlotIndex } = useEditorUI()
+  const selectedIds = useEditorState((s) => s.selection.elementIds)
   const [presetDraft, setPresetDraft] = useState<string | null>(null)
   const W = project.width
   const H = project.height
   const index = editingSlotIndex !== null && layout.slots[editingSlotIndex] !== undefined ? editingSlotIndex : null
   const slot = index !== null ? layout.slots[index]! : null
   const safe = safeAreaRect(W, H)
+  const target = findTargetMulticam(project, selectedIds, engine.playback.state.currentTimeMs)
+  const sourceSize = slot ? multicamSourceSize(project, target?.element, slot.source) : null
+  const view = slot && sourceSize ? slotCoverWindow(slot, { width: slot.rect.w * W, height: slot.rect.h * H }, sourceSize) : null
 
-  const save = (patch: Partial<LayoutSlot>, options?: { history?: boolean }) => {
+  const save = (patch: SlotEdit, options?: { history?: boolean }) => {
     if (index !== null) saveLayoutSlot(engine, layout, index, patch, options)
   }
   const saveRect = (rect: LayoutSlot['rect'], options?: { history?: boolean }) => save({ rect: roundRect(rect) }, options)
@@ -80,7 +88,7 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
     try {
       engine.dispatch({
         type: 'saveLayout',
-        layout: { ...layout, id: createLayoutId(), name },
+        layout: { ...layout, id: createLayoutId(), name, slots: layout.slots.map(withoutDefaults) },
       })
       toast.success(`"${name}" added to the layout bank`)
     } catch {
@@ -152,51 +160,47 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
                 kind="style"
                 getValues={() => ({
                   fit: slot.fit,
-                  cornerRadius: slot.cornerRadius,
-                  shadow: slot.shadow,
+                  cornerRadius: slot.cornerRadius ?? 0,
+                  shadow: slot.shadow ?? null,
                   stroke: slot.stroke ?? null,
                 })}
                 onApply={(values) => {
                   const preset = readStylePreset(values)
-                  const patch: Partial<LayoutSlot> = {}
+                  const patch: SlotEdit = {}
                   if (preset.fit) patch.fit = preset.fit
                   if (preset.cornerRadius !== undefined) patch.cornerRadius = preset.cornerRadius
-                  if (preset.stroke !== undefined) patch.stroke = preset.stroke ?? undefined
-                  if (preset.shadow !== undefined) {
-                    patch.shadow = typeof preset.shadow === 'boolean' ? preset.shadow : preset.shadow !== null
-                  }
+                  if (preset.stroke !== undefined) patch.stroke = preset.stroke
+                  if (preset.shadow !== undefined) patch.shadow = preset.shadow
                   save(patch)
                 }}
               />
             }
           >
             <ChoiceRow label="Fit" value={slot.fit} options={['cover', 'contain'] as const} onCommit={(fit) => save({ fit })} />
-            <RadiusRow value={slot.cornerRadius} onCommit={(cornerRadius) => save({ cornerRadius })} />
-            <StrokeFields value={slot.stroke} onCommit={(stroke) => save({ stroke })} />
-            <FieldRow label="Shadow">
-              <Switch aria-label="Shadow" checked={slot.shadow} onCheckedChange={(shadow) => save({ shadow })} />
-            </FieldRow>
+            <RadiusRow value={slot.cornerRadius ?? 0} onCommit={(cornerRadius) => save({ cornerRadius: cornerRadius || null })} />
+            <StrokeFields value={slot.stroke} onCommit={(stroke) => save({ stroke: stroke ?? null })} />
+            <ShadowFields value={slot.shadow} onCommit={(shadow) => save({ shadow: shadow ?? null })} />
           </Section>
 
-          {slot.fit === 'cover' && (
-            <Section title="Crop" onReset={() => save({ focus: { x: 0.5, y: 0.5 } })}>
+          {slot.fit === 'cover' && view && (
+            <Section title="Crop" onReset={() => save({ crop: null })}>
               <NumberField
                 label="Focus X"
-                value={Math.round((slot.focus?.x ?? 0.5) * 100)}
+                value={Math.round(focusOf(view.x, view.w) * 100)}
                 min={0}
                 max={100}
                 unit="%"
                 scrubPerPx={0.5}
-                onCommit={(pct) => save({ focus: { y: slot.focus?.y ?? 0.5, x: pct / 100 } })}
+                onCommit={(pct) => save({ crop: panSlotWindow(view, (pct / 100) * (1 - view.w), view.y) })}
               />
               <NumberField
                 label="Focus Y"
-                value={Math.round((slot.focus?.y ?? 0.5) * 100)}
+                value={Math.round(focusOf(view.y, view.h) * 100)}
                 min={0}
                 max={100}
                 unit="%"
                 scrubPerPx={0.5}
-                onCommit={(pct) => save({ focus: { x: slot.focus?.x ?? 0.5, y: pct / 100 } })}
+                onCommit={(pct) => save({ crop: panSlotWindow(view, view.x, (pct / 100) * (1 - view.h)) })}
               />
               <p className="text-2xs text-muted-foreground">Or double-click the slot on the canvas and drag to pan the source inside the frame.</p>
             </Section>

@@ -14,7 +14,7 @@ import {
 } from '@/lib/icons'
 import { toast } from 'sonner'
 import { createProject, getProjectDurationMs, toOtioJson } from '@mcut/timeline'
-import { findTargetMulticam, switchToLayout } from './multicam-ui'
+import { findTargetMulticam, multicamSourcesInSelection, switchToLayout } from './multicam-ui'
 import { defineAction, type ActionContext } from './action-registry'
 import { ASPECT_PRESETS } from './aspect-presets'
 import { openCommandPalette } from './command-palette-events'
@@ -608,9 +608,8 @@ defineAction({
   enabled: ({ engine }) =>
     engine.selection.elementIds.some((id) => engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video'))),
   run: ({ engine, ui }) => {
-    const videoIds = engine.selection.elementIds.filter((id) => engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video')))
     try {
-      engine.dispatch({ type: 'createMulticam', elementIds: videoIds })
+      engine.dispatch({ type: 'createMulticam', sources: multicamSourcesInSelection(engine.project, engine.selection.elementIds) })
       ui.setMode('multicam')
     } catch {}
   },

@@ -4,7 +4,7 @@ import type { Project } from './model'
 import { applyCaptions, applyThumbnail, createMulticam, detachAudio } from './commands/derived-elements'
 import { addElement, moveElement, removeElement, rippleDelete, splitElement, trimElement, updateElement } from './commands/elements'
 import { applyAnimationPreset, clearKeyframes, moveKeyframe, removeKeyframe, setKeyframe, setKeyframeEasing } from './commands/keyframes'
-import { removeLayout, saveLayout } from './commands/layouts'
+import { removeLayout, resizeLayoutSlot, saveLayout } from './commands/layouts'
 import { addMarker, removeMarker, updateMarker } from './commands/markers'
 import {
   addAngleCut,
@@ -15,7 +15,7 @@ import {
   setMulticamAngleTransition,
   setMulticamAudio,
   setMulticamSourceKey,
-  setMulticamSourceTrim,
+  setMulticamSourceOffset,
 } from './commands/multicam'
 import { addAsset, removeAsset, removePreset, savePreset, updateAsset, updateProject } from './commands/project'
 import { setReframe } from './commands/reframe'
@@ -70,6 +70,7 @@ const commandDefinitions = commandTable({
   slideElement,
   rippleTrim,
   saveLayout,
+  resizeLayoutSlot,
   removeLayout,
   savePreset,
   removePreset,
@@ -79,7 +80,7 @@ const commandDefinitions = commandTable({
   removeAngleCut,
   setAngleLayout,
   setMulticamAudio,
-  setMulticamSourceTrim,
+  setMulticamSourceOffset,
   setMulticamAngleTransition,
   setMulticamSourceKey,
   flattenMulticam,

@@ -3,9 +3,12 @@ import {
   createElementId as createTimelineElementId,
   createTrackId as createTimelineTrackId,
   getElementLocation,
+  getMediaSourceDurationMs,
   getSourceSpanMs,
+  isMediaClip,
   type BuiltinCommand,
   type ElementId,
+  type MediaClip,
   type Project,
   type TimelineElement,
   type Track,
@@ -18,6 +21,7 @@ export interface ClipDragBase {
   startMs: number
   durationMs: number
   trimStartMs?: number
+  sourceDurationMs?: number
   reversed?: boolean
   hasTimeMap?: boolean
   trackIndex: number
@@ -54,6 +58,16 @@ export function canPlaceIgnoring(track: Track, startMs: number, durationMs: numb
   return canPlace({ ...track, elements: others }, startMs, durationMs)
 }
 
+function mediaDragBase(project: Project, clip: MediaClip): Pick<ClipDragBase, 'trimStartMs' | 'sourceDurationMs' | 'reversed' | 'hasTimeMap'> {
+  const sourceDurationMs = getMediaSourceDurationMs(project, clip)
+  return {
+    trimStartMs: clip.trimStartMs,
+    ...(sourceDurationMs !== undefined ? { sourceDurationMs } : {}),
+    ...(clip.reversed ? { reversed: true } : {}),
+    ...(clip.timeMap && clip.timeMap.length >= 2 ? { hasTimeMap: true } : {}),
+  }
+}
+
 export function collectClipDragBases(project: Project, ids: readonly ElementId[]): Map<ElementId, ClipDragBase> {
   const bases = new Map<ElementId, ClipDragBase>()
   for (const id of ids) {
@@ -63,9 +77,7 @@ export function collectClipDragBases(project: Project, ids: readonly ElementId[]
         bases.set(id, {
           startMs: found.startMs,
           durationMs: found.durationMs,
-          ...('trimStartMs' in found ? { trimStartMs: found.trimStartMs } : {}),
-          ...('reversed' in found && found.reversed === true ? { reversed: true } : {}),
-          ...('timeMap' in found && Array.isArray(found.timeMap) && found.timeMap.length >= 2 ? { hasTimeMap: true } : {}),
+          ...(isMediaClip(found) ? mediaDragBase(project, found) : {}),
           trackIndex: t,
         })
         break
@@ -92,7 +104,7 @@ export function resolveToolMode(project: Project, mode: ClipDragMode, ids: reado
     case 'slide':
       return previous && next ? fallback(mode) : fallback('move')
     case 'slip':
-      return element.type === 'video' || element.type === 'audio' || element.type === 'multicam' ? fallback(mode) : fallback('move')
+      return isMediaClip(element) ? fallback(mode) : fallback('move')
     default:
       return fallback(mode)
   }
@@ -103,21 +115,11 @@ export function computeSlipRange(project: Project, ids: readonly ElementId[]): {
   let maxMs = Infinity
   for (const id of ids) {
     const element = getElementLocation(project, id)?.element
-    if (!element) continue
-    if (element.type === 'video' || element.type === 'audio') {
-      minMs = Math.max(minMs, -element.trimStartMs)
-      const assetDurationMs = project.assets[element.assetId]?.durationMs
-      if (assetDurationMs !== undefined) {
-        maxMs = Math.min(maxMs, assetDurationMs - element.trimStartMs - getSourceSpanMs(element))
-      }
-    } else if (element.type === 'multicam') {
-      for (const source of element.sources) {
-        minMs = Math.max(minMs, -source.trimStartMs)
-        const assetDurationMs = project.assets[source.assetId]?.durationMs
-        if (assetDurationMs !== undefined) {
-          maxMs = Math.min(maxMs, assetDurationMs - source.trimStartMs - element.durationMs)
-        }
-      }
+    if (!element || !isMediaClip(element)) continue
+    minMs = Math.max(minMs, -element.trimStartMs)
+    const sourceDurationMs = getMediaSourceDurationMs(project, element)
+    if (sourceDurationMs !== undefined) {
+      maxMs = Math.min(maxMs, sourceDurationMs - element.trimStartMs - getSourceSpanMs(element))
     }
   }
   return { minMs: Math.min(0, minMs), maxMs: Math.max(0, maxMs) }

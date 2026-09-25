@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "p-multicam-podcast",
   "name": "Multicam podcast",
   "width": 1920,
@@ -19,16 +19,17 @@
           "type": "multicam",
           "startMs": 0,
           "durationMs": 90000,
+          "trimStartMs": 0,
           "sources": [
             {
               "key": "screen",
               "assetId": "a-screen",
-              "trimStartMs": 0
+              "offsetMs": 0
             },
             {
               "key": "camera",
               "assetId": "a-camera",
-              "trimStartMs": 0
+              "offsetMs": 0
             }
           ],
           "angles": [
@@ -87,13 +88,7 @@
             "w": 1,
             "h": 1
           },
-          "fit": "cover",
-          "focus": {
-            "x": 0.5,
-            "y": 0.5
-          },
-          "cornerRadius": 0,
-          "shadow": false
+          "fit": "cover"
         },
         {
           "source": "camera",
@@ -104,12 +99,13 @@
             "h": 0.275
           },
           "fit": "cover",
-          "focus": {
-            "x": 0.5,
-            "y": 0.5
-          },
           "cornerRadius": 0.12,
-          "shadow": true
+          "shadow": {
+            "color": "rgba(0, 0, 0, 0.45)",
+            "blur": 36,
+            "offsetX": 0,
+            "offsetY": 12
+          }
         }
       ]
     },
@@ -125,13 +121,7 @@
             "w": 1,
             "h": 1
           },
-          "fit": "cover",
-          "focus": {
-            "x": 0.5,
-            "y": 0.5
-          },
-          "cornerRadius": 0,
-          "shadow": false
+          "fit": "cover"
         }
       ]
     },
@@ -147,13 +137,7 @@
             "w": 1,
             "h": 1
           },
-          "fit": "cover",
-          "focus": {
-            "x": 0.5,
-            "y": 0.5
-          },
-          "cornerRadius": 0,
-          "shadow": false
+          "fit": "cover"
         }
       ]
     },
@@ -170,12 +154,7 @@
             "h": 0.53
           },
           "fit": "cover",
-          "focus": {
-            "x": 0.5,
-            "y": 0.5
-          },
-          "cornerRadius": 0.06,
-          "shadow": false
+          "cornerRadius": 0.06
         },
         {
           "source": "camera",
@@ -186,12 +165,7 @@
             "h": 0.53
           },
           "fit": "cover",
-          "focus": {
-            "x": 0.5,
-            "y": 0.5
-          },
-          "cornerRadius": 0.06,
-          "shadow": false
+          "cornerRadius": 0.06
         }
       ]
     }

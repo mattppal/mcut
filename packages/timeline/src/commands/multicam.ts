@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import { CommandError } from '../errors'
 import { createElementId, createTrackId, type AssetId, type ElementId } from '../id'
-import { elementIdSchema, MIN_ELEMENT_DURATION_MS, type Project, type TimelineElement, type Track } from '../model'
+import { elementIdSchema, MIN_ELEMENT_DURATION_MS, validateElement, type Project, type TimelineElement, type Track } from '../model'
+import { getVisibleAngleCuts, isAudioOnlySource } from '../multicam'
 import { transitionSchema } from '../transitions'
 import { listZoomRegions, renameSplitCopies, zoomRegionEndMs } from '../zoom-regions'
 import { defineCommand, mustGetLayout, mustLocate, replaceTrack } from './shared'
@@ -27,9 +28,10 @@ function withMulticam(project: Project, elementId: ElementId, update: (element: 
 export const addAngleCut = defineCommand({
   type: 'addAngleCut',
   description:
-    'Cut a multicam to a layout at an element-local time: the layout is ' +
-    'active from `atMs` until the next cut (the live-switching primitive — ' +
-    'press a layout key while playing).',
+    'Cut a multicam to a layout. `atMs` is on the source clock, the synced group time every source shares ' +
+    '(at 1x forward it is the multicam trimStartMs plus element-local ms), so cuts stay on the same content ' +
+    'through trims, splits, speed changes, and reverse. The layout is active from `atMs` until the next cut ' +
+    '(the live-switching primitive, press a layout key while playing).',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     atMs: z.number().int().nonnegative(),
@@ -49,7 +51,9 @@ export const addAngleCut = defineCommand({
 
 export const moveAngleCut = defineCommand({
   type: 'moveAngleCut',
-  description: 'Retime a multicam cut (drag its tick). Clamped between its neighbors.',
+  description:
+    'Retime a multicam cut (drag its tick). `fromMs` and `toMs` are on the source clock, like addAngleCut. ' +
+    'Clamped between its neighbors. The first cut opens the schedule and cannot move.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     fromMs: z.number().int().nonnegative(),
@@ -58,15 +62,15 @@ export const moveAngleCut = defineCommand({
   reduce: (project, payload) =>
     withMulticam(project, payload.elementId, (element) => {
       const index = element.angles.findIndex((a) => a.atMs === payload.fromMs)
+      const previous = element.angles[index - 1]
       if (index === -1) {
         throw new CommandError('unknown-cut', `no cut at ${payload.fromMs}ms`)
       }
-      if (index === 0) {
-        throw new CommandError('invalid-payload', 'the first cut is pinned to 0')
+      if (!previous) {
+        throw new CommandError('invalid-payload', 'the first cut opens the schedule and cannot move; setAngleLayout changes its layout')
       }
-      const previous = element.angles[index - 1]!
       const next = element.angles[index + 1]
-      const toMs = Math.max(previous.atMs + 1, Math.min(payload.toMs, next ? next.atMs - 1 : element.durationMs - 1))
+      const toMs = Math.max(previous.atMs + 1, Math.min(payload.toMs, next ? next.atMs - 1 : Infinity))
       const angles = element.angles.map((a, i) => (i === index ? { ...a, atMs: toMs } : a))
       return { ...element, angles }
     }),
@@ -74,15 +78,19 @@ export const moveAngleCut = defineCommand({
 
 export const removeAngleCut = defineCommand({
   type: 'removeAngleCut',
-  description: 'Remove a multicam cut; the previous layout extends over its span.',
+  description: 'Remove a multicam cut at `atMs` on the source clock; the previous layout extends over its span. The first cut cannot be removed.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
-    atMs: z.number().int().positive(),
+    atMs: z.number().int().nonnegative(),
   }),
   reduce: (project, payload) =>
     withMulticam(project, payload.elementId, (element) => {
-      if (!element.angles.some((a) => a.atMs === payload.atMs)) {
+      const index = element.angles.findIndex((a) => a.atMs === payload.atMs)
+      if (index === -1) {
         throw new CommandError('unknown-cut', `no cut at ${payload.atMs}ms`)
+      }
+      if (index === 0) {
+        throw new CommandError('invalid-payload', 'the first cut opens the schedule and cannot be removed; setAngleLayout changes its layout')
       }
       return { ...element, angles: element.angles.filter((a) => a.atMs !== payload.atMs) }
     }),
@@ -90,7 +98,8 @@ export const removeAngleCut = defineCommand({
 
 export const setAngleLayout = defineCommand({
   type: 'setAngleLayout',
-  description: 'Change which layout a multicam span uses without cutting (the paused ' + '"correct this take" action; `atMs` is the span\'s cut time).',
+  description:
+    'Change which layout a multicam span uses without cutting (the paused "correct this take" action). ' + "`atMs` is the span's cut time on the source clock.",
   payloadSchema: z.object({
     elementId: elementIdSchema,
     atMs: z.number().int().nonnegative(),
@@ -128,23 +137,27 @@ export const setMulticamAudio = defineCommand({
     }),
 })
 
-export const setMulticamSourceTrim = defineCommand({
-  type: 'setMulticamSourceTrim',
-  description: "Nudge one multicam source's sync: its media time at the multicam's start (ms).",
+export const setMulticamSourceOffset = defineCommand({
+  type: 'setMulticamSourceOffset',
+  description:
+    "Nudge one multicam source's sync. `offsetMs` is that source's media time at group time 0 (ms). " +
+    'Trims, splits, slips, and speed changes move the window over the group and never change it.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     sourceKey: z.string().min(1),
-    trimStartMs: z.number().int().nonnegative(),
+    offsetMs: z.number().int().nonnegative(),
   }),
   reduce: (project, payload) =>
     withMulticam(project, payload.elementId, (element) => {
       if (!element.sources.some((s) => s.key === payload.sourceKey)) {
         throw new CommandError('unknown-source', `no multicam source "${payload.sourceKey}"`)
       }
-      return {
+      const next = {
         ...element,
-        sources: element.sources.map((s) => (s.key === payload.sourceKey ? { ...s, trimStartMs: payload.trimStartMs } : s)),
+        sources: element.sources.map((s) => (s.key === payload.sourceKey ? { ...s, offsetMs: payload.offsetMs } : s)),
       }
+      validateElement(project, next)
+      return next
     }),
 })
 
@@ -154,7 +167,8 @@ export const setMulticamAngleTransition = defineCommand({
     'Standardize the cut style of a multicam: one transition blended at ' +
     'EVERY angle cut (null = hard jump cuts). Same vocabulary as clip ' +
     'transitions (dissolve, fade-black, …); each window is centered on its ' +
-    'cut and clamped so neighboring windows never overlap.',
+    'cut and clamped so neighboring windows never overlap. Windows are measured on the source clock, ' +
+    'so a 2x multicam plays them in half the time.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     transition: transitionSchema.nullable(),
@@ -203,10 +217,11 @@ export const setMulticamSourceKey = defineCommand({
 export const flattenMulticam = defineCommand({
   type: 'flattenMulticam',
   description:
-    'Explode a multicam into plain clips: one video element per cut-span slot ' +
-    '(on new tracks, layout geometry baked into transforms — approximate, no ' +
-    'crop primitive) plus one audio element from the audio source. One-way; ' +
-    'undo restores the multicam. Zooms on a source move onto the clips cut from that source.',
+    'Destructive: removes the multicam and replaces it with plain clips, one muted video element per ' +
+    'layout slot per visible cut span on new tracks (layout geometry baked into transforms, approximate, ' +
+    'no crop primitive) plus one audio element from the audio source. The multicam, its angle schedule, ' +
+    'and its effects are gone afterwards; only undo restores them. Zooms and the reframe track on a source ' +
+    'move onto the clips cut from that source. Requires 1x forward playback (no timeMap, not reversed).',
   payloadSchema: z.object({ elementId: elementIdSchema }),
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
@@ -214,13 +229,17 @@ export const flattenMulticam = defineCommand({
     if (element.timeMap) {
       throw new CommandError('invalid-payload', 'flatten before changing speed (set speed 1, flatten, then re-apply)')
     }
+    if (element.reversed) {
+      throw new CommandError('invalid-payload', 'flatten before reversing (clear reversed, flatten, then re-apply)')
+    }
 
-    const maxSlots = Math.max(1, ...element.angles.map((a) => mustGetLayout(project, a.layoutId).slots.length))
+    const cuts = getVisibleAngleCuts(element)
+    const maxSlots = Math.max(1, ...cuts.map((cut) => mustGetLayout(project, cut.layoutId).slots.length))
 
-    const spans = element.angles.map((cut, i) => ({
-      cut,
-      fromMs: cut.atMs,
-      toMs: element.angles[i + 1]?.atMs ?? element.durationMs,
+    const spans = cuts.map((cut, i) => ({
+      layoutId: cut.layoutId,
+      fromMs: cut.localMs,
+      toMs: cuts[i + 1]?.localMs ?? element.durationMs,
     }))
 
     const W = (assetId: AssetId) => project.assets[assetId]?.width ?? project.width
@@ -239,10 +258,11 @@ export const flattenMulticam = defineCommand({
     const takenZoomIds = new Set(listZoomRegions(project).map((z) => z.id))
     for (const span of spans) {
       if (span.toMs - span.fromMs < MIN_ELEMENT_DURATION_MS) continue
-      const layout = mustGetLayout(project, span.cut.layoutId)
+      const layout = mustGetLayout(project, span.layoutId)
       layout.slots.forEach((slot, slotIndex) => {
         const source = element.sources.find((s) => s.key === slot.source)
-        if (!source) return
+        const slotTrack = slotTracks[slotIndex]
+        if (!source || !slotTrack || isAudioOnlySource(project, source)) return
         const zooms = renameSplitCopies(
           (element.zooms ?? [])
             .filter((z) => z.source === slot.source && z.atMs < span.toMs && zoomRegionEndMs(z) > span.fromMs)
@@ -254,13 +274,13 @@ export const flattenMulticam = defineCommand({
         const aw = W(source.assetId)
         const ah = H(source.assetId)
         const scale = slot.fit === 'cover' ? Math.max(rw / aw, rh / ah) : Math.min(rw / aw, rh / ah)
-        slotTracks[slotIndex]!.elements.push({
+        slotTrack.elements.push({
           id: createElementId(),
           type: 'video',
           startMs: element.startMs + span.fromMs,
           durationMs: span.toMs - span.fromMs,
           assetId: source.assetId,
-          trimStartMs: source.trimStartMs + span.fromMs,
+          trimStartMs: source.offsetMs + element.trimStartMs + span.fromMs,
           transform: {
             x: (slot.rect.x + slot.rect.w / 2 - 0.5) * project.width,
             y: (slot.rect.y + slot.rect.h / 2 - 0.5) * project.height,
@@ -271,6 +291,7 @@ export const flattenMulticam = defineCommand({
           opacity: 1,
           volume: 1,
           muted: true,
+          ...(source.reframe ? { reframe: source.reframe } : {}),
           ...(zooms.length > 0 && { zooms }),
         })
       })
@@ -292,7 +313,7 @@ export const flattenMulticam = defineCommand({
               startMs: element.startMs,
               durationMs: element.durationMs,
               assetId: audioSource.assetId,
-              trimStartMs: audioSource.trimStartMs,
+              trimStartMs: audioSource.offsetMs + element.trimStartMs,
               volume: element.volume,
               muted: element.muted,
             },

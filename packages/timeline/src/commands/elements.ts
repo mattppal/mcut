@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { applyEdgeTrim } from '../edge-trim'
 import { CommandError } from '../errors'
 import { createElementId, type ElementId, type TrackId } from '../id'
+import { isMediaClip } from '../media-clip'
 import {
   elementIdSchema,
   elementInputSchema,
@@ -160,7 +161,9 @@ export const moveElement = defineCommand({
 
 export const trimElement = defineCommand({
   type: 'trimElement',
-  description: 'Set element timing. `startMs`/`durationMs` position it on the timeline; ' + '`trimStartMs` (video/audio) offsets into the source media.',
+  description:
+    'Set element timing. `startMs`/`durationMs` position it on the timeline; ' +
+    '`trimStartMs` (video, audio, and multicam) offsets into the source media, the synced group clock for a multicam.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     startMs: z.number().int().nonnegative().optional(),
@@ -175,8 +178,8 @@ export const trimElement = defineCommand({
       durationMs: payload.durationMs ?? element.durationMs,
     }
     if (payload.trimStartMs !== undefined) {
-      if (trimmed.type !== 'video' && trimmed.type !== 'audio') {
-        throw new CommandError('invalid-payload', 'trimStartMs only applies to video/audio elements')
+      if (!isMediaClip(trimmed)) {
+        throw new CommandError('invalid-payload', 'trimStartMs only applies to video, audio, and multicam elements')
       }
       trimmed.trimStartMs = payload.trimStartMs
     }

@@ -240,7 +240,7 @@ describe('slipElement', () => {
     applyCommand(project, { type: 'slipElement', elementId: 'e-v', deltaMs: 6000 })
   })
 
-  test('slips every multicam source in sync', () => {
+  test('slips a multicam window and keeps its sources in sync', () => {
     let project = baseProject()
     project = applyCommand(project, {
       type: 'addElement',
@@ -250,16 +250,22 @@ describe('slipElement', () => {
         type: 'multicam',
         startMs: 0,
         durationMs: 2000,
+        trimStartMs: 100,
         sources: [
-          { key: 'screen', assetId: 'a-src', trimStartMs: 100 },
-          { key: 'camera', assetId: 'a-src', trimStartMs: 600 },
+          { key: 'screen', assetId: 'a-src', offsetMs: 0 },
+          { key: 'camera', assetId: 'a-src', offsetMs: 500 },
         ],
         angles: [{ atMs: 0, layoutId: 'l-x' }],
       },
     })
     project = applyCommand(project, { type: 'slipElement', elementId: 'e-m', deltaMs: 300 })
-    const element = getElement(project, 'e-m')!
-    expect(element.type === 'multicam' && element.sources.map((s) => s.trimStartMs)).toEqual([400, 900])
+    expect(getElement(project, 'e-m')).toMatchObject({
+      trimStartMs: 400,
+      sources: [
+        { key: 'screen', offsetMs: 0 },
+        { key: 'camera', offsetMs: 500 },
+      ],
+    })
   })
 
   test('rejects non-source elements', () => {
