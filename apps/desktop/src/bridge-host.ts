@@ -4,6 +4,7 @@ import type { BridgeConfig } from './bridge-config'
 export interface BridgeHostOptions {
   editorUrl: string
   allowedOrigins: readonly string[]
+  exportDir: string
 }
 
 export interface BridgeHost {
@@ -18,6 +19,7 @@ export async function startBridge(config: BridgeConfig, options: BridgeHostOptio
     token: config.token,
     editorUrl: options.editorUrl,
     allowedOrigins: [...options.allowedOrigins],
+    exportDir: options.exportDir,
   })
   const port = await bridge.listen(config.port)
   const mcpUrl = bridge.getMcpUrl()

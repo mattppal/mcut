@@ -203,7 +203,9 @@ export const setMulticamSourceKey = defineCommand({
       const sources = element.sources.map((s) =>
         s.key === payload.sourceKey ? { ...s, key: payload.newKey } : taken && s.key === payload.newKey ? { ...s, key: payload.sourceKey } : s,
       )
+      const rekey = (key: string | undefined) => (key === payload.sourceKey ? payload.newKey : taken && key === payload.newKey ? payload.sourceKey : key)
       const next = { ...element, sources }
+      if (element.zooms) next.zooms = element.zooms.map((zoom) => ({ ...zoom, source: rekey(zoom.source) }))
       if (!taken && element.audioSource === payload.sourceKey) {
         next.audioSource = payload.newKey
       }

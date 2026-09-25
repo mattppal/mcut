@@ -27,9 +27,9 @@ creates the file when missing and writes it after successful edits.
 
 ## Static tools
 
-The published server registers sixteen static tools. The live bridge handles
+The published server registers twenty static tools. The live bridge handles
 three more in the editor, `list_commands`, `apply_commands`, and
-`run_operator`, which together with the sixteen form the nineteen-tool agent
+`run_operator`, which together with the twenty form the twenty-three-tool agent
 profile. Studio serves the profiles inside the desktop app, with a catalog at
 `app://studio/tools`, at `app://studio/tools.json` and
 `app://studio/tools.agent.json`. The full profile
@@ -44,19 +44,47 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `get_audio_activity` | Live bridge only. Sound and silence windows for one video or audio clip in source time. |
 | `get_transcript` | Caption-derived transcript. Never starts transcription. |
 | `search_transcript` | Find spoken words or phrases with timeline times. |
+| `find_retakes` | Retake candidates from the word-timed transcript, last to first, each a timeline range that keeps the last take. With `elementId`, also that clip's transcript in source time for `apply_captions`. |
 | `ensure_transcript` | Live bridge only. Transcribe the target clip in the editor and apply word-timed captions. |
 | `list_commands` | Live bridge only. Every raw timeline command schema. |
 | `apply_commands` | Live bridge only. Apply several commands in one undoable transaction. |
 | `apply_captions` | Turn a transcript into caption elements as one undoable edit. |
 | `apply_silence_cuts` | Cut transcript silence out of one clip as one undoable edit. |
 | `lint_project` | Cross-entity problems `parseProject` cannot reject, each with a severity and code. |
+| `list_zooms` | Every zoom region with its element, timing, target, easing, and motion blur. |
+| `edit_zooms` | Add, update, or remove zoom regions as one undoable edit. |
 | `list_presets` | Platform delivery presets with dimensions, fps, and safe areas. |
 | `list_operators` | List available UI-level editor operators. |
 | `run_operator` | Live bridge only. Run an operator by id. |
 | `list_actions` | Live bridge only. List editor actions. |
 | `run_action` | Live bridge only. Run an editor action by id. |
-| `undo` | Undo the most recent edit. |
+| `transact` | Apply 1 to 100 command, operator, `run_operator`, `run_action`, or `apply_commands` calls as one undo step. A failed call leaves the project and the undo stack unchanged. |
+| `undo` | Undo the most recent edit. One undo step is one tool call or one whole `transact`. |
 | `redo` | Redo the most recently undone edit. |
+| `export_video` | Live bridge only. Start rendering the whole timeline to a video file and return its `jobId`. |
+| `get_export` | Live bridge only. State, percent, and ETA of an export job. `waitMs` waits for it to finish. |
+| `cancel_export` | Live bridge only. Stop a running export. |
+
+## Export jobs
+
+A long timeline renders for minutes, so export runs as a job. `export_video`
+starts the render in Studio and returns the `jobId`, the format, the
+`outputPath`, and the timeline duration. Call `get_export` with the `jobId` and
+`waitMs` set to `20000` until `state` is `done`, then read `outputPath` and
+`bytes`. While the job renders, `get_export` reports the phase, the percent,
+and `etaMs`.
+
+Studio uploads the finished file to the bridge, and the bridge writes it. No
+download starts and no save dialog opens. The file goes to `outputPath` when
+the call passes an absolute path. Otherwise it takes the project name in the
+export folder, with ` (2)` added when that name is taken. The desktop app
+exports to the Downloads folder. A standalone bridge uses
+`LiveBridgeOptions.exportDir`, which defaults to `~/Downloads`, or to the
+system temp folder when `~/Downloads` is missing.
+
+One export runs at a time. A second `export_video` fails with `export-busy`
+until the first finishes or `cancel_export` stops it. The bridge keeps the last
+ten jobs.
 
 ## Generated operator tools
 

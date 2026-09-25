@@ -58,7 +58,7 @@ test('seed 1 always yields the same second step', () => {
   expect(plan.steps[1]).toEqual({
     tool: 'addAsset',
     args: {
-      asset: { id: 'a-fze4db7d', kind: 'video', src: 'Hello world', hash: 'intro', name: 'rgba(0, 0, 0, 0.5)', nativePreview: false, durationMs: 19834 },
+      asset: { id: 'a-fz8737ea', kind: 'image', src: 'clip', mimeType: 'intro' },
     },
   })
 })

@@ -36,9 +36,9 @@ generated. Pass explicit ids when later commands must reference the element.
 ## The three clocks
 
 1. **Timeline time.** `startMs`, `splitElement.atMs`, project duration.
-2. **Element-local time.** keyframe `timeMs`, timeMap input,
-   `applyZoomPreset.atMs`. Zero is the clip's first visible frame. Moving a clip
-   moves its animation with it. Splitting redistributes keyframes per side.
+2. **Element-local time.** keyframe `timeMs`, timeMap input, zoom region `atMs`.
+   Zero is the clip's first visible frame. Moving a clip moves its animation
+   with it. Splitting redistributes keyframes and zoom regions per side.
 3. **Source time.** `trimStartMs` is the in-point into the asset. Transcripts speak
    source time. A multicam's sources share one source clock. Its `trimStartMs` and
    angle-cut `atMs` are on that clock, and each source plays its media at its

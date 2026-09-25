@@ -3,6 +3,7 @@ import type { AnimatableProperty, Keyframe, KeyframeMap } from './keyframes'
 import { getMediaSourceDurationMs, isMediaClip, type MediaClip } from './media-clip'
 import { MIN_ELEMENT_DURATION_MS, splitElementAt, type Project, type TimelineElement } from './model'
 import { getSourceSpanMs, hasTimeMap } from './speed'
+import { shiftZoomRegions } from './zoom-regions'
 
 export type TrimEdge = 'start' | 'end'
 
@@ -54,6 +55,7 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
     }
     next.keyframes = shifted
   }
+  if ('zooms' in next && next.zooms) next.zooms = shiftZoomRegions(next.zooms, growMs)
 
   if (next.type === 'caption') {
     if (next.words) {

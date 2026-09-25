@@ -1,5 +1,6 @@
-import type { Crop, FrameStyle, LayoutSlot } from '@mcut/timeline'
+import type { ContentView, Crop, FrameStyle, LayoutSlot, VisibleFraction } from '@mcut/timeline'
 import type { Canvas2D } from './types'
+import { applyView, type SourceRect } from './zoom-views'
 
 export interface FrameBox {
   x: number
@@ -8,14 +9,9 @@ export interface FrameBox {
   h: number
 }
 
-interface SourceRect {
-  sx: number
-  sy: number
-  sw: number
-  sh: number
-}
-
 type MediaFit = LayoutSlot['fit'] | 'fill'
+
+type ViewFor = (visible: VisibleFraction) => ContentView
 
 export function getImageSize(source: CanvasImageSource): { width: number; height: number } {
   if (typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement) {
@@ -34,11 +30,18 @@ function lengthInPixels(length: number | SVGAnimatedLength): number {
   return typeof length === 'number' ? length : length.baseVal.value
 }
 
-export function cropSourceRect(crop: Crop | undefined, frame: CanvasImageSource): SourceRect | null {
+function cropSourceRect(crop: Crop | undefined, frame: CanvasImageSource): SourceRect | null {
   if (!crop) return null
   const { width: fw, height: fh } = getImageSize(frame)
   if (fw <= 0 || fh <= 0) return null
   return { sx: crop.x * fw, sy: crop.y * fh, sw: crop.w * fw, sh: crop.h * fh }
+}
+
+export function viewSourceRect(crop: Crop | undefined, frame: CanvasImageSource, view: ContentView): SourceRect | null {
+  const cropped = cropSourceRect(crop, frame)
+  if (view.scale === 1) return cropped
+  const { width, height } = getImageSize(frame)
+  return applyView(cropped ?? { sx: 0, sy: 0, sw: width, sh: height }, view)
 }
 
 export const frameRadius = (style: FrameStyle, box: { w: number; h: number }): number => (style.cornerRadius ?? 0) * Math.min(box.w, box.h)
@@ -79,23 +82,25 @@ function withFrameChrome(ctx: Canvas2D, style: FrameStyle, box: FrameBox, draw: 
   }
 }
 
-function fitSource(src: SourceRect, box: FrameBox, fit: MediaFit): { src: SourceRect; dest: FrameBox } {
-  if (fit === 'fill') return { src, dest: box }
-  const scale = fit === 'cover' ? Math.max(box.w / src.sw, box.h / src.sh) : Math.min(box.w / src.sw, box.h / src.sh)
-  const sw = Math.min(src.sw, box.w / scale)
-  const sh = Math.min(src.sh, box.h / scale)
+function placeSource(base: SourceRect, box: FrameBox, fit: MediaFit, viewFor: ViewFor): { src: SourceRect; dest: FrameBox } {
+  if (fit === 'fill') return { src: applyView(base, viewFor({ x: 1, y: 1 })), dest: box }
+  const fitScale = fit === 'cover' ? Math.max(box.w / base.sw, box.h / base.sh) : Math.min(box.w / base.sw, box.h / base.sh)
+  const view = viewFor({ x: box.w / (fitScale * base.sw), y: box.h / (fitScale * base.sh) })
+  const scale = fitScale * view.scale
+  const sw = Math.min(base.sw, box.w / scale)
+  const sh = Math.min(base.sh, box.h / scale)
   const dw = sw * scale
   const dh = sh * scale
   return {
-    src: { sx: src.sx + (src.sw - sw) / 2, sy: src.sy + (src.sh - sh) / 2, sw, sh },
+    src: { sx: base.sx + (base.sw - sw) * view.focus.x, sy: base.sy + (base.sh - sh) * view.focus.y, sw, sh },
     dest: { x: box.x + (box.w - dw) / 2, y: box.y + (box.h - dh) / 2, w: dw, h: dh },
   }
 }
 
-export function drawFramedMedia(ctx: Canvas2D, frame: CanvasImageSource, box: FrameBox, style: FrameStyle, fit: MediaFit): void {
+export function drawFramedMedia(ctx: Canvas2D, frame: CanvasImageSource, box: FrameBox, style: FrameStyle, fit: MediaFit, viewFor: ViewFor): void {
   const { width, height } = getImageSize(frame)
   if (width <= 0 || height <= 0) return
-  const { src, dest } = fitSource(cropSourceRect(style.crop, frame) ?? { sx: 0, sy: 0, sw: width, sh: height }, box, fit)
+  const { src, dest } = placeSource(cropSourceRect(style.crop, frame) ?? { sx: 0, sy: 0, sw: width, sh: height }, box, fit, viewFor)
   withFrameChrome(ctx, style, box, () => ctx.drawImage(frame, src.sx, src.sy, src.sw, src.sh, dest.x, dest.y, dest.w, dest.h))
 }
 

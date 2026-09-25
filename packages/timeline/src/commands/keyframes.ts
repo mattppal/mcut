@@ -12,7 +12,6 @@ import {
   type Keyframe,
 } from '../keyframes'
 import { elementIdSchema, type Project, type TimelineElement } from '../model'
-import { expandZoomPreset, zoomPresetSchema } from '../zoom-presets'
 import { defineCommand, mustLocate, replaceTrack } from './shared'
 import { isVisualElement } from './visual'
 
@@ -185,33 +184,6 @@ export const applyAnimationPreset = defineCommand({
     return replaceTrack(project, track.id, (t) => ({
       ...t,
       elements: t.elements.map((e) => (e.id === element.id ? nextElement : e)),
-    }))
-  },
-})
-
-export const applyZoomPreset = defineCommand({
-  type: 'applyZoomPreset',
-  description:
-    'Apply a saved zoom (relative keyframe pattern: scale multipliers + ' +
-    'position deltas) to an element at an element-local time. Expands into ' +
-    'editable keyframes; existing keyframes inside the window are replaced. ' +
-    'Override durationMs to retime the move.',
-  payloadSchema: z.object({
-    elementId: elementIdSchema,
-    preset: zoomPresetSchema,
-    atMs: z.number().int().nonnegative(),
-    durationMs: z.number().int().min(100).optional(),
-  }),
-  reduce: (project, payload) => {
-    const { track, element } = mustLocate(project, payload.elementId)
-    for (const property of Object.keys(payload.preset.tracks) as AnimatableProperty[]) {
-      mustSupportProperty(element, property)
-    }
-    const keyframes = expandZoomPreset(element, payload.preset, payload.atMs, payload.durationMs)
-    const next: TimelineElement = { ...element, keyframes }
-    return replaceTrack(project, track.id, (t) => ({
-      ...t,
-      elements: t.elements.map((e) => (e.id === element.id ? next : e)),
     }))
   },
 })

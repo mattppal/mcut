@@ -10,6 +10,7 @@ import {
   getLinkedElementIds,
   getMulticamGroupTimeMs,
   getVisibleAngleCuts,
+  isZoomable,
   resolveElementAudioSource,
   TRANSITION_TYPES,
   type AssetRef,
@@ -31,6 +32,7 @@ import {
 } from '@/components/ui/context-menu'
 import { AudioWaveform, VideoFilmstrip } from './clip-media'
 import { FadeOverlay } from './clip-fades'
+import { ZoomLane } from './clip-zooms'
 import { getElementUI } from './element-ui'
 import { KeyframeMarkers, VolumeBand } from './clip-keyframes'
 import { duplicateElement, removeSelection, splitSelectionAtPlayhead, unlinkElements } from './editor-actions'
@@ -290,6 +292,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
         {element.type === 'audio' && <VolumeBand element={element} widthPx={widthPx} heightPx={heightPx + 8} interactive={selected} />}
         {element.type === 'multicam' && <MulticamWaveform element={element} widthPx={widthPx} heightPx={heightPx} />}
         {element.type === 'multicam' && <MulticamCutTicks element={element} pxPerMs={pxPerMs} />}
+        {isZoomable(element) && <ZoomLane element={element} pxPerMs={pxPerMs} />}
         {(element.type === 'video' || element.type === 'audio' || element.type === 'multicam') && (
           <FadeOverlay element={element} pxPerMs={pxPerMs} widthPx={widthPx} interactive={selected} />
         )}

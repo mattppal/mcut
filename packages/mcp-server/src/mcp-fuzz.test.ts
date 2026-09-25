@@ -114,13 +114,10 @@ test('seed 1 always yields the same second step over the stdio tool list', () =>
     tool: 'addAsset',
     args: {
       asset: {
-        id: 'a-fze4db7d',
-        kind: 'video',
-        src: 'Hello world',
-        hash: 'intro',
-        name: 'rgba(0, 0, 0, 0.5)',
-        nativePreview: false,
-        durationMs: 19834,
+        id: 'a-fz8737ea',
+        kind: 'image',
+        src: 'clip',
+        mimeType: 'intro',
       },
     },
   })

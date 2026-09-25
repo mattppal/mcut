@@ -6,6 +6,7 @@ import {
   interpolateTrack,
   isMediaClip,
   resolveElementAudioSource,
+  type ElementId,
   type Project,
   type TimeMap,
 } from '@mcut/timeline'
@@ -72,7 +73,7 @@ function sampleVolumeCurve(element: { startMs: number; durationMs: number }, get
   return curve
 }
 
-function collectAudibleSegments(project: Project): AudibleSegment[] {
+function collectAudibleSegments(project: Project, audioSources?: ReadonlyMap<ElementId, string>): AudibleSegment[] {
   const segments: AudibleSegment[] = []
   for (const track of project.tracks) {
     if (track.muted) continue
@@ -83,7 +84,7 @@ function collectAudibleSegments(project: Project): AudibleSegment[] {
       const source = resolveElementAudioSource(project, element.id)
       if (!source) continue
       segments.push({
-        src: source.asset.src,
+        src: audioSources?.get(element.id) ?? source.asset.src,
         startMs: source.timelineStartMs,
         durationMs: source.timelineDurationMs,
         trimStartMs: source.sourceStartMs,
@@ -102,8 +103,13 @@ function collectAudibleSegments(project: Project): AudibleSegment[] {
   return segments
 }
 
-export async function mixProjectAudio(project: Project, totalDurationMs: number, signal?: AbortSignal): Promise<MixedAudioData | null> {
-  const segments = collectAudibleSegments(project)
+export async function mixProjectAudio(
+  project: Project,
+  totalDurationMs: number,
+  signal?: AbortSignal,
+  audioSources?: ReadonlyMap<ElementId, string>,
+): Promise<MixedAudioData | null> {
+  const segments = collectAudibleSegments(project, audioSources)
   if (segments.length === 0) return null
   const buffer = await mixAudioSegments(segments, totalDurationMs, signal)
   return {

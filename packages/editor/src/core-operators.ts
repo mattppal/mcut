@@ -12,7 +12,7 @@ import {
   toOtioJson,
   trackIdSchema,
 } from '@mcut/timeline'
-import type { AnimatableProperty } from '@mcut/timeline'
+import type { AnimatableProperty, AudioElement, EditorEngine, MulticamElement, VideoElement } from '@mcut/timeline'
 import {
   OperatorError,
   defineOperator,
@@ -44,6 +44,16 @@ import {
 } from './timeline-operators'
 
 const hasSelection = ({ engine }: { engine: import('@mcut/timeline').EditorEngine }) => engine.selection.elementIds.length > 0
+
+function selectedVoiceClips(engine: EditorEngine) {
+  const clips: Array<VideoElement | AudioElement | MulticamElement> = []
+  for (const id of engine.selection.elementIds) {
+    const element = getElement(engine.project, id)
+    if (!element) continue
+    if (element.type === 'video' || element.type === 'audio' || element.type === 'multicam') clips.push(element)
+  }
+  return clips
+}
 
 const hasClips = ({ engine }: { engine: import('@mcut/timeline').EditorEngine }) => engine.project.tracks.some((track) => track.elements.length > 0)
 
@@ -561,6 +571,30 @@ export const operators = {
         return type === 'video' || type === 'audio'
       })
       engine.dispatch({ type: 'createMulticam', sources: sources.map((elementId) => ({ elementId })) })
+    },
+  }),
+
+  'audio.cleanVoice': defineOperator({
+    label: 'Clean up voice',
+    description:
+      'Toggle voice cleanup on the selected video, audio, and multicam clips. ' +
+      'Turns it on for every selected clip when any of them is off, keeping each clip amount or using full strength when it has none. ' +
+      'When every selected clip already has voice cleanup on, turns it off and keeps each amount. One undo restores the previous mix.',
+    category: 'edit',
+    inputSchema: emptyInputSchema,
+    enabled: ({ engine }) => selectedVoiceClips(engine).length > 0,
+    run: ({ engine }) => {
+      const clips = selectedVoiceClips(engine)
+      const enable = clips.some((clip) => clip.voice?.enabled !== true)
+      engine.transact(() => {
+        for (const clip of clips) {
+          engine.dispatch({
+            type: 'updateElement',
+            elementId: clip.id,
+            patch: { voice: { enabled: enable, amount: clip.voice?.amount ?? 1 } },
+          })
+        }
+      })
     },
   }),
 } satisfies Record<string, OperatorDefinition>

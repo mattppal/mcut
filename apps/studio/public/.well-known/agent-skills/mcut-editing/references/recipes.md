@@ -54,39 +54,18 @@ mcut silence-cuts project.json --transcript transcript.json --element e-camera -
 **When the user says:** "zoom in at 4 seconds" or "punch in for emphasis"
 **Template:** `talking-head`
 
-A pair of keyframes per axis. The first keyframe arms the property (stopwatch on) and its `easing` shapes the curve toward the second. 1.0 to 1.12 over 400ms with `easeOut` reads as a deliberate camera move. The zoom holds after the last keyframe. Times are element-local (0 is clip start), so the move survives the clip being dragged. To punch back out later, add another pair returning to 1.0.
+One zoom region, not scale keyframes. It zooms in over inMs, holds, and zooms back out, with easeOutExpo and motion blur on by default. The subtlePunchIn preset is 1.15x. Times are element-local (0 is clip start), so the zoom survives the clip being dragged. `list_zooms` shows every zoom, and `edit_zooms` revises them as one undo step. On a multicam, set `source` to the screen key so the camera overlay stays put.
 
 ```json
 [
   {
-    "type": "setKeyframe",
+    "type": "addZoomRegion",
     "elementId": "e-camera",
-    "property": "scale.x",
-    "timeMs": 4000,
-    "value": 1,
-    "easing": "easeOut"
-  },
-  {
-    "type": "setKeyframe",
-    "elementId": "e-camera",
-    "property": "scale.x",
-    "timeMs": 4400,
-    "value": 1.12
-  },
-  {
-    "type": "setKeyframe",
-    "elementId": "e-camera",
-    "property": "scale.y",
-    "timeMs": 4000,
-    "value": 1,
-    "easing": "easeOut"
-  },
-  {
-    "type": "setKeyframe",
-    "elementId": "e-camera",
-    "property": "scale.y",
-    "timeMs": 4400,
-    "value": 1.12
+    "zoom": {
+      "id": "z-punch",
+      "preset": "subtlePunchIn",
+      "atMs": 4000
+    }
   }
 ]
 ```

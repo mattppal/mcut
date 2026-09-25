@@ -1,7 +1,7 @@
 import { assertNever } from './errors'
 import type { AssetId, ElementId } from './id'
 import { isMediaClip, type MediaClip } from './media-clip'
-import type { AssetRef, Project } from './model'
+import type { AssetRef, Project, TimelineElement } from './model'
 import { getElementLocation } from './selectors'
 import { getSourceSpanMs, type TimeMap } from './speed'
 
@@ -57,4 +57,12 @@ export function resolveElementAudioSource(project: Project, elementId: ElementId
     ...(element.timeMap ? { timeMap: element.timeMap } : {}),
     reversed: element.reversed === true,
   }
+}
+
+export function getVoiceSource(project: Project, element: TimelineElement): { assetId: AssetId; amount: number } | null {
+  const voice = isMediaClip(element) ? element.voice : undefined
+  if (!voice || !voice.enabled || voice.amount <= 0) return null
+  const source = resolveElementAudioSource(project, element.id)
+  if (!source) return null
+  return { assetId: source.assetId, amount: voice.amount }
 }

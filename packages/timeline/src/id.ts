@@ -16,4 +16,5 @@ export const createProjectId = (): string => `p-${randomSuffix()}`
 export const createLinkId = (): string => `l-${randomSuffix()}`
 export const createGroupId = (): GroupId => `g-${randomSuffix()}`
 export const createLayoutId = (): string => `lay-${randomSuffix()}`
+export const createZoomId = (): string => `z-${randomSuffix()}`
 export const createPresetId = (): string => `ps-${randomSuffix()}`

@@ -12,6 +12,7 @@ import { frameStyleSchema, shadowSchema, strokeSchema } from './style'
 import { textRunSchema } from './rich-text'
 import { getMediaSourceDurationMs, type MediaClip } from './media-clip'
 import { transitionSchema } from './transitions'
+import { splitZoomRegions, zoomRegionSchema } from './zoom-regions'
 
 export const MIN_ELEMENT_DURATION_MS = 10
 
@@ -108,12 +109,20 @@ const timingShape = {
 
 const frameStyleShape = frameStyleSchema.shape
 
+export const voiceSchema = z.object({
+  enabled: z.boolean(),
+  amount: z.number().min(0).max(1),
+})
+
+export type Voice = z.infer<typeof voiceSchema>
+
 const mediaWindowShape = {
   trimStartMs: z.number().int().nonnegative().default(0),
   timeMap: timeMapSchema.optional(),
   reversed: z.boolean().optional(),
   volume: z.number().min(0).max(2).default(1),
   muted: z.boolean().default(false),
+  voice: voiceSchema.optional(),
   fadeInMs: z.number().int().nonnegative().optional(),
   fadeOutMs: z.number().int().nonnegative().optional(),
 }
@@ -125,6 +134,7 @@ const videoShape = {
   opacity: z.number().min(0).max(1).default(1),
   ...visualShape,
   ...frameStyleShape,
+  zooms: z.array(zoomRegionSchema).optional(),
 }
 
 const audioShape = {
@@ -138,6 +148,7 @@ const imageShape = {
   opacity: z.number().min(0).max(1).default(1),
   ...visualShape,
   ...frameStyleShape,
+  zooms: z.array(zoomRegionSchema).optional(),
 }
 
 const textShape = {
@@ -171,6 +182,7 @@ const multicamShape = {
   opacity: z.number().min(0).max(1).default(1),
   ...visualShape,
   ...frameStyleShape,
+  zooms: z.array(zoomRegionSchema).optional(),
 }
 
 const captionShape = {
@@ -363,6 +375,11 @@ function timingHalves<E extends TimelineElement>(element: E, offsetMs: number): 
     const split = splitKeyframes(element.keyframes, offsetMs)
     setKeyframes(left, split.left)
     setKeyframes(right, split.right)
+  }
+  if ('zooms' in element && element.zooms && 'zooms' in left && 'zooms' in right) {
+    const split = splitZoomRegions(element.zooms, offsetMs)
+    left.zooms = split.left
+    right.zooms = split.right
   }
   return { left, right }
 }
