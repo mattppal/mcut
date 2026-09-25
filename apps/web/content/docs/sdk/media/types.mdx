@@ -82,10 +82,11 @@ interface ExtractAudioOptions {
   sampleRate?: number
   numberOfChannels?: number
   onProgress?: (progress: number) => void
+  signal?: AbortSignal
 }
 ```
 
-Options for `extractAudioToWav`, the output sample rate and channel count and a progress callback.
+Options for `extractAudioToWav`, the output sample rate and channel count, a progress callback, and a signal that cancels the conversion and rejects with the signal's reason.
 
 ### ActiveMediaItem
 

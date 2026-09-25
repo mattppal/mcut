@@ -5,6 +5,7 @@ export interface ExtractAudioOptions {
   sampleRate?: number
   numberOfChannels?: number
   onProgress?: (progress: number) => void
+  signal?: AbortSignal
 }
 
 export class AudioNotDecodableError extends Error {
@@ -14,7 +15,7 @@ export class AudioNotDecodableError extends Error {
   }
 }
 
-async function runWavConversion(src: MediaSourceLike, audio: ConversionAudioOptions, onProgress?: (progress: number) => void): Promise<Blob | null> {
+async function runWavConversion(src: MediaSourceLike, audio: ConversionAudioOptions, options: ExtractAudioOptions): Promise<Blob | null> {
   const { BufferTarget, Conversion, Output, WavOutputFormat } = await import('mediabunny')
   const input = await inputFor(src)
   try {
@@ -34,8 +35,17 @@ async function runWavConversion(src: MediaSourceLike, audio: ConversionAudioOpti
       }
       throw new Error(`Audio conversion is not possible for this file` + (audioDiscard ? ` (${audioDiscard.reason})` : ''))
     }
-    if (onProgress) conversion.onProgress = onProgress
-    await conversion.execute()
+    if (options.onProgress) conversion.onProgress = options.onProgress
+    const { signal } = options
+    signal?.throwIfAborted()
+    const cancel = () => void conversion.cancel()
+    signal?.addEventListener('abort', cancel, { once: true })
+    try {
+      await conversion.execute()
+    } finally {
+      signal?.removeEventListener('abort', cancel)
+    }
+    signal?.throwIfAborted()
     if (!target.buffer) return null
     return new Blob([target.buffer], { type: 'audio/wav' })
   } finally {
@@ -59,9 +69,10 @@ export async function extractAudioToWav(src: MediaSourceLike, options: ExtractAu
   }
   const atSourceRateAndChannels: ConversionAudioOptions = { codec: 'pcm-s16' }
   try {
-    return await runWavConversion(src, resampled, options.onProgress)
+    return await runWavConversion(src, resampled, options)
   } catch (error) {
+    options.signal?.throwIfAborted()
     if (error instanceof AudioNotDecodableError) throw error
-    return await runWavConversion(src, atSourceRateAndChannels, options.onProgress)
+    return await runWavConversion(src, atSourceRateAndChannels, options)
   }
 }
