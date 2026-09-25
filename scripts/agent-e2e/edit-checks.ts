@@ -211,10 +211,16 @@ const RULES: CheckRule[] = [
         return { pass: false, detail: error instanceof Error ? error.message : String(error) }
       }
       const rounded = samples.filter((sample) => sample.rounded).length
-      const shadowed = samples.filter((sample) => sample.shadowDelta >= REFERENCE_LOOK.shadowDelta / 2).length
+      const measurable = samples.filter((sample) => sample.shadowMeasurable)
+      const shadowed = measurable.filter((sample) => sample.shadowDelta >= REFERENCE_LOOK.shadowDelta / 2).length
+      const shadowOk = measurable.length > 0 ? shadowed * 2 > measurable.length : spans.every((span) => span.slot.shadow)
+      const shadowNote =
+        measurable.length > 0
+          ? `shadow ${shadowed}/${measurable.length} measurable`
+          : `shadow unmeasurable on this background, slot shadow ${spans.every((span) => span.slot.shadow)}`
       const off = Math.max(...spans.map((span) => rectOffReference(span.slot)))
-      const detail = `rounded ${rounded}/${samples.length}, shadow ${shadowed}/${samples.length} (reference ${REFERENCE_LOOK.shadowDelta}), slot off reference by ${off.toFixed(3)}. ${samples.map((sample) => `${(sample.timeMs / 1000).toFixed(1)}s corner ${sample.cornerContrast.toFixed(0)} shadow ${sample.shadowDelta.toFixed(0)}`).join(', ')}`
-      return outcome(rounded * 2 > samples.length && shadowed * 2 > samples.length && off <= REFERENCE_LOOK.rectTolerance, detail, detail)
+      const detail = `rounded ${rounded}/${samples.length}, ${shadowNote} (reference ${REFERENCE_LOOK.shadowDelta}), slot off reference by ${off.toFixed(3)}. ${samples.map((sample) => `${(sample.timeMs / 1000).toFixed(1)}s corner ${sample.cornerContrast.toFixed(0)} shadow ${sample.shadowMeasurable ? sample.shadowDelta.toFixed(0) : 'n/a'}`).join(', ')}`
+      return outcome(rounded * 2 > samples.length && shadowOk && off <= REFERENCE_LOOK.rectTolerance, detail, detail)
     },
   ],
   [

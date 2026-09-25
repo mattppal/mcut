@@ -5,6 +5,7 @@ export interface OverlaySample {
   rounded: boolean
   cornerContrast: number
   shadowDelta: number
+  shadowMeasurable: boolean
 }
 
 type Rgb = [number, number, number]
@@ -12,6 +13,8 @@ type Rgb = [number, number, number]
 export const REFERENCE_LOOK = {
   rect: { x: 0.82, y: 0.5472, w: 0.1609, h: 0.4333 },
   shadowDelta: 45,
+  minBackgroundLuma: 60,
+  maxBackgroundSpread: 12,
   rectTolerance: 0.02,
 }
 
@@ -91,7 +94,13 @@ export function sampleOverlay(file: string, timeMs: number, slot: LayoutSlot, wi
   const rows = [0.3, 0.45, 0.6].map((fraction) => y0 + slot.rect.h * height * fraction)
   const near = rows.map((y) => luma(patch(frame, width, height, x0 - 6, y)))
   const far = rows.map((y) => luma(patch(frame, width, height, x0 - 40, y)))
-  const shadowDelta = far.reduce((a, b) => a + b, 0) / far.length - near.reduce((a, b) => a + b, 0) / near.length
+  const farther = rows.map((y) => luma(patch(frame, width, height, x0 - 60, y)))
+  const mean = (values: number[]): number => values.reduce((a, b) => a + b, 0) / values.length
+  const shadowDelta = mean(far) - mean(near)
+  const shadowMeasurable =
+    Math.min(...far) >= REFERENCE_LOOK.minBackgroundLuma &&
+    shadowDelta <= REFERENCE_LOOK.shadowDelta * 2 &&
+    far.every((value, index) => Math.abs(value - (farther[index] ?? value)) <= REFERENCE_LOOK.maxBackgroundSpread)
   const cornerContrast = Math.min(...contrasts)
-  return { timeMs, rounded: cornerContrast > 0, cornerContrast, shadowDelta }
+  return { timeMs, rounded: cornerContrast > 0, cornerContrast, shadowDelta, shadowMeasurable }
 }
