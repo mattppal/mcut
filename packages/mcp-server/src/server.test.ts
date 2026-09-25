@@ -4,6 +4,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { EditorEngine, getProjectCaptions, parseProject } from '@mcut/timeline'
 import { WebSocket } from 'ws'
+import { z } from 'zod'
 import { listServerToolDefinitions } from './contract'
 import { LiveMcutBridge, createHttpBridgeTarget } from './live-bridge'
 import { createMcutMcpServer, createMcutMcpServerForTarget } from './server'
@@ -495,9 +496,10 @@ describe('createMcutMcpServer', () => {
       socket.once('error', reject)
     })
 
+    const tabRequestSchema = z.object({ id: z.string(), type: z.string(), payload: z.unknown() })
     const payloads: unknown[] = []
     socket.on('message', (raw) => {
-      const message = JSON.parse(raw.toString()) as { id: string; type: string; payload?: unknown }
+      const message = tabRequestSchema.parse(JSON.parse(raw.toString()))
       if (message.type === 'center_person') {
         payloads.push(message.payload)
         setTimeout(() => socket.send(JSON.stringify({ id: message.id, ok: true, result: { keys: 4 } })), 200)
