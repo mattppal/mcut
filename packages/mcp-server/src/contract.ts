@@ -3,6 +3,7 @@ import { centerPersonOptionsSchema, operatorIds, operators, silenceCutOptionsSch
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
 import { captionsCommandOptionsSchema, retakeOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
+import { PICTURE_TOOL_DESCRIPTIONS, PICTURE_TOOL_INPUTS } from './picture-tools'
 import { commandBatchSchema } from './transact-shape'
 
 export * from './export-protocol'
@@ -47,6 +48,8 @@ export const MCP_AGENT_TOOL_NAMES = [
   'get_project',
   'get_media_context',
   'get_frame',
+  'find_scene_changes',
+  'get_contact_sheet',
   'get_audio_activity',
   'get_transcript',
   'search_transcript',
@@ -96,6 +99,7 @@ export const MCP_TOOL_INPUTS = {
     elementId: elementIdSchema.describe('When set, render only this element. A multicam renders its composite.').optional(),
     maxWidth: z.int().min(64).max(3840).default(1280).describe('Maximum PNG width in pixels. Defaults to 1280. Height follows the project aspect ratio.'),
   }),
+  ...PICTURE_TOOL_INPUTS,
   get_audio_activity: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
     includeWaveform: z.boolean().describe('Include compact max-amplitude waveform buckets for coarse inspection.').optional(),
@@ -221,7 +225,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   get_frame:
     'Live bridge only. Render one timeline frame as a PNG. Call get_frame before placing a zoom or a crop. ' +
     'Pass elementId to render only that element, including a multicam composite. ' +
-    'timeMs is the timeline position in milliseconds. maxWidth caps the PNG width and keeps the project aspect ratio.',
+    'timeMs is the timeline position in milliseconds. maxWidth caps the PNG width and keeps the project aspect ratio. ' +
+    'To find when something is on screen, call find_scene_changes and get_contact_sheet instead of stepping get_frame through time.',
+  ...PICTURE_TOOL_DESCRIPTIONS,
   get_audio_activity:
     'Live bridge only: analyze a video/audio clip and return compact source sound/silence windows. ' +
     'Use this only through the connected browser for audio-aware inspection; do not fall back to ffmpeg. ' +
@@ -330,6 +336,8 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('get_project'),
   staticToolCall('get_media_context'),
   staticToolCall('get_frame'),
+  staticToolCall('find_scene_changes'),
+  staticToolCall('get_contact_sheet'),
   staticToolCall('get_transcript'),
   staticToolCall('search_transcript'),
   staticToolCall('find_retakes'),

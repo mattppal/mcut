@@ -14,6 +14,8 @@ export const bridgeRequestSchema = z.discriminatedUnion('type', [
   request('get_project', MCP_TOOL_INPUTS.get_project.optional()),
   request('get_media_context', MCP_TOOL_INPUTS.get_media_context.optional()),
   request('get_frame', MCP_TOOL_INPUTS.get_frame),
+  request('find_scene_changes', MCP_TOOL_INPUTS.find_scene_changes.prefault({})),
+  request('get_contact_sheet', MCP_TOOL_INPUTS.get_contact_sheet.prefault({})),
   request('get_audio_activity', MCP_TOOL_INPUTS.get_audio_activity.default({})),
   request('get_transcript', MCP_TOOL_INPUTS.get_transcript.default({})),
   request('search_transcript', MCP_TOOL_INPUTS.search_transcript),
