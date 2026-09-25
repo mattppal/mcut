@@ -23,7 +23,7 @@ const replyProgress = `self.postMessage({ type: 'progress', id, phase: 'model', 
 test('a failed detection discards the worker so the next call retries on a fresh one that is then reused', async () => {
   const replies = [replyFailure, replyFace]
   const detector = createLocalFaceDetector({ createWorker: () => scriptedWorker(replies.shift() ?? replyFailure) })
-  await expect(detector.detect(media)).rejects.toThrow('Could not download the face detection model')
+  expect(await detector.detect(media).catch(String)).toBe('Error: Could not download the face detection model')
   expect(await detector.detect(media)).toEqual(samples)
   expect(await detector.detect(media)).toEqual(samples)
   expect(spawned).toHaveLength(2)
@@ -46,7 +46,7 @@ test('aborting the detection in flight rejects with the reason and the queued ca
   const second = detector.detect(media)
   await inFlight
   controller.abort(new Error('Cancelled by the user'))
-  await expect(first).rejects.toThrow('Cancelled by the user')
+  expect(await first.catch(String)).toBe('Error: Cancelled by the user')
   expect(await second).toEqual(samples)
   expect(progress).toEqual([0.5])
   expect(spawned).toHaveLength(2)
@@ -58,7 +58,7 @@ test('aborting a queued detection rejects it without waiting for the one in flig
   const controller = new AbortController()
   const queued = detector.detect(media, { signal: controller.signal })
   controller.abort(new Error('Cancelled while queued'))
-  await expect(queued).rejects.toThrow('Cancelled while queued')
+  expect(await queued.catch(String)).toBe('Error: Cancelled while queued')
   expect(spawned).toHaveLength(1)
 })
 
@@ -66,5 +66,5 @@ test('a worker reply outside the protocol rejects the detection', async () => {
   const detector = createLocalFaceDetector({
     createWorker: () => scriptedWorker(`self.postMessage({ type: 'result', id, samples: [{ sourceMs: 0, box: { x: 2, y: 0, w: 1, h: 1 } }] })`),
   })
-  await expect(detector.detect(media)).rejects.toThrow('The face detector worker sent a malformed message')
+  expect(await detector.detect(media).catch(String)).toBe('Error: The face detector worker sent a malformed message')
 })
