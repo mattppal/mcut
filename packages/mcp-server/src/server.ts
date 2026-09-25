@@ -35,7 +35,9 @@ import {
   listServerToolDefinitions,
   operatorToolName,
   type McpServerStaticToolCall,
+  type TransactSubRequest,
 } from './contract'
+import { runEngineTransact, translateTransactCalls } from './transact'
 
 export interface McutMcpTarget {
   getSummary(): string | Promise<string>
@@ -56,6 +58,7 @@ export interface McutMcpTarget {
   exportVideo?(input: unknown): unknown | Promise<unknown>
   getExport?(input: unknown): unknown | Promise<unknown>
   cancelExport?(input: unknown): unknown | Promise<unknown>
+  transact(requests: readonly TransactSubRequest[]): unknown | Promise<unknown>
 }
 
 export interface McutMcpServerOptions {
@@ -164,6 +167,7 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
       applyCommands(engine, commands)
       await onChange()
     },
+    transact: (requests) => runEngineTransact(engine, requests, onChange),
   }
 }
 
@@ -234,6 +238,12 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const { actionId, input } = call.arguments
       const result = await target.runAction(actionId, input)
       return text(`${withResult(`OK: action ${actionId} applied.`, result)}\n\n${await target.getSummary()}`)
+    }
+    case 'transact': {
+      const requests = translateTransactCalls(call.arguments.calls)
+      const results = await target.transact(requests)
+      const lead = `OK: ${requests.length} calls applied as one undo step.`
+      return text(`${withResult(lead, results)}\n\n${await target.getSummary()}`)
     }
     case 'undo':
       if (!(await target.undo())) return failure('Nothing to undo.')

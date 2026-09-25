@@ -1,4 +1,4 @@
-import { MCP_TOOL_INPUTS, cancelExportRequestSchema, startExportRequestSchema } from '@mcut/mcp-server/contract'
+import { MCP_TOOL_INPUTS, cancelExportRequestSchema, startExportRequestSchema, transactSubRequestSchema } from '@mcut/mcp-server/contract'
 import { z } from 'zod'
 
 const request = <Type extends string, Payload extends z.ZodType>(type: Type, payload: Payload) => z.object({ id: z.string(), type: z.literal(type), payload })
@@ -24,6 +24,12 @@ export const bridgeRequestSchema = z.discriminatedUnion('type', [
     z.strictObject({
       commandName: z.string(),
       input: z.record(z.string(), z.unknown()).default({}),
+    }),
+  ),
+  request(
+    'transact',
+    z.strictObject({
+      requests: z.array(transactSubRequestSchema).min(1).max(100),
     }),
   ),
 ])

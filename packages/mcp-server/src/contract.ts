@@ -3,8 +3,10 @@ import { operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinitio
 import { elementIdSchema, listToolDefinitions } from '@mcut/timeline'
 import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
+import { commandBatchSchema } from './transact-shape'
 
 export * from './export-protocol'
+export { applyTransact, transactSubRequestSchema, type TransactSubRequest } from './transact-shape'
 
 export interface McpToolDefinition {
   name: string
@@ -58,6 +60,7 @@ export const MCP_AGENT_TOOL_NAMES = [
   'run_operator',
   'list_actions',
   'run_action',
+  'transact',
   'undo',
   'redo',
   'export_video',
@@ -107,13 +110,19 @@ export const MCP_TOOL_INPUTS = {
   }),
   list_commands: EMPTY_INPUT,
   apply_commands: z.strictObject({
-    commands: z
+    commands: commandBatchSchema,
+  }),
+  transact: z.strictObject({
+    calls: z
       .array(
-        z.looseObject({
-          type: z.string().describe('Timeline command type, e.g. splitElement, trimElement, addElement.'),
+        z.strictObject({
+          name: z.string(),
+          arguments: z.record(z.string(), z.unknown()).optional(),
         }),
       )
-      .min(1),
+      .min(1)
+      .max(100)
+      .describe('Tool calls to apply as one undo step. Each name is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.'),
   }),
   apply_captions: applyCaptionsInputSchema,
   apply_silence_cuts: applySilenceCutsInputSchema,
@@ -180,7 +189,11 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette. ' +
     'Prefer high-level actions over hand-authored command sequences when available. ' +
     'To export or render the finished video, call export_video, then get_export until it is done.',
-  undo: 'Undo the most recent edit.',
+  transact:
+    'Apply 1 to 100 tool calls as one undo step. If any call fails, nothing stays applied. ' +
+    'Wrap one intent in one transact, for example a fade in and a fade out, so undo removes the whole intent. ' +
+    'Each call is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.',
+  undo: 'Undo the most recent edit. One undo step is one tool call or one whole transact.',
   redo: 'Redo the most recently undone edit.',
   export_video:
     'Live bridge only: render the whole timeline to a video file in Studio and write it to disk through the bridge. No dialog opens. ' +
@@ -222,6 +235,7 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('list_operators'),
   staticToolCall('list_actions'),
   staticToolCall('run_action'),
+  staticToolCall('transact'),
   staticToolCall('undo'),
   staticToolCall('redo'),
   staticToolCall('export_video'),
