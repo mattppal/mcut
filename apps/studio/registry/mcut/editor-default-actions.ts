@@ -21,7 +21,7 @@ import { openCommandPalette } from './command-palette-events'
 import { clearEditorLayoutStorage } from './editor-layout'
 import { trackOfSelection } from './editor-actions'
 import { copySelection, cutSelection, pasteAtPlayheadFromAnywhere } from './editor-clipboard'
-import { importMediaFiles, pickFiles } from './media-import'
+import { MEDIA_FILE_ACCEPT, importMediaFiles, pickFiles } from './media-import'
 import { clearSavedSession, saveAssetBlob } from './persistence'
 import { host } from './studio-host'
 import { focusTranscriptSearch } from './transcript-keywords'
@@ -643,7 +643,7 @@ defineAction({
   shortcut: { key: 'i', meta: true },
   icon: UploadIcon,
   run: ({ engine }) =>
-    void pickFiles('video/*,audio/*,image/*,.mkv').then(async (files) => {
+    void pickFiles(MEDIA_FILE_ACCEPT).then(async (files) => {
       if (files.length === 0) return
       const imported = await importMediaFiles(engine, files, (asset, file) => void saveAssetBlob(asset, file))
       if (imported.length > 0) {

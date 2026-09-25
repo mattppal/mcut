@@ -88,7 +88,7 @@ export function EmptyState({
 }
 
 export function PanelCard({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn('h-full min-h-0 overflow-hidden rounded-xl bg-card shadow-xs', className)}>{children}</div>
+  return <div className={cn('h-full min-h-0 overflow-hidden rounded-xl bg-card', className)}>{children}</div>
 }
 
 export function PanelHeader({ className, children }: { className?: string; children: React.ReactNode }) {

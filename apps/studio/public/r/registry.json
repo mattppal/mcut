@@ -210,6 +210,11 @@
           "target": "components/mcut/shortcuts-dialog.tsx"
         },
         {
+          "path": "registry/mcut/settings-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/settings-dialog.tsx"
+        },
+        {
           "path": "registry/mcut/clip-media.tsx",
           "type": "registry:component",
           "target": "components/mcut/clip-media.tsx"
@@ -268,6 +273,31 @@
           "path": "registry/mcut/timeline-drag.ts",
           "type": "registry:lib",
           "target": "components/mcut/timeline-drag.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-drag-plan.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-plan.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-drag-preview.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-preview.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-drag-live.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-live.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-autoscroll.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-autoscroll.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-track-drag.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-track-drag.ts"
         },
         {
           "path": "registry/mcut/persistence.ts",
@@ -707,6 +737,31 @@
           "target": "components/mcut/timeline-drag.ts"
         },
         {
+          "path": "registry/mcut/timeline-drag-plan.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-plan.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-drag-preview.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-preview.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-drag-live.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-live.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-autoscroll.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-autoscroll.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-track-drag.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-track-drag.ts"
+        },
+        {
           "path": "registry/mcut/format.ts",
           "type": "registry:lib",
           "target": "components/mcut/format.ts"
@@ -812,7 +867,7 @@
         "@mcut/desktop-ipc",
         "@mcut/voice"
       ],
-      "registryDependencies": ["button", "dialog", "dropdown-menu", "kbd", "progress", "tooltip"],
+      "registryDependencies": ["button", "dialog", "dropdown-menu", "input", "kbd", "progress", "tooltip"],
       "files": [
         {
           "path": "registry/mcut/editor-toolbar.tsx",
@@ -848,6 +903,11 @@
           "path": "registry/mcut/shortcuts-dialog.tsx",
           "type": "registry:component",
           "target": "components/mcut/shortcuts-dialog.tsx"
+        },
+        {
+          "path": "registry/mcut/settings-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/settings-dialog.tsx"
         },
         {
           "path": "registry/mcut/editor-ui.tsx",
@@ -1411,12 +1471,17 @@
         "@mcut/transcription-local",
         "@mcut/desktop-ipc"
       ],
-      "registryDependencies": ["button", "input", "textarea", "switch", "scroll-area"],
+      "registryDependencies": ["button", "dialog", "input", "textarea", "switch", "scroll-area"],
       "files": [
         {
           "path": "registry/mcut/captions-panel.tsx",
           "type": "registry:component",
           "target": "components/mcut/captions-panel.tsx"
+        },
+        {
+          "path": "registry/mcut/settings-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/settings-dialog.tsx"
         },
         {
           "path": "registry/mcut/format.ts",

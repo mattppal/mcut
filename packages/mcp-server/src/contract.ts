@@ -158,7 +158,10 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   apply_captions:
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
     'Pass elementId to caption only the source span one video/audio clip plays, at its timeline position. ' +
-    'styleId picks a caption style preset. Returns the updated project summary.',
+    'styleId picks a caption style preset. Returns the updated project summary. ' +
+    'Pass a timed transcript from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
+    'Never invent a transcript when transcription fails. ' +
+    'The result warns when the transcript matches no transcript in the project.',
   apply_silence_cuts:
     'Cut transcript silence out of one video/audio element (splits, ripple deletes, and edge trims) ' +
     'as one undoable edit. Returns the removed silence windows in source-media time and the updated project summary.',
@@ -171,10 +174,12 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   run_operator: 'Run a user-level editor operator by id. Use list_operators first when you need the available ids and input schemas.',
   list_actions:
     'List browser editor actions available in the live editor, including menu/palette/hotkey actions. ' +
-    'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close.',
+    'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence, effects.fade-open-close, ' +
+    'and file.export-video, which renders and saves the video.',
   run_action:
     'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette. ' +
-    'Prefer high-level actions over hand-authored command sequences when available.',
+    'Prefer high-level actions over hand-authored command sequences when available. ' +
+    'To export or render the finished video, run file.export-video with input {"format":"mp4"} or {"format":"webm"}.',
   undo: 'Undo the most recent edit.',
   redo: 'Redo the most recently undone edit.',
 }

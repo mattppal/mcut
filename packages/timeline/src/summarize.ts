@@ -1,5 +1,6 @@
 import { assertNever } from './errors'
 import { animatableProperties, getKeyframes } from './keyframes'
+import { summarizeLayouts } from './layout-summary'
 import type { AudioElement, ImageElement, MulticamElement, Project, TimelineElement, VideoElement } from './model'
 import { getProjectDurationMs } from './selectors'
 import { getAverageSpeed } from './speed'
@@ -88,6 +89,7 @@ export function summarizeProject(project: Project): string {
       lines.push(`  ${describeElement(project, element)}`)
     }
   }
+  lines.push(...summarizeLayouts(project))
   const assets = Object.values(project.assets)
   if (assets.length > 0) {
     lines.push(`Assets: ${assets.map((a) => `${a.id} ${a.kind} "${a.name ?? ''}"${a.durationMs ? ` ${seconds(a.durationMs)}` : ''}`).join('; ')}`)

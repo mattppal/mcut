@@ -23,19 +23,25 @@
     "mcut-editing-skill": "0.0.0"
   },
   "changesets": [
+    "agent-tool-descriptions",
+    "animation-preset-at-playhead",
     "audio-activity-mcp",
+    "bridge-catch-all",
+    "bridge-malformed-host",
     "caption-word-order",
     "desktop-ipc",
     "desktop-platform-field",
     "desktop-update-state",
     "duplicate-element-ids",
     "edge-trim-safe-integer",
+    "layout-summary-pixels",
     "lazy-mediabunny",
     "live-bridge-app-origin",
     "live-bridge-not-connected-message",
     "live-bridge-reconnect",
     "local-whisper-desktop-fetch",
     "mcp-server-contract-subpath",
+    "mcp-server-package-bin",
     "media-asset-no-duration",
     "media-probe-error",
     "media-probe-metadata-duration-fallback",
@@ -70,6 +76,7 @@
     "u8-react-playback",
     "u9-boundary-parse",
     "webgpu-player-default",
+    "whisper-load-watchdog",
     "whisper-model-load-retry",
     "whisper-progress-unclamped"
   ]

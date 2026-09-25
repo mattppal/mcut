@@ -9,7 +9,8 @@ import { PanelCard } from './editor-primitives'
 import { EditorToolbar } from './editor-toolbar'
 import { useEditorUI, type LeftTab } from './editor-ui'
 import { LEFT_TABS, LeftPanel, type LeftPanelProps } from './left-panel'
-import { PreviewArea, TrackSorter } from './preview-area'
+import { EditorDnd } from './editor-dnd'
+import { PreviewArea } from './preview-area'
 import { PropertiesPanel } from './properties-panel'
 import { TimelinePanel } from './timeline-panel'
 
@@ -33,7 +34,7 @@ function CompactTabBar({ active, onSelect }: { active: CompactPanel | null; onSe
           aria-pressed={active === id}
           className={cn(
             'flex min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg text-2xs font-medium transition-colors',
-            active === id ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+            active === id ? 'bg-card text-foreground' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
           )}
           onClick={() => onSelect(id)}
         >
@@ -74,7 +75,7 @@ export function CompactWorkspace({ transcribe, omitted }: Omit<LeftPanelProps, '
   }
 
   return (
-    <TrackSorter>
+    <EditorDnd>
       <div className="flex h-full min-h-0 flex-col">
         <EditorToolbar />
         <div className="min-h-0 flex-1 px-2">
@@ -103,6 +104,6 @@ export function CompactWorkspace({ transcribe, omitted }: Omit<LeftPanelProps, '
           </DialogContent>
         </Dialog>
       </div>
-    </TrackSorter>
+    </EditorDnd>
   )
 }

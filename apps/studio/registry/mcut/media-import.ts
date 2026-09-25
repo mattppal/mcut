@@ -7,6 +7,8 @@ import type { AssetRef } from '@mcut/timeline'
 
 export type OnAssetImported = (asset: AssetRef, file: File) => void
 
+export const MEDIA_FILE_ACCEPT = 'video/*,audio/*,image/*,.mkv,.aac,.m4a,.opus,.flac'
+
 export async function importMediaFiles(engine: EditorEngine, files: File[], onAssetImported?: OnAssetImported): Promise<AssetRef[]> {
   const imported: AssetRef[] = []
   for (const file of files) {
