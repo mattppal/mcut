@@ -43,6 +43,7 @@
     "expo-easing",
     "export-audio-encoder-delay",
     "export-audio-one-buffer",
+    "export-frame-rgba",
     "export-job-socket-races",
     "export-job",
     "find-retakes",
