@@ -3,6 +3,7 @@ import { applyCommand } from './commands'
 import { EditorEngine } from './engine'
 import { createProject, splitElementAt, type MulticamElement, type Project, type VideoElement } from './model'
 import { getElement } from './selectors'
+import { summarizeProject } from './summarize'
 import { thrownBy } from './test-helpers'
 import { getClipView, getSlotView, getZoomShutterMs, listZoomRegions, type ZoomRegion } from './zoom-regions'
 
@@ -127,6 +128,34 @@ describe('zoom regions on a clip', () => {
     const right = video(split, 'e-right')
     for (const t of [10_000, 10_400]) expect(getClipView(left, t)).toEqual(getClipView(whole, t))
     for (const t of [10_500, 11_500]) expect(getClipView(right, t)).toEqual(getClipView(whole, t))
+  })
+
+  test.each([
+    ['splitElement', () => ({ type: 'splitElement', elementId: 'e-screen', atMs: 10_500 })],
+    ['an insert edit', (trackId: string) => ({ type: 'addElement', trackId, editMode: 'insert', element: { type: 'video', assetId: 'a-cam', startMs: 10_500, durationMs: 1000 } })],
+    ['an overwrite edit', (trackId: string) => ({ type: 'addElement', trackId, editMode: 'overwrite', element: { type: 'video', assetId: 'a-cam', startMs: 10_500, durationMs: 100 } })],
+  ])('the right piece of a cut through a zoom by %s gets its own zoom id', (_, cut) => {
+    const project = applyCommand(projectWithScreenAndCam(), {
+      type: 'addZoomRegion',
+      elementId: 'e-screen',
+      zoom: { id: 'z-mid', atMs: 9000, inMs: 1000, holdMs: 1000, outMs: 1000 },
+    })
+    const after = applyCommand(project, cut(project.tracks[0]?.id ?? 't-default'))
+    expect(listZoomRegions(after).map((z) => z.id)).toEqual(['z-mid', 'z-mid-r'])
+  })
+
+  test('agent views clip a zoom that crosses a split to the piece that plays it', () => {
+    const project = applyCommand(projectWithScreenAndCam(), {
+      type: 'addZoomRegion',
+      elementId: 'e-screen',
+      zoom: { id: 'z-mid', atMs: 9000, inMs: 1000, holdMs: 1000, outMs: 1000 },
+    })
+    const split = applyCommand(project, { type: 'splitElement', elementId: 'e-screen', atMs: 10_500, rightElementId: 'e-right' })
+    expect(listZoomRegions(split).map(({ id, elementId, atMs, startMs, endMs }) => ({ id, elementId, atMs, startMs, endMs }))).toEqual([
+      { id: 'z-mid', elementId: 'e-screen', atMs: 9000, startMs: 9000, endMs: 10_500 },
+      { id: 'z-mid-r', elementId: 'e-right', atMs: -1500, startMs: 10_500, endMs: 12_000 },
+    ])
+    expect(summarizeProject(split)).toContain('[zooms: z-mid-r 1.15x @ 10.50s]')
   })
 
   test('a zoom left past the clip end by a trim does not block edits to other zooms', () => {
