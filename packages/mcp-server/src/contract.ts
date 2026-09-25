@@ -202,6 +202,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. Read this before revising zooms.',
   edit_zooms:
     'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
+    'If any edit is rejected, none apply. ' +
     'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.5x) with rect or focus on the discussed screen region. ' +
     'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the screen key so the camera overlay stays put.',
   list_presets: 'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',

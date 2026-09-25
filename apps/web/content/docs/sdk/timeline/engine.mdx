@@ -343,3 +343,5 @@ class EditorEngine {
 ```
 
 The headless editor that applies validated commands to a project with undo history and transactions, holds the selection, and keeps a playback store for transport state.
+
+`transact(fn)` records every dispatch inside `fn` as one undo step. If `fn` throws, the project and selection return to where that `transact` began, no undo step is recorded, and the error propagates. A nested `transact` that throws rolls back only its own dispatches.
