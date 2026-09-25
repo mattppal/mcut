@@ -320,22 +320,6 @@ function toJson(measurement: Measurement) {
 }
 
 async function measureMergeBase(ref: string): Promise<Measurement> {
-  for (const cmd of [
-    ['git', 'rev-parse', 'HEAD', ref, '--is-shallow-repository', '--git-dir', '--show-toplevel'],
-    ['git', 'log', '--oneline', '-3', 'HEAD'],
-    ['git', 'log', '--oneline', '-3', ref],
-    ['git', 'merge-base', 'HEAD', ref],
-    ['git', 'merge-base', '--all', 'HEAD', ref],
-    ['git', 'rev-list', '--count', 'HEAD'],
-    ['git', 'rev-list', '--count', ref],
-    ['git', 'status', '--short'],
-    ['git', 'worktree', 'list'],
-    ['git', 'config', '--list', '--show-origin'],
-    ['env'],
-  ]) {
-    const r = Bun.spawnSync(cmd, { cwd: repoRoot })
-    console.log(`DEBUG ${cmd.join(' ')} exit=${r.exitCode} sig=${r.signalCode}\n${r.stdout.toString().split('\n').filter((l) => !/TOKEN|SECRET|AUTH/i.test(l)).slice(0, 40).join('\n')}\n${r.stderr.toString()}`)
-  }
   const mergeBase = run(['git', 'merge-base', 'HEAD', ref], { cwd: repoRoot }).trim()
   console.log(`Comparing HEAD with merge base ${mergeBase.slice(0, 12)} of HEAD and ${ref}`)
   const tempRoot = await mkdtemp(join(tmpdir(), 'mcut-standards-'))
