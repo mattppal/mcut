@@ -36,7 +36,7 @@ edits:
     capability: partial
     note: No named exponential easing, a cubicBezier can approximate it.
   - id: 07-detail-zoom
-    ask: Each time the Daily Brief page is on screen, zoom into it on the screen recording with the same easing and motion blur, keep the zoom subtle, hold while it stays on screen, then zoom back out before it leaves.
+    ask: Each time the printed Daily Brief page (the white sheet with Events, Affirmations, and Journaling sections, shown large in the middle of the screen) is on screen, zoom into it on the screen recording with the same easing and motion blur, keep the zoom subtle, hold while it stays on screen, then zoom back out before it leaves.
     checks: [zoom in hold out, subtle zoom, exponential easing, motion blur, zoom on screen source, zoom covers 0-44.9s 99.3-138.7s 235.9-251.9s]
     capability: partial
     note: find_scene_changes and get_contact_sheet locate the page's visits. The full page is on screen 0 to 44.9 s, 99.3 to 138.7 s, and 235.9 to 251.9 s in Matt's footage. Chat views with a small thumbnail of the page don't count.
