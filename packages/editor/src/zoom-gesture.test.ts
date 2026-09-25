@@ -85,6 +85,15 @@ describe('planZoomRegionDrag', () => {
     expect(dragAndCommit(engineWithTwoZooms(), 'e-clip', 'z-b', 'end', 2000)).toEqual({ atMs: 7000, inMs: 700, holdMs: 1600, outMs: 700 })
   })
 
+  test('a left drag stops at the end of the zoom before it', () => {
+    expect(dragAndCommit(engineWithTwoZooms(), 'e-clip', 'z-b', 'move', -9000)).toEqual({ atMs: 5000, inMs: 700, holdMs: 1600, outMs: 700 })
+    expect(dragAndCommit(engineWithTwoZooms(), 'e-clip', 'z-b', 'start', -9000)).toEqual({ atMs: 5000, inMs: 700, holdMs: 3600, outMs: 700 })
+  })
+
+  test('a fractional delta rounds to a whole millisecond', () => {
+    expect(dragAndCommit(engineWithTwoZooms(), 'e-clip', 'z-a', 'move', 250.6)).toEqual({ atMs: 2251, inMs: 700, holdMs: 1600, outMs: 700 })
+  })
+
   test('only zooms on the same multicam source block the drag', () => {
     const engine = engineWithMulticam()
     engine.dispatch({ type: 'addZoomRegion', elementId: 'e-mc', zoom: { id: 'z-screen', source: 'screen', atMs: 0 } })
@@ -100,9 +109,10 @@ describe('planZoomRegionDrag', () => {
   })
 
   test.each<[ZoomRegionDragMode, number, ElementId, string, Timing]>([
-    ['end', 3700, 'e-clip', 'z-cut', { atMs: 1500, inMs: 700, holdMs: 0, outMs: 700 }],
-    ['start', 4900, 'e-right', 'z-cut-r', { atMs: -800, inMs: 700, holdMs: 0, outMs: 700 }],
-  ])('a %s drag keeps the hold at 0 when the cut off part is longer than the hold', (mode, splitAtMs, elementId, zoomId, expected) => {
+    ['move', 3500, 'e-clip', 'z-cut', { atMs: 1500, inMs: 700, holdMs: 1600, outMs: 700 }],
+    ['start', 4900, 'e-right', 'z-cut-r', { atMs: -2400, inMs: 700, holdMs: 1600, outMs: 700 }],
+    ['end', 3700, 'e-clip', 'z-cut', { atMs: 1500, inMs: 700, holdMs: 1600, outMs: 700 }],
+  ])('a %s drag that cannot fit the zoom in its piece leaves it unchanged', (mode, splitAtMs, elementId, zoomId, expected) => {
     const engine = engineSplitThroughZoom(splitAtMs)
     const { atMs, inMs, holdMs, outMs } = planZoomRegionDrag(zoomable(engine, elementId), zoomOf(engine, elementId, zoomId), mode, 100)
     expect({ atMs, inMs, holdMs, outMs }).toEqual(expected)
@@ -120,6 +130,7 @@ describe('planZoomAtPlayhead', () => {
     })
     expect(planZoomAtPlayhead(clip, 'detailZoom', 10_500).zoom.atMs).toBe(5800)
     expect(planZoomAtPlayhead(clip, 'subtlePunchIn', 500).zoom.atMs).toBe(0)
+    expect(planZoomAtPlayhead(clip, 'subtlePunchIn', 4000.6).zoom.atMs).toBe(3001)
     expect(planZoomAtPlayhead(clip, { scale: 1.35, inMs: 400, holdMs: 1000, outMs: 600, easing: 'easeInOut' }, 11_000).zoom).toEqual({
       scale: 1.35,
       inMs: 400,
