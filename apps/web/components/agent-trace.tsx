@@ -54,7 +54,7 @@ function TraceRow({ index, step, status, result }: { index: number; step: AgentS
           </>
         )}
       </div>
-      <pre className="absolute inset-x-0 top-full z-10 mt-1 hidden max-h-56 overflow-auto rounded-lg border bg-popover p-3 text-2xs leading-relaxed text-popover-foreground shadow-lg group-focus-within:block group-hover:block">
+      <pre className="absolute inset-x-0 top-full z-10 mt-1 hidden max-h-56 overflow-auto rounded-lg border bg-popover p-3 text-2xs leading-relaxed text-popover-foreground group-focus-within:block group-hover:block">
         {JSON.stringify(step.request, null, 2)}
         {result !== undefined && `\n\n${JSON.stringify(result, null, 2)}`}
       </pre>
