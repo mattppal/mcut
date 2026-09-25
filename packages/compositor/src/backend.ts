@@ -1,5 +1,6 @@
 import { buildFilterString, toCompositeOperation, type BlendMode, type Effect, type Project, type Track } from '@mcut/timeline'
-import type { Canvas2D, ElementRenderContext, FrameSource } from './types'
+import { acquireScratch } from './scratch'
+import type { Canvas2D, ElementRenderContext, RenderFrameOptions } from './types'
 
 export interface LayerChrome {
   centerX: number
@@ -96,7 +97,7 @@ export function createElementContext(
   project: Project,
   track: Track,
   timeMs: number,
-  source: FrameSource | undefined,
+  options: RenderFrameOptions,
   viewTimeMs: number = timeMs,
 ): ElementRenderContext {
   return {
@@ -105,7 +106,8 @@ export function createElementContext(
     track,
     timeMs,
     viewTimeMs,
-    source,
+    source: options.source,
+    acquireScratch: (width, height) => acquireScratch('compose', width, height, options),
     get ctx() {
       return backend.acquireRaster()
     },

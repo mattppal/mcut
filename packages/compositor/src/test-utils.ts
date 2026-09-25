@@ -19,7 +19,7 @@ const NO_SHADOW: ShadowState = { color: 'rgba(0, 0, 0, 0)', blur: 0, offsetX: 0,
 
 export class FakeContext2D {
   calls: RecordedCall[] = []
-  readonly canvas = { fake: true, owner: this }
+  readonly canvas: { width: number; height: number }
   fillStyle: unknown = '#000'
   strokeStyle: unknown = '#000'
   font = ''
@@ -32,6 +32,10 @@ export class FakeContext2D {
   shadowBlur = NO_SHADOW.blur
   shadowOffsetX = NO_SHADOW.offsetX
   shadowOffsetY = NO_SHADOW.offsetY
+
+  constructor(width = 1920, height = 1080) {
+    this.canvas = { width, height }
+  }
 
   private get shadow(): ShadowState {
     return { color: this.shadowColor, blur: this.shadowBlur, offsetX: this.shadowOffsetX, offsetY: this.shadowOffsetY }

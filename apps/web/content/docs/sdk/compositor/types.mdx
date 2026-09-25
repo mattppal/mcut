@@ -274,11 +274,13 @@ interface ElementRenderContext {
   project: Project
   track: Track
   timeMs: number
+  viewTimeMs: number
   source: FrameSource | undefined
+  acquireScratch: (width: number, height: number) => Canvas2D | null
 }
 ```
 
-What an element renderer receives, the 2D context, backend, project, track, time, and frame source.
+What an element renderer receives, the 2D context, backend, project, track, time, frame source, and a scratch surface. `viewTimeMs` is the time zoom views read. `acquireScratch` returns an off screen 2D context that is reused across frames, or `null` where no off screen canvas exists. A renderer composes into it and draws it straight away, because the next renderer that asks gets the same surface.
 
 ### ElementRenderer
 
@@ -313,4 +315,4 @@ interface RenderFrameOptions {
 }
 ```
 
-Options for rendering a frame, the frame source, background color, elements to skip, motion blur samples, and a scratch context factory.
+Options for rendering a frame, the frame source, background color, elements to skip, motion blur samples, and a scratch context factory. The renderer calls `createScratchContext` each time it needs a scratch surface, for a motion blur pass or a multicam composite. Without it the renderer keeps one `OffscreenCanvas` per purpose and reuses it across frames.

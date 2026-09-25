@@ -175,11 +175,12 @@ function createElementContext(
   project: Project,
   track: Track,
   timeMs: number,
-  source: FrameSource | undefined,
+  options: RenderFrameOptions,
+  viewTimeMs: number = timeMs,
 ): ElementRenderContext
 ```
 
-Builds the per-element render context for a backend, exposing `ctx` as a getter so the backend learns when raster drawing begins.
+Builds the per-element render context for a backend, exposing `ctx` as a getter so the backend learns when raster drawing begins. The frame source and the compose scratch come from the render options. `viewTimeMs` is the time zoom views read, and each motion blur pass sets it to its own sample time.
 
 ### drawImageQuad2D
 
