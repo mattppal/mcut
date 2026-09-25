@@ -323,7 +323,8 @@ const captionsAssemblyAi: Driver = async (ctx) => {
           run.error === undefined && run.captions.length > 0,
           `${run.captions.length} caption(s) ${quote(run.captions)} from AssemblyAI after ${run.ms} ms${run.error === undefined ? '' : `, toast "${run.error}"`}`,
         )
-  await view.locator('[data-mcut-settings-trigger]').click()
+  await view.getByRole('button', { name: 'Main menu' }).click()
+  await view.getByRole('menuitem', { name: 'Settings…' }).click()
   await field.getByRole('button', { name: 'Remove' }).click()
   await view.getByText('AssemblyAI key removed').waitFor({ state: 'visible', timeout: 10_000 })
   await field.getByText('Configured', { exact: true }).waitFor({ state: 'hidden', timeout: 5_000 })

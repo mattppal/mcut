@@ -3,7 +3,6 @@
 import { useState, useSyncExternalStore } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { SettingsIcon } from '@/lib/icons'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -88,19 +87,14 @@ export function SettingsDialog() {
   const settings = host.transcriptionSettings
   if (settings === null) return null
   return (
-    <>
-      <Button variant="ghost" size="icon-sm" title="Settings" aria-label="Settings" data-mcut-settings-trigger="" onClick={openSettings}>
-        <SettingsIcon />
-      </Button>
-      <Dialog open={open} onOpenChange={setSettingsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Settings</DialogTitle>
-            <DialogDescription>Auto-caption sends audio to AssemblyAI with this key when on-device transcription is off.</DialogDescription>
-          </DialogHeader>
-          <TranscriptionKeyField settings={settings} />
-        </DialogContent>
-      </Dialog>
-    </>
+    <Dialog open={open} onOpenChange={setSettingsOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Settings</DialogTitle>
+          <DialogDescription>Auto-caption sends audio to AssemblyAI with this key when on-device transcription is off.</DialogDescription>
+        </DialogHeader>
+        <TranscriptionKeyField settings={settings} />
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -42,7 +42,6 @@ export {
   Redo as Redo2Icon,
   Scissor as ScissorsIcon,
   Search as SearchIcon,
-  Settings as SettingsIcon,
   ControlSlider as SlidersHorizontalIcon,
   Sparks as SparklesIcon,
   SkipPrev as StepBackIcon,
