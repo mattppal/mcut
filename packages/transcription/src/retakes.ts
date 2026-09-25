@@ -28,17 +28,28 @@ const FILLERS = new Set(['um', 'uh', 'erm', 'ah', 'hmm', 'mm'])
 
 const normalize = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}']+/gu, '')
 
+const CONTRACTIONS: Record<string, readonly string[]> = { gotta: ['got', 'to'], gonna: ['going', 'to'], wanna: ['want', 'to'] }
+
 interface Token {
   norm: string
   word: TimedWord
+  opensPhrase: boolean
 }
 
-function phraseStarts(tokens: readonly Token[], pauseMs: number): number[] {
-  return tokens.flatMap((token, index) => {
-    const previous = tokens[index - 1]
-    if (!previous) return [index]
-    return token.word.startMs - previous.word.endMs >= pauseMs || /[.?!]$/.test(previous.word.text.trim()) ? [index] : []
+function tokenize(words: readonly TimedWord[], pauseMs: number): Token[] {
+  const tokens: Token[] = []
+  let pendingBreak = true
+  words.forEach((word, index) => {
+    const previous = words[index - 1]
+    if (previous && (word.startMs - previous.endMs >= pauseMs || /[.?!]$/.test(previous.text.trim()))) pendingBreak = true
+    const norm = normalize(word.text)
+    if (norm === '' || FILLERS.has(norm)) return
+    for (const part of CONTRACTIONS[norm] ?? [norm]) {
+      tokens.push({ norm: part, word, opensPhrase: pendingBreak })
+      pendingBreak = false
+    }
   })
+  return tokens
 }
 
 function sharedRun(tokens: readonly Token[], a: number, b: number): number {
@@ -50,14 +61,14 @@ function sharedRun(tokens: readonly Token[], a: number, b: number): number {
 const textOf = (tokens: readonly Token[], from: number, to: number) =>
   tokens
     .slice(from, to)
+    .filter((token, i, slice) => slice[i - 1]?.word !== token.word)
     .map((t) => t.word.text.trim())
     .join(' ')
 
 export function findRetakes(words: readonly TimedWord[], options: RetakeOptions = {}): RetakeCandidate[] {
   const { pauseMs, minMatchWords, maxLookaheadMs } = retakeOptionsSchema.parse(options)
-  const tokens = words.map((word) => ({ norm: normalize(word.text), word })).filter((t) => t.norm !== '' && !FILLERS.has(t.norm))
-  const starts = phraseStarts(tokens, pauseMs)
-  const isPhraseStart = new Set(starts)
+  const tokens = tokenize(words, pauseMs)
+  const starts = tokens.flatMap((token, index) => (token.opensPhrase ? [index] : []))
   const candidates: RetakeCandidate[] = []
   let coveredUntil = -1
   for (const start of starts) {
@@ -67,7 +78,8 @@ export function findRetakes(words: readonly TimedWord[], options: RetakeOptions 
     for (let k = start + minMatchWords; k < tokens.length; k++) {
       const candidate = tokens[k]
       if (!candidate || candidate.word.startMs - first.word.startMs > maxLookaheadMs) break
-      for (let offset = 0; offset <= MAX_OPENING_DRIFT && k - offset > start && (offset === 0 || isPhraseStart.has(k - offset)); offset++) {
+      for (let offset = 0; offset <= MAX_OPENING_DRIFT && k - offset > start; offset++) {
+        if (offset > 0 && !tokens[k - offset]?.opensPhrase) continue
         const length = sharedRun(tokens, start + offset, k)
         if (length >= minMatchWords) {
           restart = { index: k - offset, length: length + offset }

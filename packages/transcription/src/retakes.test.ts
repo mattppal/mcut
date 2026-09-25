@@ -29,8 +29,48 @@ describe('findRetakes', () => {
     expect(findRetakes(words, { minMatchWords: 4 }).map((c) => c.keptText)).toEqual(['I need some way to'])
   })
 
-  test('a phrase repeated after the lookahead window is not a retake', () => {
-    const words = [...spoken('I think this is great.', 0), ...spoken('I think this layout works.', 30_000)]
-    expect(findRetakes(words)).toEqual([])
+  test('the same restart counts inside the lookahead window and not past it', () => {
+    const restart = (gapMs: number) => [
+      ...spoken('Every morning there is a page on my desk.', 0),
+      ...spoken('every morning there is a page on my printer.', gapMs),
+    ]
+    expect(findRetakes(restart(10_000)).map((c) => [c.startMs, c.endMs])).toEqual([[0, 10_000]])
+    expect(findRetakes(restart(30_000))).toEqual([])
+  })
+
+  test('a restart may drift two opening words when it begins a phrase', () => {
+    const words = [...spoken('Well so every morning there is a page on my', 0), ...spoken('Okay now every morning there is a page on my printer.', 5000)]
+    expect(findRetakes(words)).toEqual([
+      {
+        startMs: 0,
+        endMs: 5000,
+        abandonedText: 'Well so every morning there is a page on my',
+        keptText: 'Okay now every morning there is a page on my',
+        matchedWords: 10,
+      },
+    ])
+  })
+
+  test('chained attempts merge into one range ending at the last take', () => {
+    const words = [
+      ...spoken('Now the neat thing is that it can use your computer.', 0),
+      ...spoken('Now the neat thing is that it can route traffic.', 5000),
+      ...spoken('Now the neat thing is that it can run commands.', 10_000),
+    ]
+    expect(findRetakes(words).map((c) => [c.startMs, c.endMs, c.keptText])).toEqual([[0, 10_000, 'Now the neat thing is that it can']])
+  })
+
+  test('a period that arrives as its own word still ends the phrase', () => {
+    const words = [
+      ...spoken('Here it is', 0),
+      { text: '.', startMs: 800, endMs: 800 },
+      ...spoken('we print the page every single day we print the page every single morning.', 900),
+    ]
+    expect(findRetakes(words).map((c) => [c.startMs, c.endMs])).toEqual([[900, 3000]])
+  })
+
+  test('gotta and got to are the same words', () => {
+    const words = [...spoken('I gotta shout out the team who built this', 0), ...spoken('I got to shout out the team who built this for me.', 4000)]
+    expect(findRetakes(words).map((c) => [c.startMs, c.endMs])).toEqual([[0, 4000]])
   })
 })
