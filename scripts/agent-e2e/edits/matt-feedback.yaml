@@ -1,0 +1,31 @@
+# Matt's review notes on the recipe result, sent verbatim as follow-ups on the same project.
+edits:
+  - id: f1-no-border
+    ask: No border on the shot of me in the bottom right.
+    checks: [head overlay without border]
+    capability: exists
+    note: The overlay slot stroke is set through saveLayout.
+  - id: f2-taller
+    ask: The aspect ratio of the shot of me should be taller, closer to 9:16.
+    checks: [head overlay narrower, layout head bottom right 9:16]
+    capability: exists
+  - id: f3-zooms
+    ask: The zooms are too severe and some are misplaced.
+    checks: [zoom at most 1.2x, opening zoom]
+    capability: partial
+    note: Placement is unverifiable without a transcript or a frame grab, so only severity and the opening zoom are checked.
+  - id: f2b-taller-explicit
+    ask: I meant the small picture-in-picture of me in the bottom right corner, not the full-screen head shot. Make that corner shot taller, close to 9:16, and put the full-screen head shot back to filling the whole frame.
+    checks: [head overlay narrower, layout head bottom right 9:16]
+    capability: exists
+    note: The explicit retry of f2 after the agent edited the wrong layout.
+  - id: f4-slightly-shorter
+    ask: Much better. The corner shot of me is slightly too tall, otherwise spot on.
+    checks: [head overlay aspect 0.6-0.72, head overlay without border]
+    capability: exists
+    note: Matt's reaction to f2b, verbatim. A small correction without numbers.
+  - id: f5-halfway-back
+    ask: That went too far, it is too short now. Go about halfway back toward the previous height.
+    checks: [head overlay aspect 0.6-0.72, head overlay without border]
+    capability: exists
+    note: The correction after f4 overshot "slightly".

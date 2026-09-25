@@ -8,11 +8,12 @@ import { getSourceSpanMs, splitTimeMap, timeMapSchema } from './speed'
 import { blendModeSchema, effectsSchema, motionBlurSchema } from './effects'
 import { layoutSchema } from './layouts'
 import { propertyPresetSchema } from './presets'
+import { reframeTrackSchema } from './reframe'
 import { frameStyleSchema, shadowSchema, strokeSchema } from './style'
 import { textRunSchema } from './rich-text'
 import { getMediaSourceDurationMs, type MediaClip } from './media-clip'
 import { transitionSchema } from './transitions'
-import { splitZoomRegions, zoomRegionSchema } from './zoom-regions'
+import { mustNotOverlap, splitZoomRegions, zoomRegionSchema } from './zoom-regions'
 
 export const MIN_ELEMENT_DURATION_MS = 10
 
@@ -135,6 +136,7 @@ const videoShape = {
   ...visualShape,
   ...frameStyleShape,
   zooms: z.array(zoomRegionSchema).optional(),
+  reframe: reframeTrackSchema.optional(),
 }
 
 const audioShape = {
@@ -165,6 +167,7 @@ const multicamSourceSchema = z.object({
   key: z.string().min(1),
   assetId: assetIdSchema,
   offsetMs: z.number().int().nonnegative().default(0),
+  reframe: reframeTrackSchema.optional(),
 })
 
 const angleCutSchema = z.object({
@@ -335,6 +338,7 @@ function validateMulticamSources(project: Project, element: MulticamElement): vo
 }
 
 export function validateElement(project: Project, element: TimelineElement): void {
+  if ('zooms' in element && element.zooms) mustNotOverlap(element.zooms)
   switch (element.type) {
     case 'video':
     case 'audio':

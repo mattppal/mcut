@@ -15,6 +15,8 @@ class FakeMedia {
   playbackRate = 1
   seeking = false
   error: null = null
+  readyState = 0
+  listeners = new Map<string, () => void>()
 
   constructor() {
     created.push(this)
@@ -31,13 +33,18 @@ class FakeMedia {
 
   load(): void {}
   removeAttribute(): void {}
+  addEventListener(type: string, listener: () => void): void {
+    this.listeners.set(type, listener)
+  }
 }
+
+class FakeVideo extends FakeMedia {}
 
 const saved = { video: Reflect.get(globalThis, 'HTMLVideoElement'), document: Reflect.get(globalThis, 'document') }
 
 beforeAll(() => {
-  Reflect.set(globalThis, 'HTMLVideoElement', class extends FakeMedia {})
-  Reflect.set(globalThis, 'document', { createElement: () => new FakeMedia() })
+  Reflect.set(globalThis, 'HTMLVideoElement', FakeVideo)
+  Reflect.set(globalThis, 'document', { createElement: (tag: string) => (tag === 'video' ? new FakeVideo() : new FakeMedia()) })
 })
 
 afterAll(() => {
@@ -64,4 +71,23 @@ test('a cleaned copy keeps a simultaneous dry copy of the same asset audible', (
   expect(created).toHaveLength(2)
   expect(created[0]?.muted).toBe(false)
   expect(created[1]?.muted).toBe(false)
+})
+
+test('a paused seek and its seeked event each move the frame version, and an idle sync does not', () => {
+  const asset: AssetRef = { id: 'a-clip', kind: 'video', src: 'blob:clip', nativePreview: true }
+  const pool = new PreviewMediaPool(() => asset)
+  const paused = { isPlaying: false, playbackRate: 1, masterVolume: 1, muted: false }
+  const item: ActiveMediaItem = { assetId: asset.id, kind: 'video', sourceTimeMs: 2000, rate: 1, volume: 0 }
+
+  pool.sync([item], paused)
+  const video = created.at(-1)
+  const afterSeek = pool.frameVersion
+  expect(video?.currentTime).toBe(2)
+  expect(afterSeek).toBeGreaterThan(0)
+
+  pool.sync([item], paused)
+  expect(pool.frameVersion).toBe(afterSeek)
+
+  video?.listeners.get('seeked')?.()
+  expect(pool.frameVersion).toBe(afterSeek + 1)
 })

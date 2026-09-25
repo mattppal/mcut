@@ -15,9 +15,16 @@ import {
   type TimelineElement,
 } from '../model'
 import { compactTimelineIfMagnetic, placementFor, rangesOverlap } from '../placement'
+import { listZoomRegions, renameSplitCopies } from '../zoom-regions'
 import { defineCommand, insertSorted, mintElementId, mustGetTrack, mustLocate, replaceTrack, sortByStart } from './shared'
 
 const editModeSchema = z.enum(['normal', 'overwrite', 'insert']).default('normal')
+
+function mintRightPiece(project: Project, piece: TimelineElement, id: ElementId): TimelineElement {
+  const minted = { ...piece, id }
+  if ('zooms' in minted && minted.zooms) minted.zooms = renameSplitCopies(minted.zooms, new Set(listZoomRegions(project).map((z) => z.id)))
+  return minted
+}
 
 function carveOverwriteRange(project: Project, trackId: TrackId, startMs: number, durationMs: number): Project {
   const endMs = startMs + durationMs
@@ -38,7 +45,7 @@ function carveOverwriteRange(project: Project, trackId: TrackId, startMs: number
       }
       if (tailMs >= MIN_ELEMENT_DURATION_MS) {
         const right = applyEdgeTrim(element, 'start', endMs - element.startMs)
-        elements.push(headMs >= MIN_ELEMENT_DURATION_MS ? { ...right, id: createElementId() } : right)
+        elements.push(headMs >= MIN_ELEMENT_DURATION_MS ? mintRightPiece(project, right, createElementId()) : right)
       }
     }
     return { ...track, elements: sortByStart(elements) }
@@ -67,7 +74,7 @@ function rippleOpenGap(project: Project, targetTrackId: TrackId, atMs: number, d
           const left = applyEdgeTrim(element, 'end', atMs - elementEndMs)
           if ('transition' in left) delete left.transition
           const right = applyEdgeTrim(element, 'start', headMs)
-          elements.push(left, { ...right, id: createElementId(), startMs: atMs + durationMs })
+          elements.push(left, mintRightPiece(project, { ...right, startMs: atMs + durationMs }, createElementId()))
         }
         continue
       }
@@ -203,8 +210,8 @@ export const splitElement = defineCommand({
         `cannot split "${element.id}" at ${payload.atMs}ms: both halves must be at least ` + `${MIN_ELEMENT_DURATION_MS}ms long`,
       )
     }
-    const { left, right } = splitElementAt(element, offset)
-    right.id = mintElementId(project, payload.rightElementId)
+    const { left, right: rightHalf } = splitElementAt(element, offset)
+    const right = mintRightPiece(project, rightHalf, mintElementId(project, payload.rightElementId))
     if ('transition' in left) delete left.transition
     return replaceTrack(project, track.id, (t) => ({
       ...t,

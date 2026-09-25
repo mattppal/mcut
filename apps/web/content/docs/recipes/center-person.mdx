@@ -1,0 +1,44 @@
+---
+title: Center a person
+description: Keep a face in frame with one undoable reframe edit.
+---
+
+`createLocalFaceDetector` from `@mcut/media` samples a video on device and
+returns the largest face at each sample time, or null when there is none. The
+first call downloads the face model from huggingface.co and caches it.
+`planCenterPerson` from `@mcut/editor` turns those samples into a list of
+commands. The first is one smoothed `setReframe`, and
+[Reframe](/docs/sdk/timeline/reframe) covers the track it writes. Apply the list
+in one transaction so it undoes as one step.
+
+```ts
+import { planCenterPerson } from "@mcut/editor"
+import { createLocalFaceDetector } from "@mcut/media"
+
+const detector = createLocalFaceDetector()
+const samples = await detector.detect(asset.src)
+
+const plan = planCenterPerson(engine.project, { elementId: "e-talk" }, samples, {
+  aspect: 9 / 16,
+  smoothing: 0.5,
+})
+
+engine.transact(() => {
+  for (const command of plan) engine.dispatch(command)
+})
+```
+
+On a video, the plan crops to `aspect` and the crop follows the face. When the
+crop aspect is within 1% of the project aspect, the plan also scales the clip to
+cover the frame and centers it. At another aspect the clip keeps its size and
+position, since it is likely picture in picture. Set `fill` to true to fill at
+any aspect, or to false to keep the size. On a multicam, pass the camera
+source key as `source` in the target. The layout slot keeps its rect and aspect,
+and the camera framing inside it follows the face. `smoothing` runs from 0 for a
+tight follow to 1 for a steady frame. The planner throws when no sample has a
+face, so a failed run leaves the project untouched.
+
+In Studio, right-click a video or multicam clip and choose Center person. Over
+the [live bridge](/docs/reference/mcp-server), agents call `center_person`,
+which follows the `camera` source of a multicam by default and takes the same
+`fill` override. Either way the edit is one undo step.

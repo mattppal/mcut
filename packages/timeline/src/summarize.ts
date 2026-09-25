@@ -6,6 +6,7 @@ import type { AudioElement, ImageElement, MulticamElement, Project, TimelineElem
 import { getVisibleAngleCuts } from './multicam'
 import { getProjectDurationMs } from './selectors'
 import { getAverageSpeed } from './speed'
+import { zoomRegionRefs } from './zoom-regions'
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(2)}s`
 
@@ -77,7 +78,7 @@ function describeElement(project: Project, element: TimelineElement): string {
     suffix += ` [→ ${element.transition.type} ${element.transition.durationMs}ms]`
   }
   if ('zooms' in element && element.zooms && element.zooms.length > 0) {
-    const zooms = element.zooms.map((z) => `${z.id}${z.source ? ` ${z.source}` : ''} ${z.scale}x @ ${seconds(element.startMs + z.atMs)}`)
+    const zooms = zoomRegionRefs(element).map((z) => `${z.id}${z.source ? ` ${z.source}` : ''} ${z.scale}x @ ${seconds(z.startMs)}`)
     suffix += ` [zooms: ${zooms.join(', ')}]`
   }
   if (isMediaClip(element)) suffix += describeFades(element)

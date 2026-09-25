@@ -66,6 +66,38 @@ describe('frame style rendering', () => {
     expect(draw.args.slice(5)).toEqual([-320, -180, 640, 360])
   })
 
+  test('a reframe track slides the crop window onto the subject and stops at the frame edge', () => {
+    const project = applyCommand(projectWithVideo(), {
+      type: 'setReframe',
+      elementId: 'e-vid',
+      crop: { x: 0.25, y: 0, w: 0.5, h: 1 },
+      track: [
+        { sourceMs: 0, x: 0.375, y: 0.5 },
+        { sourceMs: 4000, x: 0.9, y: 0.5 },
+      ],
+    })
+    const sourceRectAt = (timeMs: number) => {
+      const ctx = new FakeContext2D()
+      renderFrame(asCtx(ctx), project, timeMs, { source: new FakeSource() })
+      return ctx.callsTo('drawImage').at(-1)?.args.slice(1, 5)
+    }
+    expect(sourceRectAt(0)).toEqual([80, 0, 320, 360])
+    expect(sourceRectAt(4000)).toEqual([320, 0, 320, 360])
+  })
+
+  test('a zoom region narrows from the reframed crop window', () => {
+    const reframed = applyCommand(projectWithVideo(), {
+      type: 'setReframe',
+      elementId: 'e-vid',
+      crop: { x: 0.25, y: 0, w: 0.5, h: 1 },
+      track: [{ sourceMs: 0, x: 0.375, y: 0.5 }],
+    })
+    const project = applyCommand(reframed, { type: 'addZoomRegion', elementId: 'e-vid', zoom: { atMs: 0, inMs: 500, holdMs: 2000, outMs: 500, scale: 2 } })
+    const ctx = new FakeContext2D()
+    renderFrame(asCtx(ctx), project, 1000, { source: new FakeSource() })
+    expect(ctx.callsTo('drawImage').at(-1)?.args.slice(1, 5)).toEqual([160, 90, 160, 180])
+  })
+
   test('cornerRadius clips the draw to a rounded rect', () => {
     const project = projectWithVideo({ cornerRadius: 0.1 })
     const ctx = new FakeContext2D()
@@ -151,6 +183,26 @@ describe('frame style rendering', () => {
     }
     expect(drawAt({ x: 1, y: 1 })).toEqual([[480, 270, 160, 90, -960, -540, 1920, 1080]])
     expect(drawAt({ x: 0, y: 0 })).toEqual([[320, 0, 160, 90, -960, -540, 1920, 1080]])
+  })
+
+  test('a reframe track slides a slot crop onto the subject, and the fitted part keeps following once the crop meets the frame edge', () => {
+    const cropped = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
+    const project = applyCommand(cropped, {
+      type: 'setReframe',
+      elementId: 'e-mc',
+      source: 'camera',
+      track: [
+        { sourceMs: 0, x: 0.375, y: 0.5 },
+        { sourceMs: 4000, x: 0.375, y: 0.1 },
+      ],
+    })
+    const sourceRectsAt = (timeMs: number) => {
+      const ctx = new FakeContext2D()
+      renderFrame(asCtx(ctx), project, timeMs, { source: new FakeSource() })
+      return ctx.callsTo('drawImage').map((c) => c.args.slice(1, 5))
+    }
+    expect(sourceRectsAt(0)).toEqual([[80, 90, 320, 180]])
+    expect(sourceRectsAt(4000)).toEqual([[80, 0, 320, 180]])
   })
 
   test('a multicam draws its own crop and corner radius around the composite', () => {

@@ -77,6 +77,8 @@ const layoutSlotSchema = z.object({
 
 Zod schema for one layout slot, the source key it shows, a rect in normalized canvas coordinates, a fit mode, and the same frame style a video clip takes. The slot's crop picks the source region that is fitted into the rect, so panning a cover slot moves its crop.
 
+The `saveLayout` command merges each slot it is given into the saved slot with the same source. An omitted field keeps its value, `null` clears a frame style field, and only a source new to the layout needs a `rect`. A saved slot whose source is left out is removed.
+
 ### propertyPresetSchema
 
 ```ts
@@ -157,7 +159,7 @@ The name that marks a track as the thumbnail track, `Thumbnail`.
 function createDefaultLayouts(canvas: Pick<Project, 'width' | 'height'>): Layout[]
 ```
 
-Returns five starter layouts for a screen and camera pair with fresh ids, full screen with camera picture in picture, camera only, screen only, two 3 by 4 panels, and side by side. The picture in picture shadow is sized from the canvas so it scales with the slot.
+Returns five starter layouts for a screen and camera pair with fresh ids, full screen with camera picture in picture, camera only, screen only, two 3 by 4 panels, and side by side. The picture in picture shadow is sized from the canvas so it scales with the slot. `saveLayout` gives the same corner radius and shadow to an overlay slot new to a layout that sets none of `cornerRadius`, `stroke`, and `shadow`.
 
 ### getLayout
 

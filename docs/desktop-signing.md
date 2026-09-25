@@ -2,9 +2,9 @@
 
 `desktop.yml` signs the macOS build with a Developer ID Application
 certificate and notarizes it through the App Store Connect API when the
-secrets below exist. Without them the build is signed ad hoc, so pull requests
-and forks keep working. Only tag pushes and manual dispatches see the secrets.
-Pull request runs never do.
+secrets below exist. Without them the build is signed ad hoc, so forks keep
+working. The mac job runs only on tag pushes and manual dispatches. Pull
+requests build and smoke the Linux AppImage alone, once they leave draft.
 
 `apps/desktop/electron-builder.ts` reads `CSC_LINK` once. Set, it signs with
 the discovered Developer ID identity, hardened runtime, the entitlements in

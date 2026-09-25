@@ -20,11 +20,7 @@ import {
   describeLayoutChange,
   getProjectCaptions,
   getProjectMediaContext,
-  getElement,
   getProjectTranscript,
-  getSourceTimeMs,
-  type ElementId,
-  type ProjectTranscriptWordContext,
   listZoomRegions,
   parseCommand,
   parseProject,
@@ -38,12 +34,17 @@ import {
   MCP_SERVER_STATIC_TOOL_CALL_SCHEMA,
   isMcpServerStaticToolName,
   listServerToolDefinitions,
+  mediaImportReportSchema,
   operatorToolName,
   MCP_TOOL_INPUTS,
   type McpServerStaticToolCall,
   type TransactSubRequest,
 } from './contract'
 import { liveBridgeAudioActivityMessage, pickAudioActivitySource } from './audio-activity-target'
+import { toClipSourceWords } from './clip-source-words'
+import { frameContent, frameGrabSchema } from './frame-content'
+import { contactSheetContent } from './picture-tools'
+import { severeZoomNote } from './zoom-warnings'
 import { runEngineTransact, translateTransactCalls } from './transact'
 
 export interface McutMcpTarget {
@@ -53,7 +54,11 @@ export interface McutMcpTarget {
   getTranscript?(options?: ProjectTranscriptOptions): unknown | Promise<unknown>
   searchTranscript?(query: string): unknown | Promise<unknown>
   ensureTranscript?(input: unknown): unknown | Promise<unknown>
+  centerPerson?(input: unknown): unknown | Promise<unknown>
   getAudioActivity?(input: unknown): unknown | Promise<unknown>
+  getFrame?(input: unknown): unknown | Promise<unknown>
+  findSceneChanges?(input: unknown): unknown | Promise<unknown>
+  getContactSheet?(input: unknown): unknown | Promise<unknown>
   listActions(): unknown | Promise<unknown>
   listOperators(): unknown | Promise<unknown>
   runAction(actionId: string, input: unknown): unknown | Promise<unknown>
@@ -66,6 +71,7 @@ export interface McutMcpTarget {
   getExport?(input: unknown): unknown | Promise<unknown>
   cancelExport?(input: unknown): unknown | Promise<unknown>
   transact?(requests: readonly TransactSubRequest[]): unknown | Promise<unknown>
+  importMedia?(paths: readonly string[]): unknown | Promise<unknown>
 }
 
 export interface McutMcpServerOptions {
@@ -99,7 +105,7 @@ function changedLayoutId(name: string, args: unknown): string | undefined {
   return undefined
 }
 
-type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure>
+type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure> | ReturnType<typeof frameContent>
 
 const withResult = (lead: string, result: unknown) => (result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`)
 
@@ -145,6 +151,9 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
     ensureTranscript: async () => {
       throw new Error('ensure_transcript requires a live browser bridge connected to an editor tab.')
     },
+    centerPerson: async () => {
+      throw new Error('center_person requires a live browser bridge connected to an editor tab.')
+    },
     getAudioActivity: async (input) => {
       const payload = MCP_TOOL_INPUTS.get_audio_activity.parse(input ?? {})
       const source = pickAudioActivitySource(engine.project, engine.selection.elementIds, payload.elementId)
@@ -188,22 +197,10 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
       await onChange()
     },
     transact: (requests) => runEngineTransact(engine, requests, onChange),
+    importMedia: async () => {
+      throw new Error('import_media requires the live bridge connected to Studio.')
+    },
   }
-}
-
-function toClipSourceWords(project: Project, elementId: ElementId, words: readonly ProjectTranscriptWordContext[]): ProjectTranscriptWordContext[] {
-  const clip = getElement(project, elementId)
-  if (clip?.type !== 'video' && clip?.type !== 'audio')
-    throw new CommandError('invalid-payload', `find_retakes elementId must name a video or audio clip, got "${elementId}"`)
-  if (clip.reversed) throw new CommandError('invalid-payload', `clip "${elementId}" plays reversed, so its captions have no forward source time`)
-  const endMs = clip.startMs + clip.durationMs
-  return words
-    .filter((word) => word.startMs >= clip.startMs && word.startMs < endMs)
-    .map((word) => ({
-      text: word.text,
-      startMs: Math.round(getSourceTimeMs(clip, word.startMs - clip.startMs)),
-      endMs: Math.round(getSourceTimeMs(clip, Math.min(word.endMs, endMs) - clip.startMs)),
-    }))
 }
 
 async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCall): Promise<ToolResult> {
@@ -239,13 +236,32 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'get_audio_activity':
       if (!target.getAudioActivity) return failure('get_audio_activity is not available on this target.')
       return text(JSON.stringify(await target.getAudioActivity(call.arguments), null, 2))
+    case 'get_frame': {
+      if (!target.getFrame) return failure('get_frame requires the live bridge connected to Studio.')
+      const parsed = frameGrabSchema.safeParse(await target.getFrame(call.arguments))
+      if (!parsed.success) return failure(`get_frame: ${z.prettifyError(parsed.error)}`)
+      return frameContent(parsed.data)
+    }
+    case 'find_scene_changes':
+      if (!target.findSceneChanges) return failure('find_scene_changes requires the live bridge connected to Studio.')
+      return text(JSON.stringify(await target.findSceneChanges(call.arguments), null, 2))
+    case 'get_contact_sheet':
+      if (!target.getContactSheet) return failure('get_contact_sheet requires the live bridge connected to Studio.')
+      return contactSheetContent(await target.getContactSheet(call.arguments))
     case 'lint_project':
       return text(JSON.stringify(lintProject(await targetProject(target)), null, 2))
     case 'list_zooms':
       return text(JSON.stringify(listZoomRegions(await targetProject(target)), null, 2))
     case 'edit_zooms':
       await target.applyCommands(call.arguments.edits)
-      return text(`OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}`)
+      return text(
+        `OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}${severeZoomNote(await targetProject(target))}`,
+      )
+    case 'center_person': {
+      if (!target.centerPerson) return failure('center_person is not available on this target.')
+      const result = await target.centerPerson(call.arguments)
+      return text(`${withResult('OK: person centered.', result)}\n\n${await target.getSummary()}`)
+    }
     case 'list_presets':
       return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
     case 'apply_captions': {
@@ -294,7 +310,7 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const requests = translateTransactCalls(call.arguments.calls)
       const results = await target.transact(requests)
       const lead = `OK: ${requests.length} calls applied as one undo step.`
-      return text(`${withResult(lead, results)}\n\n${await target.getSummary()}`)
+      return text(`${withResult(lead, results)}\n\n${await target.getSummary()}${severeZoomNote(await targetProject(target))}`)
     }
     case 'undo':
       if (!(await target.undo())) return failure('Nothing to undo.')
@@ -315,6 +331,14 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'cancel_export':
       if (!target.cancelExport) return failure('cancel_export requires the live bridge connected to Studio.')
       return text(withResult('OK: export cancelled.', await target.cancelExport(call.arguments)))
+    case 'import_media': {
+      if (!target.importMedia) return failure('import_media requires the live bridge connected to Studio.')
+      const report = mediaImportReportSchema.parse(await target.importMedia(call.arguments.paths))
+      const count = report.imported.length
+      const lead = count === 0 ? 'Imported nothing.' : `Imported ${count} ${count === 1 ? 'file' : 'files'}. Place each asset with addElement or an operator.`
+      const body = `${lead}\n\n${JSON.stringify(report, null, 2)}`
+      return count === 0 ? failure(body) : text(body)
+    }
   }
 }
 
@@ -357,7 +381,10 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
       const before = layoutId ? await targetProject(target) : null
       await target.dispatchCommand(name, args ?? {})
       const change = before && layoutId ? describeLayoutChange(before, await targetProject(target), layoutId) : []
-      return text([`OK: ${name} applied.`, ...change, '', await target.getSummary()].join('\n'))
+      return text(
+        [`OK: ${name} applied.`, ...change, '', await target.getSummary()].join('\n') +
+          (name.endsWith('ZoomRegion') ? severeZoomNote(await targetProject(target)) : ''),
+      )
     } catch (error) {
       if (error instanceof CommandError || error instanceof ProjectFormatError || error instanceof OperatorError) {
         return failure(`${error.name} (${error.code}): ${error.message}`)

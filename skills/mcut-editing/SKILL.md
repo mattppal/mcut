@@ -15,9 +15,10 @@ JSON surgery when an mcut MCP tool or action exists.
 
 **MCP server** access is the normal agent path.
 
-For real media, transcription, silence removal, audio activity, in-editor
-export, or current editor state, use the live bridge, not the file-only stdio
-server. mcut Studio hosts the bridge at `http://127.0.0.1:44737/mcp` with the
+For real media, transcription, silence removal, audio activity, face tracking,
+frame grabs, in-editor export, importing local files, or current editor state, use the live
+bridge, not the file-only stdio server. mcut Studio hosts the bridge at
+`http://127.0.0.1:44737/mcp` with the
 token from the app's MCP menu. Developers running the editor as a browser tab
 start the same bridge with `mcut-bridge start`.
 
@@ -28,7 +29,7 @@ Minimum loop:
 3. If speech matters, `get_transcript` with `includeWords: true`
 4. If transcript is missing, `ensure_transcript`
 5. `list_actions`
-6. Prefer `run_action` high-level actions over raw commands
+6. Prefer `run_action` high-level actions and task tools such as `edit_zooms` and `center_person` over raw commands
 7. When one user request needs more than one edit call, send them all in one
    `transact`, so "undo that" removes the whole request. "Make it square and
    fill the frame" is one request, not five calls
@@ -63,6 +64,10 @@ A fade in and a fade out are one intent. Send them together.
 `undo` then removes both presets. Two separate `applyAnimationPreset` calls
 undo one preset at a time. Each call is a timeline command, an `operator_*`
 tool, `run_operator`, `run_action`, or `apply_commands`.
+
+Import local recordings with `import_media` and absolute paths. `file.import`
+opens a dialog for a person and imports nothing. `addAsset` cannot load a
+`file:` URL.
 
 ## Required workflows
 
@@ -99,10 +104,15 @@ repetition. Candidates come last to first, so cut them in the returned order,
 each with a split at both ends and a ripple delete on the clip only. Do not cut
 the caption track the same way, because a ripple delete keeps the gaps between
 captions and leaves every later word late. Rebuild captions instead with one
-`apply_captions` call per remaining clip, passing the reply's `transcript`
-unchanged and that clip's `elementId`, with `replace` true on the first call
-and false after. Pass a lower `minMatchWords` only when a short restart was
-missed, and check each extra candidate, since lower values match spoken lists.
+`apply_captions` call per remaining piece of that clip, passing the reply's
+`transcript` unchanged and the piece's `elementId`. Pass `replace` true until a
+call reports OK, then false. That first OK call clears the whole caption track,
+so when another clip has captions on it, call `find_retakes` with that clip's
+`elementId` too before cutting, and rebuild its pieces the same way from its
+own `transcript`. Expect the calls after it to warn that the transcript matches
+none in the project, since that first call replaced those captions. Pass a
+lower `minMatchWords` only when a short restart was missed, and check each
+extra candidate, since lower values match spoken lists.
 
 ### Fade from black or fade to black
 
@@ -137,6 +147,35 @@ bridge writes the file, so no download or save dialog opens.
 `export-busy` means an export is already running. Wait for it with `get_export`
 or stop it with `cancel_export`.
 
+### See a frame before a zoom or a crop
+
+Call `get_frame` before placing a zoom or a crop. Pass `timeMs` in timeline
+milliseconds. The tool returns a PNG of that frame plus the ids of the
+elements in it, so you can find a button or a region in a screen recording
+before you set the zoom. Pass `elementId` to render one element. A multicam
+element renders its composite. `maxWidth` defaults to 1280.
+
+### Find when something is on screen
+
+Don't step `get_frame` through time to find when a page or a window is on
+screen. Call `find_scene_changes` first. In one call it compares downscaled
+frames over the clip and returns each change refined to the frame, plus the
+stable `segments` between changes, all in timeline milliseconds.
+
+```json
+{ "elementId": "e-...", "source": "screen" }
+```
+
+On a multicam it reads the `screen` source by default, so the camera overlay
+doesn't count. `sensitivity` runs from 0 to 1 and defaults to 0.5, which
+reports new pages and cuts but not scrolling. Raise it to catch smaller
+changes. Pass `startMs` and `endMs` to scan part of the clip.
+
+Then call `get_contact_sheet` with `timesMs` set to each segment's start and
+midpoint. It returns one PNG with a labelled thumbnail per time, so one look
+tells you which segments show the region. Place a detail zoom's in, hold, and
+out inside that segment, and end it before the next change.
+
 ### Punch-ins and detail zooms
 
 Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
@@ -151,11 +190,35 @@ Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
 }
 ```
 
-Keep zooms subtle (1.1x to 1.5x), keep `easeOutExpo`, and keep `motionBlur` on.
+Keep zooms subtle (1.1x to 1.35x), keep `easeOutExpo`, and keep `motionBlur` on.
 On a multicam, set `source` to the screen key so the camera overlay stays put.
 Place a detail zoom over the words that discuss the region, found with
-`search_transcript`. When asked to tone zooms down, lower `scale` rather than
+`search_transcript`, and inside the `find_scene_changes` segment that shows the
+region. When asked to tone zooms down, lower `scale` rather than
 removing zooms or turning off motion blur.
+
+### Keep a person in frame
+
+`center_person` finds the face on device and applies one undoable reframe. It
+waits for the analysis, and the first run also downloads the face model.
+
+```json
+{
+  "elementId": "e-...",
+  "aspect": 0.5625,
+  "smoothing": 0.5
+}
+```
+
+On a video it crops to `aspect`, 9:16 by default, and the crop follows the face.
+When that aspect is within 1% of the project aspect, it also scales the clip to
+fill the frame and centers it in the same undo step. At another aspect the clip
+keeps its size, as a picture in picture camera should. Pass `fill` true or false
+to override. It never resizes the project, so for a vertical cut run
+`updateProject` first, as in `references/platforms.md`. On a head overlay multicam
+it follows the `camera` source by default and ignores `aspect` and `fill`. Raise
+`smoothing` toward 1 for a steadier frame. Do not hand-author reframe keys or crop
+with ffmpeg.
 
 ## Timing rules
 
@@ -179,7 +242,7 @@ inside one `transact`.
 
 Common raw-command cases:
 
-- add or register media assets
+- import local files with `import_media`, then place the returned asset ids
 - place clips on tracks
 - exact trims and splits when the times are already known
 - `setTransition` for adjacent clip transitions

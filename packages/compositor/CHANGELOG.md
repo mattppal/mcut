@@ -1,5 +1,34 @@
 # @mcut/compositor
 
+## 0.1.0-alpha.11
+
+### Minor Changes
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - `RenderFrameOptions.renderScale` renders motion blur samples at that fraction of the project resolution and composites them over the whole frame. It defaults to 1, so export and every other caller keep full-resolution samples.
+
+### Patch Changes
+
+- Updated dependencies [[`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78)]:
+  - @mcut/timeline@0.1.0-alpha.11
+
+## 0.1.0-alpha.10
+
+### Minor Changes
+
+- [#180](https://github.com/mattppal/mcut/pull/180) [`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928) Thanks [@mattppal](https://github.com/mattppal)! - Add center person reframing. A video or one multicam source can carry a reframe track of subject centers keyed by asset media time, so trims, splits, slips, and speed changes keep the framing on the subject. Adds the `setReframe` command, `getReframeCenter`, `centeredFocus`, and the `VisibleFraction` type that `centeredFocus` and `getSlotView` take. The compositor slides a video crop or a cover slot window onto the subject, and a zoom region narrows from that reframed window. Adds `planCenterPerson`, which turns face samples into a smoothed and simplified `setReframe` command. On a video whose crop matches the project aspect within 1%, the plan also carries an `updateElement` that scales the clip to fill the frame, and the `fill` option forces or disables that.
+
+### Patch Changes
+
+- Updated dependencies [[`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928)]:
+  - @mcut/timeline@0.1.0-alpha.10
+
+## 0.1.0-alpha.9
+
+### Patch Changes
+
+- Updated dependencies [[`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2)]:
+  - @mcut/timeline@0.1.0-alpha.9
+
 ## 0.1.0-alpha.8
 
 ### Patch Changes

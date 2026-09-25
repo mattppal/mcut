@@ -1,6 +1,6 @@
 {
   "name": "@mcut/mcp-server",
-  "version": "0.1.0-alpha.14",
+  "version": "0.1.0-alpha.21",
   "description": "mcut as an MCP server. Every editor command and operator becomes a tool any MCP client can call",
   "license": "Apache-2.0",
   "type": "module",

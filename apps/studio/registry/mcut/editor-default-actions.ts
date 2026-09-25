@@ -26,6 +26,7 @@ import { clearSavedSession, saveAssetBlob } from './persistence'
 import { host } from './studio-host'
 import { focusTranscriptSearch } from './transcript-keywords'
 import { applyOpeningClosingFades, removeTranscriptSilence, silenceRemovalEnabled } from './agent-edit-actions'
+import { runCenterPersonAction, selectedReframeElement } from './center-person'
 
 const hasSelection = ({ engine }: ActionContext) => engine.selection.elementIds.length > 0
 
@@ -326,6 +327,46 @@ defineAction({
   run: ({ engine, input }) => applyOpeningClosingFades(engine, input),
 })
 
+defineAction({
+  id: 'frame.center-person',
+  label: 'Center person',
+  description:
+    'Find the face on this device and keep it in frame as one undoable edit. A video gets a crop at the target aspect that follows the face, and when that aspect matches the project it also scales to fill the frame. A multicam follows the face inside its camera slot, and the slot rect keeps its aspect. Over MCP, call center_person, which waits for the analysis.',
+  category: 'edit',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      elementId: {
+        type: 'string',
+        description: 'Optional video or multicam element id. Defaults to the selected clip.',
+      },
+      aspect: {
+        type: 'number',
+        exclusiveMinimum: 0,
+        description: 'Video only. Output width over height, such as 0.5625 for 9:16. Defaults to 9/16.',
+      },
+      smoothing: {
+        type: 'number',
+        minimum: 0,
+        maximum: 1,
+        description: 'From 0 for a tight follow to 1 for a steady frame. Defaults to 0.5.',
+      },
+      fill: {
+        type: 'boolean',
+        description:
+          'Video only. true scales the clip to fill the frame and centers it, false keeps its size. Defaults to filling only when the crop aspect is within 1% of the project aspect.',
+      },
+      source: {
+        type: 'string',
+        description: 'Multicam only. The source key to follow. Defaults to "camera", then the first video source.',
+      },
+    },
+    additionalProperties: false,
+  },
+  enabled: ({ engine }) => selectedReframeElement(engine) !== undefined,
+  run: runCenterPersonAction,
+})
+
 for (const preset of ASPECT_PRESETS) {
   defineAction({
     id: `view.aspect-${preset.id}`,
@@ -399,6 +440,7 @@ defineAction({
   label: 'Export…',
   category: 'view',
   icon: DownloadIcon,
+  humanOnly: 'view.export opens an export dialog for a person and exports nothing over MCP. Export a file with export_video.',
   run: () => {
     document.querySelector<HTMLButtonElement>('[data-mcut-export-trigger]')?.click()
   },
@@ -578,6 +620,7 @@ defineAction({
   label: 'New project',
   category: 'file',
   icon: FileVideoIcon,
+  humanOnly: 'file.new asks a person to confirm replacing the open project and changes nothing over MCP.',
   run: ({ engine }) => {
     if (!window.confirm('Start a new project? The current project will be replaced.')) return
     engine.loadProject(createProject())
@@ -591,6 +634,7 @@ defineAction({
   category: 'file',
   shortcut: { key: 'o', meta: true },
   icon: FolderOpenIcon,
+  humanOnly: 'file.open opens a project file dialog for a person and loads nothing over MCP.',
   run: ({ engine }) => void host.openProject(engine),
 })
 
@@ -608,6 +652,7 @@ defineAction({
   label: 'Save project as…',
   category: 'file',
   icon: DownloadIcon,
+  humanOnly: 'file.save-as opens a save dialog for a person and writes nothing over MCP.',
   run: ({ engine }) => void host.saveProjectAs(engine.project),
 })
 
@@ -616,6 +661,7 @@ defineAction({
   label: 'Export OpenTimelineIO (.otio)…',
   category: 'file',
   icon: DownloadIcon,
+  humanOnly: 'file.export-otio starts a file download for a person and writes nothing over MCP.',
   enabled: ({ engine }) => engine.project.tracks.some((t) => t.elements.length > 0),
   run: ({ engine }) => {
     const blob = new Blob([toOtioJson(engine.project)], { type: 'application/json' })
@@ -634,13 +680,12 @@ defineAction({
   category: 'file',
   shortcut: { key: 'i', meta: true },
   icon: UploadIcon,
+  humanOnly: 'file.import opens a file dialog for a person and imports nothing over MCP. Import files with import_media { paths }.',
   run: ({ engine }) =>
     void pickFiles(MEDIA_FILE_ACCEPT).then(async (files) => {
       if (files.length === 0) return
-      const imported = await importMediaFiles(engine, files, (asset, file) => void saveAssetBlob(asset, file))
-      if (imported.length > 0) {
-        toast.success(`Imported ${imported.length} file${imported.length > 1 ? 's' : ''}`)
-      }
+      const imported = (await importMediaFiles(engine, files, (asset, file) => void saveAssetBlob(asset, file))).filter((result) => result.ok)
+      if (imported.length > 0) toast.success(`Imported ${imported.length} file${imported.length > 1 ? 's' : ''}`)
     }),
 })
 
@@ -681,6 +726,7 @@ defineAction({
   category: 'help',
   shortcut: { key: '?', shift: true },
   icon: KeyboardIcon,
+  humanOnly: 'help.shortcuts opens the keyboard shortcuts dialog for a person.',
   run: () => {
     document.querySelector<HTMLButtonElement>('[data-mcut-shortcuts-trigger]')?.click()
   },

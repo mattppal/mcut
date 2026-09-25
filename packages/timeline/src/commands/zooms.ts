@@ -4,6 +4,7 @@ import { createZoomId } from '../id'
 import { elementIdSchema, type Project } from '../model'
 import {
   isZoomable,
+  mustNotOverlap,
   patchZoomRegion,
   resolveZoomRegion,
   zoomRegionEndMs,
@@ -42,13 +43,6 @@ function mustFit(element: ZoomableElement, zoom: ZoomRegion): void {
   }
   if (!element.sources.some((s) => s.key === zoom.source)) {
     throw new CommandError('invalid-payload', `multicam "${element.id}" has no source "${zoom.source}"`)
-  }
-}
-
-function mustNotOverlap(zooms: readonly ZoomRegion[]): void {
-  for (const [index, zoom] of zooms.entries()) {
-    const clash = zooms.slice(index + 1).find((other) => other.source === zoom.source && other.atMs < zoomRegionEndMs(zoom))
-    if (clash) throw new CommandError('invalid-payload', `zooms "${zoom.id}" and "${clash.id}" overlap on the same target`)
   }
 }
 

@@ -88,6 +88,7 @@ interface GestureStep {
 interface RenderTarget {
   canvas: HTMLCanvasElement
   gpu: WebGPUSlot
+  paintedKey: PaintKey | null
 }
 
 interface OverlayView {
@@ -321,21 +322,30 @@ function getRenderScale(project: Project, quality: PreviewQuality, container: HT
   return Math.min(PROJECT_RESOLUTION_SCALE, quantizedDisplayWidth / project.width)
 }
 
-function renderPreview(target: RenderTarget, renderer: Renderer, project: Project, timeMs: number, scale: number, options: RenderFrameOptions): void {
+function renderPreview(target: RenderTarget, renderer: Renderer, project: Project, timeMs: number, scale: number, options: RenderFrameOptions): boolean {
   const { canvas } = target
   const width = Math.max(1, Math.round(project.width * scale))
   const height = Math.max(1, Math.round(project.height * scale))
   if (canvas.width !== width) canvas.width = width
   if (canvas.height !== height) canvas.height = height
+  const frameOptions = { ...options, renderScale: scale }
   if (renderer === 'webgpu' && isWebGPUSupported()) {
     const backend = target.gpu.backendFor(project.width, project.height)
-    if (backend) renderFrameWith(backend, project, timeMs, options)
-    return
+    if (!backend) return false
+    renderFrameWith(backend, project, timeMs, frameOptions)
+    return true
   }
   const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  if (!ctx) return false
   ctx.setTransform(scale, 0, 0, scale, 0, 0)
-  renderFrame(ctx, project, timeMs, options)
+  renderFrame(ctx, project, timeMs, frameOptions)
+  return true
+}
+
+type PaintKey = readonly unknown[]
+
+function samePaintKey(a: PaintKey | null, b: PaintKey): boolean {
+  return a !== null && a.length === b.length && a.every((value, index) => Object.is(value, b[index]))
 }
 
 function drawOverlay(overlay: HTMLCanvasElement | null, container: HTMLElement | null, view: OverlayView): void {
@@ -450,6 +460,7 @@ function PlayerCanvasView({
     const attached: RenderTarget = {
       canvas,
       gpu: new WebGPUSlot(canvas, () => setWebgpuUnavailable(true)),
+      paintedKey: null,
     }
     setTarget(attached)
     return () => {
@@ -466,14 +477,35 @@ function PlayerCanvasView({
         masterVolume: playback.volume,
         muted: playback.muted,
       })
+      const container = containerRef.current
+      const scale = getRenderScale(project, quality, container)
+      const paintKey: PaintKey = [
+        project,
+        playback.currentTimeMs,
+        scale,
+        container?.clientWidth,
+        container?.clientHeight,
+        window.devicePixelRatio,
+        pool.frameVersion,
+        document.fonts.size,
+        document.fonts.status,
+        effectiveRenderer,
+        background,
+        hiddenElementIds,
+        interactive,
+        engine.selection.elementIds,
+        gesture,
+      ]
       if (target) {
-        renderPreview(target, effectiveRenderer, project, playback.currentTimeMs, getRenderScale(project, quality, containerRef.current), {
+        if (!playback.isPlaying && samePaintKey(target.paintedKey, paintKey)) return
+        const painted = renderPreview(target, effectiveRenderer, project, playback.currentTimeMs, scale, {
           source: pool,
           ...(background ? { backgroundColor: background } : {}),
           ...(hiddenElementIds && hiddenElementIds.size > 0 ? { skipElementIds: hiddenElementIds } : {}),
         })
+        target.paintedKey = painted ? paintKey : null
       }
-      drawOverlay(overlayCanvasRef.current, containerRef.current, {
+      drawOverlay(overlayCanvasRef.current, container, {
         project,
         timeMs: playback.currentTimeMs,
         interactive,

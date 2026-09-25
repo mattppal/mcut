@@ -4,9 +4,10 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { EditorEngine, getProjectCaptions, parseProject } from '@mcut/timeline'
 import { WebSocket } from 'ws'
+import { z } from 'zod'
 import { listServerToolDefinitions } from './contract'
 import { LiveMcutBridge, createHttpBridgeTarget } from './live-bridge'
-import { createMcutMcpServer, createMcutMcpServerForTarget } from './server'
+import { createMcutMcpServer, createMcutMcpServerForTarget, type McutMcpTarget } from './server'
 
 async function connect(engine: EditorEngine, onChange?: () => void) {
   const server = createMcutMcpServer({ engine, onChange })
@@ -14,6 +15,35 @@ async function connect(engine: EditorEngine, onChange?: () => void) {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)])
   return client
+}
+
+async function connectTarget(target: McutMcpTarget) {
+  const server = createMcutMcpServerForTarget({ target })
+  const client = new Client({ name: 'test', version: '0.0.0' })
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)])
+  return client
+}
+
+function frameTarget(frame: unknown): McutMcpTarget {
+  const unused = async (): Promise<unknown> => {
+    throw new Error('unused')
+  }
+  return {
+    getSummary: async () => 'unused',
+    getProject: () => ({}),
+    listActions: () => [],
+    listOperators: () => [],
+    runAction: unused,
+    undo: async () => false,
+    redo: async () => false,
+    runOperator: unused,
+    dispatchCommand: unused,
+    applyCommands: unused,
+    transact: unused,
+    getFrame: async () => frame,
+    getContactSheet: async () => frame,
+  }
 }
 
 function contentText(result: Awaited<ReturnType<Client['callTool']>>): string {
@@ -68,6 +98,8 @@ describe('createMcutMcpServer', () => {
     expect(names).toContain('get_transcript')
     expect(names).toContain('search_transcript')
     expect(names).toContain('ensure_transcript')
+    expect(names).toContain('get_frame')
+    expect(names).toContain('center_person')
     expect(names).toContain('get_audio_activity')
     expect(names).toContain('apply_captions')
     expect(names).toContain('apply_silence_cuts')
@@ -234,6 +266,26 @@ describe('createMcutMcpServer', () => {
     expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
   })
 
+  test('a rejected edit_zooms batch leaves the project and the undo stack unchanged', async () => {
+    const engine = new EditorEngine({ project: talkProject() })
+    const client = await connect(engine)
+    const before = JSON.parse(JSON.stringify(engine.toJSON()))
+
+    const failed = await client.callTool({
+      name: 'edit_zooms',
+      arguments: {
+        edits: [
+          { type: 'addZoomRegion', elementId: 'e-video', zoom: { id: 'z-open', atMs: 0 } },
+          { type: 'addZoomRegion', elementId: 'e-video', zoom: { id: 'z-clash', atMs: 1000 } },
+        ],
+      },
+    })
+    expect(failed.isError).toBe(true)
+    expect(contentText(failed)).toContain('zooms "z-open" and "z-clash" overlap on the same target')
+    expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
+    expect(engine.canUndo()).toBe(false)
+  })
+
   test('transact rejects a disallowed tool before it changes the project', async () => {
     const engine = new EditorEngine({ project: talkProject() })
     let persisted = 0
@@ -392,6 +444,16 @@ describe('createMcutMcpServer', () => {
     expect(activity.isError).toBe(true)
     const activityText = (activity.content as Array<{ type: string; text: string }>)[0]!.text
     expect(activityText).toContain('requires a live browser bridge')
+
+    const frame = await client.callTool({ name: 'get_frame', arguments: { timeMs: 0 } })
+    expect(frame.isError).toBe(true)
+    expect(contentText(frame)).toBe('get_frame requires the live bridge connected to Studio.')
+    const changes = await client.callTool({ name: 'find_scene_changes', arguments: {} })
+    expect(changes.isError).toBe(true)
+    expect(contentText(changes)).toBe('find_scene_changes requires the live bridge connected to Studio.')
+    const centered = await client.callTool({ name: 'center_person', arguments: {} })
+    expect(centered.isError).toBe(true)
+    expect(contentText(centered)).toBe('center_person requires a live browser bridge connected to an editor tab.')
   })
 
   test('get_audio_activity resolves a multicam audio source headless', async () => {
@@ -609,6 +671,45 @@ describe('createMcutMcpServer', () => {
     bridge.close()
   })
 
+  test('live bridge forwards center_person with its defaults and waits past the request timeout', async () => {
+    const bridge = new LiveMcutBridge({ token: 'center-token', requestTimeoutMs: 50, transcriptionTimeoutMs: 2000 })
+    const port = await bridge.listen(0)
+    const server = createMcutMcpServerForTarget({ target: bridge.createTarget() })
+    const client = new Client({ name: 'test', version: '0.0.0' })
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)])
+
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp?token=center-token`, {
+      headers: { Origin: 'http://localhost:3000' },
+    })
+    await new Promise<void>((resolve, reject) => {
+      socket.once('open', resolve)
+      socket.once('error', reject)
+    })
+
+    const tabRequestSchema = z.object({ id: z.string(), type: z.string(), payload: z.unknown() })
+    const payloads: unknown[] = []
+    socket.on('message', (raw) => {
+      const message = tabRequestSchema.parse(JSON.parse(raw.toString()))
+      if (message.type === 'center_person') {
+        payloads.push(message.payload)
+        setTimeout(() => socket.send(JSON.stringify({ id: message.id, ok: true, result: { keys: 4 } })), 200)
+        return
+      }
+      socket.send(JSON.stringify({ id: message.id, ok: true, result: message.type === 'get_summary' ? 'Centered summary' : null }))
+    })
+
+    try {
+      const centered = await client.callTool({ name: 'center_person', arguments: { elementId: 'e-multicam', source: 'camera' } })
+
+      expect(contentText(centered)).toBe('OK: person centered.\n\nResult:\n{\n  "keys": 4\n}\n\nCentered summary')
+      expect(payloads).toEqual([{ elementId: 'e-multicam', source: 'camera', aspect: 9 / 16, smoothing: 0.5 }])
+    } finally {
+      socket.close()
+      bridge.close()
+    }
+  })
+
   test('live bridge reports fixed-port collisions without crashing', async () => {
     const bridge = new LiveMcutBridge({ token: 'first-token' })
     const port = await bridge.listen(0)
@@ -708,6 +809,10 @@ describe('createMcutMcpServer', () => {
         socket.send(JSON.stringify({ id: message.id, ok: true, result: { text: 'daemon transcript' } }))
         return
       }
+      if (message.type === 'center_person') {
+        socket.send(JSON.stringify({ id: message.id, ok: true, result: { keys: 2 } }))
+        return
+      }
       socket.send(JSON.stringify({ id: message.id, ok: true, result: null }))
     })
 
@@ -722,6 +827,9 @@ describe('createMcutMcpServer', () => {
     const transcript = await client.callTool({ name: 'get_transcript', arguments: {} })
     const transcriptContent = transcript.content as Array<{ type: string; text: string }>
     expect(transcriptContent[0]!.text).toContain('daemon transcript')
+
+    const centered = await client.callTool({ name: 'center_person', arguments: {} })
+    expect(contentText(centered)).toContain('"keys": 2')
 
     socket.close()
     bridge.close()
@@ -782,5 +890,49 @@ describe('createMcutMcpServer', () => {
 
     expect(result).toBe('closed')
     bridge.close()
+  })
+
+  test('get_frame returns the target PNG as image content', async () => {
+    const data = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const client = await connectTarget(
+      frameTarget({
+        mimeType: 'image/png',
+        data,
+        width: 8,
+        height: 4,
+        timeMs: 1000,
+        elementId: 'e-video',
+        visibleElementIds: ['e-video'],
+      }),
+    )
+    const result = await client.callTool({ name: 'get_frame', arguments: { timeMs: 1000 } })
+    expect(result.isError).toBeFalsy()
+    expect(result.content).toEqual([
+      { type: 'image', data, mimeType: 'image/png' },
+      {
+        type: 'text',
+        text: '{"timeMs":1000,"width":8,"height":4,"elementId":"e-video","visibleElementIds":["e-video"]}',
+      },
+    ])
+  })
+  test('get_contact_sheet returns the sheet PNG and its tile times', async () => {
+    const data = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const sheet = {
+      mimeType: 'image/png',
+      data,
+      width: 652,
+      height: 188,
+      columns: 2,
+      elementId: 'e-multicam',
+      source: 'screen',
+      tiles: [{ timeMs: 0 }, { timeMs: 45000 }],
+    }
+    const client = await connectTarget(frameTarget(sheet))
+    const result = await client.callTool({ name: 'get_contact_sheet', arguments: { timesMs: [0, 45000] } })
+    expect(result.isError).toBeFalsy()
+    expect(result.content).toEqual([
+      { type: 'image', data, mimeType: 'image/png' },
+      { type: 'text', text: '{"width":652,"height":188,"columns":2,"elementId":"e-multicam","source":"screen","tiles":[{"timeMs":0},{"timeMs":45000}]}' },
+    ])
   })
 })

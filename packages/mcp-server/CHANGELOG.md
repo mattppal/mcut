@@ -1,5 +1,86 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.21
+
+### Patch Changes
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - The `detailZoom` preset now zooms to 1.3x instead of 1.5x, so a detail punch-in stays subtle. The `addZoomRegion` preset description and the `edit_zooms` tool description say 1.3x.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - `find_retakes` with `elementId` now rejects a clip with a time remap, as it already did a reversed clip. `apply_captions` cannot scope captions to such a clip, so the agent learns this before it cuts anything.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - The `find_retakes` tool description now tells the agent to rebuild captions once per remaining piece of the cut clip, passing `replace` true until a call reports OK. Because that call clears the caption track, the agent also takes a `find_retakes` transcript for every other captioned clip on that track before cutting and rebuilds those clips the same way.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - `EditorEngine.transact` now rolls back when its function throws. The project and selection return to where that `transact` began and no undo step is recorded, so `edit_zooms`, `apply_commands`, and `apply_captions` apply all of their commands or none. A nested `transact` that throws rolls back only its own dispatches.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - A zoom `rect` now aims at its center and fills it only up to the preset scale, so a region never makes a detail zoom severe. MCP zoom edits warn when any zoom goes above 1.5x.
+
+- Updated dependencies [[`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78)]:
+  - @mcut/timeline@0.1.0-alpha.11
+  - @mcut/editor@0.1.0-alpha.11
+  - @mcut/transcription@0.1.0-alpha.12
+
+## 0.1.0-alpha.20
+
+### Minor Changes
+
+- [#195](https://github.com/mattppal/mcut/pull/195) [`c5aed4a`](https://github.com/mattppal/mcut/commit/c5aed4a4615a3fd5dcb1d76c385cd28ea3574b40) Thanks [@mattppal](https://github.com/mattppal)! - Find where the picture changes with `findSceneChanges`, and render a labelled thumbnail grid with `renderContactSheet`. Both read one video clip or one multicam source over a timeline range. Agents get them as the `find_scene_changes` and `get_contact_sheet` MCP tools on the live Studio bridge.
+
+  `find_scene_changes` compares 64 by 36 luma frames every `stepMs`, reports a change when the changed fraction of the picture passes the `sensitivity` threshold, and refines each change to the exact frame. It returns the changes and the stable segments between them.
+
+  `McutMcpTarget.findSceneChanges` and `getContactSheet` are optional. On a target without them, the tools fail with `find_scene_changes requires the live bridge connected to Studio.` and the same for `get_contact_sheet`.
+
+## 0.1.0-alpha.19
+
+### Patch Changes
+
+- [#191](https://github.com/mattppal/mcut/pull/191) [`5222666`](https://github.com/mattppal/mcut/commit/52226663d12d2ee8ae8b29284d5c216bb6eef5d8) Thanks [@mattppal](https://github.com/mattppal)! - `import_media` expands a leading `~` to the home folder, and its path errors name the resolved absolute path and the home folder.
+
+## 0.1.0-alpha.18
+
+### Minor Changes
+
+- [#168](https://github.com/mattppal/mcut/pull/168) [`670b34b`](https://github.com/mattppal/mcut/commit/670b34b4279a1e3f344674cf8aa2673fdd86c455) Thanks [@mattppal](https://github.com/mattppal)! - Render one project frame to a PNG with `renderProjectStill`, and expose it to agents as the `get_frame` MCP tool on the live Studio bridge.
+
+  `McutMcpTarget.getFrame` is optional, like the other live-only members, so a custom target without it still compiles. `get_frame` on such a target fails with `get_frame requires the live bridge connected to Studio.`
+
+## 0.1.0-alpha.17
+
+### Patch Changes
+
+- [#178](https://github.com/mattppal/mcut/pull/178) [`e5a64fa`](https://github.com/mattppal/mcut/commit/e5a64fabe9118f2ffe032e9e83ff427301a2836e) Thanks [@mattppal](https://github.com/mattppal)! - Fail an export whose Studio socket closes while the job is starting, ignore a replaced tab closing under a newer export, and keep a cancel during the file rename cancelled. The owner is the socket that carried start_export, so a reply crossing a tab swap cannot leave the job rendering, and a start that is still waiting can finish on the reconnected tab.
+
+## 0.1.0-alpha.16
+
+### Minor Changes
+
+- [#180](https://github.com/mattppal/mcut/pull/180) [`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928) Thanks [@mattppal](https://github.com/mattppal)! - Add the `center_person` MCP tool. In a live bridge session it finds the face on device in the connected editor and keeps the person in frame as one undoable edit, on a video crop or on one multicam source, which defaults to `camera`. On a video whose crop matches the project aspect within 1%, it also scales the clip to fill the frame, and the optional `fill` input forces or disables that. It returns the target, the sample and key counts, the source range the keys cover, and whether it filled the frame. The live bridge waits for it as long as for `ensure_transcript`, and a headless server rejects it with a message that a live bridge is required. `McutMcpTarget` gains an optional `centerPerson` method.
+
+### Patch Changes
+
+- Updated dependencies [[`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928)]:
+  - @mcut/timeline@0.1.0-alpha.10
+  - @mcut/editor@0.1.0-alpha.10
+  - @mcut/transcription@0.1.0-alpha.11
+
+## 0.1.0-alpha.15
+
+### Minor Changes
+
+- [#169](https://github.com/mattppal/mcut/pull/169) [`888fa37`](https://github.com/mattppal/mcut/commit/888fa379f17f4607a25ef8f73ff75f09e41d7c05) Thanks [@mattppal](https://github.com/mattppal)! - Import local media into a live Studio project with the `import_media` tool.
+
+### Patch Changes
+
+- [#179](https://github.com/mattppal/mcut/pull/179) [`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2) Thanks [@mattppal](https://github.com/mattppal)! - `transact` rejects `edit.undo` and `edit.redo` before any call runs, whether they come as `operator_edit_undo`, `operator_edit_redo`, `run_operator`, or `run_action`. They used to run inside the transaction, so one transact could undo an earlier edit and still report one undo step. A failed call whose message already ends in a period no longer reports a double period.
+
+  `McutMcpTarget.transact` is optional, like the other members a custom target may leave out. A target without it keeps compiling, and the `transact` tool fails on it with `transact is not available on this target.`
+
+  The server now sends MCP instructions, and the `transact`, `undo`, `run_operator`, `run_action`, and `apply_commands` descriptions tell agents to send every edit call for one user request in one `transact`, so "undo that" removes the whole request.
+
+- Updated dependencies [[`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2)]:
+  - @mcut/timeline@0.1.0-alpha.9
+  - @mcut/editor@0.1.0-alpha.9
+  - @mcut/transcription@0.1.0-alpha.10
+
 ## 0.1.0-alpha.14
 
 ### Patch Changes

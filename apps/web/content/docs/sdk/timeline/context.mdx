@@ -229,7 +229,7 @@ Returns a deterministic text rendering of the project, one header line then each
 function describeLayoutChange(before: Project, after: Project, layoutId: Layout['id']): string[]
 ```
 
-Returns lines that compare one layout across two projects, each slot's pixel size and aspect before and after with the width and height change in percent. It adds a warning when an overlay slot moves to another corner, pointing at `resizeLayoutSlot` for a resize in place, and when a single-slot layout that covered the frame stops covering it. Returns an empty array when `after` has no layout with that id.
+Returns lines that compare one layout across two projects, each slot's pixel size and aspect before and after with the width and height change in percent, then each change to the slot's fit and frame style field by field, such as `corner radius 0.12 → 0`, `shadow removed`, or `stroke added (2 px #ffffff)`. It adds a warning when an overlay slot moves to another corner, pointing at `resizeLayoutSlot` for a resize in place, when an overlay slot loses its corner radius or its shadow, giving the slot to save to restore it, and when a single-slot layout that covered the frame stops covering it. Returns an empty array when `after` has no layout with that id.
 
 ### getProjectCaptions
 

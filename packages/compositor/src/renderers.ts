@@ -1,7 +1,6 @@
 import {
   getActiveLayout,
   getClipView,
-  getSlotView,
   getAngleTransitionAt,
   getLayout,
   getMulticamGroupTimeMs,
@@ -24,6 +23,7 @@ import {
 import { applyChrome, type LayerChrome } from './backend'
 import { drawFramedComposite, drawFramedMedia, frameRadius, getImageSize, viewSourceRect } from './framed-media'
 import { toCanvasPoint } from './geometry'
+import { reframedCrop, reframedSlot } from './reframe-views'
 import { transitionRenderers } from './transition-renderers'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
 import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
@@ -73,15 +73,16 @@ function withTransform(ctx: Canvas2D, context: ElementRenderContext, element: Vi
 function drawMediaFrame(context: ElementRenderContext, element: VideoElement | ImageElement, frame: CanvasImageSource, dw: number, dh: number): void {
   const box = { x: -dw / 2, y: -dh / 2, w: dw, h: dh }
   const view = getClipView(element, context.viewTimeMs)
+  const crop = reframedCrop(element, context.timeMs)
   if (!element.stroke && !element.shadow) {
     context.backend.drawImageQuad(
-      { image: frame, src: viewSourceRect(element.crop, frame, view), dw, dh, cornerRadius: frameRadius(element, box) },
+      { image: frame, src: viewSourceRect(crop, frame, view), dw, dh, cornerRadius: frameRadius(element, box) },
       chromeOf(context, element),
     )
     return
   }
   const ctx = context.ctx
-  withTransform(ctx, context, element, () => drawFramedMedia(ctx, frame, box, element, 'fill', () => view))
+  withTransform(ctx, context, element, () => drawFramedMedia(ctx, frame, box, { ...element, crop }, 'fill', () => view))
 }
 
 const renderVideo: ElementRenderer<VideoElement> = (element, context) => {
@@ -262,7 +263,8 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
           const frame = frames.getFrame(source.assetId, getMulticamSourceTimeMs(element, source, context.timeMs))
           if (!frame) continue
           const box = { x: (slot.rect.x - 0.5) * W, y: (slot.rect.y - 0.5) * H, w: slot.rect.w * W, h: slot.rect.h * H }
-          drawFramedMedia(ctx, frame, box, slot, slot.fit, (visible) => getSlotView(element, slot, context.viewTimeMs, visible))
+          const framing = reframedSlot(element, slot, context.timeMs, context.viewTimeMs)
+          drawFramedMedia(ctx, frame, box, framing.slot, slot.fit, framing.viewFor)
         }
       })
     })

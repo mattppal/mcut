@@ -1,7 +1,8 @@
-import type { CanvasSink, Input } from 'mediabunny'
+import type { Input, VideoSampleSink } from 'mediabunny'
 import type { FrameSource } from '@mcut/compositor'
 import { ScrubFrameCache } from './scrub-cache'
 import { inputFor } from './probe'
+import { sampleCanvas } from './sample-bitmap'
 import { canUseNativeVideoPreview } from './video-capabilities'
 import {
   assertNever,
@@ -146,7 +147,7 @@ const DECODED_INIT_RETRY_MS = 3000
 interface DecodedVideoState {
   src: string | null
   input: Input | null
-  sink: CanvasSink | null
+  sink: VideoSampleSink | null
   frames: Map<number, CanvasImageSource>
   pendingKey: number | null
   failed: boolean
@@ -174,8 +175,17 @@ export class PreviewMediaPool implements FrameSource {
   private audioSources: ReadonlyMap<ElementId, string> | undefined
   private disposed = false
   private playing = false
+  private frameChanges = 0
 
   constructor(private resolveAsset: (assetId: AssetId) => AssetRef | undefined) {}
+
+  get frameVersion(): number {
+    return this.frameChanges
+  }
+
+  private readonly markFrameChanged = (): void => {
+    this.frameChanges++
+  }
 
   setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
     this.audioSources = sources
@@ -339,6 +349,7 @@ export class PreviewMediaPool implements FrameSource {
     }
     pooled.seekStartedAt = performance.now()
     pooled.el.currentTime = Math.max(0, targetSeconds)
+    this.markFrameChanged()
   }
 
   private settleSeek(pooled: PooledMedia): void {
@@ -419,6 +430,7 @@ export class PreviewMediaPool implements FrameSource {
     if (element instanceof HTMLVideoElement) {
       element.playsInline = true
       element.muted = true
+      for (const type of ['loadeddata', 'seeked', 'emptied', 'error']) element.addEventListener(type, this.markFrameChanged)
     }
     const pooled: PooledMedia = {
       el: element,
@@ -467,7 +479,7 @@ export class PreviewMediaPool implements FrameSource {
         frames: new Map(),
         pendingKey: null,
         failed: false,
-        lastInitFailureAt: 0,
+        lastInitFailureAt: Number.NEGATIVE_INFINITY,
       }
       this.decodedVideos.set(assetId, state)
     }
@@ -488,9 +500,12 @@ export class PreviewMediaPool implements FrameSource {
         if (frame) {
           current.frames.set(key, frame)
           this.trimDecodedVideoFrames(current, key)
+          this.markFrameChanged()
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!this.disposed) setTimeout(this.markFrameChanged, DECODED_INIT_RETRY_MS)
+      })
       .finally(() => {
         const current = this.decodedVideos.get(assetId)
         if (current?.pendingKey === key) current.pendingKey = null
@@ -508,11 +523,8 @@ export class PreviewMediaPool implements FrameSource {
           input.dispose()
           return null
         }
-        const { CanvasSink } = await import('mediabunny')
-        state.sink = new CanvasSink(track, {
-          width: Math.min(1280, asset.width ?? 1280),
-          fit: 'contain',
-        })
+        const { VideoSampleSink } = await import('mediabunny')
+        state.sink = new VideoSampleSink(track)
         state.input = input
       } catch (error) {
         state.lastInitFailureAt = performance.now()
@@ -520,8 +532,8 @@ export class PreviewMediaPool implements FrameSource {
         throw error
       }
     }
-    const wrapped = await state.sink.getCanvas(sourceTimeMs / 1000)
-    return wrapped?.canvas ?? null
+    const sample = await state.sink.getSample(sourceTimeMs / 1000)
+    return sample ? await sampleCanvas(sample, Math.min(1280, asset.width ?? 1280), 'contain') : null
   }
 
   private trimDecodedVideoFrames(state: DecodedVideoState, centerKey: number): void {
@@ -543,9 +555,11 @@ export class PreviewMediaPool implements FrameSource {
           return
         }
         this.images.set(assetId, bitmap)
+        this.markFrameChanged()
       })
       .catch(() => {
         this.images.set(assetId, 'error')
+        this.markFrameChanged()
       })
   }
 }

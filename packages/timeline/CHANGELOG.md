@@ -1,5 +1,33 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.11
+
+### Patch Changes
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - The `detailZoom` preset now zooms to 1.3x instead of 1.5x, so a detail punch-in stays subtle. The `addZoomRegion` preset description and the `edit_zooms` tool description say 1.3x.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - `flattenMulticam` now keeps zoom regions. A zoom on a source moves onto each clip cut from that source, in that clip's time, and zooms on other sources drop. A zoom that spans an angle cut is copied onto the clip after the cut with `-r` appended to its id.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - `EditorEngine.transact` now rolls back when its function throws. The project and selection return to where that `transact` began and no undo step is recorded, so `edit_zooms`, `apply_commands`, and `apply_captions` apply all of their commands or none. A nested `transact` that throws rolls back only its own dispatches.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - `updateElement` and `addElement` now reject a `zooms` array whose zooms overlap on one target, the rule `addZoomRegion` and `updateZoomRegion` already enforce. A `transact` that writes `zooms` through `updateElement` gets the same check.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - A zoom `rect` now aims at its center and fills it only up to the preset scale, so a region never makes a detail zoom severe. MCP zoom edits warn when any zoom goes above 1.5x.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - A split, insert edit, or overwrite edit through a zoom region now gives the right piece's copy the zoom id with `-r` appended, so the two pieces no longer share an id. `listZoomRegions` cuts each region's timeline `startMs` and `endMs` at its element's edges, and `summarizeProject` prints that start, so `list_zooms` and `get_summary` show the part of the zoom each piece plays.
+
+## 0.1.0-alpha.10
+
+### Minor Changes
+
+- [#180](https://github.com/mattppal/mcut/pull/180) [`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928) Thanks [@mattppal](https://github.com/mattppal)! - Add center person reframing. A video or one multicam source can carry a reframe track of subject centers keyed by asset media time, so trims, splits, slips, and speed changes keep the framing on the subject. Adds the `setReframe` command, `getReframeCenter`, `centeredFocus`, and the `VisibleFraction` type that `centeredFocus` and `getSlotView` take. The compositor slides a video crop or a cover slot window onto the subject, and a zoom region narrows from that reframed window. Adds `planCenterPerson`, which turns face samples into a smoothed and simplified `setReframe` command. On a video whose crop matches the project aspect within 1%, the plan also carries an `updateElement` that scales the clip to fill the frame, and the `fill` option forces or disables that.
+
+## 0.1.0-alpha.9
+
+### Patch Changes
+
+- [#179](https://github.com/mattppal/mcut/pull/179) [`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2) Thanks [@mattppal](https://github.com/mattppal)! - `cancelTransaction` rolls back only the innermost open transaction and leaves any outer transaction open. It used to cancel every open level, so a failed MCP `transact` in Studio also discarded a text edit in progress. `loadProject` keeps open transactions open and restarts them from the loaded project.
+
 ## 0.1.0-alpha.8
 
 ### Minor Changes

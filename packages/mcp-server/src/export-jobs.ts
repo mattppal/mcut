@@ -1,16 +1,14 @@
 import { randomBytes } from 'node:crypto'
-import { createWriteStream, existsSync, statSync } from 'node:fs'
-import { mkdir, rename, rm, stat } from 'node:fs/promises'
+import { createWriteStream } from 'node:fs'
+import { rename, rm, stat } from 'node:fs/promises'
 import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { homedir, tmpdir } from 'node:os'
-import { dirname, extname, isAbsolute, join, parse } from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { z } from 'zod'
 import { LiveBridgeError } from './bridge-error'
+import { checkOutputPath, defaultExportDir, freeExportPath } from './export-paths'
 import {
   cancelExportInputSchema,
-  exportFormatSchema,
   exportFrameSchema,
   exportVideoInputSchema,
   getExportInputSchema,
@@ -25,7 +23,7 @@ export const EXPORTS_PATH = '/exports/'
 
 const KEPT_JOBS = 10
 
-const UNSAFE_FILENAME_CHARACTERS = /[<>:"/\\|?*]/g
+const DISCONNECTED = 'Studio disconnected during export.'
 
 interface ExportJobBase {
   jobId: string
@@ -35,42 +33,41 @@ interface ExportJobBase {
   outputPath: string
 }
 
-type ExportJob = ExportJobBase &
-  (
-    | { state: 'rendering'; phase: ExportPhase; progress: number }
-    | { state: 'writing'; renderMs: number }
-    | { state: 'done'; bytes: number; renderMs: number; endedAt: number }
-    | { state: 'failed'; message: string; progress: number; endedAt: number }
-    | { state: 'cancelled'; progress: number; endedAt: number }
-  )
+interface OpenIdentity {
+  jobId: string
+  startedAt: number
+  format: ExportFormat | null
+  durationMs: number | null
+  outputPath: string | null
+}
 
-type LiveExportJob = ExportJob & { state: 'rendering' | 'writing' }
+type StartingJob = OpenIdentity & { state: 'starting'; owner: object | null; frames: ExportFrame[] }
+
+type RenderingJob = ExportJobBase & { state: 'rendering'; owner: object | null; phase: ExportPhase; progress: number }
+
+type WritingJob = ExportJobBase & { state: 'writing'; renderMs: number }
+
+type DoneJob = ExportJobBase & { state: 'done'; bytes: number; renderMs: number; endedAt: number }
+
+type FailedJob = OpenIdentity & { state: 'failed'; message: string; progress: number; endedAt: number }
+
+type CancelledJob = OpenIdentity & { state: 'cancelled'; progress: number; endedAt: number }
+
+type ExportJob = StartingJob | RenderingJob | WritingJob | DoneJob | FailedJob | CancelledJob
+
+type LiveExportJob = StartingJob | RenderingJob | WritingJob
 
 export interface ExportJobsOptions {
   exportDir: string | undefined
   token: string | null
   allowOrigin: (origin: string | undefined) => boolean
   address: () => AddressInfo | string | null
-  request: (type: string, payload: unknown) => Promise<unknown>
+  request: (type: string, payload: unknown) => Promise<{ result: unknown; socket: object }>
 }
 
 interface Upload {
   status: number
   body: ExportUploadReply
-}
-
-interface StartingJob {
-  jobId: string
-  frames: ExportFrame[]
-}
-
-function isDirectory(path: string): boolean {
-  return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false
-}
-
-function defaultExportDir(): string {
-  const downloads = join(homedir(), 'Downloads')
-  return isDirectory(downloads) ? downloads : tmpdir()
 }
 
 function parseInput<Schema extends z.ZodType>(schema: Schema, input: unknown): z.output<Schema> {
@@ -79,28 +76,33 @@ function parseInput<Schema extends z.ZodType>(schema: Schema, input: unknown): z
   throw new LiveBridgeError('invalid-input', z.prettifyError(parsed.error))
 }
 
-function checkOutputPath(path: string, format: ExportFormat | undefined): { path: string; format: ExportFormat | undefined } {
-  if (!isAbsolute(path)) throw new LiveBridgeError('invalid-output-path', `outputPath must be absolute, got ${path}.`)
-  if (!isDirectory(dirname(path))) throw new LiveBridgeError('invalid-output-path', `The folder ${dirname(path)} does not exist.`)
-  if (isDirectory(path)) throw new LiveBridgeError('invalid-output-path', `${path} is a folder. Pass a file path inside it.`)
-  const implied = exportFormatSchema.safeParse(extname(path).slice(1).toLowerCase())
-  if (!implied.success) return { path, format }
-  if (format !== undefined && format !== implied.data) {
-    throw new LiveBridgeError('invalid-output-path', `outputPath ends in .${implied.data} but format is ${format}.`)
-  }
-  return { path, format: implied.data }
-}
-
-function safeFilename(filename: string, format: ExportFormat): string {
-  const cleaned = filename.replace(UNSAFE_FILENAME_CHARACTERS, '_').trim()
-  return cleaned === '' || cleaned.startsWith('.') ? `export.${format}` : cleaned
-}
-
 const baseOf = ({ jobId, format, durationMs, startedAt, outputPath }: ExportJobBase): ExportJobBase => ({ jobId, format, durationMs, startedAt, outputPath })
 
-const isLive = (job: ExportJob | undefined): job is LiveExportJob => job?.state === 'rendering' || job?.state === 'writing'
+const isLive = (job: ExportJob | undefined): job is LiveExportJob => job?.state === 'starting' || job?.state === 'rendering' || job?.state === 'writing'
 
-const renderedFraction = (job: LiveExportJob): number => (job.state === 'rendering' ? job.progress : 1)
+function livePercent(job: LiveExportJob): number {
+  switch (job.state) {
+    case 'starting':
+      return 0
+    case 'rendering':
+      return percentOf(job.progress)
+    case 'writing':
+      return 100
+    default: {
+      const unhandled: never = job
+      throw new LiveBridgeError('invalid-export', `Unknown export job ${JSON.stringify(unhandled)}.`)
+    }
+  }
+}
+
+function labeled(job: ExportJob) {
+  return {
+    jobId: job.jobId,
+    state: job.state,
+    ...(job.format === null ? {} : { format: job.format }),
+    ...(job.outputPath === null ? {} : { outputPath: job.outputPath }),
+  }
+}
 
 const percentOf = (progress: number): number => Math.round(progress * 100)
 
@@ -117,8 +119,10 @@ function reply(res: ServerResponse, { status, body }: Upload, headers: OutgoingH
 }
 
 function exportView(job: ExportJob, now: number) {
-  const common = { jobId: job.jobId, state: job.state, format: job.format, outputPath: job.outputPath }
+  const common = labeled(job)
   switch (job.state) {
+    case 'starting':
+      return { ...common, percent: 0, elapsedMs: now - job.startedAt }
     case 'rendering': {
       const elapsedMs = now - job.startedAt
       const eta = job.progress > 0 ? { etaMs: Math.round((elapsedMs * (1 - job.progress)) / job.progress) } : {}
@@ -144,7 +148,6 @@ export class ExportJobs {
   private readonly exportDir: string
   private readonly jobs = new Map<string, ExportJob>()
   private readonly wakers = new Set<() => void>()
-  private starting: StartingJob | null = null
 
   constructor(options: ExportJobsOptions) {
     this.options = options
@@ -157,21 +160,28 @@ export class ExportJobs {
     const target = outputPath === undefined ? undefined : checkOutputPath(outputPath, format)
     const jobId = randomBytes(4).toString('hex')
     const startedAt = Date.now()
-    const starting: StartingJob = { jobId, frames: [] }
-    this.starting = starting
+    this.add({
+      state: 'starting',
+      jobId,
+      startedAt,
+      owner: null,
+      frames: [],
+      format: target?.format ?? format ?? null,
+      durationMs: null,
+      outputPath: target?.path ?? null,
+    })
     try {
-      const answer = await this.options.request('start_export', { jobId, format: target?.format ?? format, uploadUrl: this.uploadUrl(jobId) })
-      const reply = startExportReplySchema.safeParse(answer)
-      if (!reply.success) {
-        throw new LiveBridgeError('invalid-reply', `Studio answered start_export with an unexpected reply. ${z.prettifyError(reply.error)}`)
+      const sent = await this.options.request('start_export', { jobId, format: target?.format ?? format, uploadUrl: this.uploadUrl(jobId) })
+      const parsed = startExportReplySchema.safeParse(sent.result)
+      if (!parsed.success) {
+        throw new LiveBridgeError('invalid-reply', `Studio answered start_export with an unexpected reply. ${z.prettifyError(parsed.error)}`)
       }
-      const { format: chosen, filename, durationMs } = reply.data
-      const path = target?.path ?? (await this.freePath(filename, chosen))
-      this.add({ jobId, format: chosen, durationMs, startedAt, outputPath: path, state: 'rendering', phase: 'audio', progress: 0 })
-      for (const frame of starting.frames) this.apply(frame)
-      return { jobId, format: chosen, outputPath: path, durationMs }
-    } finally {
-      this.starting = null
+      this.noteStart(jobId, parsed.data.format, parsed.data.durationMs, sent.socket)
+      const path = target?.path ?? (await freeExportPath(this.exportDir, parsed.data.filename, parsed.data.format))
+      return this.beginRendering(jobId, path, parsed.data.format, parsed.data.durationMs)
+    } catch (error) {
+      this.failIfStarting(jobId, messageOf(error))
+      throw error
     }
   }
 
@@ -186,7 +196,17 @@ export class ExportJobs {
     const { jobId } = parseInput(cancelExportInputSchema, input)
     const job = this.find(jobId)
     if (!isLive(job)) throw new LiveBridgeError('export-not-running', `Export ${job.jobId} is already ${job.state}.`)
-    this.put({ ...baseOf(job), state: 'cancelled', progress: renderedFraction(job), endedAt: Date.now() })
+    const progress = job.state === 'rendering' ? job.progress : job.state === 'writing' ? 1 : 0
+    this.put({
+      state: 'cancelled',
+      jobId: job.jobId,
+      startedAt: job.startedAt,
+      endedAt: Date.now(),
+      progress,
+      format: job.format,
+      durationMs: job.durationMs,
+      outputPath: job.outputPath,
+    })
     await this.options.request('cancel_export', { jobId: job.jobId })
     return exportView(this.find(job.jobId), Date.now())
   }
@@ -194,19 +214,20 @@ export class ExportJobs {
   receive(message: unknown): boolean {
     const frame = exportFrameSchema.safeParse(message)
     if (!frame.success) return false
-    const starting = this.starting
-    if (starting?.jobId === frame.data.payload.jobId) {
-      starting.frames.push(frame.data)
+    const job = this.jobs.get(frame.data.payload.jobId)
+    if (job?.state === 'starting') {
+      job.frames.push(frame.data)
       return true
     }
     this.apply(frame.data)
     return true
   }
 
-  disconnect(): void {
+  disconnect(socket: object): void {
     for (const job of this.jobs.values()) {
-      if (job.state !== 'rendering') continue
-      this.put({ ...baseOf(job), state: 'failed', message: 'Studio disconnected during export.', progress: job.progress, endedAt: Date.now() })
+      if (job.state !== 'starting' && job.state !== 'rendering') continue
+      if (job.owner !== socket) continue
+      this.failLive(job, DISCONNECTED)
     }
   }
 
@@ -244,6 +265,11 @@ export class ExportJobs {
         return rejected(409, `Export ${jobId} stopped while writing.`)
       }
       await rename(part, job.outputPath)
+      if (this.jobs.get(jobId)?.state !== 'writing') {
+        await rm(job.outputPath, { force: true })
+        await rm(part, { force: true })
+        return rejected(409, `Export ${jobId} stopped while writing.`)
+      }
       this.put({ ...baseOf(job), state: 'done', bytes: size, renderMs, endedAt: Date.now() })
       return { status: 200, body: { path: job.outputPath, bytes: size } }
     } catch (error) {
@@ -259,7 +285,7 @@ export class ExportJobs {
     if (job?.state !== 'rendering') return
     switch (frame.type) {
       case 'export_progress':
-        this.put({ ...baseOf(job), state: 'rendering', phase: frame.payload.phase, progress: frame.payload.progress })
+        this.put({ ...baseOf(job), owner: job.owner, state: 'rendering', phase: frame.payload.phase, progress: frame.payload.progress })
         return
       case 'export_failed':
         this.put(
@@ -275,10 +301,46 @@ export class ExportJobs {
     }
   }
 
+  private noteStart(jobId: string, format: ExportFormat, durationMs: number, owner: object): void {
+    const job = this.jobs.get(jobId)
+    if (job?.state !== 'starting') return
+    this.put({ ...job, format, durationMs, owner })
+  }
+
+  private beginRendering(jobId: string, outputPath: string, format: ExportFormat, durationMs: number) {
+    const job = this.jobs.get(jobId)
+    if (job?.state === 'cancelled') throw new LiveBridgeError('export-not-running', `Export ${jobId} is already cancelled.`)
+    if (job?.state !== 'starting') throw new LiveBridgeError('browser-disconnected', job?.state === 'failed' ? job.message : DISCONNECTED)
+    this.put({ jobId, format, durationMs, startedAt: job.startedAt, outputPath, owner: job.owner, state: 'rendering', phase: 'audio', progress: 0 })
+    for (const frame of job.frames) this.apply(frame)
+    return { jobId, format, outputPath, durationMs }
+  }
+
+  private failIfStarting(jobId: string, message: string): void {
+    const job = this.jobs.get(jobId)
+    if (job?.state !== 'starting') return
+    this.failLive(job, message)
+  }
+
+  private failLive(job: StartingJob | RenderingJob, message: string): void {
+    this.put({
+      state: 'failed',
+      jobId: job.jobId,
+      startedAt: job.startedAt,
+      endedAt: Date.now(),
+      message,
+      progress: job.state === 'rendering' ? job.progress : 0,
+      format: job.format,
+      durationMs: job.durationMs,
+      outputPath: job.outputPath,
+    })
+  }
+
   private assertIdle(): void {
-    const live = [...this.jobs.values()].find(isLive)
-    if (live) throw busy(live.jobId, percentOf(renderedFraction(live)))
-    if (this.starting) throw busy(this.starting.jobId, 0)
+    for (const job of this.jobs.values()) {
+      if (!isLive(job)) continue
+      throw busy(job.jobId, livePercent(job))
+    }
   }
 
   private find(jobId: string | undefined): ExportJob {
@@ -313,15 +375,6 @@ export class ExportJobs {
         const timer = setTimeout(wake, deadline - Date.now())
         this.wakers.add(wake)
       })
-    }
-  }
-
-  private async freePath(filename: string, format: ExportFormat): Promise<string> {
-    await mkdir(this.exportDir, { recursive: true })
-    const { name, ext } = parse(safeFilename(filename, format))
-    for (let copy = 1; ; copy += 1) {
-      const path = join(this.exportDir, copy === 1 ? `${name}${ext}` : `${name} (${copy})${ext}`)
-      if (!existsSync(path) && !existsSync(`${path}.part`)) return path
     }
   }
 
