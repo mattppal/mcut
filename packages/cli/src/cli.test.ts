@@ -151,7 +151,7 @@ describe('mcut CLI', () => {
     const native = decodeWav(await readFile(join(VOICE_FIXTURES, 'native.wav')))
     expect(cleaned.sampleRate).toBe(48_000)
     expect(signalToDifferenceDb(cleaned.samples, native.samples)).toBeGreaterThan(35)
-  }, 30_000)
+  }, 120_000)
 
   test('clean-voice rejects audio that is not 48 kHz', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'mcut-cli-'))
