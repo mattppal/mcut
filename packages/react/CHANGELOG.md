@@ -1,5 +1,12 @@
 # @mcut/react
 
+## 0.1.0-alpha.15
+
+### Patch Changes
+
+- Updated dependencies [[`fed2a9e`](https://github.com/mattppal/mcut/commit/fed2a9e931caf36072346453da30835824944580)]:
+  - @mcut/media@0.1.0-alpha.14
+
 ## 0.1.0-alpha.14
 
 ### Patch Changes
