@@ -235,6 +235,35 @@ describe('ensureTranscriptForBridge', () => {
     expect(transcript.text).toBe('Hello world')
   })
 
+  test('times out a stalled audio decode, aborts it, and never calls Whisper', async () => {
+    const engine = new EditorEngine({ project: project() })
+    let aborted = false
+    let transcribed = false
+
+    await expect(
+      ensureTranscriptForBridge(
+        engine,
+        {},
+        {
+          ...deps(),
+          audioExtractTimeoutMs: 20,
+          extractAudioToWav: (_src, signal) => {
+            signal.addEventListener('abort', () => {
+              aborted = true
+            })
+            return new Promise<Blob | null>(() => {})
+          },
+          transcribeOnDevice: async () => {
+            transcribed = true
+            throw new Error('should not transcribe')
+          },
+        },
+      ),
+    ).rejects.toThrow('Timed out decoding the audio of "talk.mp4"')
+    expect(aborted).toBe(true)
+    expect(transcribed).toBe(false)
+  })
+
   test('fails clearly when local Whisper is unsupported', async () => {
     const engine = new EditorEngine({ project: project() })
 
