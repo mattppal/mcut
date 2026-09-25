@@ -24,7 +24,7 @@ function allowedOrigins(options: LaunchOptions): string[] {
 
 function bridgeHostOptions(options: LaunchOptions): BridgeHostOptions {
   const studioOrigin = options.devUrl?.origin ?? STUDIO_ORIGIN
-  return { editorUrl: `${studioOrigin}/editor`, allowedOrigins: allowedOrigins(options) }
+  return { editorUrl: `${studioOrigin}/editor`, allowedOrigins: allowedOrigins(options), exportDir: app.getPath('downloads') }
 }
 
 async function hostBridge(config: BridgeConfig, options: BridgeHostOptions): Promise<{ host: BridgeHost; title: string }> {
