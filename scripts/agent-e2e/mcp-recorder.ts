@@ -76,6 +76,18 @@ export function startMcpRecorder(upstreamUrl: string): McpRecorder {
     entry.record.durationMs = Math.round(performance.now() - entry.startedAt)
   }
 
+  const fail = (opened: string[], error: unknown): Response => {
+    const message = `recording proxy lost the upstream response. ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`
+    for (const id of opened) {
+      const entry = pending.get(id)
+      if (entry === undefined) continue
+      pending.delete(id)
+      entry.record.result = message
+      entry.record.durationMs = Math.round(performance.now() - entry.startedAt)
+    }
+    return Response.json({ jsonrpc: '2.0', id: null, error: { code: -32603, message } }, { status: 502 })
+  }
+
   const server = Bun.serve({
     hostname: '127.0.0.1',
     port: 0,
@@ -86,6 +98,7 @@ export function startMcpRecorder(upstreamUrl: string): McpRecorder {
       target.pathname = incoming.pathname
       for (const [key, value] of incoming.searchParams) target.searchParams.set(key, value)
       const body = req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.text()
+      const opened: string[] = []
       if (body !== undefined) {
         for (const message of messagesOf(body, 'application/json')) {
           const call = callRequest.safeParse(message)
@@ -93,14 +106,18 @@ export function startMcpRecorder(upstreamUrl: string): McpRecorder {
           const record: ToolCall = { name: call.data.params.name, args: call.data.params.arguments, result: '', isError: true, durationMs: 0 }
           calls.push(record)
           pending.set(String(call.data.id), { record, startedAt: performance.now() })
+          opened.push(String(call.data.id))
         }
       }
-      const response = await fetch(target, { method: req.method, headers: forwardHeaders(req.headers), body })
+      const response = await fetch(target, { method: req.method, headers: forwardHeaders(req.headers), body }).catch((error: unknown) => fail(opened, error))
       const contentType = response.headers.get('content-type') ?? ''
       const headers = forwardHeaders(response.headers)
       if (req.method !== 'POST' || response.body === null) return new Response(response.body, { status: response.status, headers })
       const [client, tap] = response.body.tee()
-      void new Response(tap).text().then((text) => messagesOf(text, contentType).forEach(settle))
+      void new Response(tap)
+        .text()
+        .then((text) => messagesOf(text, contentType).forEach(settle))
+        .catch((error: unknown) => fail(opened, error))
       return new Response(client, { status: response.status, headers })
     },
   })

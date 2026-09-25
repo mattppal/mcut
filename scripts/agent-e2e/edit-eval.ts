@@ -115,7 +115,10 @@ async function runStep(step: EditStep, context: { mcp: McpSession; page: StudioP
   const before = await mcp.getProject()
   await page.drain()
   const mark = recorder.mark()
-  const turn = await driver(step.id, { system: SYSTEM, user: step.ask })
+  const turn = await driver(step.id, { system: SYSTEM, user: step.ask }).catch((error: unknown): AgentTurn => {
+    if (error instanceof CursorAgentAuthError || error instanceof GrokBuildAuthError) throw error
+    return { toolCalls: [], stop: { stoppedBy: 'error', detail: error instanceof Error ? error.message : String(error) }, steps: 0, tokens: { input: 0, output: 0 }, model: 'driver crashed' }
+  })
   await Bun.sleep(SETTLE_MS)
   const after = await mcp.getProject()
   const toolCalls = recorder.since(mark)
