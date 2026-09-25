@@ -28,7 +28,6 @@ import { z } from 'zod'
 import { prepareAddAssetCommand } from './add-asset-src'
 import { formatShortcut, getEditorAction, isActionEnabled, listEditorActions, runEditorAction, type EditorAction } from './action-registry'
 import { isExportRequest, parseBridgeFrame, type BridgeRequest } from './bridge-request'
-import { handleGetFrame } from './get-frame'
 import { importGrantedMedia } from './import-granted-media'
 import { editorClipboard } from './editor-clipboard'
 import { useEditorUI } from './editor-ui'
@@ -274,8 +273,6 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
         playback: engine.playback.state,
         selection: engine.selection,
       })
-    case 'get_frame':
-      return await handleGetFrame(engine, request.payload)
     case 'get_transcript':
       return getProjectTranscript(engine.project, request.payload)
     case 'search_transcript':

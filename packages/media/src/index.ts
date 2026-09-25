@@ -34,8 +34,6 @@ export {
 
 export { containerFormats, listContainerFormats, type ContainerFormat, type ContainerFormatEntry } from './container-formats'
 
-export { renderProjectStill, type ProjectStill, type RenderProjectStillOptions } from './still'
-
 export { getFilmstrip, type Filmstrip, type FilmstripOptions } from './filmstrip'
 
 export { canUseNativeVideoPreview, isMatroskaLike, type VideoPreviewCapability } from './video-capabilities'
