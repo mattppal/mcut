@@ -1,11 +1,9 @@
 import { expect, test, type Downloads, type Locator, type Page } from './electron-fixture'
-import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { parseManifest, type FixtureManifest, type ManifestFixture, type ManifestMutation } from '../../../scripts/fixtures/manifest'
 import type { FixtureRecipe } from '../../../scripts/fixtures/recipes'
 import { clip, collectErrors, openEditor } from './helpers'
-import type { InPageProbe } from './media-fuzz/inpage'
 import { knownFailures, matchKnownFailure, type Violation } from './media-fuzz/known-failures'
 import { browserFixtures, browserMutations, proprietaryCodecFixtures } from './media-fuzz/subset'
 
@@ -28,13 +26,9 @@ interface Canvas {
   height: number
 }
 
-let bundle = ''
-test.beforeAll(() => {
-  bundle = execFileSync('bun', ['build', path.join(__dirname, 'media-fuzz', 'inpage.ts'), '--target', 'browser', '--format', 'iife'], {
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-  })
-})
+type ExportProbe =
+  | { ok: true; durationMs: number; width: number | null; height: number | null; hasVideo: boolean; hasAudio: boolean }
+  | { ok: false; name: string; message: string }
 
 function fixtureById(id: string): ManifestFixture {
   const fixture = manifest?.fixtures.find((entry) => entry.id === id)
@@ -146,16 +140,33 @@ async function unsupportedCodec(page: Page, fixture: ManifestFixture): Promise<s
   return null
 }
 
-function probeInPage(page: Page, bytes: Buffer, type: string): Promise<InPageProbe> {
-  return page.evaluate(([base64, mime]) => window.__mcutMediaFuzz.probe(base64, mime), [bytes.toString('base64'), type] as const)
+async function probeExport(bytes: Buffer): Promise<ExportProbe> {
+  const media = await import('@mcut/media')
+  try {
+    const probe = await media.probeMedia(new Blob([new Uint8Array(bytes)], { type: 'video/webm' }))
+    return {
+      ok: true,
+      durationMs: probe.durationMs,
+      width: probe.width ?? null,
+      height: probe.height ?? null,
+      hasVideo: probe.hasVideo,
+      hasAudio: probe.hasAudio,
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      name: error instanceof Error ? error.name : typeof error,
+      message: error instanceof Error ? error.message : String(error),
+    }
+  }
 }
 
-function describeProbe(probe: InPageProbe): string {
+function describeProbe(probe: ExportProbe): string {
   if (!probe.ok) return `threw ${probe.name} (${probe.message})`
   return `${probe.durationMs}ms ${probe.width ?? '-'}x${probe.height ?? '-'} v=${probe.hasVideo} a=${probe.hasAudio}`
 }
 
-function exportViolations(fixture: ManifestFixture, canvas: Canvas, fps: number, probe: InPageProbe): Violation[] {
+function exportViolations(fixture: ManifestFixture, canvas: Canvas, fps: number, probe: ExportProbe): Violation[] {
   if (!probe.ok) {
     return [{ invariant: 'export-probes', detail: `exported webm failed to probe with ${probe.name} (${probe.message})` }]
   }
@@ -219,7 +230,6 @@ test.describe('media fuzz', () => {
       await openEditor(page, editorUrl)
       const unsupported = await unsupportedCodec(page, fixture)
       test.skip(unsupported !== null, unsupported ?? '')
-      await page.addScriptTag({ content: bundle })
 
       const violations: Violation[] = []
       const { card, toast } = await importFile(page, fixture.file)
@@ -244,7 +254,7 @@ test.describe('media fuzz', () => {
         console.log(`${row.id} badge "${badge}" export failed, ${outcome.detail}`)
         violations.push({ invariant: 'export-completes', detail: outcome.detail })
       } else {
-        const probe = await probeInPage(page, outcome.bytes, 'video/webm')
+        const probe = await probeExport(outcome.bytes)
         console.log(`${row.id} badge "${badge}" exported ${outcome.bytes.length} bytes, probe ${describeProbe(probe)}`)
         violations.push(...exportViolations(fixture, canvas, fps, probe))
       }
