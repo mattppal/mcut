@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { applyCommand, createProject, type Project } from '@mcut/timeline'
 import { renderFrame } from './render-frame'
 import { FakeContext2D } from './test-utils'
-import type { Canvas2D } from './types'
+import type { Canvas2D, FrameSource } from './types'
 
 const asCtx = (fake: FakeContext2D): Canvas2D => fake as unknown as Canvas2D
 
@@ -36,46 +36,44 @@ function movingTextProject(): Project {
   return project
 }
 
+function scratchPair() {
+  const sample = new FakeContext2D()
+  const accumulate = new FakeContext2D()
+  const queue = [sample, accumulate]
+  return { sample, accumulate, create: () => asCtx(queue.shift() ?? accumulate) }
+}
+
 describe('motion blur', () => {
-  test('accumulates N sub-frame passes additively, then composites once', () => {
+  test('renders each pass whole, adds the passes at 1/N, then composites once', () => {
     const project = movingTextProject()
     const main = new FakeContext2D()
-    const scratch = new FakeContext2D()
-    renderFrame(asCtx(main), project, 500, {
-      motionBlurSamples: 4,
-      createScratchContext: () => asCtx(scratch),
-    })
+    const { sample, accumulate, create } = scratchPair()
+    renderFrame(asCtx(main), project, 500, { motionBlurSamples: 4, createScratchContext: create })
 
-    const passes = scratch.callsTo('fillText')
-    expect(passes).toHaveLength(4)
-    for (const pass of passes) {
-      expect(pass.globalAlpha).toBeCloseTo(0.25, 5)
-      expect(pass.globalCompositeOperation).toBe('lighter')
-    }
-
-    const xs = scratch.callsTo('translate').map((c) => c.args[0] as number)
+    const passes = sample.callsTo('fillText')
+    expect(passes.map((p) => [p.globalAlpha, p.globalCompositeOperation])).toEqual(Array.from({ length: 4 }, () => [1, 'source-over']))
+    const xs = sample.callsTo('translate').map((c) => Number(c.args[0]))
     expect(xs).toHaveLength(4)
     for (let i = 1; i < xs.length; i++) expect(xs[i]!).toBeGreaterThan(xs[i - 1]!)
     expect(xs[0]!).toBeCloseTo(960 + 197.5, 1)
     expect(xs[3]!).toBeCloseTo(960 + 202.5, 1)
 
+    const adds = accumulate.callsTo('drawImage')
+    expect(adds.map((c) => [c.args[0] === sample.canvas, c.globalAlpha, c.globalCompositeOperation])).toEqual(
+      Array.from({ length: 4 }, () => [true, 0.25, 'lighter']),
+    )
     expect(main.callsTo('fillText')).toHaveLength(0)
     const composites = main.callsTo('drawImage')
     expect(composites).toHaveLength(1)
-    expect(composites[0]!.args[0]).toBe(scratch.canvas)
-    expect(scratch.globalCompositeOperation).toBe('source-over')
-    expect(scratch.globalAlpha).toBe(1)
+    expect(composites[0]!.args[0]).toBe(accumulate.canvas)
   })
 
   test('renders identically regardless of evaluation order (deterministic)', () => {
     const project = movingTextProject()
     const run = () => {
-      const scratch = new FakeContext2D()
-      renderFrame(asCtx(new FakeContext2D()), project, 500, {
-        motionBlurSamples: 4,
-        createScratchContext: () => asCtx(scratch),
-      })
-      return scratch.callsTo('translate').map((c) => c.args)
+      const { sample, create } = scratchPair()
+      renderFrame(asCtx(new FakeContext2D()), project, 500, { motionBlurSamples: 4, createScratchContext: create })
+      return sample.callsTo('translate').map((c) => c.args)
     }
     expect(run()).toEqual(run())
   })
@@ -122,14 +120,47 @@ describe('motion blur', () => {
     let project = movingTextProject()
     project = applyCommand(project, { type: 'setBlendMode', elementId: 'e-mb', blendMode: 'screen' })
     const main = new FakeContext2D()
-    const scratch = new FakeContext2D()
-    renderFrame(asCtx(main), project, 500, {
-      motionBlurSamples: 2,
-      createScratchContext: () => asCtx(scratch),
-    })
-    for (const pass of scratch.callsTo('fillText')) {
-      expect(pass.globalCompositeOperation).toBe('lighter')
+    const { sample, create } = scratchPair()
+    renderFrame(asCtx(main), project, 500, { motionBlurSamples: 2, createScratchContext: create })
+    for (const pass of sample.callsTo('fillText')) {
+      expect(pass.globalCompositeOperation).toBe('source-over')
     }
     expect(main.callsTo('drawImage')[0]!.globalCompositeOperation).toBe('screen')
+  })
+})
+
+const source: FrameSource = { getFrame: () => ({ width: 1280, height: 720 }) as CanvasImageSource }
+
+function zoomedClip(opacity: number): Project {
+  let project = createProject({ width: 1280, height: 720, fps: 30 })
+  const trackId = project.tracks[0]?.id ?? 't-default'
+  project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-vid', kind: 'video', src: 'blob:x', durationMs: 60_000, width: 1280, height: 720 } })
+  project = applyCommand(project, {
+    type: 'addElement',
+    trackId,
+    element: { id: 'e-vid', type: 'video', assetId: 'a-vid', startMs: 0, durationMs: 5000, opacity },
+  })
+  return applyCommand(project, { type: 'addZoomRegion', elementId: 'e-vid', zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, motionBlur: 1 } })
+}
+
+describe('zoom motion blur', () => {
+  test('a ramp renders zooming passes whole and adds them at 1/N, keeping the clip opacity inside each pass', () => {
+    const main = new FakeContext2D()
+    const { sample, accumulate, create } = scratchPair()
+    renderFrame(asCtx(main), zoomedClip(0.5), 100, { source, motionBlurSamples: 4, createScratchContext: create })
+    const passes = sample.callsTo('drawImage')
+    expect(passes.map((p) => [p.globalAlpha, p.globalCompositeOperation])).toEqual(Array.from({ length: 4 }, () => [0.5, 'source-over']))
+    const widths = passes.map((p) => Number(p.args[3]))
+    for (let i = 1; i < widths.length; i++) expect(widths[i] ?? 0).toBeLessThan(widths[i - 1] ?? 0)
+    expect(accumulate.callsTo('drawImage').map((c) => [c.globalAlpha, c.globalCompositeOperation])).toEqual(Array.from({ length: 4 }, () => [0.25, 'lighter']))
+    expect(main.callsTo('drawImage')).toHaveLength(1)
+  })
+
+  test('a hold draws one sharp pass straight into the frame', () => {
+    const main = new FakeContext2D()
+    const { sample, create } = scratchPair()
+    renderFrame(asCtx(main), zoomedClip(1), 1500, { source, createScratchContext: create })
+    expect(sample.callsTo('drawImage')).toHaveLength(0)
+    expect(main.callsTo('drawImage').map((p) => p.args[3])).toEqual([640])
   })
 })

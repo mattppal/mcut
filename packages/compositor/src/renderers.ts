@@ -1,5 +1,7 @@
 import {
   getActiveLayout,
+  getClipView,
+  getSlotView,
   getAngleTransitionAt,
   getLayout,
   getMulticamSourceTimeMs,
@@ -23,6 +25,7 @@ import {
 import { applyChrome, type LayerChrome } from './backend'
 import { toCanvasPoint } from './geometry'
 import { transitionRenderers } from './transition-renderers'
+import { applyView } from './zoom-views'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
 import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
 
@@ -134,35 +137,19 @@ function cropSourceRect(crop: Crop | undefined, frame: CanvasImageSource): { sx:
   return { sx: crop.x * fw, sy: crop.y * fh, sw: crop.w * fw, sh: crop.h * fh }
 }
 
-function drawMediaFrame(
-  context: ElementRenderContext,
-  element: VisualChrome & FrameStyle & { crop?: Crop | undefined },
-  frame: CanvasImageSource,
-  dw: number,
-  dh: number,
-): void {
-  const src = cropSourceRect(element.crop, frame)
+function drawMediaFrame(context: ElementRenderContext, element: VideoElement | ImageElement, frame: CanvasImageSource, dw: number, dh: number): void {
+  const { width: fw, height: fh } = getImageSize(frame)
+  const view = getClipView(element, context.viewTimeMs)
+  const src = view.scale === 1 ? cropSourceRect(element.crop, frame) : applyView(cropSourceRect(element.crop, frame) ?? { sx: 0, sy: 0, sw: fw, sh: fh }, view)
   if (!element.stroke && !element.shadow) {
-    context.backend.drawImageQuad(
-      {
-        image: frame,
-        src,
-        dw,
-        dh,
-        cornerRadius: (element.cornerRadius ?? 0) * Math.min(dw, dh),
-      },
-      chromeOf(context, element),
-    )
+    context.backend.drawImageQuad({ image: frame, src, dw, dh, cornerRadius: (element.cornerRadius ?? 0) * Math.min(dw, dh) }, chromeOf(context, element))
     return
   }
   const ctx = context.ctx
   withTransform(ctx, context, element, () => {
     withFrameChrome(ctx, element, dw, dh, () => {
-      if (src) {
-        ctx.drawImage(frame, src.sx, src.sy, src.sw, src.sh, -dw / 2, -dh / 2, dw, dh)
-      } else {
-        ctx.drawImage(frame, -dw / 2, -dh / 2, dw, dh)
-      }
+      if (src) ctx.drawImage(frame, src.sx, src.sy, src.sw, src.sh, -dw / 2, -dh / 2, dw, dh)
+      else ctx.drawImage(frame, -dw / 2, -dh / 2, dw, dh)
     })
   })
 }
@@ -365,23 +352,19 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
           ctx.restore()
         }
 
-        const scale = slot.fit === 'cover' ? Math.max(rw / fw, rh / fh) : Math.min(rw / fw, rh / fh)
+        const fitScale = slot.fit === 'cover' ? Math.max(rw / fw, rh / fh) : Math.min(rw / fw, rh / fh)
+        const view = getSlotView(element, slot, context.viewTimeMs, { x: rw / (fitScale * fw), y: rh / (fitScale * fh) })
+        const scale = fitScale * view.scale
         const sw = Math.min(fw, rw / scale)
         const sh = Math.min(fh, rh / scale)
-        const sx = (fw - sw) * (slot.focus?.x ?? 0.5)
-        const sy = (fh - sh) * (slot.focus?.y ?? 0.5)
         const dw = sw * scale
         const dh = sh * scale
-        const dx = rx + (rw - dw) / 2
-        const dy = ry + (rh - dh) / 2
 
         ctx.save()
-        if (radius > 0) {
-          ctx.beginPath()
-          ctx.roundRect(rx, ry, rw, rh, radius)
-          ctx.clip()
-        }
-        ctx.drawImage(frame, sx, sy, sw, sh, dx, dy, dw, dh)
+        ctx.beginPath()
+        ctx.roundRect(rx, ry, rw, rh, radius)
+        ctx.clip()
+        ctx.drawImage(frame, (fw - sw) * view.focus.x, (fh - sh) * view.focus.y, sw, sh, rx + (rw - dw) / 2, ry + (rh - dh) / 2, dw, dh)
         ctx.restore()
 
         if (slot.stroke) {

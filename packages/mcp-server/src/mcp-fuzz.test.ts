@@ -113,18 +113,21 @@ test('seed 1 always yields the same second step over the stdio tool list', () =>
   expect(plan.steps[1]).toEqual({
     tool: 'addElement',
     args: {
-      trackId: { $slot: 'track', index: 4 },
+      trackId: { $slot: 'track', index: 3 },
       element: {
+        id: 'e-fzee5432',
         type: 'audio',
-        startMs: 19834,
-        durationMs: 4771,
-        linkId: 'clip',
-        assetId: { $slot: 'asset', index: 5 },
+        startMs: 3197,
+        durationMs: 1655,
+        keyframes: {},
+        assetId: { $slot: 'asset', index: 1 },
         timeMap: [
           { timeMs: 0, value: 0 },
-          { timeMs: 4349, value: 3976 },
+          { timeMs: 2630, value: 2139 },
+          { timeMs: 6062, value: 3863 },
+          { timeMs: 7289, value: 6543 },
         ],
-        reversed: true,
+        reversed: false,
         muted: true,
       },
     },
