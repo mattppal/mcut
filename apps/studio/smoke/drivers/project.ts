@@ -26,7 +26,7 @@ async function readSavedProject(file: string): Promise<{ bytes: number; name: st
   return { bytes, name: project.name, elements }
 }
 
-async function saveThroughMenu(ctx: SurfaceContext): Promise<{ file: string; toast: string }> {
+export async function saveThroughMenu(ctx: SurfaceContext): Promise<{ file: string; toast: string }> {
   const { view } = ctx
   switch (ctx.surface) {
     case 'embed': {

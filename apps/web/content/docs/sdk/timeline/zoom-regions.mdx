@@ -43,6 +43,12 @@ engine.dispatch({
 instant. `scale` multiplies the fit scale. `focus` is the anchor point from 0 to
 1 that stays fixed while it scales.
 
+### VisibleFraction
+
+`VisibleFraction` is `{ x, y }`, the fraction of the source frame each axis shows
+at scale 1. An axis where the clip or slot shows the whole frame is 1.
+`getSlotView` and `centeredFocus` take it.
+
 ## Schemas
 
 ### zoomRegionSchema

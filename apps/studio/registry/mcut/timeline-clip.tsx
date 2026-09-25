@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useRef, type PointerEvent as ReactPointerEvent } from 'react'
+import { memo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { LinkIcon } from '@/lib/icons'
 import { useEditor, useEditorState } from '@mcut/react'
 import {
@@ -25,6 +25,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { CENTER_PERSON_DEFAULTS, CenterPersonDialog, type CenterPersonDraft } from './center-person-dialog'
 import { AudioWaveform, VideoFilmstrip } from './clip-media'
 import { FadeOverlay } from './clip-fades'
 import { ZoomLane } from './clip-zooms'
@@ -151,6 +152,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
   const selected = useEditorState((s) => s.selection.elementIds.includes(element.id))
   const multiSelected = useEditorState((s) => s.selection.elementIds.length >= 2)
   const asset = useEditorState((s) => ('assetId' in element ? s.project.assets[element.assetId] : undefined))
+  const [centerDraft, setCenterDraft] = useState<CenterPersonDraft | null>(null)
   const widthPx = Math.max(10, element.durationMs * pxPerMs)
   const heightPx = TRACK_HEIGHT - 8
   const label = clipLabel(element, asset)
@@ -216,41 +218,73 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
       engine.dispatch(command)
     } catch {}
   }
+  const centeredSources = element.type === 'multicam' ? element.sources.flatMap((source) => (source.reframe ? [source.key] : [])) : []
+  const centered = element.type === 'video' ? element.reframe !== undefined : centeredSources.length > 0
+  const stopCentering = () =>
+    engine.transact(() => {
+      if (element.type === 'video') engine.dispatch({ type: 'setReframe', elementId: element.id, track: null })
+      for (const source of centeredSources) engine.dispatch({ type: 'setReframe', elementId: element.id, source, track: null })
+    })
   const showTrimHandles = canTrimFromTimeline(element)
   const idleTrimHandleClassName = trimHandlesAlwaysVisible ? 'bg-overlay-foreground/40' : 'group-hover:bg-overlay-foreground/40'
 
   return (
-    <ContextMenu
-      onOpenChange={(open, details) => {
-        if (open && clipDrag.dragging) details.cancel()
-      }}
-    >
-      <ContextMenuTrigger
-        render={
-          <div
-            data-mcut-clip={element.type}
-            data-mcut-element-id={element.id}
-            className={cn(
-              'group absolute top-1 bottom-1 left-0 flex cursor-grab touch-none items-center overflow-hidden rounded-lg text-xs font-medium select-none active:cursor-grabbing',
-              'data-dragging:z-40 data-settling:z-40 data-dragging:cursor-grabbing data-drop-invalid:opacity-60 data-drop-invalid:ring-2 data-drop-invalid:ring-destructive',
-              getElementUI(element.type).clipClassName,
-              selected ? 'ring-2 ring-overlay-foreground' : 'ring-1 ring-overlay-foreground/10 hover:ring-overlay-foreground/30',
-            )}
-            style={{
-              transform: `translateX(${element.startMs * pxPerMs}px)`,
-              width: widthPx,
-            }}
-            onPointerDown={beginDrag}
-            onContextMenu={() => {
-              if (!selected) engine.select(getLinkedElementIds(engine.project, element.id))
-            }}
-            title={label}
-          />
-        }
+    <>
+      <ContextMenu
+        onOpenChange={(open, details) => {
+          if (open && clipDrag.dragging) details.cancel()
+        }}
       >
-        {element.type === 'video' && asset && (
-          <>
-            <VideoFilmstrip
+        <ContextMenuTrigger
+          render={
+            <div
+              data-mcut-clip={element.type}
+              data-mcut-element-id={element.id}
+              className={cn(
+                'group absolute top-1 bottom-1 left-0 flex cursor-grab touch-none items-center overflow-hidden rounded-lg text-xs font-medium select-none active:cursor-grabbing',
+                'data-dragging:z-40 data-settling:z-40 data-dragging:cursor-grabbing data-drop-invalid:opacity-60 data-drop-invalid:outline-2 data-drop-invalid:outline-destructive',
+                getElementUI(element.type).clipClassName,
+                selected ? 'ring-2 ring-overlay-foreground' : 'ring-1 ring-overlay-foreground/10 hover:ring-overlay-foreground/30',
+              )}
+              style={{
+                transform: `translateX(${element.startMs * pxPerMs}px)`,
+                width: widthPx,
+              }}
+              onPointerDown={beginDrag}
+              onContextMenu={() => {
+                if (!selected) engine.select(getLinkedElementIds(engine.project, element.id))
+              }}
+              title={label}
+            />
+          }
+        >
+          {element.type === 'video' && asset && (
+            <>
+              <VideoFilmstrip
+                asset={asset}
+                widthPx={widthPx}
+                heightPx={heightPx}
+                trimStartMs={element.trimStartMs}
+                durationMs={element.durationMs}
+                timeMap={element.timeMap}
+                reversed={element.reversed}
+                className="opacity-90"
+              />
+              <AudioWaveform
+                asset={asset}
+                widthPx={widthPx}
+                heightPx={Math.round(heightPx * 0.35)}
+                trimStartMs={element.trimStartMs}
+                durationMs={element.durationMs}
+                timeMap={element.timeMap}
+                reversed={element.reversed}
+                variant="strip"
+                color="rgba(255, 255, 255, 0.65)"
+              />
+            </>
+          )}
+          {element.type === 'audio' && asset && (
+            <AudioWaveform
               asset={asset}
               widthPx={widthPx}
               heightPx={heightPx}
@@ -258,200 +292,184 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
               durationMs={element.durationMs}
               timeMap={element.timeMap}
               reversed={element.reversed}
-              className="opacity-90"
+              color="rgba(167, 243, 208, 0.9)"
             />
-            <AudioWaveform
-              asset={asset}
-              widthPx={widthPx}
-              heightPx={Math.round(heightPx * 0.35)}
-              trimStartMs={element.trimStartMs}
-              durationMs={element.durationMs}
-              timeMap={element.timeMap}
-              reversed={element.reversed}
-              variant="strip"
-              color="rgba(255, 255, 255, 0.65)"
-            />
-          </>
-        )}
-        {element.type === 'audio' && asset && (
-          <AudioWaveform
-            asset={asset}
-            widthPx={widthPx}
-            heightPx={heightPx}
-            trimStartMs={element.trimStartMs}
-            durationMs={element.durationMs}
-            timeMap={element.timeMap}
-            reversed={element.reversed}
-            color="rgba(167, 243, 208, 0.9)"
-          />
-        )}
-        {element.type === 'audio' && <VolumeBand element={element} widthPx={widthPx} heightPx={heightPx + 8} interactive={selected} />}
-        {element.type === 'multicam' && <MulticamWaveform element={element} widthPx={widthPx} heightPx={heightPx} />}
-        {element.type === 'multicam' && <MulticamCutTicks element={element} pxPerMs={pxPerMs} />}
-        {isZoomable(element) && <ZoomLane element={element} pxPerMs={pxPerMs} />}
-        {(element.type === 'video' || element.type === 'audio' || element.type === 'multicam') && (
-          <FadeOverlay element={element} pxPerMs={pxPerMs} widthPx={widthPx} interactive={selected} />
-        )}
-        {selected && <KeyframeMarkers element={element} pxPerMs={pxPerMs} />}
-        {(speed !== 1 || isReversed) && (
-          <span className="pointer-events-none absolute top-0.5 right-2.5 z-10 rounded-sm bg-overlay/60 px-1 font-mono text-2xs text-overlay-foreground/90">
-            {[speed !== 1 ? `${Number(speed.toFixed(2))}x` : null, isReversed ? '◀' : null].filter(Boolean).join(' ')}
-          </span>
-        )}
-        {element.linkId && (
-          <span
-            title="Linked: selects and edits with its partner clip"
-            className="pointer-events-none absolute top-0.5 left-2.5 z-10 rounded-sm bg-overlay/60 p-0.5 text-overlay-foreground/90"
-          >
-            <LinkIcon className="size-2.5" />
-          </span>
-        )}
-        {transition && (
-          <span
-            title={nextAdjacent ? `${transition.type} → next clip` : 'Transition inactive (next clip not flush)'}
-            className={cn(
-              'absolute top-1/2 right-[3px] z-30 size-2 -translate-y-1/2 rotate-45 rounded-[2px]',
-              nextAdjacent ? 'bg-(--snap-guide) ring-1 ring-overlay/40' : 'bg-overlay-foreground/30',
-            )}
-          />
-        )}
-        <span
-          className={cn(
-            'pointer-events-none relative z-10 truncate px-2',
-            (element.type === 'video' || element.type === 'audio') && 'rounded-sm bg-overlay/55 py-0.5 text-2xs mx-1.5',
           )}
-        >
-          {label}
-        </span>
-        {showTrimHandles && (
-          <>
-            <span
-              className={cn(
-                'absolute inset-y-0 left-0 z-20 flex cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors',
-                selected ? 'bg-overlay-foreground/90' : idleTrimHandleClassName,
-              )}
-              style={{ width: trimHandlePx }}
-            >
-              <span className={cn('h-3.5 w-0.5 rounded-full', selected ? 'bg-overlay/70' : 'bg-overlay-foreground/70')} />
+          {element.type === 'audio' && <VolumeBand element={element} widthPx={widthPx} heightPx={heightPx + 8} interactive={selected} />}
+          {element.type === 'multicam' && <MulticamWaveform element={element} widthPx={widthPx} heightPx={heightPx} />}
+          {element.type === 'multicam' && <MulticamCutTicks element={element} pxPerMs={pxPerMs} />}
+          {isZoomable(element) && <ZoomLane element={element} pxPerMs={pxPerMs} />}
+          {(element.type === 'video' || element.type === 'audio' || element.type === 'multicam') && (
+            <FadeOverlay element={element} pxPerMs={pxPerMs} widthPx={widthPx} interactive={selected} />
+          )}
+          {selected && <KeyframeMarkers element={element} pxPerMs={pxPerMs} />}
+          {(speed !== 1 || isReversed) && (
+            <span className="pointer-events-none absolute top-0.5 right-2.5 z-10 rounded-sm bg-overlay/60 px-1 font-mono text-2xs text-overlay-foreground/90">
+              {[speed !== 1 ? `${Number(speed.toFixed(2))}x` : null, isReversed ? '◀' : null].filter(Boolean).join(' ')}
             </span>
+          )}
+          {element.linkId && (
             <span
-              className={cn(
-                'absolute inset-y-0 right-0 z-20 flex cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors',
-                selected ? 'bg-overlay-foreground/90' : idleTrimHandleClassName,
-              )}
-              style={{ width: trimHandlePx }}
+              title="Linked: selects and edits with its partner clip"
+              className="pointer-events-none absolute top-0.5 left-2.5 z-10 rounded-sm bg-overlay/60 p-0.5 text-overlay-foreground/90"
             >
-              <span className={cn('h-3.5 w-0.5 rounded-full', selected ? 'bg-overlay/70' : 'bg-overlay-foreground/70')} />
+              <LinkIcon className="size-2.5" />
             </span>
-          </>
-        )}
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem disabled={!playheadInside()} onClick={() => splitSelectionAtPlayhead(engine)}>
-          Split at playhead
-          <span className="ml-auto pl-4 font-mono text-2xs text-muted-foreground">S</span>
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => duplicateElement(engine, element.id)}>Duplicate</ContextMenuItem>
-        {(element.type === 'video' || element.type === 'audio') && (
-          <ContextMenuItem
-            onClick={() =>
-              engine.dispatch({
-                type: 'updateElement',
-                elementId: element.id,
-                patch: { muted: !element.muted },
-              })
-            }
+          )}
+          {transition && (
+            <span
+              title={nextAdjacent ? `${transition.type} → next clip` : 'Transition inactive (next clip not flush)'}
+              className={cn(
+                'absolute top-1/2 right-[3px] z-30 size-2 -translate-y-1/2 rotate-45 rounded-[2px]',
+                nextAdjacent ? 'bg-(--snap-guide) ring-1 ring-overlay/40' : 'bg-overlay-foreground/30',
+              )}
+            />
+          )}
+          <span
+            className={cn(
+              'pointer-events-none relative z-10 truncate px-2',
+              (element.type === 'video' || element.type === 'audio') && 'rounded-sm bg-overlay/55 py-0.5 text-2xs mx-1.5',
+            )}
           >
-            {element.muted ? 'Unmute' : 'Mute'}
+            {label}
+          </span>
+          {showTrimHandles && (
+            <>
+              <span
+                className={cn(
+                  'absolute inset-y-0 left-0 z-20 flex cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors',
+                  selected ? 'bg-overlay-foreground/90' : idleTrimHandleClassName,
+                )}
+                style={{ width: trimHandlePx }}
+              >
+                <span className={cn('h-3.5 w-0.5 rounded-full', selected ? 'bg-overlay/70' : 'bg-overlay-foreground/70')} />
+              </span>
+              <span
+                className={cn(
+                  'absolute inset-y-0 right-0 z-20 flex cursor-ew-resize items-center justify-center bg-overlay-foreground/0 transition-colors',
+                  selected ? 'bg-overlay-foreground/90' : idleTrimHandleClassName,
+                )}
+                style={{ width: trimHandlePx }}
+              >
+                <span className={cn('h-3.5 w-0.5 rounded-full', selected ? 'bg-overlay/70' : 'bg-overlay-foreground/70')} />
+              </span>
+            </>
+          )}
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem disabled={!playheadInside()} onClick={() => splitSelectionAtPlayhead(engine)}>
+            Split at playhead
+            <span className="ml-auto pl-4 font-mono text-2xs text-muted-foreground">S</span>
           </ContextMenuItem>
-        )}
-        {element.type === 'video' && (
-          <ContextMenuItem disabled={element.muted} onClick={() => dispatchSafe({ type: 'detachAudio', elementId: element.id })}>
-            Detach audio
-          </ContextMenuItem>
-        )}
-        {element.linkId && <ContextMenuItem onClick={() => unlinkElements(engine, element.id)}>Unlink</ContextMenuItem>}
-        {(element.type === 'video' || element.type === 'audio') && (
-          <ContextMenuSub>
-            <ContextMenuSubTrigger>Speed</ContextMenuSubTrigger>
-            <ContextMenuSubContent>
-              {[25, 50, 100, 150, 200, 400, -100].map((pct) => (
-                <ContextMenuItem
-                  key={pct}
-                  onClick={() => {
-                    try {
-                      engine.transact(() => {
-                        engine.dispatch({
-                          type: 'setElementSpeed',
-                          elementId: element.id,
-                          speed: Math.abs(pct) / 100,
-                        })
-                        if (pct < 0 !== (element.reversed ?? false)) {
-                          engine.dispatch({
-                            type: 'updateElement',
-                            elementId: element.id,
-                            patch: { reversed: pct < 0 || undefined },
-                          })
-                        }
-                      })
-                    } catch {}
-                  }}
-                >
-                  {pct}%{pct === -100 && ' (reverse)'}
-                  {Math.abs(speed * (element.reversed ? -100 : 100) - pct) < 0.5 && <span className="ml-auto pl-4 text-2xs text-muted-foreground">✓</span>}
-                </ContextMenuItem>
-              ))}
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-        )}
-        {element.type === 'multicam' && (
-          <ContextMenuItem onClick={() => dispatchSafe({ type: 'flattenMulticam', elementId: element.id })}>Flatten multicam</ContextMenuItem>
-        )}
-        {element.type === 'video' && multiSelected && (
-          <ContextMenuItem
-            onClick={() => {
-              const videoIds = engine.selection.elementIds.filter((id) =>
-                engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video')),
-              )
-              dispatchSafe({ type: 'createMulticam', elementIds: videoIds })
-            }}
-          >
-            Create multicam from selection
-          </ContextMenuItem>
-        )}
-        {isVisual &&
-          (transition ? (
-            <ContextMenuItem onClick={() => dispatchSafe({ type: 'setTransition', elementId: element.id, transition: null })}>
-              Remove transition
+          <ContextMenuItem onClick={() => duplicateElement(engine, element.id)}>Duplicate</ContextMenuItem>
+          {(element.type === 'video' || element.type === 'audio') && (
+            <ContextMenuItem
+              onClick={() =>
+                engine.dispatch({
+                  type: 'updateElement',
+                  elementId: element.id,
+                  patch: { muted: !element.muted },
+                })
+              }
+            >
+              {element.muted ? 'Unmute' : 'Mute'}
             </ContextMenuItem>
-          ) : nextAdjacent ? (
+          )}
+          {element.type === 'video' && (
+            <ContextMenuItem disabled={element.muted} onClick={() => dispatchSafe({ type: 'detachAudio', elementId: element.id })}>
+              Detach audio
+            </ContextMenuItem>
+          )}
+          {element.linkId && <ContextMenuItem onClick={() => unlinkElements(engine, element.id)}>Unlink</ContextMenuItem>}
+          {(element.type === 'video' || element.type === 'audio') && (
             <ContextMenuSub>
-              <ContextMenuSubTrigger>Transition into next</ContextMenuSubTrigger>
+              <ContextMenuSubTrigger>Speed</ContextMenuSubTrigger>
               <ContextMenuSubContent>
-                {TRANSITION_TYPES.map((type) => (
+                {[25, 50, 100, 150, 200, 400, -100].map((pct) => (
                   <ContextMenuItem
-                    key={type}
-                    className="capitalize"
-                    onClick={() =>
-                      dispatchSafe({
-                        type: 'setTransition',
-                        elementId: element.id,
-                        transition: { type, durationMs: 500 },
-                      })
-                    }
+                    key={pct}
+                    onClick={() => {
+                      try {
+                        engine.transact(() => {
+                          engine.dispatch({
+                            type: 'setElementSpeed',
+                            elementId: element.id,
+                            speed: Math.abs(pct) / 100,
+                          })
+                          if (pct < 0 !== (element.reversed ?? false)) {
+                            engine.dispatch({
+                              type: 'updateElement',
+                              elementId: element.id,
+                              patch: { reversed: pct < 0 || undefined },
+                            })
+                          }
+                        })
+                      } catch {}
+                    }}
                   >
-                    {type.replace('-', ' ')}
+                    {pct}%{pct === -100 && ' (reverse)'}
+                    {Math.abs(speed * (element.reversed ? -100 : 100) - pct) < 0.5 && <span className="ml-auto pl-4 text-2xs text-muted-foreground">✓</span>}
                   </ContextMenuItem>
                 ))}
               </ContextMenuSubContent>
             </ContextMenuSub>
-          ) : null)}
-        <ContextMenuSeparator />
-        <ContextMenuItem variant="destructive" onClick={() => removeSelection(engine)}>
-          Delete
-          <span className="ml-auto pl-4 font-mono text-2xs text-muted-foreground">⌫</span>
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+          )}
+          {element.type === 'multicam' && (
+            <ContextMenuItem onClick={() => dispatchSafe({ type: 'flattenMulticam', elementId: element.id })}>Flatten multicam</ContextMenuItem>
+          )}
+          {(element.type === 'video' || element.type === 'multicam') && (
+            <ContextMenuItem onClick={() => setCenterDraft(CENTER_PERSON_DEFAULTS)}>Center person…</ContextMenuItem>
+          )}
+          {centered && <ContextMenuItem onClick={stopCentering}>Stop centering</ContextMenuItem>}
+          {element.type === 'video' && multiSelected && (
+            <ContextMenuItem
+              onClick={() => {
+                const videoIds = engine.selection.elementIds.filter((id) =>
+                  engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video')),
+                )
+                dispatchSafe({ type: 'createMulticam', elementIds: videoIds })
+              }}
+            >
+              Create multicam from selection
+            </ContextMenuItem>
+          )}
+          {isVisual &&
+            (transition ? (
+              <ContextMenuItem onClick={() => dispatchSafe({ type: 'setTransition', elementId: element.id, transition: null })}>
+                Remove transition
+              </ContextMenuItem>
+            ) : nextAdjacent ? (
+              <ContextMenuSub>
+                <ContextMenuSubTrigger>Transition into next</ContextMenuSubTrigger>
+                <ContextMenuSubContent>
+                  {TRANSITION_TYPES.map((type) => (
+                    <ContextMenuItem
+                      key={type}
+                      className="capitalize"
+                      onClick={() =>
+                        dispatchSafe({
+                          type: 'setTransition',
+                          elementId: element.id,
+                          transition: { type, durationMs: 500 },
+                        })
+                      }
+                    >
+                      {type.replace('-', ' ')}
+                    </ContextMenuItem>
+                  ))}
+                </ContextMenuSubContent>
+              </ContextMenuSub>
+            ) : null)}
+          <ContextMenuSeparator />
+          <ContextMenuItem variant="destructive" onClick={() => removeSelection(engine)}>
+            Delete
+            <span className="ml-auto pl-4 font-mono text-2xs text-muted-foreground">⌫</span>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+      {(element.type === 'video' || element.type === 'multicam') && (
+        <CenterPersonDialog element={element} draft={centerDraft} onClose={() => setCenterDraft(null)} />
+      )}
+    </>
   )
 })

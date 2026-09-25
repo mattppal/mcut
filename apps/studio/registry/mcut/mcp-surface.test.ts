@@ -371,6 +371,7 @@ describe('Studio action/operator MCP surface', () => {
       'lint_project',
       'list_zooms',
       'edit_zooms',
+      'center_person',
       'list_presets',
       'list_operators',
       'run_operator',
@@ -382,6 +383,7 @@ describe('Studio action/operator MCP surface', () => {
       'export_video',
       'get_export',
       'cancel_export',
+      'import_media',
     ])
     expect(LIVE_MCP_STATIC_TOOL_REQUESTS).toEqual(expect.arrayContaining([...requiredToolNames]))
     expect(LIVE_MCP_DYNAMIC_TOOL_REQUESTS).toEqual(['dispatch_command'])

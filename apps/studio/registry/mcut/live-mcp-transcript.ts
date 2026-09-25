@@ -19,8 +19,9 @@ type EnsureTranscriptPayload = z.infer<typeof MCP_TOOL_INPUTS.ensure_transcript>
 
 export interface EnsureTranscriptDeps {
   isLocalTranscriptionSupported: () => boolean
-  extractAudioToWav: (src: string) => Promise<Blob | null>
+  extractAudioToWav: (src: string, signal: AbortSignal) => Promise<Blob | null>
   transcribeOnDevice: (audio: Blob, options?: TranscribeOptions) => Promise<TranscriptResult>
+  audioExtractTimeoutMs?: number
 }
 
 export interface EnsureTranscriptResult {
@@ -40,8 +41,32 @@ export interface EnsureTranscriptResult {
 
 const browserDeps: EnsureTranscriptDeps = {
   isLocalTranscriptionSupported,
-  extractAudioToWav: (src) => extractAudioToWav(src),
+  extractAudioToWav: (src, signal) => extractAudioToWav(src, { signal }),
   transcribeOnDevice,
+}
+
+const MIN_AUDIO_EXTRACT_TIMEOUT_MS = 30_000
+const AUDIO_EXTRACT_MS_PER_SOURCE_MS = 0.1
+
+async function extractSourceAudio(source: ElementAudioSource, deps: EnsureTranscriptDeps): Promise<Blob | null> {
+  const timeoutMs = deps.audioExtractTimeoutMs ?? Math.max(MIN_AUDIO_EXTRACT_TIMEOUT_MS, (source.asset.durationMs ?? 0) * AUDIO_EXTRACT_MS_PER_SOURCE_MS)
+  const controller = new AbortController()
+  const timedOut = new Promise<never>((_, reject) => {
+    controller.signal.addEventListener('abort', () => reject(controller.signal.reason), { once: true })
+  })
+  const timer = setTimeout(() => {
+    controller.abort(
+      new Error(
+        `Timed out decoding the audio of "${source.asset.name ?? source.asset.id}" after ${Math.round(timeoutMs / 1000)}s, before transcription started. ` +
+          'The Studio window may be too busy to decode it. Pause heavy previews and try again.',
+      ),
+    )
+  }, timeoutMs)
+  try {
+    return await Promise.race([deps.extractAudioToWav(source.asset.src, controller.signal), timedOut])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 function pickTranscriptionSource(engine: EditorEngine, payload: EnsureTranscriptPayload): ElementAudioSource {
@@ -116,7 +141,7 @@ export async function ensureTranscriptForBridge(
     throw new Error('Local Whisper transcription is not supported in this browser. Use a WebGPU-capable browser with enough memory.')
   }
 
-  const wav = await deps.extractAudioToWav(source.asset.src)
+  const wav = await extractSourceAudio(source, deps)
   if (!wav) {
     throw new Error(`"${source.asset.name ?? source.asset.id}" has no audio track.`)
   }

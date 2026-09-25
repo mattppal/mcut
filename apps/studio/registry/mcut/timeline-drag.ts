@@ -312,7 +312,6 @@ export class ClipDragController {
     gesture.layer?.release(engine.project, this.deps.prefs().pxPerMs)
     engine.cancelTransaction()
     this.deps.setSnapGuideMs(null)
-    if (gesture.plan) gesture.layer?.settle(gesture.plan.previews, () => engine.project, this.deps.prefs().pxPerMs, false)
   }
 
   private startAutoScroll(gesture: ClipDragGesture): void {

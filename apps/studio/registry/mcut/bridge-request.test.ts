@@ -32,6 +32,13 @@ describe('parseBridgeFrame', () => {
     })
   })
 
+  test('a center_person frame without a payload gets the default aspect and smoothing', () => {
+    expect(parseBridgeFrame('{"id":"6","type":"center_person"}')).toEqual({
+      ok: true,
+      request: { id: '6', type: 'center_person', payload: { aspect: 9 / 16, smoothing: 0.5 } },
+    })
+  })
+
   test('a frame missing a required field is rejected with the field named and the id kept', () => {
     expect(parseBridgeFrame('{"id":"2","type":"search_transcript","payload":{}}')).toEqual({
       ok: false,

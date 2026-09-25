@@ -10,7 +10,7 @@ import {
   type LocalWhisperProgress,
 } from '@mcut/transcription-local'
 import type { TranscribeOptions, TranscriptResult } from '@mcut/transcription'
-import { host } from './studio-host'
+import { ortWasmPaths } from './ort-wasm'
 
 export { isLocalTranscriptionSupported }
 
@@ -56,16 +56,6 @@ export function defaultModelDownloadLabel(): string {
 let provider: ReturnType<typeof createLocalWhisperProvider> | null = null
 
 const PROGRESS_TOAST_ID = 'mcut-on-device-transcription'
-
-const ORT_WASM_FILES = { mjs: 'ort-wasm-simd-threaded.asyncify.mjs', wasm: 'ort-wasm-simd-threaded.asyncify.wasm' }
-
-function ortWasmPaths(): { mjs: string; wasm: string } | null {
-  if (host.windowChrome === 'browser') return null
-  return {
-    mjs: new URL(`/ort/${ORT_WASM_FILES.mjs}`, window.location.origin).href,
-    wasm: new URL(`/ort/${ORT_WASM_FILES.wasm}`, window.location.origin).href,
-  }
-}
 
 function progressLabel(phase: LocalWhisperProgress['phase'], percent: number): string {
   if (phase === 'transcribe') return `Transcribing on this device… ${percent}%`

@@ -15,6 +15,7 @@ export interface BridgeSession {
 export interface BridgeSessionOptions {
   logDir: string
   readyTimeoutMs?: number
+  remoteDebuggingPort?: number
   log?: (line: string) => void
 }
 
@@ -210,7 +211,8 @@ export async function openBridgeSession(options: BridgeSessionOptions): Promise<
   mkdirSync(options.logDir, { recursive: true })
 
   const token = randomBytes(32).toString('hex')
-  const app = new DesktopApp([electron, DESKTOP_DIR, '--port', '0', '--token', token], options.logDir, log)
+  const debugging = options.remoteDebuggingPort === undefined ? [] : [`--remote-debugging-port=${options.remoteDebuggingPort}`]
+  const app = new DesktopApp([electron, DESKTOP_DIR, ...debugging, '--port', '0', '--token', token], options.logDir, log)
   let fixtures: FixtureServer | undefined
   let closing: Promise<void> | undefined
 

@@ -1,4 +1,10 @@
-import { MCP_TOOL_INPUTS, cancelExportRequestSchema, startExportRequestSchema, transactSubRequestSchema } from '@mcut/mcp-server/contract'
+import {
+  MCP_TOOL_INPUTS,
+  cancelExportRequestSchema,
+  importMediaBridgePayloadSchema,
+  startExportRequestSchema,
+  transactSubRequestSchema,
+} from '@mcut/mcp-server/contract'
 import { z } from 'zod'
 
 const request = <Type extends string, Payload extends z.ZodType>(type: Type, payload: Payload) => z.object({ id: z.string(), type: z.literal(type), payload })
@@ -12,12 +18,14 @@ export const bridgeRequestSchema = z.discriminatedUnion('type', [
   request('search_transcript', MCP_TOOL_INPUTS.search_transcript),
   request('ensure_transcript', MCP_TOOL_INPUTS.ensure_transcript.default({})),
   request('ensure_voice_stems', MCP_TOOL_INPUTS.ensure_voice_stems.default({})),
+  request('center_person', MCP_TOOL_INPUTS.center_person.prefault({})),
   request('list_commands', MCP_TOOL_INPUTS.list_commands.optional()),
   request('apply_commands', MCP_TOOL_INPUTS.apply_commands),
   request('list_operators', MCP_TOOL_INPUTS.list_operators.optional()),
   request('run_operator', MCP_TOOL_INPUTS.run_operator),
   request('list_actions', MCP_TOOL_INPUTS.list_actions.optional()),
   request('run_action', MCP_TOOL_INPUTS.run_action),
+  request('import_media', importMediaBridgePayloadSchema),
   request('undo', MCP_TOOL_INPUTS.undo.optional()),
   request('redo', MCP_TOOL_INPUTS.redo.optional()),
   request(

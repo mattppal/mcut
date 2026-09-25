@@ -4,6 +4,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { EditorEngine, getProjectCaptions, parseProject } from '@mcut/timeline'
 import { WebSocket } from 'ws'
+import { z } from 'zod'
 import { listServerToolDefinitions } from './contract'
 import { LiveMcutBridge, createHttpBridgeTarget } from './live-bridge'
 import { createMcutMcpServer, createMcutMcpServerForTarget } from './server'
@@ -69,6 +70,7 @@ describe('createMcutMcpServer', () => {
     expect(names).toContain('search_transcript')
     expect(names).toContain('ensure_transcript')
     expect(names).toContain('ensure_voice_stems')
+    expect(names).toContain('center_person')
     expect(names).toContain('get_audio_activity')
     expect(names).toContain('apply_captions')
     expect(names).toContain('apply_silence_cuts')
@@ -404,6 +406,10 @@ describe('createMcutMcpServer', () => {
     expect(activity.isError).toBe(true)
     const activityText = (activity.content as Array<{ type: string; text: string }>)[0]!.text
     expect(activityText).toContain('requires a live browser bridge')
+
+    const centered = await client.callTool({ name: 'center_person', arguments: {} })
+    expect(centered.isError).toBe(true)
+    expect(contentText(centered)).toBe('center_person requires a live browser bridge connected to an editor tab.')
   })
 
   test('live bridge forwards MCP tools to a connected browser tab', async () => {
@@ -604,6 +610,45 @@ describe('createMcutMcpServer', () => {
     bridge.close()
   })
 
+  test('live bridge forwards center_person with its defaults and waits past the request timeout', async () => {
+    const bridge = new LiveMcutBridge({ token: 'center-token', requestTimeoutMs: 50, transcriptionTimeoutMs: 2000 })
+    const port = await bridge.listen(0)
+    const server = createMcutMcpServerForTarget({ target: bridge.createTarget() })
+    const client = new Client({ name: 'test', version: '0.0.0' })
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)])
+
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp?token=center-token`, {
+      headers: { Origin: 'http://localhost:3000' },
+    })
+    await new Promise<void>((resolve, reject) => {
+      socket.once('open', resolve)
+      socket.once('error', reject)
+    })
+
+    const tabRequestSchema = z.object({ id: z.string(), type: z.string(), payload: z.unknown() })
+    const payloads: unknown[] = []
+    socket.on('message', (raw) => {
+      const message = tabRequestSchema.parse(JSON.parse(raw.toString()))
+      if (message.type === 'center_person') {
+        payloads.push(message.payload)
+        setTimeout(() => socket.send(JSON.stringify({ id: message.id, ok: true, result: { keys: 4 } })), 200)
+        return
+      }
+      socket.send(JSON.stringify({ id: message.id, ok: true, result: message.type === 'get_summary' ? 'Centered summary' : null }))
+    })
+
+    try {
+      const centered = await client.callTool({ name: 'center_person', arguments: { elementId: 'e-multicam', source: 'camera' } })
+
+      expect(contentText(centered)).toBe('OK: person centered.\n\nResult:\n{\n  "keys": 4\n}\n\nCentered summary')
+      expect(payloads).toEqual([{ elementId: 'e-multicam', source: 'camera', aspect: 9 / 16, smoothing: 0.5 }])
+    } finally {
+      socket.close()
+      bridge.close()
+    }
+  })
+
   test('live bridge reports fixed-port collisions without crashing', async () => {
     const bridge = new LiveMcutBridge({ token: 'first-token' })
     const port = await bridge.listen(0)
@@ -703,6 +748,10 @@ describe('createMcutMcpServer', () => {
         socket.send(JSON.stringify({ id: message.id, ok: true, result: { text: 'daemon transcript' } }))
         return
       }
+      if (message.type === 'center_person') {
+        socket.send(JSON.stringify({ id: message.id, ok: true, result: { keys: 2 } }))
+        return
+      }
       socket.send(JSON.stringify({ id: message.id, ok: true, result: null }))
     })
 
@@ -717,6 +766,9 @@ describe('createMcutMcpServer', () => {
     const transcript = await client.callTool({ name: 'get_transcript', arguments: {} })
     const transcriptContent = transcript.content as Array<{ type: string; text: string }>
     expect(transcriptContent[0]!.text).toContain('daemon transcript')
+
+    const centered = await client.callTool({ name: 'center_person', arguments: {} })
+    expect(contentText(centered)).toContain('"keys": 2')
 
     socket.close()
     bridge.close()
