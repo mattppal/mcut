@@ -95,7 +95,10 @@ export function describeLayoutChange(before: Project, after: Project, layoutId: 
     }
     const was = describeSlot(prev, prev.slots.indexOf(old), before)
     if (was === now) {
-      lines.push(`  ${now} (unchanged)`)
+      const moved = old.rect.x !== slot.rect.x || old.rect.y !== slot.rect.y
+      const restyled = JSON.stringify({ ...old, rect: null }) !== JSON.stringify({ ...slot, rect: null })
+      const change = [moved && `moved from x ${old.rect.x}, y ${old.rect.y} to x ${slot.rect.x}, y ${slot.rect.y}`, restyled && 'restyled'].filter(Boolean)
+      lines.push(`  ${now} (${change.length > 0 ? change.join(', ') : 'unchanged'})`)
       return
     }
     lines.push(`  ${was} → ${now} (width ${percentChange(old.rect.w, slot.rect.w)}, height ${percentChange(old.rect.h, slot.rect.h)})`)
