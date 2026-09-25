@@ -13,6 +13,7 @@ import {
 import { z } from 'zod'
 import { downloadBlob } from './download-blob'
 import { collectProjectFontExports, ensureProjectFontsLoaded } from './font-library'
+import { voiceStems } from './voice-cleanup'
 
 const exportActionInputSchema = z.strictObject({
   format: z.enum(['webm', 'mp4', 'mkv']).optional(),
@@ -171,10 +172,11 @@ export async function exportProjectVideo(engine: EditorEngine, value: unknown): 
   const support = await getExportSupport(format)
   if (!support.video) throw new Error(`This browser cannot encode ${format} video with WebCodecs.`)
   engine.pause()
+  const audioSources = await voiceStems.ready(engine.project)
   await ensureProjectFontsLoaded(engine.project)
   const fonts = await collectProjectFontExports(engine.project)
   const startedAt = performance.now()
-  const result = await exportProject(engine.project, { format, fonts })
+  const result = await exportProject(engine.project, { format, fonts, audioSources })
   const filename = `${engine.project.name || 'export'}.${result.extension}`
   if (input.download ?? true) downloadBlob(result.blob, filename)
   return {

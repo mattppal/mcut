@@ -804,7 +804,8 @@
         "@mcut/editor",
         "sonner",
         "zod",
-        "@mcut/desktop-ipc"
+        "@mcut/desktop-ipc",
+        "@mcut/voice"
       ],
       "registryDependencies": ["button", "dialog", "dropdown-menu", "kbd", "progress", "tooltip"],
       "files": [
@@ -967,6 +968,16 @@
           "path": "registry/mcut/transcript-keywords.ts",
           "type": "registry:lib",
           "target": "components/mcut/transcript-keywords.ts"
+        },
+        {
+          "path": "registry/mcut/voice-cleanup.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/voice-cleanup.tsx"
+        },
+        {
+          "path": "registry/mcut/voice-stems.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/voice-stems.ts"
         }
       ],
       "cssVars": {
@@ -1510,7 +1521,16 @@
       "type": "registry:component",
       "title": "mcut Export Dialog",
       "description": "Deterministic client-side MP4/WebM export with WebCodecs support detection and progress.",
-      "dependencies": ["@mcut/media", "@mcut/react", "@mcut/timeline", "@tanstack/react-query", "iconoir-react", "unicode-animations@1.0.3", "zod"],
+      "dependencies": [
+        "@mcut/media",
+        "@mcut/react",
+        "@mcut/timeline",
+        "@mcut/voice",
+        "@tanstack/react-query",
+        "iconoir-react",
+        "unicode-animations@1.0.3",
+        "zod"
+      ],
       "registryDependencies": ["button", "dialog", "progress"],
       "files": [
         {
@@ -1542,6 +1562,16 @@
           "path": "registry/mcut/font-css.ts",
           "type": "registry:lib",
           "target": "components/mcut/font-css.ts"
+        },
+        {
+          "path": "registry/mcut/voice-cleanup.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/voice-cleanup.tsx"
+        },
+        {
+          "path": "registry/mcut/voice-stems.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/voice-stems.ts"
         }
       ],
       "cssVars": {
