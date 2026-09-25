@@ -33,6 +33,7 @@
     "center-person-mcp",
     "center-person-reframe",
     "cli-clean-voice",
+    "decoded-preview-first-frame",
     "deflake-use-web-socket-test",
     "desktop-ipc",
     "desktop-platform-field",
