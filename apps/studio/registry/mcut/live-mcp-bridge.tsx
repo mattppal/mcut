@@ -31,7 +31,7 @@ import { useEditorUI } from './editor-ui'
 import { handleExportRequest } from './live-mcp-export'
 import { ensureTranscriptForBridge } from './live-mcp-transcript'
 import { clamp } from './math'
-import { MCP_AGENT_TOOL_NAMES, MCP_TOOL_INPUTS, operatorToolName } from '@mcut/mcp-server/contract'
+import { applyTransact, MCP_AGENT_TOOL_NAMES, MCP_TOOL_INPUTS, operatorToolName, type TransactSubRequest } from '@mcut/mcp-server/contract'
 
 type AudioActivityPayload = z.infer<typeof MCP_TOOL_INPUTS.get_audio_activity>
 
@@ -234,6 +234,23 @@ function serializeError(error: unknown) {
   }
 }
 
+function bridgeRequestFor(id: string, sub: TransactSubRequest): BridgeRequest {
+  switch (sub.type) {
+    case 'dispatch_command':
+      return { id, type: 'dispatch_command', payload: { commandName: sub.commandName, input: sub.input } }
+    case 'run_operator':
+      return { id, type: 'run_operator', payload: { operatorId: sub.operatorId, input: sub.input } }
+    case 'run_action':
+      return { id, type: 'run_action', payload: { actionId: sub.actionId, input: sub.input } }
+    case 'apply_commands':
+      return { id, type: 'apply_commands', payload: { commands: sub.commands } }
+    default: {
+      const unhandled: never = sub
+      throw new Error(`Unknown transact sub-request ${JSON.stringify(unhandled)}.`)
+    }
+  }
+}
+
 export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<typeof useEditorUI>, request: BridgeRequest): Promise<unknown> {
   const context = { engine, ui, clipboard: editorClipboard }
   switch (request.type) {
@@ -305,6 +322,8 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
       }
       return runEditorAction(action, { ...context, input, throwOnError: true }) ?? null
     }
+    case 'transact':
+      return applyTransact(engine, request.payload.requests, (sub) => handleLiveMcpRequest(engine, ui, bridgeRequestFor(request.id, sub)))
     default: {
       const unhandled: never = request
       throw new Error(`Unknown live MCP request ${JSON.stringify(unhandled)}.`)
