@@ -262,6 +262,15 @@ const RULES: [RegExp, Test][] = [
     },
   ],
   [
+    /^probed assets (\d+)$/,
+    ({ after }, match) => {
+      const assets = Object.values(after.assets)
+      const probed = assets.filter((asset) => asset.kind === 'image' || (asset.durationMs ?? 0) > 0)
+      const names = assets.map((asset) => `${asset.name ?? asset.id} (${asset.kind}, ${asset.durationMs ?? 'unprobed'} ms, ${asset.src.slice(0, 40)})`)
+      return outcome(probed.length >= Number(match[1]), names.join(', '), names.length === 0 ? 'no assets' : names.join(', '))
+    },
+  ],
+  [
     /^more elements$/,
     ({ before, after }) => {
       const detail = `${elements(before).length} to ${elements(after).length} elements`
