@@ -7,8 +7,8 @@ edits:
     capability: missing
     note: createMulticam accepts only video elements and audio follows a video source, so an audio-only file cannot be the multicam audio source.
   - id: 02-layout
-    ask: Make the base layout the screen recording full frame with my head overlaid in the bottom right corner, the head cropped to about 9:16.
-    checks: [layout head bottom right 9:16]
+    ask: Make the base layout the screen recording full frame with my head overlaid in the bottom right corner, the head cropped narrow and tall, a little less tall than 9:16, with no border.
+    checks: [head overlay aspect 0.62-0.70, head overlay without border]
     capability: exists
     note: saveLayout with a narrow slot rect and cover fit crops the head.
   - id: 02b-narrower

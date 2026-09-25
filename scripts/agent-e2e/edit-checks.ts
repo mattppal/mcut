@@ -1,4 +1,4 @@
-import { getProjectDurationMs, type Keyframe, type MulticamElement, type Project, type TimelineElement } from '@mcut/timeline'
+import { getProjectDurationMs, type Keyframe, type LayoutSlot, type MulticamElement, type Project, type TimelineElement } from '@mcut/timeline'
 import type { ToolCall } from './types'
 
 export interface CheckInput {
@@ -62,6 +62,18 @@ function zoomShape(keys: Keyframe[]): { base: number; peak: number; holdMs: numb
 
 function multicamOf(project: Project): MulticamElement | undefined {
   return ofType(project, 'multicam')[0]
+}
+
+const isFullFrame = (slot: LayoutSlot): boolean => slot.rect.w >= 0.99 && slot.rect.h >= 0.99
+
+const inBottomRight = (slot: LayoutSlot): boolean => slot.rect.w < 0.5 && slot.rect.x + slot.rect.w / 2 > 0.5 && slot.rect.y + slot.rect.h / 2 > 0.5
+
+function headOverlays(project: Project): LayoutSlot[] {
+  const used = new Set(multicamOf(project)?.angles.map((angle) => angle.layoutId) ?? [])
+  return project.layouts
+    .filter((layout) => used.has(layout.id) && layout.slots.some(isFullFrame))
+    .flatMap((layout) => layout.slots)
+    .filter(inBottomRight)
 }
 
 function sourceAssetName(project: Project, multicam: MulticamElement, key: string | undefined): string {
@@ -144,10 +156,10 @@ const RULES: [RegExp, Test][] = [
     ({ after }, match) => {
       const want = Number(match[1]) / Number(match[2])
       const fits = after.layouts.filter((layout) =>
-        layout.slots.some((slot) => slot.rect.w >= 0.99 && slot.rect.h >= 0.99) &&
+        layout.slots.some(isFullFrame) &&
         layout.slots.some((slot) => {
           const aspect = (slot.rect.w * after.width) / (slot.rect.h * after.height)
-          return slot.rect.w < 0.5 && slot.rect.x + slot.rect.w / 2 > 0.5 && slot.rect.y + slot.rect.h / 2 > 0.5 && aspect >= want * 0.85 && aspect <= want * 1.35
+          return inBottomRight(slot) && aspect >= want * 0.85 && aspect <= want * 1.15
         }),
       )
       const used = new Set(multicamOf(after)?.angles.map((angle) => angle.layoutId) ?? [])
@@ -160,15 +172,39 @@ const RULES: [RegExp, Test][] = [
     /^head overlay narrower$/,
     ({ before, after }) => {
       const overlayAspect = (project: Project): number | undefined => {
-        const used = new Set(multicamOf(project)?.angles.map((angle) => angle.layoutId) ?? [])
-        const slots = project.layouts.filter((layout) => used.has(layout.id)).flatMap((layout) => layout.slots).filter((slot) => slot.rect.w < 0.5)
-        const aspects = slots.map((slot) => (slot.rect.w * project.width) / (slot.rect.h * project.height))
+        const aspects = headOverlays(project).map((slot) => (slot.rect.w * project.width) / (slot.rect.h * project.height))
         return aspects.length === 0 ? undefined : Math.min(...aspects)
       }
       const was = overlayAspect(before)
       const now = overlayAspect(after)
       const detail = `overlay aspect ${was?.toFixed(2) ?? 'none'} to ${now?.toFixed(2) ?? 'none'} (9:16 is 0.56)`
       return outcome(was !== undefined && now !== undefined && now < was - 0.02 && now <= 0.75, detail, detail)
+    },
+  ],
+  [
+    /^head overlay aspect (\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/,
+    ({ after }, match) => {
+      const aspects = headOverlays(after).map((slot) => (slot.rect.w * after.width) / (slot.rect.h * after.height))
+      const detail = aspects.length === 0 ? 'no overlay slot in a used layout' : `overlay aspect ${aspects.map((aspect) => aspect.toFixed(3)).join(', ')}`
+      return outcome(aspects.length > 0 && aspects.every((aspect) => aspect >= Number(match[1]) && aspect <= Number(match[2])), detail, detail)
+    },
+  ],
+  [
+    /^head overlay without border$/,
+    ({ after }) => {
+      const overlays = headOverlays(after)
+      const bordered = overlays.filter((slot) => slot.stroke !== undefined && slot.stroke.width > 0)
+      const detail = overlays.map((slot) => `${slot.source} stroke ${slot.stroke === undefined ? 'none' : JSON.stringify(slot.stroke)} shadow ${slot.shadow}`).join('; ')
+      return outcome(overlays.length > 0 && bordered.length === 0, detail, overlays.length === 0 ? 'no overlay slot in a used layout' : detail)
+    },
+  ],
+  [
+    /^zoom at most (\d+(?:\.\d+)?)x$/,
+    ({ after }, match) => {
+      const peaks = zoomed(after).map((element) => ({ id: element.id, ratio: zoomShape(scaleKeys(element)).peak / zoomShape(scaleKeys(element)).base }))
+      const worst = Math.max(0, ...peaks.map((peak) => peak.ratio))
+      const detail = peaks.map((peak) => `${peak.id} ${peak.ratio.toFixed(2)}x`).join(', ') || 'no zoom'
+      return outcome(peaks.length > 0 && worst <= Number(match[1]), detail, detail)
     },
   ],
   [
