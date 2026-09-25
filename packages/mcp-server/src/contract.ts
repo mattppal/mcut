@@ -290,7 +290,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Returns at once with a jobId while Studio renders in the background, which takes minutes for a long timeline. ' +
     'Then call get_export { jobId, waitMs: 20000 } until state is done, which reports the file path and byte size. One export runs at a time.',
   get_export:
-    'Report an export job from export_video: state (rendering, writing, done, failed, or cancelled), percent, elapsedMs, ' +
+    'Report an export job from export_video: state (starting, rendering, writing, done, failed, or cancelled), percent, elapsedMs, ' +
     'an etaMs estimate while rendering, outputPath, and bytes once done. waitMs long-polls until the job ends or the wait runs out, ' +
     'so call it with waitMs 20000 until state is done.',
   cancel_export: 'Cancel the running export from export_video. Studio stops rendering and nothing is written.',

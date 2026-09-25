@@ -6,6 +6,7 @@ import { tapLines } from './bridge-session'
 import { jsonObjectSchema } from './json'
 import { judge, prepareTask, transcriptText, type Caps, type Stop } from './loop'
 import type { McpSession } from './mcp'
+import type { Prompt, TokenUsage } from './model'
 import type { E2ETask, TaskRun, ToolCall } from './types'
 
 export const GROK_SERVER_NAME = 'mcut-live'
@@ -259,12 +260,18 @@ function grokArgs(options: GrokBuildOptions, promptFile: string, rules: string):
   return args
 }
 
-export async function runGrokBuildTask(task: E2ETask, session: McpSession, options: GrokBuildOptions): Promise<TaskRun> {
-  const startedAt = Date.now()
-  const prompt = await prepareTask(task, session)
-  const promptFile = join(options.runDir, `${task.id}.prompt.md`)
+export interface AgentTurn {
+  toolCalls: ToolCall[]
+  stop: Stop
+  steps: number
+  tokens: TokenUsage
+  model: string
+}
+
+export async function runGrokPrompt(id: string, prompt: Prompt, options: GrokBuildOptions): Promise<AgentTurn> {
+  const promptFile = join(options.runDir, `${id}.prompt.md`)
   writeFileSync(promptFile, `${prompt.user}\n`, 'utf8')
-  const events = createWriteStream(join(options.runDir, `${task.id}.grok.ndjson`))
+  const events = createWriteStream(join(options.runDir, `${id}.grok.ndjson`))
   const transcript: Transcript = { calls: [], text: [], end: undefined, error: undefined, maxTurns: false }
   const stderr: string[] = []
 
@@ -277,7 +284,7 @@ export async function runGrokBuildTask(task: E2ETask, session: McpSession, optio
     timeout: options.caps.wallClockMs,
     killSignal: 'SIGKILL',
   })
-  options.log(`${task.id}: grok pid ${proc.pid} reading ${promptFile}`)
+  options.log(`${id}: grok pid ${proc.pid} reading ${promptFile}`)
   const onStdout = (line: string): void => {
     events.write(`${line}\n`)
     if (line.trim().length === 0) return
@@ -305,18 +312,29 @@ export async function runGrokBuildTask(task: E2ETask, session: McpSession, optio
     throw new GrokBuildAuthError(`grok could not authenticate. ${stop.detail}`)
   }
 
-  const toolCalls = transcript.calls.map((call) => call.record)
-  const project = await session.getProject()
   const models = Object.keys(transcript.end?.modelUsage ?? {})
   return {
-    task: { id: task.id, title: task.title, fixtures: task.fixtures },
-    model: `grok-build/${models.length > 0 ? models.join('+') : (options.model ?? 'default')}`,
-    toolCalls,
+    toolCalls: transcript.calls.map((call) => call.record),
+    stop,
     steps: transcript.end?.num_turns ?? 0,
-    durationMs: Date.now() - startedAt,
     tokens: { input: transcript.end?.usage.input_tokens ?? 0, output: transcript.end?.usage.output_tokens ?? 0 },
-    verdict: judge(task, project, toolCalls, stop),
-    stoppedBy: stop.stoppedBy,
-    finalMessage: stop.stoppedBy === 'model' ? stop.detail : '',
+    model: `grok-build/${models.length > 0 ? models.join('+') : (options.model ?? 'default')}`,
+  }
+}
+
+export async function runGrokBuildTask(task: E2ETask, session: McpSession, options: GrokBuildOptions): Promise<TaskRun> {
+  const startedAt = Date.now()
+  const turn = await runGrokPrompt(task.id, await prepareTask(task, session), options)
+  const project = await session.getProject()
+  return {
+    task: { id: task.id, title: task.title, fixtures: task.fixtures },
+    model: turn.model,
+    toolCalls: turn.toolCalls,
+    steps: turn.steps,
+    durationMs: Date.now() - startedAt,
+    tokens: turn.tokens,
+    verdict: judge(task, project, turn.toolCalls, turn.stop),
+    stoppedBy: turn.stop.stoppedBy,
+    finalMessage: turn.stop.stoppedBy === 'model' ? turn.stop.detail : '',
   }
 }
