@@ -1,4 +1,4 @@
-import type { Project } from '@mcut/timeline'
+import type { ElementId, Project } from '@mcut/timeline'
 import type { Quality } from 'mediabunny'
 import type { ContainerFormatId } from './container-formats'
 
@@ -21,6 +21,7 @@ export interface ExportProjectOptions {
   format?: ContainerFormatId
   videoBitrate?: number | Quality
   fonts?: ExportFontFaceInit[]
+  audioSources?: ReadonlyMap<ElementId, string>
   onProgress?: (progress: ExportProgress) => void
   signal?: AbortSignal
 }
