@@ -76,11 +76,7 @@ export function coalesceActiveMediaItems(items: ActiveMediaItem[]): ActiveMediaI
   return [...grouped.values()]
 }
 
-export function getActiveMediaItems(
-  project: Project,
-  timeMs: number,
-  audioSources?: ReadonlyMap<ElementId, string>,
-): ActiveMediaItem[] {
+export function getActiveMediaItems(project: Project, timeMs: number, audioSources?: ReadonlyMap<ElementId, string>): ActiveMediaItem[] {
   const items: ActiveMediaItem[] = []
   for (const { track, element } of getRenderableElements(project, timeMs)) {
     const audioSrc = audioSources?.get(element.id)
