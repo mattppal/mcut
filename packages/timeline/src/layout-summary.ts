@@ -1,5 +1,5 @@
 import { assertNever } from './errors'
-import type { Layout, LayoutSlot } from './layouts'
+import type { Layout, LayoutSlot, SlotAnchor } from './layouts'
 import type { Project } from './model'
 
 type SlotRole = 'full-frame' | 'overlay' | 'panel'
@@ -37,10 +37,24 @@ function layoutRole(layout: Layout): string {
   return 'split'
 }
 
-function corner(slot: LayoutSlot): string {
+function corner(slot: LayoutSlot): Exclude<SlotAnchor, 'center'> {
   const cx = slot.rect.x + slot.rect.w / 2
   const cy = slot.rect.y + slot.rect.h / 2
   return `${cy < 0.5 ? 'top' : 'bottom'}-${cx < 0.5 ? 'left' : 'right'}`
+}
+
+export function defaultSlotAnchor(layout: Layout, index: number): SlotAnchor {
+  const slot = layout.slots[index]
+  return slot !== undefined && slotRole(layout, index) === 'overlay' ? corner(slot) : 'center'
+}
+
+function cornerWarnings(prev: Layout, next: Layout): string[] {
+  return next.slots.flatMap((slot, i) => {
+    const j = prev.slots.findIndex((s) => s.source === slot.source)
+    const old = prev.slots[j]
+    if (old === undefined || slotRole(prev, j) !== 'overlay' || slotRole(next, i) !== 'overlay' || corner(old) === corner(slot)) return []
+    return [`Warning: ${slot.source} moved from ${corner(old)} to ${corner(slot)}. Use resizeLayoutSlot to change size or aspect in place.`]
+  })
 }
 
 function pixels(slot: LayoutSlot, frame: Frame): string {
@@ -107,6 +121,7 @@ export function describeLayoutChange(before: Project, after: Project, layoutId: 
   for (const slot of prev.slots) {
     if (!next.slots.some((s) => s.source === slot.source)) lines.push(`  removed ${slot.source} slot`)
   }
+  lines.push(...cornerWarnings(prev, next))
   const [prevOnly] = prev.slots
   const [nextOnly] = next.slots
   if (prev.slots.length === 1 && next.slots.length === 1 && prevOnly && nextOnly && coversFrame(prevOnly) && !coversFrame(nextOnly)) {

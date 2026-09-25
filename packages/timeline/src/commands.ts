@@ -4,7 +4,7 @@ import type { Project } from './model'
 import { applyCaptions, applyThumbnail, createMulticam, detachAudio } from './commands/derived-elements'
 import { addElement, moveElement, removeElement, rippleDelete, splitElement, trimElement, updateElement } from './commands/elements'
 import { applyAnimationPreset, applyZoomPreset, clearKeyframes, moveKeyframe, removeKeyframe, setKeyframe, setKeyframeEasing } from './commands/keyframes'
-import { removeLayout, saveLayout } from './commands/layouts'
+import { removeLayout, resizeLayoutSlot, saveLayout } from './commands/layouts'
 import { addMarker, removeMarker, updateMarker } from './commands/markers'
 import {
   addAngleCut,
@@ -68,6 +68,7 @@ const commandDefinitions = commandTable({
   slideElement,
   rippleTrim,
   saveLayout,
+  resizeLayoutSlot,
   removeLayout,
   savePreset,
   removePreset,
