@@ -1,5 +1,13 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.18
+
+### Minor Changes
+
+- [#168](https://github.com/mattppal/mcut/pull/168) [`670b34b`](https://github.com/mattppal/mcut/commit/670b34b4279a1e3f344674cf8aa2673fdd86c455) Thanks [@mattppal](https://github.com/mattppal)! - Render one project frame to a PNG with `renderProjectStill`, and expose it to agents as the `get_frame` MCP tool on the live Studio bridge.
+
+  `McutMcpTarget.getFrame` is optional, like the other live-only members, so a custom target without it still compiles. `get_frame` on such a target fails with `get_frame requires the live bridge connected to Studio.`
+
 ## 0.1.0-alpha.17
 
 ### Patch Changes

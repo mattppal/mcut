@@ -67,7 +67,7 @@ jobs:
         with:
           name: smoke-electron-dev
           path: reports/smoke/electron-dev
-          retention-days: 14
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 14 }}
 
   embed:
     if: github.event_name != 'pull_request'

@@ -1,5 +1,6 @@
 import { createCanvasSurface, getNativeVideoFilmstrip, type CanvasSurface } from './native-video'
 import { inputFor, type MediaSourceLike } from './probe'
+import { sampleCanvas } from './sample-bitmap'
 
 export interface FilmstripOptions {
   frameCount: number
@@ -16,31 +17,32 @@ export interface Filmstrip {
   timestampsMs: number[]
 }
 
-async function getCanvasSinkFilmstrip(src: MediaSourceLike, options: FilmstripOptions): Promise<Filmstrip | null> {
+async function getDecodedFilmstrip(src: MediaSourceLike, options: FilmstripOptions): Promise<Filmstrip | null> {
   const frameWidth = options.frameWidth ?? 80
   const frameCount = Math.max(1, Math.round(options.frameCount))
   const input = await inputFor(src)
   try {
     const track = await input.getPrimaryVideoTrack()
     if (!track) return null
-    const { CanvasSink } = await import('mediabunny')
+    const { VideoSampleSink } = await import('mediabunny')
     const durationMs = options.endMs ?? (await input.computeDuration()) * 1000
     const startMs = options.startMs ?? 0
     const spanMs = Math.max(1, durationMs - startMs)
 
     const timestampsMs = Array.from({ length: frameCount }, (_, i) => startMs + ((i + 0.5) / frameCount) * spanMs)
-    const sink = new CanvasSink(track, { width: frameWidth, fit: 'cover' })
+    const sink = new VideoSampleSink(track)
 
     let strip: CanvasSurface | null = null
     let frameHeight = 0
     let index = 0
-    for await (const wrapped of sink.canvasesAtTimestamps(timestampsMs.map((ms) => ms / 1000))) {
-      if (wrapped) {
+    for await (const sample of sink.samplesAtTimestamps(timestampsMs.map((ms) => ms / 1000))) {
+      if (sample) {
+        const frame = await sampleCanvas(sample, frameWidth, 'cover')
         if (!strip) {
-          frameHeight = wrapped.canvas.height
+          frameHeight = frame.height
           strip = createCanvasSurface(frameWidth * frameCount, frameHeight)
         }
-        strip.ctx?.drawImage(wrapped.canvas, index * frameWidth, 0)
+        strip.ctx?.drawImage(frame, index * frameWidth, 0)
       }
       index++
     }
@@ -60,7 +62,7 @@ async function getNativeFilmstrip(src: MediaSourceLike, frameWidth: number, fram
   })
 }
 
-function canUseCanvasSinkFallback(src: MediaSourceLike): boolean {
+function canUseDecodeFallback(src: MediaSourceLike): boolean {
   return typeof src !== 'string' || src.startsWith('blob:')
 }
 
@@ -76,11 +78,11 @@ export async function getFilmstrip(src: MediaSourceLike, options: FilmstripOptio
     const native = await getNativeFilmstrip(src, frameWidth, frameCount, options)
     if (native) return native
   } catch (error) {
-    if (!canUseCanvasSinkFallback(src)) return decodeUnavailable(error)
+    if (!canUseDecodeFallback(src)) return decodeUnavailable(error)
   }
-  if (!canUseCanvasSinkFallback(src)) return null
+  if (!canUseDecodeFallback(src)) return null
   try {
-    return await getCanvasSinkFilmstrip(src, { ...options, frameWidth, frameCount })
+    return await getDecodedFilmstrip(src, { ...options, frameWidth, frameCount })
   } catch (error) {
     return decodeUnavailable(error)
   }
