@@ -91,6 +91,10 @@ const SERVER_INSTRUCTIONS =
 const text = (value: string) => ({ content: [{ type: 'text' as const, text: value }] })
 const failure = (value: string) => ({ ...text(value), isError: true })
 
+const targetProject = async (target: McutMcpTarget): Promise<Project> => parseProject(await target.getProject())
+
+const savedLayoutArgs = z.object({ layout: z.object({ id: z.string() }) })
+
 type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure> | ReturnType<typeof frameContent>
 
 const withResult = (lead: string, result: unknown) => (result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`)

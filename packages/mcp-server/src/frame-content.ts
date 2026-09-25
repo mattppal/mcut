@@ -28,7 +28,3 @@ export function frameContent(frame: FrameGrab) {
     ],
   }
 }
-
-const targetProject = async (target: McutMcpTarget): Promise<Project> => parseProject(await target.getProject())
-
-const savedLayoutArgs = z.object({ layout: z.object({ id: z.string() }) })
