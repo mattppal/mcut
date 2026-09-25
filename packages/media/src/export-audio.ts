@@ -1,11 +1,11 @@
 import type { AudioBufferSink } from 'mediabunny'
 import {
   getEffectiveVolume,
-  getMulticamAudioSource,
-  getSourceSpanMs,
   hasFades,
   hasKeyframes,
   interpolateTrack,
+  isMediaClip,
+  resolveElementAudioSource,
   type Project,
   type TimeMap,
 } from '@mcut/timeline'
@@ -77,41 +77,19 @@ function collectAudibleSegments(project: Project): AudibleSegment[] {
   for (const track of project.tracks) {
     if (track.muted) continue
     for (const element of track.elements) {
-      if (element.type === 'multicam' && !element.muted) {
-        const source = getMulticamAudioSource(element)
-        const asset = source ? project.assets[source.assetId] : undefined
-        if (!source || !asset) continue
-        const curved = hasKeyframes(element, 'volume') || hasFades(element)
-        if (element.volume <= 0 && !curved) continue
-        segments.push({
-          src: asset.src,
-          startMs: element.startMs,
-          durationMs: element.durationMs,
-          trimStartMs: source.trimStartMs,
-          sourceSpanMs: getSourceSpanMs(element),
-          ...(element.timeMap ? { timeMap: element.timeMap } : {}),
-          volume: element.volume,
-          ...(curved
-            ? {
-                volumeCurve: sampleVolumeCurve(element, (timelineMs) => getEffectiveVolume(element, timelineMs)),
-              }
-            : {}),
-        })
-        continue
-      }
-      if ((element.type !== 'video' && element.type !== 'audio') || element.muted) continue
+      if (!isMediaClip(element) || element.muted) continue
       const curved = hasKeyframes(element, 'volume') || hasFades(element)
       if (element.volume <= 0 && !curved) continue
-      const asset = project.assets[element.assetId]
-      if (!asset) continue
+      const source = resolveElementAudioSource(project, element.id)
+      if (!source) continue
       segments.push({
-        src: asset.src,
-        startMs: element.startMs,
-        durationMs: element.durationMs,
-        trimStartMs: element.trimStartMs,
-        sourceSpanMs: getSourceSpanMs(element),
-        ...(element.timeMap ? { timeMap: element.timeMap } : {}),
-        ...(element.reversed ? { reversed: true } : {}),
+        src: source.asset.src,
+        startMs: source.timelineStartMs,
+        durationMs: source.timelineDurationMs,
+        trimStartMs: source.sourceStartMs,
+        sourceSpanMs: source.sourceSpanMs,
+        ...(source.timeMap ? { timeMap: source.timeMap } : {}),
+        ...(source.reversed ? { reversed: true } : {}),
         volume: element.volume,
         ...(curved
           ? {

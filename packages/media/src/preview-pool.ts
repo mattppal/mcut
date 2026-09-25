@@ -4,14 +4,17 @@ import { ScrubFrameCache } from './scrub-cache'
 import { inputFor } from './probe'
 import { canUseNativeVideoPreview } from './video-capabilities'
 import {
+  assertNever,
   getEffectiveVolume,
-  getMulticamSourceTimeMs,
   getRenderableElements,
   getSourceTimeMs,
   getSpeedAt,
+  isAudioOnlySource,
   isElementActiveAt,
+  isMediaClip,
   type AssetId,
   type AssetRef,
+  type MediaClip,
   type Project,
 } from '@mcut/timeline'
 
@@ -64,42 +67,45 @@ export function coalesceActiveMediaItems(items: ActiveMediaItem[]): ActiveMediaI
   return [...byAsset.values()]
 }
 
+type MediaFeed = Pick<ActiveMediaItem, 'assetId' | 'kind'> & { offsetMs: number; heard: boolean }
+
+function mediaFeeds(project: Project, clip: MediaClip): MediaFeed[] {
+  switch (clip.type) {
+    case 'video':
+    case 'audio':
+      return [{ assetId: clip.assetId, kind: clip.type, offsetMs: 0, heard: true }]
+    case 'multicam':
+      return clip.sources
+        .map((source): MediaFeed => {
+          const kind = isAudioOnlySource(project, source) ? 'audio' : 'video'
+          return { assetId: source.assetId, kind, offsetMs: source.offsetMs, heard: source.key === clip.audioSource }
+        })
+        .filter((feed) => feed.kind === 'video' || feed.heard)
+    default:
+      return assertNever(clip)
+  }
+}
+
 export function getActiveMediaItems(project: Project, timeMs: number): ActiveMediaItem[] {
   const items: ActiveMediaItem[] = []
   for (const { track, element } of getRenderableElements(project, timeMs)) {
-    if (element.type === 'multicam') {
-      const audible = isElementActiveAt(element, timeMs)
-      const speedShim = {
-        startMs: element.startMs,
-        durationMs: element.durationMs,
-        trimStartMs: 0,
-        timeMap: element.timeMap,
-      }
-      for (const source of element.sources) {
-        const isAudio = source.key === element.audioSource
-        items.push({
-          assetId: source.assetId,
-          kind: 'video',
-          sourceTimeMs: getMulticamSourceTimeMs(element, source, timeMs),
-          rate: getSpeedAt(speedShim, timeMs - element.startMs),
-          volume: isAudio && audible && !track.muted && !element.muted ? getEffectiveVolume(element, timeMs) : 0,
-        })
-      }
-      continue
-    }
-    if (element.type !== 'video' && element.type !== 'audio') continue
-    if (element.type === 'video' && track.hidden && (track.muted || element.muted)) continue
+    if (!isMediaClip(element)) continue
+    if (element.type !== 'audio' && track.hidden && (track.muted || element.muted)) continue
     const localMs = timeMs - element.startMs
     const audible = isElementActiveAt(element, timeMs)
     if (element.type === 'audio' && !audible) continue
-    items.push({
-      assetId: element.assetId,
-      kind: element.type,
-      sourceTimeMs: Math.max(0, getSourceTimeMs(element, localMs)),
-      rate: getSpeedAt(element, localMs),
-      volume: !audible || track.muted || element.muted || element.reversed ? 0 : getEffectiveVolume(element, timeMs),
-      ...(element.reversed ? { reversed: true } : {}),
-    })
+    const groupMs = getSourceTimeMs(element, localMs)
+    const silent = !audible || track.muted || element.muted || element.reversed === true
+    for (const feed of mediaFeeds(project, element)) {
+      items.push({
+        assetId: feed.assetId,
+        kind: feed.kind,
+        sourceTimeMs: Math.max(0, feed.offsetMs + groupMs),
+        rate: getSpeedAt(element, localMs),
+        volume: silent || !feed.heard ? 0 : getEffectiveVolume(element, timeMs),
+        ...(element.reversed ? { reversed: true } : {}),
+      })
+    }
   }
   return items
 }
