@@ -42,14 +42,13 @@ For text and titles, use `pop-in` plus `fade-out`. For photos, use `ken-burns`. 
 `whip-in` between beats. For subtle life on static shots, use `breathe` or `float`. One in
 and one out per element. Use emphasis sparingly.
 
-## Zoom presets
+## Zoom regions
 
-`applyZoomPreset { elementId, preset, atMs, durationMs? }` applies a saved relative
-pattern (scale multipliers plus position deltas) at an element-local time.
-That is the punch-in-at-this-moment tool when you have a preset object. See `ZOOM_PRESETS` in
-`@mcut/timeline`, or capture one from existing keyframes with `captureZoomPreset`.
-Existing keyframes inside the window are replaced. For a one-off, two `setKeyframe`
-pairs work the same way. See recipes, punch-in.
+Punch-ins and detail zooms are zoom regions, not scale keyframes.
+`addZoomRegion`, `updateZoomRegion`, and `removeZoomRegion` edit one region, and
+the MCP tools `list_zooms` and `edit_zooms` read and batch them. A region keeps
+its own in, hold, and out timing in element-local time and writes no keyframes.
+See "Punch-ins and detail zooms" in SKILL.md.
 
 ## Motion blur
 

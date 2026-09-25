@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinition, type OperatorId } from '@mcut/editor'
-import { elementIdSchema, listToolDefinitions } from '@mcut/timeline'
-import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
+import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
+import { captionsCommandOptionsSchema, retakeOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
 import { commandBatchSchema } from './transact-shape'
 
@@ -49,12 +49,15 @@ export const MCP_AGENT_TOOL_NAMES = [
   'get_audio_activity',
   'get_transcript',
   'search_transcript',
+  'find_retakes',
   'ensure_transcript',
   'list_commands',
   'apply_commands',
   'apply_captions',
   'apply_silence_cuts',
   'lint_project',
+  'list_zooms',
+  'edit_zooms',
   'list_presets',
   'list_operators',
   'run_operator',
@@ -103,6 +106,15 @@ export const MCP_TOOL_INPUTS = {
   search_transcript: z.strictObject({
     query: z.string().trim().min(1, 'search_transcript requires a non-empty query string.'),
   }),
+  find_retakes: retakeOptionsSchema
+    .extend({
+      elementId: elementIdSchema
+        .describe(
+          'The video or audio clip the captions came from. The reply then includes transcript, its words in source ms, ready to pass to apply_captions per remaining clip after the cuts.',
+        )
+        .optional(),
+    })
+    .strict(),
   ensure_transcript: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
     replace: z.boolean().describe('When true, replace captions overlapping the target clip. Defaults to false.').optional(),
@@ -127,6 +139,8 @@ export const MCP_TOOL_INPUTS = {
   apply_captions: applyCaptionsInputSchema,
   apply_silence_cuts: applySilenceCutsInputSchema,
   lint_project: EMPTY_INPUT,
+  list_zooms: EMPTY_INPUT,
+  edit_zooms: z.strictObject({ edits: z.array(zoomCommandSchema).min(1) }),
   list_presets: EMPTY_INPUT,
   list_operators: EMPTY_INPUT,
   run_operator: z.strictObject({ operatorId: z.string(), input: TOOL_INPUT }),
@@ -158,6 +172,12 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Do not use ffmpeg or shell media analysis as a substitute for transcript-aware edits.',
   search_transcript:
     'Search the caption-derived transcript and return timeline times for matches. ' + 'Use this to locate spoken words/phrases before cutting or annotating.',
+  find_retakes:
+    'Find retakes in the word-timed transcript: a phrase whose opening words are spoken again within maxLookaheadMs. ' +
+    'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
+    'Candidates come last to first; cut them in that order so no ripple delete shifts a range still to cut. ' +
+    'Pass elementId to get transcript back in source ms. Cut the clip only, then call apply_captions once per remaining clip with that transcript and the clip elementId; cutting the caption track leaves later words late. ' +
+    'Review abandonedText before cutting. Needs captions with word timings; call ensure_transcript first.',
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
@@ -179,6 +199,13 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   lint_project:
     'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
     'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',
+  list_zooms:
+    'List every zoom region in the project in one call: element id, source slot for multicam, element-local atMs, timeline startMs and endMs, ' +
+    'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. Read this before revising zooms.',
+  edit_zooms:
+    'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
+    'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.5x) with rect or focus on the discussed screen region. ' +
+    'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the screen key so the camera overlay stays put.',
   list_presets: 'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',
   list_operators:
     'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' + 'use raw command tools for low-level document edits.',
@@ -231,11 +258,14 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('get_media_context'),
   staticToolCall('get_transcript'),
   staticToolCall('search_transcript'),
+  staticToolCall('find_retakes'),
   staticToolCall('ensure_transcript'),
   staticToolCall('get_audio_activity'),
   staticToolCall('apply_captions'),
   staticToolCall('apply_silence_cuts'),
   staticToolCall('lint_project'),
+  staticToolCall('list_zooms'),
+  staticToolCall('edit_zooms'),
   staticToolCall('list_presets'),
   staticToolCall('list_operators'),
   staticToolCall('list_actions'),

@@ -2,6 +2,7 @@ import { CommandError } from './errors'
 import type { AnimatableProperty, Keyframe, KeyframeMap } from './keyframes'
 import { MIN_ELEMENT_DURATION_MS, splitElementAt, type MulticamElement, type Project, type TimelineElement } from './model'
 import { getSourceSpanMs, type TimeMap } from './speed'
+import { shiftZoomRegions } from './zoom-regions'
 
 export type TrimEdge = 'start' | 'end'
 
@@ -59,6 +60,7 @@ function growStart(element: TimelineElement, growMs: number): TimelineElement {
     }
     next.keyframes = shifted
   }
+  if ('zooms' in next && next.zooms) next.zooms = shiftZoomRegions(next.zooms, growMs)
 
   if (element.type === 'caption') {
     if ('words' in next && next.words) {

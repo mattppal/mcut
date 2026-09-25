@@ -31,6 +31,8 @@ Error thrown by `probeMedia` and `createAsset` when a file cannot be read as med
 ```ts
 class PreviewMediaPool implements FrameSource {
   constructor(private resolveAsset: (assetId: AssetId) => AssetRef | undefined)
+  setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void
+  getAudioSources(): ReadonlyMap<ElementId, string> | undefined
   getFrame(assetId: AssetId, sourceTimeMs: number): CanvasImageSource | null
   sync(items: ActiveMediaItem[], options: PreviewSyncOptions): void
   pauseAll(): void
@@ -38,7 +40,7 @@ class PreviewMediaPool implements FrameSource {
 }
 ```
 
-The approximate `FrameSource` for interactive preview, one pooled media element per asset kept in sync with the playback clock plus decoded bitmaps for images.
+The approximate `FrameSource` for interactive preview. It keeps one pooled media element per asset in sync with the playback clock, plays `setAudioSources` URLs from a separate audio element while muting the asset's own audio, and decodes bitmaps for images.
 
 ### ScrubFrameCache
 

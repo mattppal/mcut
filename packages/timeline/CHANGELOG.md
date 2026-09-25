@@ -1,5 +1,23 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.7
+
+### Minor Changes
+
+- [#165](https://github.com/mattppal/mcut/pull/165) [`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33) Thanks [@mattppal](https://github.com/mattppal)! - Add `planZoomRegionDrag` and `planZoomAtPlayhead` to `@mcut/editor`, the headless planners behind the Studio zoom lane. A drag moves the whole zoom, its start, the inner edge of either ramp, or its end. Every drag keeps valid ramp and hold lengths, and a move or outer edge drag also stops at the element edges and at neighboring zooms on its target. `planZoomAtPlayhead` starts a preset or an explicit zoom shape at the playhead and picks the `screen` source on a multicam. `@mcut/timeline` now exports `isZoomable`, `ZoomableElement`, and `zoomRegionEndMs`.
+
+### Patch Changes
+
+- [#165](https://github.com/mattppal/mcut/pull/165) [`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33) Thanks [@mattppal](https://github.com/mattppal)! - Remove the keyframe zoom presets in favor of zoom regions. The `applyZoomPreset` command is gone, along with `ZOOM_PRESETS`, `ZOOMABLE_PROPERTIES`, `zoomPresetSchema`, `ZoomPreset`, `expandZoomPreset`, and `captureZoomPreset`. Add a punch-in with `addZoomRegion` instead.
+
+## 0.1.0-alpha.6
+
+### Minor Changes
+
+- [#154](https://github.com/mattppal/mcut/pull/154) [`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f) Thanks [@mattppal](https://github.com/mattppal)! - Add `easeInExpo`, `easeOutExpo`, and `easeInOutExpo` to `easingSchema`.
+
+- [#154](https://github.com/mattppal/mcut/pull/154) [`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f) Thanks [@mattppal](https://github.com/mattppal)! - Add zoom regions, one punch-in object with in, hold, and out timing, a target, easing, and motion blur, on a clip or on one multicam source. Adds the `addZoomRegion`, `updateZoomRegion`, and `removeZoomRegion` commands, `getSlotView` and `getClipView`, compositor rendering with motion blur while a zoom moves, and the `list_zooms` and `edit_zooms` MCP tools.
+
 ## 0.1.0-alpha.5
 
 ### Patch Changes

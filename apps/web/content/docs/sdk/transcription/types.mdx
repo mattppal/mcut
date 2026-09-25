@@ -272,3 +272,11 @@ Zod object schema for `CaptionsCommandOptions`, shared by the CLI `captions` com
 | `maxChars` | Soft maximum characters per caption, a positive integer, default 36. |
 | `maxGapMs` | A silence gap longer than this starts a new caption, default 800. |
 | `replace` | Clear existing captions on the target track first. |
+
+### RetakeCandidate
+
+`RetakeCandidate` has `startMs` and `endMs` in the input word times, the `abandonedText` to cut, the opening `keptText` of the take that stays, and `matchedWords`.
+
+### RetakeOptions
+
+`RetakeOptions` is `z.input<typeof retakeOptionsSchema>`, every field optional.
