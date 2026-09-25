@@ -101,7 +101,7 @@ export function getActiveMediaItems(
           sourceTimeMs: getMulticamSourceTimeMs(element, source, timeMs),
           rate: getSpeedAt(speedShim, timeMs - element.startMs),
           volume: isAudio && audible && !track.muted && !element.muted ? getEffectiveVolume(element, timeMs) : 0,
-          ...replacement,
+          ...(isAudio ? replacement : {}),
         })
       }
       continue
