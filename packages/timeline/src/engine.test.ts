@@ -92,24 +92,7 @@ describe('EditorEngine', () => {
     expect(engine.canUndo()).toBe(false)
   })
 
-  test('a nested transact that throws rolls back only its own dispatches', () => {
-    const { engine, trackId } = engineWithText()
-    engine.dispatch({ type: 'addElement', trackId, element: { id: 'e-1', type: 'text', startMs: 0, durationMs: 1000, text: 'one' } })
-    engine.transact(() => {
-      engine.dispatch({ type: 'moveElement', elementId: 'e-1', startMs: 2000 })
-      expect(() =>
-        engine.transact(() => {
-          engine.dispatch({ type: 'updateElement', elementId: 'e-1', patch: { text: 'inner' } })
-          engine.dispatch({ type: 'removeElement', elementId: 'e-missing' })
-        }),
-      ).toThrow('no element "e-missing"')
-    })
-    expect(getTrack(engine.project, trackId)?.elements[0]).toMatchObject({ startMs: 2000, text: 'one' })
-    expect(engine.undo()).toBe(true)
-    expect(getTrack(engine.project, trackId)?.elements[0]).toMatchObject({ startMs: 0, text: 'one' })
-  })
-
-  test('a nested transact that throws drops the selection it declared', () => {
+  test('a nested transact that throws rolls back only its own dispatches and declared selection', () => {
     const { engine, trackId } = engineWithText()
     engine.dispatch({ type: 'addElement', trackId, element: { type: 'text', id: 'e-a', text: 'a', startMs: 0, durationMs: 1000 } })
     engine.dispatch({ type: 'addElement', trackId, element: { type: 'text', id: 'e-b', text: 'b', startMs: 2000, durationMs: 1000 } })
@@ -123,6 +106,7 @@ describe('EditorEngine', () => {
         }),
       ).toThrow('no element "e-missing"')
     })
+    expect(getTrack(engine.project, trackId)?.elements[0]).toMatchObject({ startMs: 0, durationMs: 500 })
     engine.select(['e-b'])
     engine.undo()
     expect(getTrack(engine.project, trackId)?.elements[0]).toMatchObject({ startMs: 0, durationMs: 1000 })
