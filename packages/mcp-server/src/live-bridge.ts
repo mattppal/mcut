@@ -372,13 +372,18 @@ export class LiveMcutBridge {
       return
     }
 
-    if (req.method !== 'POST' || req.url !== '/rpc') {
+    if (req.method !== 'POST' || requestUrl(req).pathname !== '/rpc') {
       sendJson(res, 404, { ok: false, error: 'Not found.' })
       return
     }
 
     if (req.headers.origin || !hasCliHeader(req)) {
       sendJson(res, 403, { ok: false, error: 'Bridge RPC is only available to local CLI clients.' })
+      return
+    }
+
+    if (this.token !== null && tokenFrom(req) !== this.token) {
+      sendJson(res, 403, { ok: false, error: 'Bridge RPC requires the local bridge token. Pass --token or set MCUT_BRIDGE_TOKEN.' })
       return
     }
 
@@ -440,9 +445,15 @@ export function parseLiveBridgePort(value: string | undefined): number | undefin
   return port
 }
 
-export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT): McutMcpTarget {
+export function bridgeRpcUrl(port: number, token: string | undefined): string {
+  const url = new URL(`http://127.0.0.1:${port}/rpc`)
+  if (token) url.searchParams.set('token', token)
+  return url.toString()
+}
+
+export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT, token?: string): McutMcpTarget {
   const rpc = async (type: string, payload: unknown = {}) => {
-    const response = await fetch(`http://127.0.0.1:${port}/rpc`, {
+    const response = await fetch(bridgeRpcUrl(port, token), {
       method: 'POST',
       headers: {
         'content-type': 'application/json',

@@ -66,7 +66,7 @@ async function main(): Promise<void> {
   const options = parseLaunchOptions({ argv: process.argv, env: process.env })
   await app.whenReady()
   reportSafeStorageBackend()
-  const settings = openSettings(path.join(app.getPath('userData'), 'settings.json'))
+  const settings = openSettings(app.getPath('userData'))
   serveStudio({ transcribe: (request) => handleTranscribeRequest(request, settings) })
   hardenSession(allowedOrigins(options))
   routeDownloadsToSaveDialog()

@@ -1,5 +1,22 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.4
+
+### Minor Changes
+
+- [#151](https://github.com/mattppal/mcut/pull/151) [`fa25629`](https://github.com/mattppal/mcut/commit/fa256296c4f284c58f289fc448564fc9c2fe2b88) Thanks [@mattppal](https://github.com/mattppal)! - Add a `mcp-server` bin so `npx -y @mcut/mcp-server` and `bunx @mcut/mcp-server project.mcut.json` start the stdio server. The bridge `/rpc` endpoint now requires the bridge token, and `mcut-bridge` reads it from `--token` or `MCUT_BRIDGE_TOKEN`.
+
+## 0.1.0-alpha.3
+
+### Patch Changes
+
+- [#159](https://github.com/mattppal/mcut/pull/159) [`9b17ac7`](https://github.com/mattppal/mcut/commit/9b17ac71a1314a9197d350ae110783537b13243a) Thanks [@mattppal](https://github.com/mattppal)! - `applyAnimationPreset` takes an element-local `atMs`. In and emphasis presets start there, out presets end there, clamped to fit the clip. `withPlayheadDefaults` fills `atMs` from the playhead when the playhead is on the clip, and the MCP server and `applyCommands` use it.
+
+- Updated dependencies [[`9b17ac7`](https://github.com/mattppal/mcut/commit/9b17ac71a1314a9197d350ae110783537b13243a)]:
+  - @mcut/timeline@0.1.0-alpha.3
+  - @mcut/editor@0.1.0-alpha.3
+  - @mcut/transcription@0.1.0-alpha.3
+
 ## 0.1.0-alpha.2
 
 ### Patch Changes

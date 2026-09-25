@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { useEditorUI, type EditorMode } from './editor-ui'
 import { ExportDialog } from './export-dialog'
 import { MainMenu } from './main-menu'
+import { SettingsDialog } from './settings-dialog'
 import { ShortcutsDialog } from './shortcuts-dialog'
 
 function ProjectName({ className }: { className: string }) {
@@ -120,6 +121,7 @@ export function EditorToolbar() {
           </span>
           <ThemeToggle />
           <ShortcutsDialog />
+          <SettingsDialog />
           <ExportDialog />
         </Toolbar>
       )
@@ -128,6 +130,7 @@ export function EditorToolbar() {
         <Toolbar>
           <ProjectName className="min-w-0 flex-1" />
           <ThemeToggle />
+          <SettingsDialog />
           <ExportDialog />
         </Toolbar>
       )

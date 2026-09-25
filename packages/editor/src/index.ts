@@ -61,6 +61,6 @@ export {
   type SilenceWindow,
 } from './silence-cuts'
 
-export { applyCommands, summarizeEngine } from './headless'
+export { applyCommands, summarizeEngine, withPlayheadDefaults } from './headless'
 export { lintProject, type LintIssue } from './lint'
 export { PLATFORM_PRESETS, getPlatformPreset, type PlatformPreset } from './platform-presets'

@@ -9,7 +9,8 @@ import { PanelCard } from './editor-primitives'
 import { EditorToolbar } from './editor-toolbar'
 import { useEditorUI, type LeftTab } from './editor-ui'
 import { LEFT_TABS, LeftPanel, type LeftPanelProps } from './left-panel'
-import { PreviewArea, TrackSorter } from './preview-area'
+import { EditorDnd } from './editor-dnd'
+import { PreviewArea } from './preview-area'
 import { PropertiesPanel } from './properties-panel'
 import { TimelinePanel } from './timeline-panel'
 
@@ -74,7 +75,7 @@ export function CompactWorkspace({ transcribe, omitted }: Omit<LeftPanelProps, '
   }
 
   return (
-    <TrackSorter>
+    <EditorDnd>
       <div className="flex h-full min-h-0 flex-col">
         <EditorToolbar />
         <div className="min-h-0 flex-1 px-2">
@@ -103,6 +104,6 @@ export function CompactWorkspace({ transcribe, omitted }: Omit<LeftPanelProps, '
           </DialogContent>
         </Dialog>
       </div>
-    </TrackSorter>
+    </EditorDnd>
   )
 }
