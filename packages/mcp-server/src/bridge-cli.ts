@@ -175,7 +175,7 @@ async function main(): Promise<void> {
       print(await rpc(args, 'ensure_transcript', args.json))
       return
     case 'ensure-voice-stems':
-      print(await rpc(args.port, 'ensure_voice_stems', args.json))
+      print(await rpc(args, 'ensure_voice_stems', args.json))
       return
     case 'list-actions':
       print(await rpc(args, 'list_actions'))
