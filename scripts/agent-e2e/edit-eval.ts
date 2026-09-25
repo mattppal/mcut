@@ -1,13 +1,13 @@
-import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, relative } from 'node:path'
 import { parseArgs } from 'node:util'
-import type { Project } from '@mcut/timeline'
+import { parseProject, type Project } from '@mcut/timeline'
 import { openBridgeSession } from './bridge-session'
 import { CURSOR_INSTALL_COMMAND, CursorAgentAuthError, findCursorAgentBinary, runCursorAgentPrompt, writeCursorProject } from './cursor-agent'
 import { runCheck } from './edit-checks'
 import { describeChanges } from './edit-diff'
-import { writeEditReport, type EditReport, type EditRow } from './edit-report'
+import { readEditReport, writeEditReport, type EditReport, type EditRow } from './edit-report'
 import { classifyFailure, loadEditSpec, type EditStep } from './edit-spec'
 import { GROK_INSTALL_COMMAND, GrokBuildAuthError, findGrokBinary, runGrokPrompt, writeGrokProject, type AgentTurn } from './grok-build'
 import { DEFAULT_CAPS, type Caps } from './loop'
@@ -20,10 +20,11 @@ import { connectStudioPage, type StudioPage } from './studio-cdp'
 const EXIT_FAILED = 1
 const EXIT_CONFIG = 2
 const DEV_DEBUG_PORT = 9333
+const DEFAULT_GROK_MODEL = 'grok-4.7'
 const SETTLE_MS = 1_500
 
 const USAGE = [
-  'usage: bun scripts/agent-e2e/edit-eval.ts --edits <file.yaml|file.txt> [--media <dir>] [--driver cursor-agent|grok-build] [--app running|dev] [--max-steps N] [--wall-clock-ms N] [--only <edit id>]... [--report <file.md>]',
+  'usage: bun scripts/agent-e2e/edit-eval.ts --edits <file.yaml|file.txt> [--media <dir>] [--driver grok-build|cursor-agent] [--app running|dev] [--max-steps N] [--wall-clock-ms N] [--only <edit id>]... [--report <file.md>]',
   '',
   'Runs each edit instruction as one headless agent prompt against Studio through the mcut MCP server,',
   'and writes one report row per edit to reports/agent-e2e/<stamp>-edit-eval/.',
@@ -32,8 +33,10 @@ const USAGE = [
   '                  MCUT_CDP_URL its --remote-debugging-port endpoint (default http://127.0.0.1:9222)',
   '         dev      launches apps/desktop from this checkout with remote debugging',
   '',
-  'driver   cursor-agent  needs `cursor-agent login` or CURSOR_API_KEY; model from CURSOR_AGENT_MODEL',
-  '         grok-build    needs XAI_API_KEY; model from GROK_BUILD_MODEL',
+  `driver   grok-build    the default, needs XAI_API_KEY; model from GROK_BUILD_MODEL, default ${DEFAULT_GROK_MODEL}`,
+  '         cursor-agent  needs `cursor-agent login` or CURSOR_API_KEY; model from CURSOR_AGENT_MODEL',
+  '',
+  'rescore  --rescore <run dir> --edits <file> re-runs the checks on the saved before and after JSON and rewrites the report',
   '',
   'Media is imported through the media bin file input, the files named under `place:` are put on the timeline.',
   'exit codes  0 every edit passed, 1 an edit failed, 2 configuration error',
@@ -94,7 +97,7 @@ function createDriver(name: string, projectDir: string, recorderUrl: string, run
     const binary = findGrokBinary()
     if (binary === undefined) throw new ConfigError(`grok not found. Install it with \`${GROK_INSTALL_COMMAND}\` or set GROK_BIN.`)
     log(`grok ${binary} reads ${writeGrokProject(projectDir, recorderUrl)}`)
-    const options = { binary, projectDir, runDir, caps, model: envValue('GROK_BUILD_MODEL'), log }
+    const options = { binary, projectDir, runDir, caps, model: envValue('GROK_BUILD_MODEL') ?? DEFAULT_GROK_MODEL, log }
     return (id, prompt) => runGrokPrompt(id, prompt, options)
   }
   throw new ConfigError(`--driver must be cursor-agent or grok-build, got "${name}".`)
@@ -145,13 +148,29 @@ async function runStep(step: EditStep, context: { mcp: McpSession; page: StudioP
   }
 }
 
+function rescore(runDir: string, steps: EditStep[]): number {
+  const report = readEditReport(runDir)
+  const load = (name: string): Project => parseProject(JSON.parse(readFileSync(join(runDir, name), 'utf8')))
+  report.rows = report.rows.map((row) => {
+    const step = steps.find((entry) => entry.id === row.id)
+    if (step === undefined) return row
+    const checks = step.checks.map((check) => runCheck(check, { before: load(row.beforeFile), after: load(row.afterFile), calls: row.toolCalls }))
+    const pass = row.stoppedBy === 'model' && checks.every((check) => check.pass)
+    log(`${row.id} ${row.pass === pass ? 'unchanged' : 'changed'}: ${pass ? 'PASS' : 'FAIL'} ${checks.map((check) => `${check.pass ? '+' : '-'}${check.check}`).join(', ')}`)
+    return { ...row, checks, pass, failure: pass ? null : classifyFailure(step, row.toolCalls, row.finalMessage) }
+  })
+  log(`report ${writeEditReport(report, runDir).markdown}`)
+  return report.rows.every((row) => row.pass) ? 0 : EXIT_FAILED
+}
+
 async function main(argv: string[]): Promise<number> {
   const { values } = parseArgs({
     args: argv,
     options: {
       edits: { type: 'string' },
       media: { type: 'string' },
-      driver: { type: 'string', default: 'cursor-agent' },
+      driver: { type: 'string', default: 'grok-build' },
+      rescore: { type: 'string' },
       app: { type: 'string', default: 'running' },
       'max-steps': { type: 'string' },
       'wall-clock-ms': { type: 'string' },
@@ -169,6 +188,7 @@ async function main(argv: string[]): Promise<number> {
   const unknown = values.only.filter((id) => !spec.edits.some((step) => step.id === id))
   if (unknown.length > 0) throw new ConfigError(`--only names unknown edits ${unknown.join(', ')}. Known. ${spec.edits.map((step) => step.id).join(', ')}`)
   const steps = values.only.length === 0 ? spec.edits : spec.edits.filter((step) => values.only.includes(step.id))
+  if (values.rescore !== undefined) return rescore(values.rescore, spec.edits)
   const caps: Caps = {
     maxSteps: positive(values['max-steps'], DEFAULT_CAPS.maxSteps * 2, '--max-steps'),
     wallClockMs: positive(values['wall-clock-ms'], DEFAULT_CAPS.wallClockMs * 2, '--wall-clock-ms'),

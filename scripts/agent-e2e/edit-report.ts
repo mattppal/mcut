@@ -1,38 +1,41 @@
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { CheckResult } from './edit-checks'
-import type { Capability, FailureCause } from './edit-spec'
-import type { StopReason, ToolCall } from './types'
+import { z } from 'zod'
+import { jsonObjectSchema } from './json'
+import type { FailureCause } from './edit-spec'
+import type { ToolCall } from './types'
 
-export interface EditRow {
-  id: string
-  asked: string
-  capability: Capability
-  note: string
-  driver: string
-  toolCalls: ToolCall[]
-  toolErrors: string[]
-  toasts: string[]
-  consoleErrors: string[]
-  changes: string[]
-  checks: CheckResult[]
-  pass: boolean
-  failure: FailureCause | null
-  stoppedBy: StopReason
-  finalMessage: string
-  durationMs: number
-  screenshot: string
-  beforeFile: string
-  afterFile: string
-}
+const toolCallSchema = z.object({ name: z.string(), args: jsonObjectSchema, result: z.string(), isError: z.boolean(), durationMs: z.number() })
 
-export interface EditReport {
-  generatedAt: string
-  driver: string
-  app: string
-  media: string[]
-  rows: EditRow[]
-}
+const editRowSchema = z.object({
+  id: z.string(),
+  asked: z.string(),
+  capability: z.enum(['exists', 'partial', 'missing']),
+  note: z.string(),
+  driver: z.string(),
+  toolCalls: z.array(toolCallSchema),
+  toolErrors: z.array(z.string()),
+  toasts: z.array(z.string()),
+  consoleErrors: z.array(z.string()),
+  changes: z.array(z.string()),
+  checks: z.array(z.object({ check: z.string(), pass: z.boolean(), detail: z.string() })),
+  pass: z.boolean(),
+  failure: z.enum(['agent-misuse', 'tool-error', 'missing-capability']).nullable(),
+  stoppedBy: z.enum(['model', 'step-cap', 'wall-clock', 'error']),
+  finalMessage: z.string(),
+  durationMs: z.number(),
+  screenshot: z.string(),
+  beforeFile: z.string(),
+  afterFile: z.string(),
+})
+
+const editReportSchema = z.object({ generatedAt: z.string(), driver: z.string(), app: z.string(), media: z.array(z.string()), rows: z.array(editRowSchema) })
+
+export type EditRow = z.infer<typeof editRowSchema>
+
+export type EditReport = z.infer<typeof editReportSchema>
+
+export const readEditReport = (dir: string): EditReport => editReportSchema.parse(JSON.parse(readFileSync(join(dir, 'edit-report.json'), 'utf8')))
 
 const cell = (text: string): string => text.replace(/\|/g, '\\|').replace(/\n+/g, ' ').trim()
 
