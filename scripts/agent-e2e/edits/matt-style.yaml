@@ -1,0 +1,46 @@
+# Matt's talking head plus screen recipe, one prompt per edit, run in order on one project.
+# Media comes from --media: a camera clip, a screen recording, and a separate audio file.
+edits:
+  - id: 01-multicam
+    ask: Put the talking track, the screen recording, and the audio file together as one synced multicam clip. Use the separate audio file as the audio source.
+    checks: [multicam sources 3, multicam audio from audio file]
+    capability: missing
+    note: createMulticam accepts only video elements and audio follows a video source, so an audio-only file cannot be the multicam audio source.
+  - id: 02-layout
+    ask: Make the base layout the screen recording full frame with my head overlaid in the bottom right corner, the head cropped to about 9:16.
+    checks: [layout head bottom right 9:16]
+    capability: exists
+    note: saveLayout with a narrow slot rect and cover fit crops the head.
+  - id: 02b-narrower
+    ask: Make the shot of me narrower.
+    checks: [head overlay narrower]
+    capability: exists
+    note: A vague revision. The slot rect of the active layout is the control, via saveLayout or setAngleLayout.
+  - id: 03-retakes
+    ask: Find the retakes and remove them, keeping the good take. At each join, cut to the head-only shot so it reads as one continuous take.
+    checks: [duration shorter by 2s, angle cuts 2]
+    capability: partial
+    note: No retake detection. The transcript plus split and delete can do it by hand.
+  - id: 04-captions
+    ask: Transcribe the audio and add captions.
+    checks: [transcript, captions]
+    capability: exists
+    note: Desktop transcription downloads a Whisper model from huggingface.co on first use.
+  - id: 05-alternate
+    ask: Alternate between the head-only shot and the screen with head overlay through the video.
+    checks: [angle cuts 4]
+    capability: exists
+  - id: 06-opening-zoom
+    ask: Add a subtle punch-in right at the start to catch the eye, with exponential easing and motion blur.
+    checks: [opening zoom, subtle zoom, exponential easing, motion blur]
+    capability: partial
+    note: No named exponential easing, a cubicBezier can approximate it.
+  - id: 07-detail-zoom
+    ask: When I talk about the export button, zoom into it on the screen recording with the same easing and motion blur, hold while I talk about it, then zoom back out.
+    checks: [zoom in hold out, subtle zoom, exponential easing, motion blur]
+    capability: partial
+    note: The agent cannot see frames, so it has to guess where the export button is.
+  - id: 08-export
+    ask: Export the video.
+    checks: [action file.export-video]
+    capability: exists
