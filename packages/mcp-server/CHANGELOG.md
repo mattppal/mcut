@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.17
+
+### Patch Changes
+
+- [#178](https://github.com/mattppal/mcut/pull/178) [`e5a64fa`](https://github.com/mattppal/mcut/commit/e5a64fabe9118f2ffe032e9e83ff427301a2836e) Thanks [@mattppal](https://github.com/mattppal)! - Fail an export whose Studio socket closes while the job is starting, ignore a replaced tab closing under a newer export, and keep a cancel during the file rename cancelled. The owner is the socket that carried start_export, so a reply crossing a tab swap cannot leave the job rendering, and a start that is still waiting can finish on the reconnected tab.
+
 ## 0.1.0-alpha.16
 
 ### Minor Changes
