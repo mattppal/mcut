@@ -61,6 +61,8 @@ export {
   type SilenceWindow,
 } from './silence-cuts'
 
+export { centerPersonOptionsSchema, planCenterPerson, type CenterPersonOptions, type FaceSample } from './center-person'
+
 export { applyCommands, summarizeEngine } from './headless'
 export { lintProject, type LintIssue } from './lint'
 export { PLATFORM_PRESETS, getPlatformPreset, type PlatformPreset } from './platform-presets'
