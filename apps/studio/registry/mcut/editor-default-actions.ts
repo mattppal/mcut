@@ -25,7 +25,7 @@ import { MEDIA_FILE_ACCEPT, importMediaFiles, pickFiles } from './media-import'
 import { clearSavedSession, saveAssetBlob } from './persistence'
 import { host } from './studio-host'
 import { focusTranscriptSearch } from './transcript-keywords'
-import { applyOpeningClosingFades, removeTranscriptSilence } from './agent-edit-actions'
+import { applyOpeningClosingFades, removeTranscriptSilence, silenceRemovalEnabled } from './agent-edit-actions'
 
 const hasSelection = ({ engine }: ActionContext) => engine.selection.elementIds.length > 0
 
@@ -263,7 +263,7 @@ defineAction({
     properties: {
       elementId: {
         type: 'string',
-        description: 'Optional target video/audio element id. Defaults to selected media, then first media clip.',
+        description: 'Optional clip id. Defaults to the selected clip, then the first clip with source audio.',
       },
       minGapMs: {
         type: 'number',
@@ -287,7 +287,7 @@ defineAction({
     },
     additionalProperties: false,
   },
-  enabled: ({ engine }) => engine.project.tracks.some((track) => track.elements.some((element) => element.type === 'video' || element.type === 'audio')),
+  enabled: ({ engine }) => silenceRemovalEnabled(engine),
   run: ({ engine, input }) => removeTranscriptSilence(engine, input),
 })
 
