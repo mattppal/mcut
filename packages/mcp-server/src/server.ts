@@ -142,6 +142,7 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
     },
     ensureVoiceStems: async () => {
       throw new Error('ensure_voice_stems requires a live browser bridge connected to an editor tab.')
+    },
     centerPerson: async () => {
       throw new Error('center_person requires a live browser bridge connected to an editor tab.')
     },
