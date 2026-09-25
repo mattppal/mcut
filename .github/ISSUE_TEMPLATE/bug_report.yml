@@ -20,6 +20,7 @@ body:
         - "@mcut/transcription-ai-sdk"
         - "@mcut/transcription-assemblyai"
         - "@mcut/transcription-local"
+        - "@mcut/voice"
         - "@mcut/cli"
         - "@mcut/mcp-server"
         - examples/docs

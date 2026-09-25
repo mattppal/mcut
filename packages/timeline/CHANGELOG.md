@@ -1,5 +1,17 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.9
+
+### Patch Changes
+
+- [#179](https://github.com/mattppal/mcut/pull/179) [`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2) Thanks [@mattppal](https://github.com/mattppal)! - `cancelTransaction` rolls back only the innermost open transaction and leaves any outer transaction open. It used to cancel every open level, so a failed MCP `transact` in Studio also discarded a text edit in progress. `loadProject` keeps open transactions open and restarts them from the loaded project.
+
+## 0.1.0-alpha.8
+
+### Minor Changes
+
+- [#161](https://github.com/mattppal/mcut/pull/161) [`2efc9c8`](https://github.com/mattppal/mcut/commit/2efc9c80954559389c540502b63c821a9e1fe97d) Thanks [@mattppal](https://github.com/mattppal)! - Video, audio, and multicam clips can store an optional voice cleanup mix. The Clean up voice operator toggles that mix on the current selection in one undo step. Export and preview accept a replacement audio URL per clip so a cleaned stem can stand in for the clip's original audio.
+
 ## 0.1.0-alpha.7
 
 ### Minor Changes

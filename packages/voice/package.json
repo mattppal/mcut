@@ -1,0 +1,65 @@
+{
+  "name": "@mcut/voice",
+  "version": "0.1.0-alpha.1",
+  "description": "DeepFilterNet3 voice cleanup for mcut. WASM in browser and Node workers, chunked across a worker pool, with a WAV codec and a dry and wet mix",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    }
+  },
+  "files": [
+    "dist",
+    "wasm/df_bg.wasm",
+    "wasm/LICENSE-APACHE",
+    "wasm/LICENSE-MIT"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "build:wasm": "sh scripts/build-wasm.sh",
+    "fixtures": "bun scripts/make-fixtures.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattppal/mcut.git",
+    "directory": "packages/voice"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "author": "Matt Palmer",
+  "homepage": "https://github.com/mattppal/mcut/tree/main/packages/voice#readme",
+  "bugs": {
+    "url": "https://github.com/mattppal/mcut/issues"
+  },
+  "keywords": [
+    "mcut",
+    "video",
+    "video-editing",
+    "audio",
+    "typescript",
+    "noise-suppression",
+    "deepfilternet",
+    "wasm"
+  ]
+}

@@ -13,6 +13,12 @@ interface HistoryEntry {
   restoresSelection: boolean
 }
 
+interface Savepoint {
+  project: Project
+  selection: SelectionState
+  declaredSelection: boolean
+}
+
 export interface EditorState {
   project: Project
   selection: SelectionState
@@ -49,8 +55,7 @@ export class EditorEngine {
   private past: HistoryEntry[] = []
   private future: HistoryEntry[] = []
   private readonly maxHistorySize: number
-  private transactionDepth = 0
-  private transactionBase: HistoryEntry | null = null
+  private savepoints: Savepoint[] = []
   private transactionDeclaredSelection = false
 
   constructor(options: EditorEngineOptions = {}) {
@@ -89,10 +94,10 @@ export class EditorEngine {
       return next
     }
 
-    if (this.transactionDepth > 0 && options.selection !== undefined) {
+    if (this.savepoints.length > 0 && options.selection !== undefined) {
       this.transactionDeclaredSelection = true
     }
-    const recordHistory = options.history !== false && this.transactionDepth === 0
+    const recordHistory = options.history !== false && this.savepoints.length === 0
     if (recordHistory) {
       this.pushHistory({
         project: previous,
@@ -126,39 +131,33 @@ export class EditorEngine {
   }
 
   beginTransaction(): void {
-    if (this.transactionDepth === 0) {
-      this.transactionBase = {
-        project: this.project,
-        selection: this.selection,
-        restoresSelection: false,
-      }
-      this.transactionDeclaredSelection = false
-    }
-    this.transactionDepth++
+    this.savepoints.push({
+      project: this.project,
+      selection: this.selection,
+      declaredSelection: this.transactionDeclaredSelection,
+    })
   }
 
   endTransaction(): void {
-    if (this.transactionDepth === 0) return
-    this.transactionDepth--
-    if (this.transactionDepth === 0) {
-      const base = this.transactionBase
-      this.transactionBase = null
-      if (base && base.project !== this.project) {
-        this.pushHistory({ ...base, restoresSelection: this.transactionDeclaredSelection })
-        this.refreshHistoryFlags()
-      }
-      this.transactionDeclaredSelection = false
+    const savepoint = this.savepoints.pop()
+    if (!savepoint || this.savepoints.length > 0) return
+    if (savepoint.project !== this.project) {
+      this.pushHistory({
+        project: savepoint.project,
+        selection: savepoint.selection,
+        restoresSelection: this.transactionDeclaredSelection,
+      })
+      this.refreshHistoryFlags()
     }
+    this.transactionDeclaredSelection = false
   }
 
   cancelTransaction(): void {
-    if (this.transactionDepth === 0) return
-    const base = this.transactionBase
-    this.transactionDepth = 0
-    this.transactionBase = null
-    this.transactionDeclaredSelection = false
-    if (base && base.project !== this.project) {
-      this.commitProject(base.project, base.selection)
+    const savepoint = this.savepoints.pop()
+    if (!savepoint) return
+    this.transactionDeclaredSelection = savepoint.declaredSelection
+    if (savepoint.project !== this.project) {
+      this.commitProject(savepoint.project, savepoint.selection)
     }
   }
 
@@ -204,13 +203,15 @@ export class EditorEngine {
 
   loadProject(project: Project): void {
     const parsed = parseProject(project)
+    const selection: SelectionState = { elementIds: [] }
     this.past = []
     this.future = []
-    this.transactionBase = null
+    this.savepoints = this.savepoints.map(() => ({ project: parsed, selection, declaredSelection: false }))
+    this.transactionDeclaredSelection = false
     this.store.setState((s) => ({
       ...s,
       project: parsed,
-      selection: { elementIds: [] },
+      selection,
       canUndo: false,
       canRedo: false,
     }))

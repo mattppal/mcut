@@ -1,5 +1,19 @@
 # @mcut/compositor
 
+## 0.1.0-alpha.9
+
+### Patch Changes
+
+- Updated dependencies [[`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2)]:
+  - @mcut/timeline@0.1.0-alpha.9
+
+## 0.1.0-alpha.8
+
+### Patch Changes
+
+- Updated dependencies [[`2efc9c8`](https://github.com/mattppal/mcut/commit/2efc9c80954559389c540502b63c821a9e1fe97d)]:
+  - @mcut/timeline@0.1.0-alpha.8
+
 ## 0.1.0-alpha.7
 
 ### Patch Changes

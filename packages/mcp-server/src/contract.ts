@@ -69,6 +69,7 @@ export const MCP_AGENT_TOOL_NAMES = [
   'export_video',
   'get_export',
   'cancel_export',
+  'import_media',
 ] as const
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
@@ -151,7 +152,46 @@ export const MCP_TOOL_INPUTS = {
   export_video: exportVideoInputSchema,
   get_export: getExportInputSchema,
   cancel_export: cancelExportInputSchema,
+  import_media: z.strictObject({
+    paths: z.array(z.string().min(1)).min(1).max(50).describe('Absolute paths of local media files. Studio probes each file and registers an asset.'),
+  }),
 } satisfies Record<McpAgentToolName, z.ZodType>
+
+const importMediaBridgeFileSchema = z.strictObject({
+  url: z.url(),
+  name: z.string().min(1),
+  mimeType: z.string().min(1),
+  size: z.int().nonnegative(),
+  path: z.string().min(1),
+})
+
+export const importMediaBridgePayloadSchema = z.strictObject({
+  files: z.array(importMediaBridgeFileSchema).min(1).max(50),
+})
+
+const importedMediaFileSchema = z.strictObject({
+  path: z.string(),
+  assetId: z.string(),
+  name: z.string(),
+  kind: z.enum(['video', 'audio', 'image']),
+  durationMs: z.int().nonnegative().optional(),
+  width: z.int().positive().optional(),
+  height: z.int().positive().optional(),
+})
+
+const mediaImportFailureSchema = z.strictObject({
+  path: z.string(),
+  error: z.string(),
+})
+
+export const mediaImportReportSchema = z.strictObject({
+  imported: z.array(importedMediaFileSchema),
+  failed: z.array(mediaImportFailureSchema),
+})
+
+export type MediaImportReport = z.infer<typeof mediaImportReportSchema>
+
+export type ImportMediaBridgeFile = z.infer<typeof importMediaBridgeFileSchema>
 
 const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   get_summary:
@@ -185,7 +225,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
     'Required before transcript-based silence removal when captions are missing.',
   list_commands: 'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
-  apply_commands: 'Apply one or more serializable timeline commands in one undoable transaction, then return an updated project summary.',
+  apply_commands:
+    'Apply one or more serializable timeline commands in one undoable transaction, then return an updated project summary. ' +
+    'To mix commands with operators or actions in one undo step, use transact.',
   apply_captions:
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
     'Pass elementId to caption only the source span one video/audio clip plays, at its timeline position. ' +
@@ -210,20 +252,25 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   list_presets: 'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',
   list_operators:
     'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' + 'use raw command tools for low-level document edits.',
-  run_operator: 'Run a user-level editor operator by id. Use list_operators first when you need the available ids and input schemas.',
+  run_operator:
+    'Run a user-level editor operator by id. Use list_operators first when you need the available ids and input schemas. ' +
+    'Several calls for one user request go in one transact.',
   list_actions:
     'List browser editor actions available in the live editor, including menu/palette/hotkey actions. ' +
+    'Actions with humanOnly open a dialog for a person and run_action rejects them. ' +
     'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close. ' +
     'To render the finished video, use export_video instead.',
   run_action:
     'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette. ' +
+    'Actions with humanOnly open a dialog for a person and are rejected. Actions without an input schema reject a non-empty input. ' +
     'Prefer high-level actions over hand-authored command sequences when available. ' +
+    'Several calls for one user request go in one transact. ' +
     'To export or render the finished video, call export_video, then get_export until it is done.',
   transact:
-    'Apply 1 to 100 tool calls as one undo step. If any call fails, nothing stays applied. ' +
-    'Wrap one intent in one transact, for example a fade in and a fade out, so undo removes the whole intent. ' +
+    'When one user request needs more than one edit call, send them all in one transact, for example "make it square and fill the frame" or a fade in plus a fade out. ' +
+    'Applies 1 to 100 tool calls as one undo step, so "undo that" removes the whole request. If any call fails, nothing stays applied. ' +
     'Each call is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.',
-  undo: 'Undo the most recent edit. One undo step is one tool call or one whole transact.',
+  undo: 'Undo the most recent edit. One undo step is one tool call or one whole transact, so a request made of separate calls outside transact only loses its last call.',
   redo: 'Redo the most recently undone edit.',
   export_video:
     'Live bridge only: render the whole timeline to a video file in Studio and write it to disk through the bridge. No dialog opens. ' +
@@ -234,6 +281,10 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'an etaMs estimate while rendering, outputPath, and bytes once done. waitMs long-polls until the job ends or the wait runs out, ' +
     'so call it with waitMs 20000 until state is done.',
   cancel_export: 'Cancel the running export from export_video. Studio stops rendering and nothing is written.',
+  import_media:
+    'Live bridge only. Import local media files into the connected Studio project by absolute path. ' +
+    'The bridge checks each path, then Studio probes the file, registers the asset, and stores the bytes. ' +
+    'The result lists imported assets and per-file failures. Place an imported asset with addElement or an operator.',
 }
 
 const toolDefinition = (name: McpAgentToolName): McpToolDefinition => ({
@@ -274,6 +325,7 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('export_video'),
   staticToolCall('get_export'),
   staticToolCall('cancel_export'),
+  staticToolCall('import_media'),
 ])
 
 export type McpServerStaticToolCall = z.infer<typeof MCP_SERVER_STATIC_TOOL_CALL_SCHEMA>

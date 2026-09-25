@@ -157,6 +157,30 @@ describe('EditorEngine', () => {
     expect(engine.canUndo()).toBe(true)
   })
 
+  test('cancelTransaction in a nested transaction rolls back only the inner level', () => {
+    const { engine, trackId } = engineWithText()
+    engine.dispatch({
+      type: 'addElement',
+      trackId,
+      element: { id: 'e-1', type: 'text', startMs: 0, durationMs: 1000, text: 'one' },
+    })
+    engine.beginTransaction()
+    engine.dispatch({ type: 'updateElement', elementId: 'e-1', patch: { text: 'typed' } })
+    engine.beginTransaction()
+    engine.dispatch({ type: 'moveElement', elementId: 'e-1', startMs: 2000 })
+    engine.cancelTransaction()
+    expect(getTrack(engine.project, trackId)?.elements[0]).toMatchObject({ startMs: 0, text: 'typed' })
+
+    engine.dispatch({ type: 'updateElement', elementId: 'e-1', patch: { text: 'typed more' } })
+    engine.endTransaction()
+    expect(getTrack(engine.project, trackId)?.elements[0]).toMatchObject({ startMs: 0, text: 'typed more' })
+    expect(engine.undo()).toBe(true)
+    expect(getTrack(engine.project, trackId)?.elements[0]).toMatchObject({ startMs: 0, text: 'one' })
+    expect(engine.undo()).toBe(true)
+    expect(getTrack(engine.project, trackId)?.elements).toHaveLength(0)
+    expect(engine.undo()).toBe(false)
+  })
+
   test('history is capped at maxHistorySize', () => {
     const { engine, trackId } = engineWithText()
     const small = new EditorEngine({ project: engine.project, maxHistorySize: 3 })
@@ -218,6 +242,21 @@ describe('EditorEngine', () => {
 
     engine.loadProject(createProject({ name: 'fresh' }))
     expect(engine.canUndo()).toBe(false)
+    expect(engine.project.name).toBe('fresh')
+  })
+
+  test('loadProject during an open transaction keeps the old project out of history', () => {
+    const { engine, trackId } = engineWithText()
+    engine.beginTransaction()
+    engine.dispatch({
+      type: 'addElement',
+      trackId,
+      element: { id: 'e-1', type: 'text', startMs: 0, durationMs: 1000, text: 'one' },
+    })
+    engine.loadProject(createProject({ name: 'fresh' }))
+    engine.endTransaction()
+    expect(engine.canUndo()).toBe(false)
+    expect(engine.undo()).toBe(false)
     expect(engine.project.name).toBe('fresh')
   })
 
@@ -296,6 +335,31 @@ describe('selection across undo/redo', () => {
     expect(engine.selection.elementIds).toEqual(['e-a'])
     engine.redo()
     expect(engine.selection.elementIds).toEqual(['e-new'])
+  })
+
+  test('a cancelled inner transaction drops the selection it declared', () => {
+    const { engine, trackId } = engineWithText()
+    engine.dispatch({
+      type: 'addElement',
+      trackId,
+      element: { type: 'text', id: 'e-a', text: 'a', startMs: 0, durationMs: 1000 },
+    })
+    engine.dispatch({
+      type: 'addElement',
+      trackId,
+      element: { type: 'text', id: 'e-b', text: 'b', startMs: 2000, durationMs: 1000 },
+    })
+    engine.select(['e-a'])
+    engine.beginTransaction()
+    engine.dispatch({ type: 'trimElement', elementId: 'e-a', durationMs: 500 })
+    engine.beginTransaction()
+    engine.dispatch({ type: 'moveElement', elementId: 'e-a', startMs: 100 }, { selection: ['e-a'] })
+    engine.cancelTransaction()
+    engine.endTransaction()
+    engine.select(['e-b'])
+    engine.undo()
+    expect(getTrack(engine.project, trackId)?.elements[0]).toMatchObject({ startMs: 0, durationMs: 1000 })
+    expect(engine.selection.elementIds).toEqual(['e-b'])
   })
 
   test('selection still prunes ids missing from the restored project', () => {
