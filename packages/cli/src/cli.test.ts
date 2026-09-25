@@ -2,8 +2,20 @@ import { describe, expect, test } from 'bun:test'
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { decodeWav, encodeWav } from '@mcut/voice'
 
 const CLI = join(import.meta.dir, 'cli.ts')
+const VOICE_FIXTURES = join(import.meta.dir, '..', '..', 'voice', 'test', 'fixtures')
+
+function signalToDifferenceDb(estimate: Float32Array, reference: Float32Array): number {
+  let signal = 0
+  let difference = 0
+  reference.forEach((sample, index) => {
+    signal += sample * sample
+    difference += (sample - (estimate[index] ?? 0)) ** 2
+  })
+  return 10 * Math.log10(signal / difference)
+}
 
 async function run(args: string[], options: { cwd?: string; stdin?: string } = {}) {
   const proc = Bun.spawn(['bun', CLI, ...args], {
@@ -128,5 +140,25 @@ describe('mcut CLI', () => {
     expect(result.stdout).toContain('4.00s removed')
     const project = JSON.parse(await readFile(file, 'utf8'))
     expect(project.tracks[0].elements).toHaveLength(2)
+  })
+
+  test('clean-voice writes a 48 kHz WAV close to the native deep-filter output', async () => {
+    const output = join(await mkdtemp(join(tmpdir(), 'mcut-cli-')), 'clean.wav')
+    const result = await run(['clean-voice', join(VOICE_FIXTURES, 'input.wav'), '-o', output])
+    expect(result.stderr).toBe('')
+    expect(result.exitCode).toBe(0)
+    const cleaned = decodeWav(await readFile(output))
+    const native = decodeWav(await readFile(join(VOICE_FIXTURES, 'native.wav')))
+    expect(cleaned.sampleRate).toBe(48_000)
+    expect(signalToDifferenceDb(cleaned.samples, native.samples)).toBeGreaterThan(35)
+  }, 30_000)
+
+  test('clean-voice rejects audio that is not 48 kHz', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'mcut-cli-'))
+    const input = join(dir, 'phone.wav')
+    await writeFile(input, encodeWav(new Float32Array(16_000), 16_000))
+    const result = await run(['clean-voice', input, '-o', join(dir, 'clean.wav')])
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain(`mcut: ${input} is 16000 Hz audio and clean-voice needs 48000 Hz`)
   })
 })
