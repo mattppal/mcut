@@ -2,9 +2,11 @@ import {
   getActiveLayout,
   getAngleTransitionAt,
   getLayout,
+  getMulticamGroupTimeMs,
   getMulticamSourceTimeMs,
   getSourceTimeMs,
   getTransitionCompletion,
+  isAudioOnlySource,
   type MulticamElement,
   type BlendMode,
   type CaptionElement,
@@ -254,7 +256,7 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
       drawFramedComposite(ctx, project, element, () => {
         for (const slot of layout.slots) {
           const source = element.sources.find((s) => s.key === slot.source)
-          if (!source) continue
+          if (!source || isAudioOnlySource(project, source)) continue
           const frame = frames.getFrame(source.assetId, getMulticamSourceTimeMs(element, source, context.timeMs))
           if (!frame) continue
           const box = { x: (slot.rect.x - 0.5) * W, y: (slot.rect.y - 0.5) * H, w: slot.rect.w * W, h: slot.rect.h * H }
@@ -264,12 +266,13 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
     })
   }
 
-  const window = getAngleTransitionAt(element, context.timeMs - element.startMs)
+  const groupMs = getMulticamGroupTimeMs(element, context.timeMs)
+  const window = getAngleTransitionAt(element, groupMs)
   if (window) {
     const pair = {
       left: element,
       right: element,
-      cutMs: element.startMs + window.cutMs,
+      cutMs: window.cutMs,
       durationMs: window.durationMs,
       type: window.type,
     }
@@ -277,8 +280,8 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
       ctx,
       project,
       pair,
-      timeMs: context.timeMs,
-      completion: getTransitionCompletion(pair, context.timeMs),
+      timeMs: groupMs,
+      completion: getTransitionCompletion(pair, groupMs),
       drawLeft: () => drawLayout(getLayout(project.layouts, window.fromLayoutId)),
       drawRight: () => drawLayout(getLayout(project.layouts, window.toLayoutId)),
     })

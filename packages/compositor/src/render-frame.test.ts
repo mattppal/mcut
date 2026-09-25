@@ -282,92 +282,102 @@ describe('transitions', () => {
 })
 
 describe('multicam rendering', () => {
-  function multicamProject(): { project: Project; layoutIds: { both: string; cam: string } } {
-    let project = createProject({ width: 1920, height: 1080 })
-    const trackId = project.tracks[0]!.id
+  function multicamProject(): Project {
+    let project = applyCommand(createProject({ width: 1920, height: 1080 }), { type: 'addTrack', id: 't-cam' })
     project = applyCommand(project, {
       type: 'addAsset',
       asset: { id: 'a-screen', kind: 'video', src: 'blob:s', durationMs: 60_000, width: 2560, height: 1440 },
     })
-    project = applyCommand(project, {
-      type: 'addAsset',
-      asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000, width: 1920, height: 1080 },
-    })
-    project = applyCommand(project, {
-      type: 'addElement',
-      trackId,
-      element: { type: 'video', id: 'e-s', assetId: 'a-screen', startMs: 0, durationMs: 10_000 },
-    })
-    project = applyCommand(project, {
-      type: 'addElement',
-      trackId,
-      element: { type: 'video', id: 'e-c', assetId: 'a-cam', startMs: 10_000, durationMs: 10_000 },
-    })
-    project = applyCommand(project, { type: 'addTrack' })
-    project = applyCommand(project, {
-      type: 'moveElement',
-      elementId: 'e-c',
-      startMs: 0,
-      toTrackId: project.tracks[1]!.id,
-    })
-    project = applyCommand(project, {
-      type: 'createMulticam',
-      sources: [{ elementId: 'e-s' }, { elementId: 'e-c' }],
-      multicamId: 'e-mc',
-    })
-    const both = project.layouts.find((l) => l.name === 'Screen + Cam')!.id
-    const cam = project.layouts.find((l) => l.name === 'Camera')!.id
-    project = applyCommand(project, { type: 'addAngleCut', elementId: 'e-mc', atMs: 5000, layoutId: cam })
-    return { project, layoutIds: { both, cam } }
+    project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000, width: 1920, height: 1080 } })
+    const screen = { type: 'video', id: 'e-s', assetId: 'a-screen', startMs: 0, durationMs: 10_000 }
+    project = applyCommand(project, { type: 'addElement', trackId: trackIdAt(project, 0), element: screen })
+    project = applyCommand(project, { type: 'addElement', trackId: 't-cam', element: { ...screen, id: 'e-c', assetId: 'a-cam' } })
+    project = applyCommand(project, { type: 'createMulticam', sources: [{ elementId: 'e-s' }, { elementId: 'e-c' }], multicamId: 'e-mc' })
+    const cam = project.layouts.find((l) => l.name === 'Camera')
+    if (!cam) throw new Error('no Camera layout')
+    return applyCommand(project, { type: 'addAngleCut', elementId: 'e-mc', atMs: 5000, layoutId: cam.id })
+  }
+
+  const render = (project: Project, timeMs: number, source = new FakeSource()) => {
+    const fake = new FakeContext2D()
+    renderFrame(asCtx(fake), project, timeMs, { source })
+    return fake
   }
 
   test('draws every slot of the active layout, then switches at the cut', () => {
-    const { project } = multicamProject()
+    const project = multicamProject()
     const source = new FakeSource()
-
-    const fakeA = new FakeContext2D()
-    renderFrame(asCtx(fakeA), project, 1000, { source })
-    expect(fakeA.callsTo('drawImage')).toHaveLength(2)
+    expect(render(project, 1000, source).callsTo('drawImage')).toHaveLength(2)
     expect(source.requests.map((r) => r.assetId).sort()).toEqual(['a-cam', 'a-screen'])
 
-    const fakeB = new FakeContext2D()
     source.requests = []
-    renderFrame(asCtx(fakeB), project, 6000, { source })
-    expect(fakeB.callsTo('drawImage')).toHaveLength(1)
+    expect(render(project, 6000, source).callsTo('drawImage')).toHaveLength(1)
     expect(source.requests.map((r) => r.assetId)).toEqual(['a-cam'])
   })
 
   test('PiP slot rounds and clips', () => {
-    const { project } = multicamProject()
-    const fake = new FakeContext2D()
-    renderFrame(asCtx(fake), project, 1000, { source: new FakeSource() })
+    const fake = render(multicamProject(), 1000)
     expect(fake.callsTo('roundRect').length).toBeGreaterThan(0)
     expect(fake.callsTo('clip').length).toBeGreaterThan(0)
   })
 
   test('angleTransition blends every cut through the transition registry', () => {
-    let { project } = multicamProject()
-    project = applyCommand(project, {
-      type: 'setMulticamAngleTransition',
-      elementId: 'e-mc',
-      transition: { type: 'fade-white', durationMs: 1000 },
+    const withTransition = (type: 'fade-white' | 'dissolve') =>
+      applyCommand(multicamProject(), { type: 'setMulticamAngleTransition', elementId: 'e-mc', transition: { type, durationMs: 1000 } })
+    const white = (fake: FakeContext2D) => fake.callsTo('fillRect').some((c) => c.fillStyle === '#ffffff')
+
+    expect(white(render(withTransition('fade-white'), 5000))).toBe(true)
+    expect(white(render(withTransition('fade-white'), 1000))).toBe(false)
+    expect(render(withTransition('dissolve'), 4800).callsTo('drawImage')).toHaveLength(3)
+  })
+
+  test('slots draw each source at its offset plus the group time, and a slip carries the cut with the content', () => {
+    let project = applyCommand(multicamProject(), { type: 'setMulticamSourceOffset', elementId: 'e-mc', sourceKey: 'camera', offsetMs: 500 })
+    project = applyCommand(project, { type: 'slipElement', elementId: 'e-mc', deltaMs: 2000 })
+    const source = new FakeSource()
+    render(project, 1000, source)
+    expect(source.requests).toEqual([
+      { assetId: 'a-screen', sourceTimeMs: 3000 },
+      { assetId: 'a-cam', sourceTimeMs: 3500 },
+    ])
+    source.requests = []
+    render(project, 3500, source)
+    expect(source.requests).toEqual([{ assetId: 'a-cam', sourceTimeMs: 6000 }])
+  })
+
+  test('an angle transition blends around its cut on the group clock', () => {
+    let project = applyCommand(multicamProject(), { type: 'slipElement', elementId: 'e-mc', deltaMs: 2000 })
+    project = applyCommand(project, { type: 'setMulticamAngleTransition', elementId: 'e-mc', transition: { type: 'dissolve', durationMs: 1000 } })
+    expect(render(project, 2800).callsTo('drawImage')).toHaveLength(3)
+    expect(render(project, 4800).callsTo('drawImage')).toHaveLength(1)
+  })
+
+  test('a slot that names an audio-only source draws nothing for it', () => {
+    let project = applyCommand(createProject({ width: 1920, height: 1080 }), {
+      type: 'addAsset',
+      asset: { id: 'a-mic', kind: 'audio', src: 'blob:m', durationMs: 60_000 },
     })
-
-    const atCut = new FakeContext2D()
-    renderFrame(asCtx(atCut), project, 5000, { source: new FakeSource() })
-    expect(atCut.callsTo('fillRect').some((c) => c.fillStyle === '#ffffff')).toBe(true)
-
-    const outside = new FakeContext2D()
-    renderFrame(asCtx(outside), project, 1000, { source: new FakeSource() })
-    expect(outside.callsTo('fillRect').some((c) => c.fillStyle === '#ffffff')).toBe(false)
-
+    project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000 } })
+    const full = { x: 0, y: 0, w: 1, h: 1 }
     project = applyCommand(project, {
-      type: 'setMulticamAngleTransition',
-      elementId: 'e-mc',
-      transition: { type: 'dissolve', durationMs: 1000 },
+      type: 'saveLayout',
+      layout: {
+        id: 'l-both',
+        name: 'Both',
+        slots: [
+          { source: 'mic', rect: full },
+          { source: 'camera', rect: full },
+        ],
+      },
     })
-    const blending = new FakeContext2D()
-    renderFrame(asCtx(blending), project, 4800, { source: new FakeSource() })
-    expect(blending.callsTo('drawImage')).toHaveLength(3)
+    const sources = [
+      { key: 'camera', assetId: 'a-cam' },
+      { key: 'mic', assetId: 'a-mic' },
+    ]
+    const multicam = { id: 'e-mc', type: 'multicam', startMs: 0, durationMs: 5000, sources, angles: [{ atMs: 0, layoutId: 'l-both' }], audioSource: 'mic' }
+    project = applyCommand(project, { type: 'addElement', trackId: trackIdAt(project, 0), element: multicam })
+    const source = new FakeSource()
+    expect(render(project, 1000, source).callsTo('drawImage')).toHaveLength(1)
+    expect(source.requests).toEqual([{ assetId: 'a-cam', sourceTimeMs: 1000 }])
   })
 })
