@@ -37,4 +37,43 @@ describe('saved zoom templates', () => {
       ),
     ).toBeNull()
   })
+
+  test('a peak at 1.001 or under has no zoom region form, and a peak just past it does', () => {
+    const peaking = (value: number) =>
+      saved(1000, [
+        { t: 0, value: 1 },
+        { t: 1, value },
+      ])
+    expect(toSavedZoom(peaking(1.0005))).toBeNull()
+    expect(toSavedZoom(peaking(1.002))?.zoom.scale).toBe(1.002)
+  })
+
+  test('a peak past 8x converts at 8x', () => {
+    expect(
+      toSavedZoom(
+        saved(1000, [
+          { t: 0, value: 1 },
+          { t: 1, value: 12 },
+        ]),
+      )?.zoom.scale,
+    ).toBe(8)
+  })
+
+  test('a template with only a scale.y track converts from it', () => {
+    const entry = {
+      id: 'tpl-1',
+      kind: 'zoom' as const,
+      name: 'Mine',
+      payload: {
+        durationMs: 350,
+        tracks: {
+          'scale.y': [
+            { t: 0, value: 1 },
+            { t: 1, value: 1.25 },
+          ],
+        },
+      },
+    }
+    expect(toSavedZoom(entry)?.zoom).toEqual({ scale: 1.25, inMs: 350, holdMs: 0, outMs: 350, easing: 'easeOutExpo' })
+  })
 })
