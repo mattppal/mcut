@@ -95,16 +95,16 @@ describe('planZoomRegionDrag', () => {
 
   test('a drag pulls a zoom cut off by a split back inside its half', () => {
     expect(dragAndCommit(engineSplitThroughZoom(4000), 'e-clip', 'z-cut', 'end', 300)).toEqual({ atMs: 1500, inMs: 700, holdMs: 100, outMs: 700 })
-    expect(dragAndCommit(engineSplitThroughZoom(4000), 'e-right', 'z-cut', 'move', 200)).toEqual({ atMs: 0, inMs: 700, holdMs: 1600, outMs: 700 })
-    expect(dragAndCommit(engineSplitThroughZoom(4000), 'e-right', 'z-cut', 'start', 200)).toEqual({ atMs: 0, inMs: 700, holdMs: 100, outMs: 700 })
+    expect(dragAndCommit(engineSplitThroughZoom(4000), 'e-right', 'z-cut-r', 'move', 200)).toEqual({ atMs: 0, inMs: 700, holdMs: 1600, outMs: 700 })
+    expect(dragAndCommit(engineSplitThroughZoom(4000), 'e-right', 'z-cut-r', 'start', 200)).toEqual({ atMs: 0, inMs: 700, holdMs: 100, outMs: 700 })
   })
 
-  test.each<[ZoomRegionDragMode, number, ElementId, Timing]>([
-    ['end', 3700, 'e-clip', { atMs: 1500, inMs: 700, holdMs: 0, outMs: 700 }],
-    ['start', 4900, 'e-right', { atMs: -800, inMs: 700, holdMs: 0, outMs: 700 }],
-  ])('a %s drag keeps the hold at 0 when the cut off part is longer than the hold', (mode, splitAtMs, elementId, expected) => {
+  test.each<[ZoomRegionDragMode, number, ElementId, string, Timing]>([
+    ['end', 3700, 'e-clip', 'z-cut', { atMs: 1500, inMs: 700, holdMs: 0, outMs: 700 }],
+    ['start', 4900, 'e-right', 'z-cut-r', { atMs: -800, inMs: 700, holdMs: 0, outMs: 700 }],
+  ])('a %s drag keeps the hold at 0 when the cut off part is longer than the hold', (mode, splitAtMs, elementId, zoomId, expected) => {
     const engine = engineSplitThroughZoom(splitAtMs)
-    const { atMs, inMs, holdMs, outMs } = planZoomRegionDrag(zoomable(engine, elementId), zoomOf(engine, elementId, 'z-cut'), mode, 100)
+    const { atMs, inMs, holdMs, outMs } = planZoomRegionDrag(zoomable(engine, elementId), zoomOf(engine, elementId, zoomId), mode, 100)
     expect({ atMs, inMs, holdMs, outMs }).toEqual(expected)
   })
 })

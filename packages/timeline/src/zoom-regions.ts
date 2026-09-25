@@ -198,6 +198,16 @@ export function splitZoomRegions(zooms: readonly ZoomRegion[], offsetMs: number)
   }
 }
 
+export function renameSplitCopies(zooms: readonly ZoomRegion[], taken: Set<string>): ZoomRegion[] {
+  return zooms.map((zoom) => {
+    if (zoom.atMs >= 0) return zoom
+    let id = `${zoom.id}-r`
+    while (taken.has(id)) id += '-r'
+    taken.add(id)
+    return { ...zoom, id }
+  })
+}
+
 export const shiftZoomRegions = (zooms: readonly ZoomRegion[], deltaMs: number): ZoomRegion[] => zooms.map((z) => ({ ...z, atMs: z.atMs + deltaMs }))
 
 export type ZoomableElement = VideoElement | ImageElement | MulticamElement
@@ -212,15 +222,11 @@ export interface ZoomRegionRef extends ZoomRegion {
   endMs: number
 }
 
+export function zoomRegionRefs(element: ZoomableElement): ZoomRegionRef[] {
+  const onTimeline = (localMs: number) => element.startMs + Math.min(element.durationMs, Math.max(0, localMs))
+  return (element.zooms ?? []).map((region) => ({ ...region, elementId: element.id, startMs: onTimeline(region.atMs), endMs: onTimeline(zoomRegionEndMs(region)) }))
+}
+
 export function listZoomRegions(project: Project): ZoomRegionRef[] {
-  return project.tracks.flatMap((track) =>
-    track.elements.filter(isZoomable).flatMap((element) =>
-      (element.zooms ?? []).map((region) => ({
-        ...region,
-        elementId: element.id,
-        startMs: element.startMs + region.atMs,
-        endMs: element.startMs + zoomRegionEndMs(region),
-      })),
-    ),
-  )
+  return project.tracks.flatMap((track) => track.elements.filter(isZoomable).flatMap(zoomRegionRefs))
 }
