@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { MaximizeIcon, PlusIcon, ZoomInIcon, ZoomOutIcon } from '@/lib/icons'
 import { useEditor, useEditorState, useElementEvent, usePlayback, useProject } from '@mcut/react'
 import { getProjectDurationMs, rangesOverlap, type ElementId } from '@mcut/timeline'
@@ -14,7 +13,8 @@ import { MAX_PX_PER_MS, MIN_PX_PER_MS, useEditorUI, type WorkspaceLayout } from 
 import { formatTimecode } from './format'
 import { ClipDragProvider, NEW_TRACK_LANE_HEIGHT, RULER_HEIGHT, TRACK_HEIGHT, useClipDragController } from './timeline-drag'
 import { MarkerLines, Playhead, Ruler, SnapGuide } from './timeline-ruler'
-import { DropGhostOverlay, NewTrackLane, SortableRow } from './timeline-tracks'
+import { DropGhostOverlay, NewTrackLane, TrackRow } from './timeline-tracks'
+import { TrackDragProvider, useTrackDragController } from './timeline-track-drag'
 
 interface MarqueeState {
   x0: number
@@ -45,6 +45,7 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
   const project = useProject()
   const activeDrag = useActiveDrag()
   const clipDrag = useClipDragController()
+  const trackDrag = useTrackDragController()
   const { pxPerMs, setPxPerMs, zoomBy, timelineScrollRef, layout, timelineHeaderPx } = useEditorUI()
   const controls = HEADER_CONTROLS[layout]
   const durationMs = useEditorState((s) => getProjectDurationMs(s.project))
@@ -52,7 +53,7 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
   const contentRef = useRef<HTMLDivElement | null>(null)
 
   const contentWidth = contentWidthQuantizedToKeepLanesMemoized(durationMs, pxPerMs)
-  const mediaDragActive = activeDrag !== null && activeDrag.kind !== 'track'
+  const mediaDragActive = activeDrag !== null
   const rows = [...project.tracks].map((track, index) => ({ track, index })).reverse()
   const totalHeight = RULER_HEIGHT + NEW_TRACK_LANE_HEIGHT + rows.length * TRACK_HEIGHT
 
@@ -129,89 +130,89 @@ export function TimelinePanel({ className }: TimelinePanelProps) {
 
   return (
     <ClipDragProvider value={clipDrag}>
-      <div className={cn('flex flex-col', className)} data-mcut-timeline="">
-        <PanelHeader>
-          <Button variant="ghost" size={controls.addTrack} title="Add track" onClick={() => engine.dispatch({ type: 'addTrack' })}>
-            <PlusIcon /> Track
-          </Button>
-          <div className="flex-1" />
-          <Button variant="ghost" size={controls.zoom} title="Fit timeline" onClick={fitToView}>
-            <MaximizeIcon />
-          </Button>
-          <Button variant="ghost" size={controls.zoom} title="Zoom out" onClick={() => zoomBy(1 / 1.4)}>
-            <ZoomOutIcon />
-          </Button>
-          <Slider
-            value={zoomSliderValue * 100}
-            min={0}
-            max={100}
-            step={1}
-            className={controls.sliderClassName}
-            onValueChange={(value) => {
-              const v = (Array.isArray(value) ? (value[0] ?? 0) : value) / 100
-              setPxPerMs(MIN_PX_PER_MS * Math.pow(MAX_PX_PER_MS / MIN_PX_PER_MS, v))
-            }}
-          />
-          <Button variant="ghost" size={controls.zoom} title="Zoom in" onClick={() => zoomBy(1.4)}>
-            <ZoomInIcon />
-          </Button>
-        </PanelHeader>
+      <TrackDragProvider value={trackDrag}>
+        <div className={cn('flex flex-col', className)} data-mcut-timeline="">
+          <PanelHeader>
+            <Button variant="ghost" size={controls.addTrack} title="Add track" onClick={() => engine.dispatch({ type: 'addTrack' })}>
+              <PlusIcon /> Track
+            </Button>
+            <div className="flex-1" />
+            <Button variant="ghost" size={controls.zoom} title="Fit timeline" onClick={fitToView}>
+              <MaximizeIcon />
+            </Button>
+            <Button variant="ghost" size={controls.zoom} title="Zoom out" onClick={() => zoomBy(1 / 1.4)}>
+              <ZoomOutIcon />
+            </Button>
+            <Slider
+              value={zoomSliderValue * 100}
+              min={0}
+              max={100}
+              step={1}
+              className={controls.sliderClassName}
+              onValueChange={(value) => {
+                const v = (Array.isArray(value) ? (value[0] ?? 0) : value) / 100
+                setPxPerMs(MIN_PX_PER_MS * Math.pow(MAX_PX_PER_MS / MIN_PX_PER_MS, v))
+              }}
+            />
+            <Button variant="ghost" size={controls.zoom} title="Zoom in" onClick={() => zoomBy(1.4)}>
+              <ZoomInIcon />
+            </Button>
+          </PanelHeader>
 
-        <div ref={timelineScrollRef} className="relative isolate min-h-0 flex-1 overflow-auto overscroll-contain">
-          <div
-            ref={contentRef}
-            className="relative w-max min-w-full"
-            style={{ minHeight: totalHeight }}
-            onPointerDown={onBackgroundPointerDown}
-            onPointerMove={onBackgroundPointerMove}
-            onPointerUp={onBackgroundPointerUp}
-          >
-            <div className="sticky top-0 z-[60] flex">
-              <div
-                className="sticky left-0 z-[70] flex shrink-0 items-center justify-center border-r border-foreground/10 bg-card"
-                style={{ width: timelineHeaderPx, height: RULER_HEIGHT }}
-              >
-                <CurrentTime />
+          <div ref={timelineScrollRef} className="relative isolate min-h-0 flex-1 overflow-auto overscroll-contain">
+            <div
+              ref={contentRef}
+              className="relative w-max min-w-full"
+              style={{ minHeight: totalHeight }}
+              onPointerDown={onBackgroundPointerDown}
+              onPointerMove={onBackgroundPointerMove}
+              onPointerUp={onBackgroundPointerUp}
+            >
+              <div className="sticky top-0 z-[60] flex">
+                <div
+                  className="sticky left-0 z-[70] flex shrink-0 items-center justify-center border-r border-foreground/10 bg-card"
+                  style={{ width: timelineHeaderPx, height: RULER_HEIGHT }}
+                >
+                  <CurrentTime />
+                </div>
+                <Ruler pxPerMs={pxPerMs} contentWidth={contentWidth} />
               </div>
-              <Ruler pxPerMs={pxPerMs} contentWidth={contentWidth} />
-            </div>
 
-            <NewTrackLane contentWidth={contentWidth} dragActive={mediaDragActive} />
+              <NewTrackLane contentWidth={contentWidth} dragActive={mediaDragActive} />
 
-            <SortableContext items={rows.map(({ track }) => track.id)} strategy={verticalListSortingStrategy}>
               {rows.map(({ track }) => (
-                <SortableRow key={track.id} track={track} pxPerMs={pxPerMs} contentWidth={contentWidth} />
+                <TrackRow key={track.id} track={track} pxPerMs={pxPerMs} contentWidth={contentWidth} />
               ))}
-            </SortableContext>
 
-            {durationMs === 0 && !activeDrag && (
-              <div
-                className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex justify-center text-xs text-muted-foreground"
-                style={{ paddingLeft: timelineHeaderPx }}
-              >
-                Drag media here, or press the import button in the media bin
-              </div>
-            )}
+              {durationMs === 0 && !activeDrag && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex justify-center text-xs text-muted-foreground"
+                  style={{ paddingLeft: timelineHeaderPx }}
+                >
+                  Drag media here, or press the import button in the media bin
+                </div>
+              )}
 
-            {marquee?.active && (
-              <div
-                className="pointer-events-none absolute z-40 border border-primary bg-primary/10"
-                style={{
-                  left: Math.min(marquee.x0, marquee.x1),
-                  top: Math.min(marquee.y0, marquee.y1),
-                  width: Math.abs(marquee.x1 - marquee.x0),
-                  height: Math.abs(marquee.y1 - marquee.y0),
-                }}
-              />
-            )}
+              {marquee?.active && (
+                <div
+                  className="pointer-events-none absolute z-40 border border-primary bg-primary/10"
+                  style={{
+                    left: Math.min(marquee.x0, marquee.x1),
+                    top: Math.min(marquee.y0, marquee.y1),
+                    width: Math.abs(marquee.x1 - marquee.x0),
+                    height: Math.abs(marquee.y1 - marquee.y0),
+                  }}
+                />
+              )}
 
-            <DropGhostOverlay rows={rows} pxPerMs={pxPerMs} />
-            <MarkerLines pxPerMs={pxPerMs} height={totalHeight} />
-            <SnapGuide pxPerMs={pxPerMs} height={totalHeight} />
-            <Playhead pxPerMs={pxPerMs} height={totalHeight} />
+              <DropGhostOverlay rows={rows} pxPerMs={pxPerMs} />
+              <MarkerLines pxPerMs={pxPerMs} height={totalHeight} />
+              <SnapGuide pxPerMs={pxPerMs} height={totalHeight} />
+              <Playhead pxPerMs={pxPerMs} height={totalHeight} />
+            </div>
           </div>
         </div>
-      </div>
+      </TrackDragProvider>
     </ClipDragProvider>
   )
 }
