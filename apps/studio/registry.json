@@ -244,11 +244,6 @@
           "target": "components/mcut/live-mcp-bridge.tsx"
         },
         {
-          "path": "registry/mcut/get-frame.ts",
-          "type": "registry:lib",
-          "target": "components/mcut/get-frame.ts"
-        },
-        {
           "path": "registry/mcut/add-asset-src.ts",
           "type": "registry:lib",
           "target": "components/mcut/add-asset-src.ts"
