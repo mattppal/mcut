@@ -37,6 +37,7 @@
     "live-bridge-reconnect",
     "local-whisper-desktop-fetch",
     "mcp-server-contract-subpath",
+    "mcp-server-package-bin",
     "media-asset-no-duration",
     "media-probe-error",
     "media-probe-metadata-duration-fallback",
