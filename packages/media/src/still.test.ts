@@ -39,6 +39,12 @@ describe('renderProjectStill', () => {
     await expect(renderProjectStill(project, 2500)).rejects.toThrow('Cannot grab a frame at 2.5 s. The project ends at 2 s.')
   })
 
+  test('a time at the project end is judged against the last frame', async () => {
+    await expect(renderProjectStill(project, 2000, { soloElementId: 'e-title' })).rejects.toThrow(
+      'Element e-title is not on screen at 1.967 s. It spans 0 to 1 s.',
+    )
+  })
+
   test('an unknown element is named', async () => {
     await expect(renderProjectStill(project, 0, { soloElementId: 'e-missing' })).rejects.toThrow('Element e-missing is not in the project.')
   })
