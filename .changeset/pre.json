@@ -51,6 +51,7 @@
     "get-frame-first-timestamp",
     "get-frame-leak",
     "get-frame",
+    "import-media-home",
     "import-media",
     "layout-summary-pixels",
     "lazy-mediabunny",

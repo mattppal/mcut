@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.19
+
+### Patch Changes
+
+- [#191](https://github.com/mattppal/mcut/pull/191) [`5222666`](https://github.com/mattppal/mcut/commit/52226663d12d2ee8ae8b29284d5c216bb6eef5d8) Thanks [@mattppal](https://github.com/mattppal)! - `import_media` expands a leading `~` to the home folder, and its path errors name the resolved absolute path and the home folder.
+
 ## 0.1.0-alpha.18
 
 ### Minor Changes
