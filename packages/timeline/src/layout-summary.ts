@@ -32,7 +32,8 @@ function slotRole(layout: Layout, index: number): SlotRole {
 function layoutRole(layout: Layout): string {
   const roles = layout.slots.map((_, i) => slotRole(layout, i))
   if (roles.includes('overlay')) return 'picture-in-picture'
-  if (layout.slots.length === 1) return roles[0] === 'full-frame' ? `full-frame ${layout.slots[0]?.source}` : `single ${layout.slots[0]?.source}, does not cover the frame`
+  if (layout.slots.length === 1)
+    return roles[0] === 'full-frame' ? `full-frame ${layout.slots[0]?.source}` : `single ${layout.slots[0]?.source}, does not cover the frame`
   return 'split'
 }
 
@@ -109,7 +110,9 @@ export function describeLayoutChange(before: Project, after: Project, layoutId: 
   const [prevOnly] = prev.slots
   const [nextOnly] = next.slots
   if (prev.slots.length === 1 && next.slots.length === 1 && prevOnly && nextOnly && coversFrame(prevOnly) && !coversFrame(nextOnly)) {
-    lines.push(`Warning: the only slot of "${next.name}" no longer covers the frame, so every cut to this layout shows bars. Check that this is the layout you meant to edit.`)
+    lines.push(
+      `Warning: the only slot of "${next.name}" no longer covers the frame, so every cut to this layout shows bars. Check that this is the layout you meant to edit.`,
+    )
   }
   return lines
 }
