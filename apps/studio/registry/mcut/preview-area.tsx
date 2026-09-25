@@ -50,7 +50,7 @@ export function PreviewArea() {
             <PlayerCanvas
               quality={previewQuality}
               renderer={renderer}
-              className="overflow-hidden rounded-lg shadow-xl ring-1 ring-foreground/10"
+              className="overflow-hidden rounded-lg ring-1 ring-foreground/10"
               {...(editingTextId ? { hiddenElementIds: new Set([editingTextId]) } : {})}
               onElementDoubleClick={(elementId) => {
                 const element = getElement(engine.project, elementId)

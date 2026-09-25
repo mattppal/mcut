@@ -289,7 +289,7 @@ export function DropGhostOverlay({ rows, pxPerMs }: { rows: Array<{ track: Track
   return (
     <div
       data-mcut-drop-ghost=""
-      className="pointer-events-none absolute z-40 flex items-end gap-1.5 overflow-hidden rounded-lg border border-primary/80 bg-primary/25 px-1.5 py-0.5 shadow-[0_14px_32px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.14),inset_0_1px_0_rgba(255,255,255,0.18)] ring-1 ring-primary/35"
+      className="pointer-events-none absolute z-40 flex items-end gap-1.5 overflow-hidden rounded-lg border border-primary/80 bg-primary/25 px-1.5 py-0.5 ring-1 ring-primary/35"
       style={{
         left: timelineHeaderPx + ghost.startMs * pxPerMs,
         top,

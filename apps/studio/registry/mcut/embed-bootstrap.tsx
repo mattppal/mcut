@@ -145,7 +145,7 @@ export function EmbedBootstrap({ options, loop, onCollapsed }: { options: EmbedO
 
   if (!bootstrap.isError) return null
   return (
-    <div role="alert" className="fixed right-4 bottom-4 z-50 rounded-lg border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg">
+    <div role="alert" className="fixed right-4 bottom-4 z-50 rounded-lg border bg-popover px-4 py-3 text-sm text-popover-foreground ">
       {bootstrap.error.message}
     </div>
   )

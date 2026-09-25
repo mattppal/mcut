@@ -58,7 +58,7 @@ function ModeSwitch() {
           type="button"
           className={cn(
             'rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
-            mode === id ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground',
+            mode === id ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground',
           )}
           onClick={() => setMode(id)}
         >

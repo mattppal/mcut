@@ -104,7 +104,7 @@ function ChromeRail({ tab, collapsed, onSelect }: { tab: LeftTab; collapsed: boo
                 aria-pressed={tab === id && !collapsed}
                 className={cn(
                   'flex size-10 items-center justify-center rounded-lg transition-colors',
-                  tab === id && !collapsed ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+                  tab === id && !collapsed ? 'bg-card text-foreground' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
                 )}
                 onClick={() => onSelect(id)}
               />

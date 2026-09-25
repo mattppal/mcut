@@ -224,7 +224,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
           <div
             data-mcut-clip={element.type}
             className={cn(
-              'group absolute top-1 bottom-1 left-0 flex cursor-grab touch-none items-center overflow-hidden rounded-lg text-xs font-medium shadow-sm select-none active:cursor-grabbing',
+              'group absolute top-1 bottom-1 left-0 flex cursor-grab touch-none items-center overflow-hidden rounded-lg text-xs font-medium select-none active:cursor-grabbing',
               getElementUI(element.type).clipClassName,
               selected ? 'ring-2 ring-overlay-foreground' : 'ring-1 ring-overlay-foreground/10 hover:ring-overlay-foreground/30',
             )}

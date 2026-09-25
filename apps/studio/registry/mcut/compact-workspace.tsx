@@ -33,7 +33,7 @@ function CompactTabBar({ active, onSelect }: { active: CompactPanel | null; onSe
           aria-pressed={active === id}
           className={cn(
             'flex min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg text-2xs font-medium transition-colors',
-            active === id ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+            active === id ? 'bg-card text-foreground' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
           )}
           onClick={() => onSelect(id)}
         >
