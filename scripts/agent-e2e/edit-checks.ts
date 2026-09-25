@@ -1,4 +1,5 @@
 import { getProjectDurationMs, type Keyframe, type LayoutSlot, type MulticamElement, type Project, type TimelineElement } from '@mcut/timeline'
+import { z } from 'zod'
 import type { ToolCall } from './types'
 
 export interface CheckInput {
@@ -30,6 +31,8 @@ const elements = (project: Project): TimelineElement[] => project.tracks.flatMap
 
 const ofType = <T extends TimelineElement['type']>(project: Project, type: T): Extract<TimelineElement, { type: T }>[] =>
   elements(project).filter((element): element is Extract<TimelineElement, { type: T }> => element.type === type)
+
+const voicedSchema = z.object({ voice: z.object({ enabled: z.literal(true), amount: z.number().positive() }) })
 
 const seconds = (ms: number): string => `${(ms / 1000).toFixed(2)}s`
 
@@ -131,6 +134,21 @@ const RULES: [RegExp, Test][] = [
       const runs = calls.filter((call) => call.name === 'ensure_transcript')
       const ok = runs.find((call) => !call.isError)
       return outcome(ok !== undefined, ok?.result.slice(0, 160) ?? '', runs.length === 0 ? 'ensure_transcript was never called' : `ensure_transcript failed. ${runs.map((call) => call.result.slice(0, 80)).join(' / ')}`)
+    },
+  ],
+  [
+    /^voice cleaned$/,
+    ({ after }) => {
+      const voiced = elements(after).filter((element) => voicedSchema.safeParse(element).success)
+      return outcome(voiced.length > 0, `${voiced.length} clip(s) with voice cleanup on`, 'no clip has voice cleanup on')
+    },
+  ],
+  [
+    /^voice stems$/,
+    ({ calls }) => {
+      const runs = calls.filter((call) => call.name === 'ensure_voice_stems')
+      const ok = runs.find((call) => !call.isError && call.result.includes('"ready"'))
+      return outcome(ok !== undefined, ok?.result.slice(0, 160) ?? '', runs.length === 0 ? 'ensure_voice_stems was never called' : `ensure_voice_stems did not report ready. ${runs.map((call) => call.result.slice(0, 80)).join(' / ')}`)
     },
   ],
   [

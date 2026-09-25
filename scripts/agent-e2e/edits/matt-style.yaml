@@ -26,6 +26,11 @@ edits:
     checks: [transcript, captions]
     capability: exists
     note: Desktop transcription downloads a Whisper model from huggingface.co on first use.
+  - id: 04b-clean-voice
+    ask: Clean up the background noise in my voice.
+    checks: [voice cleaned, voice stems]
+    capability: exists
+    note: Set voice on the audio clip through updateElement or the audio.cleanVoice operator, then ensure_voice_stems waits for DeepFilterNet3 to finish on device.
   - id: 05-alternate
     ask: Alternate between the head-only shot and the screen with head overlay through the video.
     checks: [angle cuts 4]
