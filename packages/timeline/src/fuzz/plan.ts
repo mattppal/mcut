@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { effectSchema } from '../effects'
 import { elementInputSchema, type Project } from '../model'
 import { TRANSITION_TYPES } from '../transitions'
-import { generateArgs, isRecord, isSlot, type ArgTemplate, type Overrides, type Slot, type SlotKind } from './json-schema-gen'
+import { generateArgs, isRecord, isSlot, slot, type ArgTemplate, type Overrides, type Slot, type SlotKind } from './json-schema-gen'
 import { Rng } from './rng'
 
 export type Seed = number
@@ -55,6 +55,7 @@ const slotCandidates: Record<SlotKind, (project: Project) => string[]> = {
   track: (project) => project.tracks.map((track) => track.id),
   element: (project) => project.tracks.flatMap((track) => track.elements.map((element) => element.id)),
   asset: (project) => Object.keys(project.assets),
+  media: (project) => Object.values(project.assets).flatMap((asset) => (asset.kind === 'image' ? [] : [asset.id])),
   marker: (project) => project.markers.map((marker) => marker.id),
   layout: (project) => project.layouts.map((layout) => layout.id),
   preset: (project) => project.presets.map((preset) => preset.id),
@@ -64,6 +65,7 @@ const missingId: Record<SlotKind, string> = {
   track: 't-missing',
   element: 'e-missing',
   asset: 'a-missing',
+  media: 'a-missing',
   marker: 'm-missing',
   layout: 'lay-missing',
   preset: 'ps-missing',
@@ -129,10 +131,22 @@ const refinedShapes: Overrides = {
   effects: (rng) => Array.from({ length: rng.int(0, 2) }, () => effectTemplate(rng)),
 }
 
+const SOURCE_KEYS = ['screen', 'camera', 'audio']
+
+function multicamSourcesTemplate(rng: Rng): ArgTemplate {
+  return SOURCE_KEYS.slice(0, rng.int(1, SOURCE_KEYS.length)).map((key) => ({
+    key,
+    assetId: slot(rng.chance(0.9) ? 'media' : 'asset', rng),
+    offsetMs: rng.chance(0.7) ? 0 : rng.int(1, 1000),
+  }))
+}
+
 const elementOverrides: Overrides = {
   ...refinedShapes,
   startMs: (rng) => rng.int(0, 20000),
   durationMs: (rng) => rng.int(10, 5000),
+  sources: multicamSourcesTemplate,
+  audioSource: (rng) => rng.pick(SOURCE_KEYS),
 }
 
 export function elementTemplate(rng: Rng): ArgTemplate {
