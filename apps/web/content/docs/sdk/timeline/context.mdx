@@ -221,7 +221,15 @@ Options for OpenTimelineIO export, a frame rate for the global start time that d
 function summarizeProject(project: Project): string
 ```
 
-Returns a deterministic text rendering of the project, one header line then each track from the top down with its elements, keyframes, effects, blend modes, transitions, and fades.
+Returns a deterministic text rendering of the project, one header line then each track from the top down with its elements, keyframes, effects, blend modes, transitions, and fades. A `Layouts` block names each layout's role and gives every slot's role, pixel size, and aspect.
+
+### describeLayoutChange
+
+```ts
+function describeLayoutChange(before: Project, after: Project, layoutId: string): string[]
+```
+
+Returns lines that compare one layout across two projects, each slot's pixel size and aspect before and after with the width and height change in percent. It adds a warning when a single-slot layout that covered the frame stops covering it. Returns an empty array when `after` has no layout with that id.
 
 ### getProjectCaptions
 
