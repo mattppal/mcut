@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { resolveElementAudioSource } from './audio-source'
 import { applyCommand } from './commands'
+import { getFrameRequests } from './frame-requests'
 import type { ElementId } from './id'
 import { createProject, type Project } from './model'
 import { getElement } from './selectors'
@@ -66,6 +67,45 @@ describe('createMulticam from placed clips', () => {
       ],
       audioSource: 'audio',
     })
+  })
+
+  test('keeps a late clip at the offset it was placed with', () => {
+    let project = createProject({ fps: 30 })
+    project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'blob:s', durationMs: 60_000 } })
+    project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000 } })
+    project = applyCommand(project, { type: 'addTrack' })
+    const [screenTrack, cameraTrack] = project.tracks.map((track) => track.id)
+    project = applyCommand(project, {
+      type: 'addElement',
+      trackId: mustFind(screenTrack, 'track'),
+      element: { id: 'e-screen', type: 'video', assetId: 'a-screen', startMs: 0, durationMs: 20_000, trimStartMs: 0 },
+    })
+    project = applyCommand(project, {
+      type: 'addElement',
+      trackId: mustFind(cameraTrack, 'track'),
+      element: { id: 'e-cam', type: 'video', assetId: 'a-cam', startMs: 3000, durationMs: 20_000, trimStartMs: 500 },
+    })
+    const before = [...getFrameRequests(project, element(project, 'e-screen'), 5000), ...getFrameRequests(project, element(project, 'e-cam'), 5000)]
+    const grouped = applyCommand(project, {
+      type: 'createMulticam',
+      sources: [
+        { elementId: 'e-screen', key: 'screen' },
+        { elementId: 'e-cam', key: 'camera' },
+      ],
+      multicamId: 'e-mc',
+    })
+    expect(element(grouped, 'e-mc')).toMatchObject({
+      startMs: 3000,
+      sources: [
+        { key: 'screen', offsetMs: 2500 },
+        { key: 'camera', offsetMs: 0 },
+      ],
+    })
+    expect(getFrameRequests(grouped, element(grouped, 'e-mc'), 5000)).toEqual(before)
+    expect(before).toEqual([
+      { assetId: 'a-screen', sourceTimeMs: 5000 },
+      { assetId: 'a-cam', sourceTimeMs: 2500 },
+    ])
   })
 
   test('cuts the multicam short to the shortest source', () => {
