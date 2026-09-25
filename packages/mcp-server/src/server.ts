@@ -44,6 +44,7 @@ import {
   type TransactSubRequest,
 } from './contract'
 import { frameContent, frameGrabSchema } from './frame-content'
+import { contactSheetContent } from './picture-tools'
 import { runEngineTransact, translateTransactCalls } from './transact'
 
 export interface McutMcpTarget {
@@ -56,6 +57,8 @@ export interface McutMcpTarget {
   centerPerson?(input: unknown): unknown | Promise<unknown>
   getAudioActivity?(input: unknown): unknown | Promise<unknown>
   getFrame?(input: unknown): unknown | Promise<unknown>
+  findSceneChanges?(input: unknown): unknown | Promise<unknown>
+  getContactSheet?(input: unknown): unknown | Promise<unknown>
   listActions(): unknown | Promise<unknown>
   listOperators(): unknown | Promise<unknown>
   runAction(actionId: string, input: unknown): unknown | Promise<unknown>
@@ -146,9 +149,6 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
     },
     getAudioActivity: async () => {
       throw new Error('get_audio_activity requires a live browser bridge connected to an editor tab.')
-    },
-    getFrame: async () => {
-      throw new Error('get_frame requires the live bridge connected to Studio.')
     },
     listActions: () => [],
     listOperators: () =>
@@ -248,6 +248,12 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       if (!parsed.success) return failure(`get_frame: ${z.prettifyError(parsed.error)}`)
       return frameContent(parsed.data)
     }
+    case 'find_scene_changes':
+      if (!target.findSceneChanges) return failure('find_scene_changes requires the live bridge connected to Studio.')
+      return text(JSON.stringify(await target.findSceneChanges(call.arguments), null, 2))
+    case 'get_contact_sheet':
+      if (!target.getContactSheet) return failure('get_contact_sheet requires the live bridge connected to Studio.')
+      return contactSheetContent(await target.getContactSheet(call.arguments))
     case 'lint_project':
       return text(JSON.stringify(lintProject(await targetProject(target)), null, 2))
     case 'list_zooms':

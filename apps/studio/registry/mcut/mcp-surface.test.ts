@@ -359,6 +359,8 @@ describe('Studio action/operator MCP surface', () => {
       'get_project',
       'get_media_context',
       'get_frame',
+      'find_scene_changes',
+      'get_contact_sheet',
       'get_audio_activity',
       'get_transcript',
       'search_transcript',

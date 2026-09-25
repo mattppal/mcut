@@ -47,6 +47,7 @@
     "export-job-socket-races",
     "export-job",
     "find-retakes",
+    "find-scene-changes",
     "get-frame-end-frame",
     "get-frame-first-timestamp",
     "get-frame-leak",
