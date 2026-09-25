@@ -52,6 +52,8 @@ export {
   type ResolvedClipDragMode,
 } from './timeline-gesture'
 
+export { planZoomAtPlayhead, planZoomRegionDrag, type ZoomRegionDragMode, type ZoomShape } from './zoom-gesture'
+
 export {
   planSilenceCuts,
   silenceCutOptionsSchema,

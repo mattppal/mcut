@@ -6,6 +6,7 @@ import {
   hasFades,
   hasKeyframes,
   interpolateTrack,
+  type ElementId,
   type Project,
   type TimeMap,
 } from '@mcut/timeline'
@@ -72,7 +73,7 @@ function sampleVolumeCurve(element: { startMs: number; durationMs: number }, get
   return curve
 }
 
-function collectAudibleSegments(project: Project): AudibleSegment[] {
+function collectAudibleSegments(project: Project, audioSources?: ReadonlyMap<ElementId, string>): AudibleSegment[] {
   const segments: AudibleSegment[] = []
   for (const track of project.tracks) {
     if (track.muted) continue
@@ -84,7 +85,7 @@ function collectAudibleSegments(project: Project): AudibleSegment[] {
         const curved = hasKeyframes(element, 'volume') || hasFades(element)
         if (element.volume <= 0 && !curved) continue
         segments.push({
-          src: asset.src,
+          src: audioSources?.get(element.id) ?? asset.src,
           startMs: element.startMs,
           durationMs: element.durationMs,
           trimStartMs: source.trimStartMs,
@@ -105,7 +106,7 @@ function collectAudibleSegments(project: Project): AudibleSegment[] {
       const asset = project.assets[element.assetId]
       if (!asset) continue
       segments.push({
-        src: asset.src,
+        src: audioSources?.get(element.id) ?? asset.src,
         startMs: element.startMs,
         durationMs: element.durationMs,
         trimStartMs: element.trimStartMs,
@@ -124,8 +125,13 @@ function collectAudibleSegments(project: Project): AudibleSegment[] {
   return segments
 }
 
-export async function mixProjectAudio(project: Project, totalDurationMs: number, signal?: AbortSignal): Promise<MixedAudioData | null> {
-  const segments = collectAudibleSegments(project)
+export async function mixProjectAudio(
+  project: Project,
+  totalDurationMs: number,
+  signal?: AbortSignal,
+  audioSources?: ReadonlyMap<ElementId, string>,
+): Promise<MixedAudioData | null> {
+  const segments = collectAudibleSegments(project, audioSources)
   if (segments.length === 0) return null
   const buffer = await mixAudioSegments(segments, totalDurationMs, signal)
   return {
