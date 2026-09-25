@@ -249,10 +249,9 @@ describe('createMcutMcpServer', () => {
       },
     })
     expect(rejected.isError).toBe(true)
-    expect(contentText(rejected).startsWith('transact cannot run "undo". Allowed tools are ')).toBe(true)
-    expect(contentText(rejected)).toContain('applyAnimationPreset')
-    expect(contentText(rejected)).toContain('run_operator')
-    expect(contentText(rejected)).toContain('operator_playback_toggle')
+    expect(contentText(rejected)).toBe(
+      'transact cannot run "undo". Allowed tools are timeline commands (list_commands), operator_* tools, run_operator, run_action, and apply_commands.',
+    )
     expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
     expect(engine.canUndo()).toBe(false)
     expect(engine.canRedo()).toBe(false)
