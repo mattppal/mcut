@@ -1,5 +1,30 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.8
+
+### Patch Changes
+
+- [#170](https://github.com/mattppal/mcut/pull/170) [`7de9d8d`](https://github.com/mattppal/mcut/commit/7de9d8de87bf0446cb1ffa78a0b3f7885053bb15) Thanks [@mattppal](https://github.com/mattppal)! - The live bridge answers an unexpected HTTP handler error with 500 and refuses a WebSocket upgrade whose check throws, instead of crashing. `LiveBridgeOptions.onError` receives the error and defaults to stderr.
+
+## 0.1.0-alpha.7
+
+### Patch Changes
+
+- [#164](https://github.com/mattppal/mcut/pull/164) [`1cc9630`](https://github.com/mattppal/mcut/commit/1cc963001005ace3da7b856cd300dc6b2794f0e3) Thanks [@mattppal](https://github.com/mattppal)! - The live bridge answers a request with a malformed URL or Host header with 400 instead of crashing.
+
+## 0.1.0-alpha.6
+
+### Minor Changes
+
+- [#156](https://github.com/mattppal/mcut/pull/156) [`53b78d7`](https://github.com/mattppal/mcut/commit/53b78d7fdaaeed29df8d1654702d073eacf75e65) Thanks [@mattppal](https://github.com/mattppal)! - `run_action` and `list_actions` name `file.export-video` for export. `apply_captions` warns when its transcript matches no captions in the project, so invented transcripts are visible, and it now fails without touching existing captions when the transcript yields no captions. `applyAnimationPreset` points to `effects.fade-open-close` for a fade in and out as one undo step.
+
+### Patch Changes
+
+- Updated dependencies [[`53b78d7`](https://github.com/mattppal/mcut/commit/53b78d7fdaaeed29df8d1654702d073eacf75e65)]:
+  - @mcut/timeline@0.1.0-alpha.5
+  - @mcut/editor@0.1.0-alpha.5
+  - @mcut/transcription@0.1.0-alpha.5
+
 ## 0.1.0-alpha.5
 
 ### Minor Changes

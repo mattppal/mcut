@@ -17,6 +17,7 @@ export interface LiveBridgeOptions {
   requestTimeoutMs?: number
   transcriptionTimeoutMs?: number
   reconnectGraceMs?: number
+  onError?: (error: unknown) => void
   exportDir?: string
 }
 
@@ -60,13 +61,18 @@ function isAllowedOrigin(origin: string | undefined, allowedOrigins: readonly st
   return parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1'
 }
 
-function requestUrl(req: IncomingMessage): URL {
+function requestUrl(req: IncomingMessage): URL | null {
   const host = req.headers.host ?? '127.0.0.1'
-  return new URL(req.url ?? '/', `http://${host}`)
+  try {
+    return new URL(req.url ?? '/', `http://${host}`)
+  } catch (error) {
+    if (error instanceof TypeError) return null
+    throw error
+  }
 }
 
 function tokenFrom(req: IncomingMessage): string | null {
-  return requestUrl(req).searchParams.get('token')
+  return requestUrl(req)?.searchParams.get('token') ?? null
 }
 
 function hasCliHeader(req: IncomingMessage): boolean {
@@ -116,7 +122,10 @@ export class LiveMcutBridge {
   readonly transcriptionTimeoutMs: number
   readonly reconnectGraceMs: number
 
-  private readonly server = createServer((req, res) => void this.handleHttp(req, res))
+  private readonly onError: (error: unknown) => void
+  private readonly server = createServer((req, res) => {
+    this.handleHttp(req, res).catch((error: unknown) => this.failRequest(res, error))
+  })
   private readonly wss: WebSocketServer
   private readonly exports: ExportJobs
   private readonly pending = new Map<string, PendingRequest>()
@@ -131,9 +140,17 @@ export class LiveMcutBridge {
     this.requestTimeoutMs = options.requestTimeoutMs ?? 30_000
     this.transcriptionTimeoutMs = options.transcriptionTimeoutMs ?? 10 * 60_000
     this.reconnectGraceMs = options.reconnectGraceMs ?? 5_000
+    this.onError =
+      options.onError ?? ((error) => process.stderr.write(`mcut bridge error: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`))
     const allowedOrigins = options.allowedOrigins ?? []
-    const verifyClient: VerifyClientCallbackSync = ({ origin, req }) =>
-      (this.token === null || tokenFrom(req) === this.token) && isAllowedOrigin(origin, allowedOrigins)
+    const verifyClient: VerifyClientCallbackSync = ({ origin, req }) => {
+      try {
+        return (this.token === null || tokenFrom(req) === this.token) && isAllowedOrigin(origin, allowedOrigins)
+      } catch (error) {
+        this.onError(error)
+        return false
+      }
+    }
     this.wss = new WebSocketServer({
       server: this.server,
       path: '/mcut-mcp',
@@ -376,8 +393,22 @@ export class LiveMcutBridge {
     pending.resolve(message.result)
   }
 
+  private failRequest(res: ServerResponse, error: unknown): void {
+    this.onError(error)
+    if (res.headersSent) {
+      res.destroy()
+      return
+    }
+    sendJson(res, 500, { ok: false, error: 'Internal bridge error.' })
+  }
+
   private async handleHttp(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const url = requestUrl(req)
+    if (url === null) {
+      sendJson(res, 400, { ok: false, error: 'Malformed request URL or Host header.' })
+      return
+    }
+
     if (url.pathname === '/mcp') {
       await this.handleMcp(req, res)
       return
@@ -393,7 +424,7 @@ export class LiveMcutBridge {
       return
     }
 
-    if (req.method !== 'POST' || requestUrl(req).pathname !== '/rpc') {
+    if (req.method !== 'POST' || url.pathname !== '/rpc') {
       sendJson(res, 404, { ok: false, error: 'Not found.' })
       return
     }
