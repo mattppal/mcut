@@ -13,14 +13,18 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "wasm/df_bg.wasm",
+    "wasm/LICENSE-APACHE",
+    "wasm/LICENSE-MIT"
   ],
   "sideEffects": false,
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "build:wasm": "sh scripts/build-wasm.sh"
   },
   "repository": {
     "type": "git",
