@@ -363,7 +363,7 @@ function planZoomRegionDrag(
 ): ZoomRegion
 ```
 
-Returns the zoom region after a drag of `deltaMs`. Ramps stay at least 1 ms long and the hold stays at least 0 ms. Within those limits a move, start, or end drag keeps the zoom inside the element and clear of other zooms on its target, which pulls a zoom that a split or trim left running past an edge back inside. A ramp drag keeps the span, so on such a zoom `updateZoomRegion` rejects the result.
+Returns the zoom region after a drag of `deltaMs`. Ramps stay at least 1 ms long and the hold stays at least 0 ms. Within those limits a move, start, or end drag keeps the zoom inside the element and clear of other zooms on its target, which pulls a zoom that a split or trim left running past an edge back inside. When no drag of that kind can fit the zoom there, the zoom comes back unchanged. A ramp drag keeps the span, so on such a zoom `updateZoomRegion` rejects the result.
 
 ### planSilenceCuts
 
@@ -397,7 +397,7 @@ Turns face samples into a list of commands to apply in one `engine.transact`, so
 function applyCommands(engine: EditorEngine, commands: readonly BuiltinCommand[]): void
 ```
 
-Dispatches the commands in order inside one transaction, so the batch becomes a single undo entry. Each command passes through `withPlayheadDefaults` first.
+Dispatches the commands in order inside one transaction, so the batch becomes a single undo entry. If a command throws, none of the batch applies and the error propagates. Each command passes through `withPlayheadDefaults` first.
 
 ### withPlayheadDefaults
 

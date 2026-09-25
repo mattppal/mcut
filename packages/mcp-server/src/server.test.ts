@@ -266,6 +266,26 @@ describe('createMcutMcpServer', () => {
     expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
   })
 
+  test('a rejected edit_zooms batch leaves the project and the undo stack unchanged', async () => {
+    const engine = new EditorEngine({ project: talkProject() })
+    const client = await connect(engine)
+    const before = JSON.parse(JSON.stringify(engine.toJSON()))
+
+    const failed = await client.callTool({
+      name: 'edit_zooms',
+      arguments: {
+        edits: [
+          { type: 'addZoomRegion', elementId: 'e-video', zoom: { id: 'z-open', atMs: 0 } },
+          { type: 'addZoomRegion', elementId: 'e-video', zoom: { id: 'z-clash', atMs: 1000 } },
+        ],
+      },
+    })
+    expect(failed.isError).toBe(true)
+    expect(contentText(failed)).toContain('zooms "z-open" and "z-clash" overlap on the same target')
+    expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
+    expect(engine.canUndo()).toBe(false)
+  })
+
   test('transact rejects a disallowed tool before it changes the project', async () => {
     const engine = new EditorEngine({ project: talkProject() })
     let persisted = 0

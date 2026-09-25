@@ -5,6 +5,7 @@ import { createProject, type MulticamElement, type Project } from './model'
 import { getActiveAngleIndex, getActiveLayout, getAngleTransitionAt, getMulticamSourceTimeMs } from './multicam'
 import { getReframeCenter } from './reframe'
 import { getElement } from './selectors'
+import { getClipView, listZoomRegions } from './zoom-regions'
 
 function projectWithRecordings(): { project: Project; trackId: `t-${string}` } {
   let project = createProject({ name: 'mc', width: 1920, height: 1080 })
@@ -394,5 +395,23 @@ describe('split + flatten', () => {
       const t = clip.startMs + Math.floor(clip.durationMs / 2)
       expect(getReframeCenter(clip, undefined, t)).toEqual(getReframeCenter(multicam, 'camera', t))
     }
+  })
+
+  test('flatten carries each source zoom onto the clips cut from that source', () => {
+    const { project } = projectWithRecordings()
+    let next = createMc(project)
+    const camLayoutId = next.layouts.find((l) => l.name === 'Camera')?.id
+    next = applyCommand(next, { type: 'addAngleCut', elementId: 'e-mc', atMs: 12_000, layoutId: camLayoutId })
+    next = applyCommand(next, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { id: 'z-screen', source: 'screen', atMs: 1000 } })
+    next = applyCommand(next, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { id: 'z-cam', source: 'camera', atMs: 10_000, holdMs: 4600 } })
+    next = applyCommand(next, { type: 'flattenMulticam', elementId: 'e-mc' })
+
+    expect(listZoomRegions(next).map(({ id, atMs, startMs, endMs }) => ({ id, atMs, startMs, endMs }))).toEqual([
+      { id: 'z-screen', atMs: 1000, startMs: 1000, endMs: 4000 },
+      { id: 'z-cam-r', atMs: -2000, startMs: 12_000, endMs: 16_000 },
+      { id: 'z-cam', atMs: 10_000, startMs: 10_000, endMs: 12_000 },
+    ])
+    const camTail = next.tracks.flatMap((t) => t.elements).find((e) => e.type === 'video' && e.startMs === 12_000)
+    expect(camTail?.type === 'video' && getClipView(camTail, 13_000).scale).toBe(1.15)
   })
 })

@@ -83,6 +83,9 @@ export class FakeContext2D {
   scale(...args: unknown[]): void {
     this.record('scale', args)
   }
+  setTransform(...args: unknown[]): void {
+    this.record('setTransform', args)
+  }
   fillRect(...args: unknown[]): void {
     this.record('fillRect', args)
   }
