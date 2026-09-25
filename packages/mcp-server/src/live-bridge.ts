@@ -283,6 +283,7 @@ export class LiveMcutBridge {
       exportVideo: (input) => this.exports.start(input),
       getExport: (input) => this.exports.get(input),
       cancelExport: (input) => this.exports.cancel(input),
+      transact: (requests) => this.request('transact', { requests }),
     }
   }
 
@@ -508,5 +509,6 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT, token?: strin
     exportVideo: (input) => rpc('export_video', input ?? {}),
     getExport: (input) => rpc('get_export', input ?? {}),
     cancelExport: (input) => rpc('cancel_export', input ?? {}),
+    transact: (requests) => rpc('transact', { requests }),
   }
 }
