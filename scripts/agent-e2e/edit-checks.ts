@@ -294,6 +294,15 @@ const RULES: [RegExp, Test][] = [
     },
   ],
   [
+    /^export job done$/,
+    ({ calls }) => {
+      const started = calls.filter((call) => call.name === 'export_video' && !call.isError)
+      const done = calls.find((call) => call.name === 'get_export' && !call.isError && /\bdone\b/i.test(call.result))
+      const detail = done?.result.slice(0, 200) ?? (started.length === 0 ? 'export_video was never called successfully' : `started ${started.length} job(s), no get_export answered done`)
+      return outcome(started.length > 0 && done !== undefined, detail, detail)
+    },
+  ],
+  [
     /^no errors$/,
     ({ calls }) => {
       const failed = calls.filter((call) => call.isError)

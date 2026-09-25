@@ -42,5 +42,5 @@ edits:
     note: The agent cannot see frames, so it has to guess where the export button is.
   - id: 08-export
     ask: Export the video.
-    checks: [action file.export-video]
+    checks: [export job done]
     capability: exists
