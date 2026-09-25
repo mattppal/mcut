@@ -10,6 +10,7 @@ description: "Classes exported by @mcut/compositor."
 ```ts
 class Canvas2DBackend implements RenderBackend {
   readonly kind = 'canvas2d'
+  readonly renderScale: number
   constructor(
     private readonly ctx: Canvas2D,
     readonly width: number,
@@ -24,7 +25,7 @@ class Canvas2DBackend implements RenderBackend {
 }
 ```
 
-The reference `RenderBackend` that draws directly into a 2D context.
+The reference `RenderBackend` that draws directly into a 2D context. Its `renderScale` comes from the context's transform when the backend is constructed.
 
 ### WebGPUBackend
 
@@ -34,6 +35,7 @@ class WebGPUBackend implements RenderBackend {
   readonly width: number
   readonly height: number
   static async create(options: WebGPUBackendOptions): Promise<WebGPUBackend>
+  get renderScale(): number
   registerLut3D(lutId: string, size: number, data: Float32Array): void
   beginFrame(backgroundColor: string): void
   endFrame(): void
@@ -45,4 +47,4 @@ class WebGPUBackend implements RenderBackend {
 }
 ```
 
-A `RenderBackend` that composites image quads as textured GPU passes with WGSL effects and uploads Canvas 2D raster content as texture layers.
+A `RenderBackend` that composites image quads as textured GPU passes with WGSL effects and uploads Canvas 2D raster content as texture layers. Its `renderScale` is the canvas width over `width`.

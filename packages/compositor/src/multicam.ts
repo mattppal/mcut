@@ -69,6 +69,7 @@ export function getSlotBoxes(project: Project, element: MulticamElement, timelin
 
 export function composeMulticam(surface: Canvas2D, element: MulticamElement, context: ElementRenderContext, frames: FrameSource): void {
   const { project } = context
+  surface.setTransform(surface.canvas.width / project.width, 0, 0, surface.canvas.height / project.height, 0, 0)
   surface.clearRect(0, 0, project.width, project.height)
 
   const drawLayout = (layout: Layout | null) => {

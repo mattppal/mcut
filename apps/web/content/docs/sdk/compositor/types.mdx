@@ -131,6 +131,7 @@ interface RenderBackend {
   readonly kind: 'canvas2d' | 'webgpu' | (string & {})
   readonly width: number
   readonly height: number
+  readonly renderScale: number
   beginFrame(backgroundColor: string): void
   endFrame(): void
   acquireRaster(): Canvas2D
@@ -140,7 +141,7 @@ interface RenderBackend {
 }
 ```
 
-The interface a compositing backend implements, with frame begin and end, raster access, image quad drawing, and raster scopes.
+The interface a compositing backend implements, with frame begin and end, raster access, image quad drawing, and raster scopes. `renderScale` is how many target pixels one project unit covers.
 
 ### WebGPUBackendOptions
 

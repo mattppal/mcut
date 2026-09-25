@@ -3,7 +3,7 @@ import { applyCommand, createProject, type LayoutSlot, type Project } from '@mcu
 import type { ImageQuad, LayerChrome, RenderBackend } from './backend'
 import { getElementDisplaySize, getElementNaturalSize } from './geometry'
 import { renderFrame, renderFrameWith } from './render-frame'
-import { FakeContext2D } from './test-utils'
+import { FakeContext2D, type RecordedCall } from './test-utils'
 import type { Canvas2D, FrameSource } from './types'
 import { COLOR_OP, planEffects } from './webgpu/effect-plan'
 
@@ -60,7 +60,7 @@ function screenWithCamera(): Project {
   ]
   const slots = [
     { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 } },
-    { source: 'camera', rect: { x: 0.7, y: 0.69, w: 0.275, h: 0.275 } },
+    { source: 'camera', rect: { x: 0.75, y: 0.75, w: 0.25, h: 0.25 } },
   ]
   const project = projectWithMulticam({ width: 1920, height: 1080 }, {}, { sources })
   return applyCommand(project, { type: 'saveLayout', layout: { id: 'l-cam', name: 'Screen + Cam', slots } })
@@ -77,6 +77,14 @@ const frameCalls = (fake: FakeContext2D) =>
   fake.calls
     .filter((c) => c.method === 'roundRect' || c.method === 'clip' || c.method === 'fill' || c.method === 'stroke')
     .map((c) => (c.method === 'fill' ? { method: c.method, shadow: c.shadow } : { method: c.method, args: c.args }))
+
+const deviceRect = ({ args, transform: { a, b, c, d, e, f } }: RecordedCall) => {
+  const [x = 0, y = 0, w = 0, h = 0] = args.slice(-4).map(Number)
+  const at = (px: number, py: number) => ({ x: a * px + c * py + e, y: b * px + d * py + f })
+  const from = at(x, y)
+  const to = at(x + w, y + h)
+  return [from.x, from.y, to.x - from.x, to.y - from.y]
+}
 
 describe('frame style rendering', () => {
   test('crop draws the kept source region into the shrunken frame', () => {
@@ -201,6 +209,7 @@ class RecordingBackend implements RenderBackend {
   readonly kind = 'recording'
   readonly width = 1920
   readonly height = 1080
+  readonly renderScale = 1
   readonly raster = new FakeContext2D()
   readonly quads: Array<{ quad: ImageQuad; chrome: LayerChrome }> = []
   beginFrame(): void {}
@@ -226,6 +235,42 @@ describe('multicam composite', () => {
     expect(modes(clip)).toEqual(['multiply'])
     expect(modes(main)).toEqual(['multiply'])
     expect(modes(composed)).toEqual(['source-over', 'source-over'])
+  })
+
+  test('a multicam composes at the project size, or at the render scale of a larger target', () => {
+    const composeAt = (scale: number) => {
+      const main = new FakeContext2D(1920 * scale, 1080 * scale)
+      main.setTransform(scale, 0, 0, scale, 0, 0)
+      let composed = new FakeContext2D()
+      renderFrame(asCtx(main), screenWithCamera(), 1000, {
+        source: new FakeSource(),
+        createScratchContext: (width, height) => {
+          composed = new FakeContext2D(width, height)
+          return asCtx(composed)
+        },
+      })
+      return {
+        scratch: composed.canvas,
+        slots: composed.callsTo('drawImage').map(deviceRect),
+        frame: main.callsTo('drawImage').map((c) => [c.args[0] === composed.canvas, ...deviceRect(c)]),
+      }
+    }
+    expect(composeAt(2)).toEqual({
+      scratch: { width: 3840, height: 2160 },
+      slots: [
+        [0, 0, 3840, 2160],
+        [2880, 1620, 960, 540],
+      ],
+      frame: [[true, 0, 0, 3840, 2160]],
+    })
+    expect(composeAt(0.5)).toEqual({
+      scratch: { width: 1920, height: 1080 },
+      slots: [
+        [0, 0, 1920, 1080],
+        [1440, 810, 480, 270],
+      ],
+      frame: [[true, 0, 0, 960, 540]],
+    })
   })
 
   test('a keyed multicam reaches the backend as one image quad with the chrome of a keyed clip, off the raster', () => {

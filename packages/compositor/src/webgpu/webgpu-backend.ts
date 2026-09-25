@@ -166,6 +166,10 @@ export class WebGPUBackend implements RenderBackend {
     device.queue.writeTexture({ texture: this.identityCurves }, identity, { bytesPerRow: 256 * 4 }, { width: 256, height: 1 })
   }
 
+  get renderScale(): number {
+    return this.context.canvas.width / this.width
+  }
+
   registerLut3D(lutId: string, size: number, data: Float32Array): void {
     if (data.length < size * size * size * 3) throw new Error('LUT data is too short for its size')
     const width = size * size

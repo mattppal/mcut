@@ -25,6 +25,7 @@ export interface RenderBackend {
   readonly kind: 'canvas2d' | 'webgpu' | (string & {})
   readonly width: number
   readonly height: number
+  readonly renderScale: number
   beginFrame(backgroundColor: string): void
   endFrame(): void
   acquireRaster(): Canvas2D
@@ -63,12 +64,16 @@ export function drawImageQuad2D(ctx: Canvas2D, quad: ImageQuad): void {
 
 export class Canvas2DBackend implements RenderBackend {
   readonly kind = 'canvas2d'
+  readonly renderScale: number
 
   constructor(
     private readonly ctx: Canvas2D,
     readonly width: number,
     readonly height: number,
-  ) {}
+  ) {
+    const { a, b, c, d } = ctx.getTransform()
+    this.renderScale = Math.max(Math.hypot(a, b), Math.hypot(c, d))
+  }
 
   beginFrame(backgroundColor: string): void {
     this.ctx.save()

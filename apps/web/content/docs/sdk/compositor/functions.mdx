@@ -19,7 +19,7 @@ Distance in canvas pixels from the top edge of a box to its rotate handle.
 const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> }
 ```
 
-The closed table of element renderers keyed by `ElementType`, where each renderer receives the element of its own kind and the `audio` renderer draws nothing. The `multicam` renderer composes the active layout, or both layouts of an angle transition, into the compose scratch at the project frame size. It then draws that frame as one image quad the way the `video` renderer draws a clip, so the multicam's effects, blend mode, crop, corner radius, stroke, and shadow apply to the composed frame.
+The closed table of element renderers keyed by `ElementType`, where each renderer receives the element of its own kind and the `audio` renderer draws nothing. The `multicam` renderer composes the active layout, or both layouts of an angle transition, into the compose scratch. The scratch is the project frame size, times the backend's `renderScale` when that is above 1. It then draws that frame as one image quad the way the `video` renderer draws a clip, so the multicam's effects, blend mode, crop, corner radius, stroke, and shadow apply to the composed frame.
 
 ### transitionRenderers
 
