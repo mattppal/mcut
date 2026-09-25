@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CommandError } from './errors'
 import { easingSchema, evaluateEasing } from './keyframes'
 import type { LayoutSlot } from './layouts'
 import type { ImageElement, MulticamElement, Project, TimelineElement, VideoElement } from './model'
@@ -103,6 +104,14 @@ export function patchZoomRegion(region: ZoomRegion, patch: z.output<typeof zoomR
 }
 
 export const zoomRegionEndMs = (region: ZoomRegion): number => region.atMs + region.inMs + region.holdMs + region.outMs
+
+export function mustNotOverlap(zooms: readonly ZoomRegion[]): void {
+  const sorted = [...zooms].sort((a, b) => a.atMs - b.atMs)
+  for (const [index, zoom] of sorted.entries()) {
+    const clash = sorted.slice(index + 1).find((other) => other.source === zoom.source && other.atMs < zoomRegionEndMs(zoom))
+    if (clash) throw new CommandError('invalid-payload', `zooms "${zoom.id}" and "${clash.id}" overlap on the same target`)
+  }
+}
 
 type Phase = { kind: 'in' | 'out'; region: ZoomRegion; progress: number } | { kind: 'hold'; region: ZoomRegion }
 
