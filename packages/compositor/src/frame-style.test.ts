@@ -41,6 +41,38 @@ describe('frame style rendering', () => {
     expect(draw.args.slice(5)).toEqual([-320, -180, 640, 360])
   })
 
+  test('a reframe track slides the crop window onto the subject and stops at the frame edge', () => {
+    const project = applyCommand(projectWithVideo(), {
+      type: 'setReframe',
+      elementId: 'e-vid',
+      crop: { x: 0.25, y: 0, w: 0.5, h: 1 },
+      track: [
+        { sourceMs: 0, x: 0.375, y: 0.5 },
+        { sourceMs: 4000, x: 0.9, y: 0.5 },
+      ],
+    })
+    const sourceRectAt = (timeMs: number) => {
+      const ctx = new FakeContext2D()
+      renderFrame(asCtx(ctx), project, timeMs, { source: new FakeSource() })
+      return ctx.callsTo('drawImage').at(-1)?.args.slice(1, 5)
+    }
+    expect(sourceRectAt(0)).toEqual([80, 0, 320, 360])
+    expect(sourceRectAt(4000)).toEqual([320, 0, 320, 360])
+  })
+
+  test('a zoom region narrows from the reframed crop window', () => {
+    const reframed = applyCommand(projectWithVideo(), {
+      type: 'setReframe',
+      elementId: 'e-vid',
+      crop: { x: 0.25, y: 0, w: 0.5, h: 1 },
+      track: [{ sourceMs: 0, x: 0.375, y: 0.5 }],
+    })
+    const project = applyCommand(reframed, { type: 'addZoomRegion', elementId: 'e-vid', zoom: { atMs: 0, inMs: 500, holdMs: 2000, outMs: 500, scale: 2 } })
+    const ctx = new FakeContext2D()
+    renderFrame(asCtx(ctx), project, 1000, { source: new FakeSource() })
+    expect(ctx.callsTo('drawImage').at(-1)?.args.slice(1, 5)).toEqual([160, 90, 160, 180])
+  })
+
   test('cornerRadius clips the draw to a rounded rect', () => {
     const project = projectWithVideo({ cornerRadius: 0.1 })
     const ctx = new FakeContext2D()

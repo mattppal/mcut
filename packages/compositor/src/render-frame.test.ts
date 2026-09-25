@@ -337,6 +337,18 @@ describe('multicam rendering', () => {
     expect(source.requests.map((r) => r.assetId)).toEqual(['a-cam'])
   })
 
+  test('a camera reframe track centers only the camera slot window on the subject', () => {
+    let { project } = multicamProject()
+    const tall = project.layouts.find((l) => l.name === 'Screen + Cam 3:4')
+    if (!tall) throw new Error('default layouts lost Screen + Cam 3:4')
+    project = applyCommand(project, { type: 'addAngleCut', elementId: 'e-mc', atMs: 2000, layoutId: tall.id })
+    project = applyCommand(project, { type: 'setReframe', elementId: 'e-mc', source: 'camera', track: [{ sourceMs: 0, x: 0.4, y: 0.5 }] })
+    const fake = new FakeContext2D()
+    renderFrame(asCtx(fake), project, 3000, { source: new FakeSource() })
+    const windowCenters = fake.callsTo('drawImage').map(({ args: [, sx, , sw] }) => Number(sx) + Number(sw) / 2)
+    expect(windowCenters).toEqual([expect.closeTo(320), expect.closeTo(256)])
+  })
+
   test('PiP slot rounds and clips', () => {
     const { project } = multicamProject()
     const fake = new FakeContext2D()

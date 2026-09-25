@@ -1,6 +1,6 @@
 {
   "name": "@mcut/voice",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "DeepFilterNet3 voice cleanup for mcut. WASM in browser and Node workers, chunked across a worker pool, with a WAV codec and a dry and wet mix",
   "license": "Apache-2.0",
   "type": "module",

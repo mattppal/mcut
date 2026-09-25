@@ -1,5 +1,25 @@
 # @mcut/media
 
+## 0.1.0-alpha.12
+
+### Minor Changes
+
+- [#180](https://github.com/mattppal/mcut/pull/180) [`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928) Thanks [@mattppal](https://github.com/mattppal)! - `createLocalFaceDetector()` detects faces in a video on the user's device. `detect(src)` samples the video `sampleRateHz` times per second, 5 by default, and runs the YuNet 2023mar model with `onnxruntime-web` in a module worker. It resolves to one `FaceSample` per sample. Each sample's `box` is the largest face in fractions of the source frame, or `null` when no face scores at least 0.6. The model downloads once from Hugging Face into Cache Storage. Pass `ortWasmPaths` to serve the onnxruntime wasm from your own origin instead of jsDelivr. Aborting the `signal` terminates the worker, and the next call starts a fresh one.
+
+### Patch Changes
+
+- Updated dependencies [[`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928)]:
+  - @mcut/timeline@0.1.0-alpha.10
+  - @mcut/compositor@0.1.0-alpha.10
+
+## 0.1.0-alpha.11
+
+### Patch Changes
+
+- Updated dependencies [[`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2)]:
+  - @mcut/timeline@0.1.0-alpha.9
+  - @mcut/compositor@0.1.0-alpha.9
+
 ## 0.1.0-alpha.10
 
 ### Minor Changes

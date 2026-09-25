@@ -26,6 +26,7 @@ import { clearSavedSession, saveAssetBlob } from './persistence'
 import { host } from './studio-host'
 import { focusTranscriptSearch } from './transcript-keywords'
 import { applyOpeningClosingFades, removeTranscriptSilence } from './agent-edit-actions'
+import { runCenterPersonAction, selectedReframeElement } from './center-person'
 
 const hasSelection = ({ engine }: ActionContext) => engine.selection.elementIds.length > 0
 
@@ -324,6 +325,46 @@ defineAction({
       track.elements.some((element) => element.type === 'video' || element.type === 'image' || element.type === 'text' || element.type === 'multicam'),
     ),
   run: ({ engine, input }) => applyOpeningClosingFades(engine, input),
+})
+
+defineAction({
+  id: 'frame.center-person',
+  label: 'Center person',
+  description:
+    'Find the face on this device and keep it in frame as one undoable edit. A video gets a crop at the target aspect that follows the face, and when that aspect matches the project it also scales to fill the frame. A multicam follows the face inside its camera slot, and the slot rect keeps its aspect. Over MCP, call center_person, which waits for the analysis.',
+  category: 'edit',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      elementId: {
+        type: 'string',
+        description: 'Optional video or multicam element id. Defaults to the selected clip.',
+      },
+      aspect: {
+        type: 'number',
+        exclusiveMinimum: 0,
+        description: 'Video only. Output width over height, such as 0.5625 for 9:16. Defaults to 9/16.',
+      },
+      smoothing: {
+        type: 'number',
+        minimum: 0,
+        maximum: 1,
+        description: 'From 0 for a tight follow to 1 for a steady frame. Defaults to 0.5.',
+      },
+      fill: {
+        type: 'boolean',
+        description:
+          'Video only. true scales the clip to fill the frame and centers it, false keeps its size. Defaults to filling only when the crop aspect is within 1% of the project aspect.',
+      },
+      source: {
+        type: 'string',
+        description: 'Multicam only. The source key to follow. Defaults to "camera", then the first video source.',
+      },
+    },
+    additionalProperties: false,
+  },
+  enabled: ({ engine }) => selectedReframeElement(engine) !== undefined,
+  run: runCenterPersonAction,
 })
 
 for (const preset of ASPECT_PRESETS) {

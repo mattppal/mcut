@@ -87,7 +87,7 @@ const collage: Driver = async (ctx) => {
   )
 }
 
-const aspectPresets: Driver = async ({ view }) => {
+export async function switchToPortrait(view: View): Promise<string> {
   await keyboardOf(view).press('ControlOrMeta+Shift+a')
   await view.getByText('Nothing selected.').waitFor({ state: 'visible', timeout: 5_000 })
   const widthBefore = await numberField(view, 'Width').inputValue()
@@ -104,8 +104,10 @@ const aspectPresets: Driver = async ({ view }) => {
     5_000,
   )
   check(width === '1080' && height === '1920', `Width ${width} px, Height ${height} px after 9:16`)
-  return pass(`Width ${widthBefore} px, Height ${heightBefore} px became Width ${width} px, Height ${height} px after clicking 9:16`)
+  return `Width ${widthBefore} px, Height ${heightBefore} px became Width ${width} px, Height ${height} px after clicking 9:16`
 }
+
+const aspectPresets: Driver = async ({ view }) => pass(await switchToPortrait(view))
 
 export const MODE_DRIVERS = {
   multicam,

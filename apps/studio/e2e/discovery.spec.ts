@@ -18,6 +18,7 @@ const AGENT_TOOL_NAMES = [
   'lint_project',
   'list_zooms',
   'edit_zooms',
+  'center_person',
   'list_presets',
   'list_operators',
   'run_operator',

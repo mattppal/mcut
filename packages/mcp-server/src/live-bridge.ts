@@ -311,6 +311,7 @@ export class LiveMcutBridge {
       getTranscript: (options) => this.request('get_transcript', options ?? {}),
       searchTranscript: (query) => this.request('search_transcript', { query }),
       ensureTranscript: (input) => this.request('ensure_transcript', input ?? {}),
+      centerPerson: (input) => this.request('center_person', input ?? {}),
       getAudioActivity: (input) => this.request('get_audio_activity', input ?? {}),
       listActions: () => this.request('list_actions'),
       listOperators: () => this.request('list_operators'),
@@ -329,7 +330,7 @@ export class LiveMcutBridge {
   }
 
   private timeoutFor(type: string): number {
-    if (type === 'ensure_transcript') return this.transcriptionTimeoutMs
+    if (type === 'ensure_transcript' || type === 'center_person') return this.transcriptionTimeoutMs
     if (type === 'import_media') return this.importTimeoutMs
     return this.requestTimeoutMs
   }
@@ -568,6 +569,7 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT, token?: strin
     getTranscript: (options) => rpc('get_transcript', options ?? {}),
     searchTranscript: (query) => rpc('search_transcript', { query }),
     ensureTranscript: (input) => rpc('ensure_transcript', input ?? {}),
+    centerPerson: (input) => rpc('center_person', input ?? {}),
     getAudioActivity: (input) => rpc('get_audio_activity', input ?? {}),
     listActions: () => rpc('list_actions'),
     listOperators: () => rpc('list_operators'),
