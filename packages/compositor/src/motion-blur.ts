@@ -76,18 +76,22 @@ export function renderElementWithMotionBlur(
   const windowMs = Math.max(transformWindowMs, getZoomShutterMs(element, timeMs, frameMs))
   if (!(windowMs > 0)) return false
   const start = timeMs - windowMs / 2
-  const sample = acquireScratch('sample', project.width, project.height, options)
-  const accumulate = acquireScratch('accumulate', project.width, project.height, options)
+  const renderScale = options.renderScale ?? 1
+  const width = Math.max(1, Math.round(project.width * renderScale))
+  const height = Math.max(1, Math.round(project.height * renderScale))
+  const sample = acquireScratch('sample', width, height, options)
+  const accumulate = acquireScratch('accumulate', width, height, options)
   if (!sample || !accumulate) return false
 
   const samples = Math.max(2, Math.min(64, Math.round(options.motionBlurSamples ?? DEFAULT_SAMPLES)))
-  accumulate.clearRect(0, 0, project.width, project.height)
+  accumulate.clearRect(0, 0, width, height)
+  sample.setTransform(renderScale, 0, 0, renderScale, 0, 0)
   const subBackend = new Canvas2DBackend(sample, project.width, project.height)
   for (let i = 0; i < samples; i++) {
     const sampleMs = start + windowMs * ((i + 0.5) / samples)
     const resolved = resolveAnimatedElement(element, transformWindowMs > 0 ? sampleMs : timeMs)
     const sub = 'blendMode' in resolved && resolved.blendMode ? { ...resolved, blendMode: undefined } : resolved
-    sample.clearRect(0, 0, project.width, project.height)
+    sample.clearRect(0, 0, width / renderScale, height / renderScale)
     renderer(sub, createElementContext(subBackend, project, track, timeMs, options.source, sampleMs))
     accumulate.save()
     accumulate.globalCompositeOperation = 'lighter'
@@ -100,7 +104,7 @@ export function renderElementWithMotionBlur(
   ctx.save()
   const blendMode = 'blendMode' in element ? element.blendMode : undefined
   if (blendMode) ctx.globalCompositeOperation = toCompositeOperation(blendMode)
-  ctx.drawImage(accumulate.canvas, 0, 0)
+  ctx.drawImage(accumulate.canvas, 0, 0, project.width, project.height)
   ctx.restore()
   return true
 }

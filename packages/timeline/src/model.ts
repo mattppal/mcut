@@ -13,7 +13,7 @@ import { cropSchema, shadowSchema, strokeSchema } from './style'
 import { textRunSchema } from './rich-text'
 import { splitAngles } from './multicam'
 import { transitionSchema } from './transitions'
-import { splitZoomRegions, zoomRegionSchema } from './zoom-regions'
+import { mustNotOverlap, splitZoomRegions, zoomRegionSchema } from './zoom-regions'
 
 export const MIN_ELEMENT_DURATION_MS = 10
 
@@ -348,6 +348,7 @@ function validateMulticam(project: Project, element: MulticamElement): void {
 }
 
 export function validateElement(project: Project, element: TimelineElement): void {
+  if ('zooms' in element && element.zooms) mustNotOverlap(element.zooms)
   switch (element.type) {
     case 'video':
     case 'audio':

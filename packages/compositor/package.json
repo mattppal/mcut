@@ -30,6 +30,9 @@
   "dependencies": {
     "@mcut/timeline": "workspace:*"
   },
+  "devDependencies": {
+    "@playwright/test": "1.60.0"
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true

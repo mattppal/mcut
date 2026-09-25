@@ -3,6 +3,7 @@ import { CommandError } from '../errors'
 import { createElementId, createTrackId, type AssetId, type ElementId } from '../id'
 import { elementIdSchema, MIN_ELEMENT_DURATION_MS, type Project, type TimelineElement, type Track } from '../model'
 import { transitionSchema } from '../transitions'
+import { listZoomRegions, renameSplitCopies, zoomRegionEndMs } from '../zoom-regions'
 import { defineCommand, mustGetLayout, mustLocate, replaceTrack } from './shared'
 
 function mustBeMulticam(element: TimelineElement): asserts element is TimelineElement & {
@@ -205,7 +206,7 @@ export const flattenMulticam = defineCommand({
     'Explode a multicam into plain clips: one video element per cut-span slot ' +
     '(on new tracks, layout geometry baked into transforms — approximate, no ' +
     'crop primitive) plus one audio element from the audio source. One-way; ' +
-    'undo restores the multicam.',
+    'undo restores the multicam. Zooms on a source move onto the clips cut from that source.',
   payloadSchema: z.object({ elementId: elementIdSchema }),
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
@@ -235,12 +236,19 @@ export const flattenMulticam = defineCommand({
       elements: [],
     }))
 
+    const takenZoomIds = new Set(listZoomRegions(project).map((z) => z.id))
     for (const span of spans) {
       if (span.toMs - span.fromMs < MIN_ELEMENT_DURATION_MS) continue
       const layout = mustGetLayout(project, span.cut.layoutId)
       layout.slots.forEach((slot, slotIndex) => {
         const source = element.sources.find((s) => s.key === slot.source)
         if (!source) return
+        const zooms = renameSplitCopies(
+          (element.zooms ?? [])
+            .filter((z) => z.source === slot.source && z.atMs < span.toMs && zoomRegionEndMs(z) > span.fromMs)
+            .map(({ source: _source, ...zoom }) => ({ ...zoom, atMs: zoom.atMs - span.fromMs })),
+          takenZoomIds,
+        )
         const rw = slot.rect.w * project.width
         const rh = slot.rect.h * project.height
         const aw = W(source.assetId)
@@ -263,6 +271,7 @@ export const flattenMulticam = defineCommand({
           opacity: 1,
           volume: 1,
           muted: true,
+          ...(zooms.length > 0 && { zooms }),
         })
       })
     }
