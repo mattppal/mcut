@@ -220,6 +220,9 @@ export function buildCaptionsCommand(project: Project, transcript: TranscriptRes
     if (source.timeMap) {
       throw new Error(`element "${options.elementId}" has a time remap; transcript times will not line up`)
     }
+    if (source.reversed) {
+      throw new Error(`element "${options.elementId}" is reversed; captions require forward playback`)
+    }
     scope = {
       timeOffsetMs: source.timelineStartMs,
       sourceStartMs: source.sourceStartMs,

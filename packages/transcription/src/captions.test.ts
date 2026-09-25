@@ -60,6 +60,14 @@ describe('buildCaptionsCommand', () => {
     )
   })
 
+  test('a reversed multicam is rejected like a reversed silence cut', () => {
+    const engine = multicamProject()
+    engine.dispatch({ type: 'updateElement', elementId: 'e-mc', patch: { reversed: true } })
+    expect(() => buildCaptionsCommand(engine.project, transcript, { elementId: 'e-mc' })).toThrow(
+      'element "e-mc" is reversed; captions require forward playback',
+    )
+  })
+
   test('a text element is not a caption scope', () => {
     const engine = new EditorEngine({ project: createProject({ id: 'p-text' }) })
     engine.dispatch({
