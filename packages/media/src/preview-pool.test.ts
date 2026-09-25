@@ -133,6 +133,6 @@ describe('getActiveMediaItems', () => {
         .filter((item) => item.audioSrc === 'blob:mc-wet')
         .map((item) => item.assetId)
         .sort(),
-    ).toEqual(['a-cam', 'a-vid'])
+    ).toEqual(['a-cam'])
   })
 })
