@@ -190,6 +190,7 @@ class ExportFrameSource implements FrameSource {
   private images = new Map<AssetId, ImageBitmap | null>()
   private frameCache = new Map<string, CanvasImageSource>()
   private temporaries: ImageBitmap[] = []
+  private scratch: ImageData | null = null
 
   constructor(private project: Project) {}
 
@@ -204,7 +205,7 @@ class ExportFrameSource implements FrameSource {
         for (const request of getFrameRequests(this.project, element, timeMs)) {
           const sample = await this.advance(`${element.id}:${request.assetId}`, request.assetId as AssetId, request.sourceTimeMs / 1000)
           if (sample) {
-            const image = await sampleBitmap(sample)
+            const image = await sampleBitmap(sample, this.scratchFor(sample))
             this.temporaries.push(image)
             this.frameCache.set(frameKey(request.assetId, request.sourceTimeMs), image)
           }
@@ -234,6 +235,12 @@ class ExportFrameSource implements FrameSource {
     this.inputs.clear()
     for (const bitmap of this.images.values()) bitmap?.close()
     this.images.clear()
+  }
+
+  private scratchFor(sample: VideoSample): ImageData {
+    const { width, height } = sample.visibleRect
+    if (this.scratch?.width !== width || this.scratch.height !== height) this.scratch = new ImageData(width, height)
+    return this.scratch
   }
 
   private async ensureSink(assetId: AssetId): Promise<VideoSampleSink | null> {
