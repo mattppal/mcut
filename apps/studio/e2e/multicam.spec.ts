@@ -146,6 +146,28 @@ test('multicam inspector settings are scoped to multicam mode', async ({ page, e
   await expect(page.locator("[title^='Arm keyframes']")).not.toHaveCount(0)
 })
 
+test('multicam: clicking its picture in edit mode selects it', async ({ page, editorUrl }) => {
+  await openEditor(page, editorUrl)
+  await importWebm(page, 'screen.webm')
+  await importWebm(page, 'cam.webm')
+
+  await page.getByTitle(/screen.webm/).click()
+  await page.getByTitle(/cam.webm/).click()
+  await page.locator('[data-mcut-multicam-setup]').getByRole('button', { name: 'Create multicam' }).click()
+  await expect(clip(page)).toHaveCount(1)
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
+
+  const selected = page.getByRole('button', { name: 'Delete element' })
+  await page.keyboard.press('Escape')
+  await expect(selected, 'nothing is selected before the click').toBeHidden()
+
+  const box = await page.locator('[data-mcut-player]').boundingBox()
+  if (!box) throw new Error('the player has no box')
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  await expect(selected, 'the multicam frame is its hit box').toBeVisible()
+  await expect(page.getByText('multicam', { exact: true })).toBeVisible()
+})
+
 async function timecodeMs(page: Page): Promise<number> {
   const text = await page.locator('[data-mcut-timeline] .text-primary').first().textContent()
   const match = /(\d+):(\d+)\.(\d)/.exec(text ?? '')
