@@ -173,7 +173,7 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
 
       const plan = segment.timeMap ? buildRemapPlan(segment.timeMap, segment.durationMs) : null
       if (!plan) {
-        const composite = await decodeCompositeRange(sink, trimS, segment.sourceSpanMs / 1000, signal)
+        const composite = await decodeCompositeRange(sink, trimS, segment.sourceSpanMs / 1000, 'all', signal)
         if (composite) {
           scheduleComposite(offline, gain, segment, composite.channels, composite.sampleRate)
           continue
@@ -231,15 +231,25 @@ function stereoOf(composite: CompositeAudio): StereoComposite {
   return { left, right: second ?? left.slice(), sampleRate: composite.sampleRate }
 }
 
-async function decodeCompositeRange(sink: AudioBufferSink, startS: number, spanS: number, signal?: AbortSignal): Promise<CompositeAudio | null> {
+type CompositeChannels = 'all' | 'stereo'
+
+async function decodeCompositeRange(
+  sink: AudioBufferSink,
+  startS: number,
+  spanS: number,
+  keep: CompositeChannels,
+  signal?: AbortSignal,
+): Promise<CompositeAudio | null> {
   let composite: CompositeAudio | null = null
   for await (const { buffer, timestamp } of sink.buffers(startS, startS + spanS)) {
     signal?.throwIfAborted()
     if (!composite) {
       const sampleRate = buffer.sampleRate
       const frames = Math.ceil(spanS * sampleRate)
-      const channelCount = Math.max(1, buffer.numberOfChannels)
-      if (frames * channelCount > MAX_STRETCH_SOURCE_FRAMES * 2) return null
+      const sourceChannels = Math.max(1, buffer.numberOfChannels)
+      const channelCount = keep === 'all' ? sourceChannels : Math.min(2, sourceChannels)
+      const frameBudget = keep === 'all' ? (MAX_STRETCH_SOURCE_FRAMES * 2) / channelCount : MAX_STRETCH_SOURCE_FRAMES
+      if (frames > frameBudget) return null
       composite = {
         channels: Array.from({ length: channelCount }, () => new Float32Array(frames)),
         sampleRate,
@@ -278,7 +288,7 @@ async function scheduleStretchedSegment(
 ): Promise<boolean> {
   try {
     const startS = (segment.trimStartMs + constant.sourceStartOffsetMs) / 1000
-    const composite = await decodeCompositeRange(sink, startS, constant.sourceSpanMs / 1000, signal)
+    const composite = await decodeCompositeRange(sink, startS, constant.sourceSpanMs / 1000, 'stereo', signal)
     if (!composite) return false
 
     const stretched = await stretchStereo(stereoOf(composite), constant.rate)
@@ -300,7 +310,7 @@ async function scheduleReversedSegment(
   signal?: AbortSignal,
 ): Promise<boolean> {
   try {
-    const decoded = await decodeCompositeRange(sink, segment.trimStartMs / 1000, segment.sourceSpanMs / 1000, signal)
+    const decoded = await decodeCompositeRange(sink, segment.trimStartMs / 1000, segment.sourceSpanMs / 1000, 'stereo', signal)
     if (!decoded) return false
     const composite = stereoOf(decoded)
     composite.left.reverse()
