@@ -18,11 +18,9 @@ interface SpokenWord {
 
 function clipsOf(project: Project): Clip[] {
   return elements(project).flatMap((element): Clip[] =>
-    element.type === 'multicam'
-      ? [{ startMs: element.startMs, endMs: element.startMs + element.durationMs, trimStartMs: element.sources[0]?.trimStartMs ?? 0 }]
-      : element.type === 'video' || element.type === 'audio'
-        ? [{ startMs: element.startMs, endMs: element.startMs + element.durationMs, trimStartMs: element.trimStartMs }]
-        : [],
+    element.type === 'multicam' || element.type === 'video' || element.type === 'audio'
+      ? [{ startMs: element.startMs, endMs: element.startMs + element.durationMs, trimStartMs: element.trimStartMs }]
+      : [],
   )
 }
 

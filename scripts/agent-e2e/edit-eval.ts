@@ -117,7 +117,7 @@ async function applyTranscript(mcp: McpSession, file: string): Promise<void> {
     .flatMap((track) => track.elements)
     .find((element) => element.type === 'multicam' || element.type === 'video' || element.type === 'audio')
   if (clip === undefined) throw new Error(`no clip to caption with ${file}`)
-  if (clip.type === 'multicam' && (clip.startMs !== 0 || clip.sources.some((source) => source.trimStartMs !== 0)))
+  if (clip.type === 'multicam' && (clip.startMs !== 0 || clip.trimStartMs !== 0))
     throw new Error(`apply_captions can't scope to a multicam, and ${clip.id} doesn't start at timeline 0 untrimmed`)
   const result = await mcp.callTool('apply_captions', clip.type === 'multicam' ? { transcript } : { transcript, elementId: clip.id })
   if (result.isError) throw new Error(`apply_captions with ${file} failed. ${result.text.slice(0, 300)}`)
