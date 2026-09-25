@@ -253,7 +253,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   edit_zooms:
     'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
     'If any edit is rejected, none apply. ' +
-    'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.5x) with rect or focus on the discussed screen region. ' +
+    'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.3x) with rect or focus on the discussed screen region. ' +
     'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the screen key so the camera overlay stays put.',
   center_person:
     'Live bridge only: find the face on device in the connected editor and keep the person in frame as one undoable edit. Waits for the analysis. ' +

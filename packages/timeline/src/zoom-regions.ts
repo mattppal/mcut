@@ -25,7 +25,7 @@ export type ZoomRegion = z.infer<typeof zoomRegionSchema>
 
 export const ZOOM_REGION_PRESETS = {
   subtlePunchIn: { scale: 1.15, inMs: 700, holdMs: 1600, outMs: 700 },
-  detailZoom: { scale: 1.5, inMs: 600, holdMs: 3000, outMs: 600 },
+  detailZoom: { scale: 1.3, inMs: 600, holdMs: 3000, outMs: 600 },
 } as const satisfies Record<string, Pick<ZoomRegion, 'scale' | 'inMs' | 'holdMs' | 'outMs'>>
 
 const presetSchema = z.enum(['subtlePunchIn', 'detailZoom'])
@@ -45,7 +45,7 @@ const rectMessage = 'pass either rect or focus/scale, not both'
 export const zoomRegionInputSchema = z
   .object({
     id: z.string().min(1).optional(),
-    preset: presetSchema.default('subtlePunchIn').describe('subtlePunchIn is 1.15x, detailZoom is 1.5x. Explicit fields override it.'),
+    preset: presetSchema.default('subtlePunchIn').describe('subtlePunchIn is 1.15x, detailZoom is 1.3x. Explicit fields override it.'),
     source: z.string().min(1).describe('Multicam only: the source key whose slots zoom, e.g. "screen". Other slots stay put.').optional(),
     atMs: z.number().int().nonnegative().describe('Element-local time the zoom-in starts.'),
     inMs: z.number().int().min(1).optional(),

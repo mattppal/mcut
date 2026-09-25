@@ -161,7 +161,7 @@ Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
 }
 ```
 
-Keep zooms subtle (1.1x to 1.5x), keep `easeOutExpo`, and keep `motionBlur` on.
+Keep zooms subtle (1.1x to 1.35x), keep `easeOutExpo`, and keep `motionBlur` on.
 On a multicam, set `source` to the screen key so the camera overlay stays put.
 Place a detail zoom over the words that discuss the region, found with
 `search_transcript`. When asked to tone zooms down, lower `scale` rather than
