@@ -1,5 +1,11 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.9
+
+### Patch Changes
+
+- [#179](https://github.com/mattppal/mcut/pull/179) [`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2) Thanks [@mattppal](https://github.com/mattppal)! - `cancelTransaction` rolls back only the innermost open transaction and leaves any outer transaction open. It used to cancel every open level, so a failed MCP `transact` in Studio also discarded a text edit in progress. `loadProject` keeps open transactions open and restarts them from the loaded project.
+
 ## 0.1.0-alpha.8
 
 ### Minor Changes

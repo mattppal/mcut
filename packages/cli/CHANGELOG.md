@@ -1,5 +1,19 @@
 # @mcut/cli
 
+## 0.1.0-alpha.10
+
+### Minor Changes
+
+- [#172](https://github.com/mattppal/mcut/pull/172) [`e70a4c3`](https://github.com/mattppal/mcut/commit/e70a4c3e63c18de97d8db77f094666df0f1a5970) Thanks [@mattppal](https://github.com/mattppal)! - Add `mcut clean-voice <in.wav> -o <out.wav> [--amount <0..1>]`, which removes background noise from speech in a 48 kHz WAV file with `@mcut/voice`. An `--amount` below 1 mixes the original audio back in. Audio at any other sample rate exits with an error that shows an ffmpeg command to resample it.
+
+### Patch Changes
+
+- Updated dependencies [[`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2), [`e70a4c3`](https://github.com/mattppal/mcut/commit/e70a4c3e63c18de97d8db77f094666df0f1a5970)]:
+  - @mcut/timeline@0.1.0-alpha.9
+  - @mcut/voice@0.1.0-alpha.1
+  - @mcut/editor@0.1.0-alpha.9
+  - @mcut/transcription@0.1.0-alpha.10
+
 ## 0.1.0-alpha.9
 
 ### Patch Changes

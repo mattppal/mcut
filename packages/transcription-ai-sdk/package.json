@@ -1,6 +1,6 @@
 {
   "name": "@mcut/transcription-ai-sdk",
-  "version": "1.0.0-alpha.9",
+  "version": "1.0.0-alpha.10",
   "description": "mcut transcription provider backed by the Vercel AI SDK. Use any AI SDK transcription model (OpenAI, Deepgram, Groq, ElevenLabs, ...)",
   "license": "Apache-2.0",
   "type": "module",
