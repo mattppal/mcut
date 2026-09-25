@@ -27,9 +27,9 @@ creates the file when missing and writes it after successful edits.
 
 ## Static tools
 
-The published server registers twenty static tools. The live bridge handles
+The published server registers twenty-one static tools. The live bridge handles
 three more in the editor, `list_commands`, `apply_commands`, and
-`run_operator`, which together with the twenty form the twenty-three-tool agent
+`run_operator`, which together with the twenty-one form the twenty-four-tool agent
 profile. Studio serves the profiles inside the desktop app, with a catalog at
 `app://studio/tools`, at `app://studio/tools.json` and
 `app://studio/tools.agent.json`. The full profile
@@ -41,6 +41,7 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `get_summary` | Compact project summary. Read this before editing. |
 | `get_project` | Full serializable project JSON. |
 | `get_media_context` | Project, playback, selection, asset, track, element, marker, and transcript metadata. |
+| `get_frame` | Live bridge only. PNG of one timeline frame. Call it before placing a zoom or a crop. |
 | `get_audio_activity` | Live bridge only. Sound and silence windows for one video or audio clip in source time. |
 | `get_transcript` | Caption-derived transcript. Never starts transcription. |
 | `search_transcript` | Find spoken words or phrases with timeline times. |

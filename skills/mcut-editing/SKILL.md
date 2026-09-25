@@ -15,8 +15,8 @@ JSON surgery when an mcut MCP tool or action exists.
 
 **MCP server** access is the normal agent path.
 
-For real media, transcription, silence removal, audio activity, in-editor
-export, or current editor state, use the live bridge, not the file-only stdio
+For real media, transcription, silence removal, audio activity, frame grabs,
+in-editor export, or current editor state, use the live bridge, not the file-only stdio
 server. mcut Studio hosts the bridge at `http://127.0.0.1:44737/mcp` with the
 token from the app's MCP menu. Developers running the editor as a browser tab
 start the same bridge with `mcut-bridge start`.
@@ -119,6 +119,14 @@ bridge writes the file, so no download or save dialog opens.
 
 `export-busy` means an export is already running. Wait for it with `get_export`
 or stop it with `cancel_export`.
+
+### See a frame before a zoom or a crop
+
+Call `get_frame` before placing a zoom or a crop. Pass `timeMs` in timeline
+milliseconds. The tool returns a PNG of that frame plus the ids of the
+elements in it, so you can find a button or a region in a screen recording
+before you set the zoom. Pass `elementId` to render one element. A multicam
+element renders its composite. `maxWidth` defaults to 1280.
 
 ## Timing rules
 
