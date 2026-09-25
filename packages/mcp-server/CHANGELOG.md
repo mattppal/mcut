@@ -1,5 +1,17 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.8
+
+### Patch Changes
+
+- [#170](https://github.com/mattppal/mcut/pull/170) [`7de9d8d`](https://github.com/mattppal/mcut/commit/7de9d8de87bf0446cb1ffa78a0b3f7885053bb15) Thanks [@mattppal](https://github.com/mattppal)! - The live bridge answers an unexpected HTTP handler error with 500 and refuses a WebSocket upgrade whose check throws, instead of crashing. `LiveBridgeOptions.onError` receives the error and defaults to stderr.
+
+## 0.1.0-alpha.7
+
+### Patch Changes
+
+- [#164](https://github.com/mattppal/mcut/pull/164) [`1cc9630`](https://github.com/mattppal/mcut/commit/1cc963001005ace3da7b856cd300dc6b2794f0e3) Thanks [@mattppal](https://github.com/mattppal)! - The live bridge answers a request with a malformed URL or Host header with 400 instead of crashing.
+
 ## 0.1.0-alpha.6
 
 ### Minor Changes

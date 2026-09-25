@@ -2,7 +2,11 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { randomBytes } from 'node:crypto'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { WebSocket, WebSocketServer, type VerifyClientCallbackSync } from 'ws'
+import { LiveBridgeError } from './bridge-error'
+import { EXPORTS_PATH, ExportJobs } from './export-jobs'
 import { createMcutMcpServerForTarget, type McutMcpTarget } from './server'
+
+export { LiveBridgeError } from './bridge-error'
 
 export const DEFAULT_BRIDGE_PORT = 44737
 
@@ -13,6 +17,8 @@ export interface LiveBridgeOptions {
   requestTimeoutMs?: number
   transcriptionTimeoutMs?: number
   reconnectGraceMs?: number
+  onError?: (error: unknown) => void
+  exportDir?: string
 }
 
 interface PendingRequest {
@@ -36,16 +42,6 @@ interface LiveBridgeMessage {
   error?: { name?: string; code?: string; message?: string }
 }
 
-export class LiveBridgeError extends Error {
-  readonly code: string
-
-  constructor(code: string, message: string) {
-    super(message)
-    this.name = 'LiveBridgeError'
-    this.code = code
-  }
-}
-
 function parsePort(value: string | null): number | null {
   if (!value) return null
   const port = Number(value)
@@ -65,13 +61,18 @@ function isAllowedOrigin(origin: string | undefined, allowedOrigins: readonly st
   return parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1'
 }
 
-function requestUrl(req: IncomingMessage): URL {
+function requestUrl(req: IncomingMessage): URL | null {
   const host = req.headers.host ?? '127.0.0.1'
-  return new URL(req.url ?? '/', `http://${host}`)
+  try {
+    return new URL(req.url ?? '/', `http://${host}`)
+  } catch (error) {
+    if (error instanceof TypeError) return null
+    throw error
+  }
 }
 
 function tokenFrom(req: IncomingMessage): string | null {
-  return requestUrl(req).searchParams.get('token')
+  return requestUrl(req)?.searchParams.get('token') ?? null
 }
 
 function hasCliHeader(req: IncomingMessage): boolean {
@@ -121,8 +122,12 @@ export class LiveMcutBridge {
   readonly transcriptionTimeoutMs: number
   readonly reconnectGraceMs: number
 
-  private readonly server = createServer((req, res) => void this.handleHttp(req, res))
+  private readonly onError: (error: unknown) => void
+  private readonly server = createServer((req, res) => {
+    this.handleHttp(req, res).catch((error: unknown) => this.failRequest(res, error))
+  })
   private readonly wss: WebSocketServer
+  private readonly exports: ExportJobs
   private readonly pending = new Map<string, PendingRequest>()
   private readonly socketWaiters = new Set<SocketWaiter>()
   private socket: WebSocket | null = null
@@ -135,15 +140,30 @@ export class LiveMcutBridge {
     this.requestTimeoutMs = options.requestTimeoutMs ?? 30_000
     this.transcriptionTimeoutMs = options.transcriptionTimeoutMs ?? 10 * 60_000
     this.reconnectGraceMs = options.reconnectGraceMs ?? 5_000
+    this.onError =
+      options.onError ?? ((error) => process.stderr.write(`mcut bridge error: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`))
     const allowedOrigins = options.allowedOrigins ?? []
-    const verifyClient: VerifyClientCallbackSync = ({ origin, req }) =>
-      (this.token === null || tokenFrom(req) === this.token) && isAllowedOrigin(origin, allowedOrigins)
+    const verifyClient: VerifyClientCallbackSync = ({ origin, req }) => {
+      try {
+        return (this.token === null || tokenFrom(req) === this.token) && isAllowedOrigin(origin, allowedOrigins)
+      } catch (error) {
+        this.onError(error)
+        return false
+      }
+    }
     this.wss = new WebSocketServer({
       server: this.server,
       path: '/mcut-mcp',
       verifyClient,
     })
     this.wss.on('connection', (socket) => this.attach(socket))
+    this.exports = new ExportJobs({
+      exportDir: options.exportDir,
+      token: this.token,
+      allowOrigin: (origin) => isAllowedOrigin(origin, allowedOrigins),
+      address: () => this.server.address(),
+      request: (type, payload) => this.request(type, payload),
+    })
   }
 
   async listen(port = 0): Promise<number> {
@@ -229,6 +249,12 @@ export class LiveMcutBridge {
           connected: this.isConnected(),
           tab: this.tabInfo,
         }
+      case 'export_video':
+        return await this.exports.start(payload)
+      case 'get_export':
+        return await this.exports.get(payload)
+      case 'cancel_export':
+        return await this.exports.cancel(payload)
       default:
         return await this.request(type, payload)
     }
@@ -271,6 +297,9 @@ export class LiveMcutBridge {
       runOperator: (operatorId, input) => this.request('run_operator', { operatorId, input: input ?? {} }),
       dispatchCommand: (commandName, input) => this.request('dispatch_command', { commandName, input: input ?? {} }),
       applyCommands: (commands) => this.request('apply_commands', { commands }),
+      exportVideo: (input) => this.exports.start(input),
+      getExport: (input) => this.exports.get(input),
+      cancelExport: (input) => this.exports.cancel(input),
     }
   }
 
@@ -291,6 +320,7 @@ export class LiveMcutBridge {
         pending.reject(new LiveBridgeError('browser-disconnected', `Browser disconnected before response ${id}.`))
       }
       this.pending.clear()
+      this.exports.disconnect()
     })
   }
 
@@ -343,6 +373,8 @@ export class LiveMcutBridge {
       return
     }
 
+    if (this.exports.receive(message)) return
+
     if (!message.id && message.type === 'hello') {
       this.tabInfo = message.payload ?? null
       return
@@ -361,9 +393,29 @@ export class LiveMcutBridge {
     pending.resolve(message.result)
   }
 
+  private failRequest(res: ServerResponse, error: unknown): void {
+    this.onError(error)
+    if (res.headersSent) {
+      res.destroy()
+      return
+    }
+    sendJson(res, 500, { ok: false, error: 'Internal bridge error.' })
+  }
+
   private async handleHttp(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    if (requestUrl(req).pathname === '/mcp') {
+    const url = requestUrl(req)
+    if (url === null) {
+      sendJson(res, 400, { ok: false, error: 'Malformed request URL or Host header.' })
+      return
+    }
+
+    if (url.pathname === '/mcp') {
       await this.handleMcp(req, res)
+      return
+    }
+
+    if (url.pathname.startsWith(EXPORTS_PATH)) {
+      await this.exports.serveUpload(req, res, url)
       return
     }
 
@@ -372,7 +424,7 @@ export class LiveMcutBridge {
       return
     }
 
-    if (req.method !== 'POST' || requestUrl(req).pathname !== '/rpc') {
+    if (req.method !== 'POST' || url.pathname !== '/rpc') {
       sendJson(res, 404, { ok: false, error: 'Not found.' })
       return
     }
@@ -484,5 +536,8 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT, token?: strin
     runOperator: (operatorId, input) => rpc('run_operator', { operatorId, input: input ?? {} }),
     dispatchCommand: (commandName, input) => rpc('dispatch_command', { commandName, input: input ?? {} }),
     applyCommands: (commands) => rpc('apply_commands', { commands }),
+    exportVideo: (input) => rpc('export_video', input ?? {}),
+    getExport: (input) => rpc('get_export', input ?? {}),
+    cancelExport: (input) => rpc('cancel_export', input ?? {}),
   }
 }

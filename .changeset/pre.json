@@ -26,6 +26,8 @@
     "agent-tool-descriptions",
     "animation-preset-at-playhead",
     "audio-activity-mcp",
+    "bridge-catch-all",
+    "bridge-malformed-host",
     "caption-word-order",
     "desktop-ipc",
     "desktop-platform-field",

@@ -249,6 +249,11 @@
           "target": "components/mcut/bridge-request.ts"
         },
         {
+          "path": "registry/mcut/live-mcp-export.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/live-mcp-export.ts"
+        },
+        {
           "path": "registry/mcut/live-mcp-transcript.ts",
           "type": "registry:lib",
           "target": "components/mcut/live-mcp-transcript.ts"

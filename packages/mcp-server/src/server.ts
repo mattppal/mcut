@@ -53,6 +53,9 @@ export interface McutMcpTarget {
   runOperator(operatorId: OperatorId, input: unknown): unknown | Promise<unknown>
   dispatchCommand(commandName: string, input: unknown): unknown | Promise<unknown>
   applyCommands(commands: BuiltinCommand[]): unknown | Promise<unknown>
+  exportVideo?(input: unknown): unknown | Promise<unknown>
+  getExport?(input: unknown): unknown | Promise<unknown>
+  cancelExport?(input: unknown): unknown | Promise<unknown>
 }
 
 export interface McutMcpServerOptions {
@@ -238,6 +241,19 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'redo':
       if (!(await target.redo())) return failure('Nothing to redo.')
       return text(`Redone.\n\n${await target.getSummary()}`)
+    case 'export_video': {
+      if (!target.exportVideo) return failure('export_video requires the live bridge connected to Studio.')
+      const started = await target.exportVideo(call.arguments)
+      return text(
+        withResult('OK: export started. Studio renders it in the background. Call get_export { jobId, waitMs: 20000 } until its state is done.', started),
+      )
+    }
+    case 'get_export':
+      if (!target.getExport) return failure('get_export requires the live bridge connected to Studio.')
+      return text(JSON.stringify(await target.getExport(call.arguments), null, 2))
+    case 'cancel_export':
+      if (!target.cancelExport) return failure('cancel_export requires the live bridge connected to Studio.')
+      return text(withResult('OK: export cancelled.', await target.cancelExport(call.arguments)))
   }
 }
 
