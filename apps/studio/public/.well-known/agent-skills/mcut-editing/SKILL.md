@@ -58,14 +58,17 @@ no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 
 ### Remove retakes
 
-After `ensure_transcript`, call `find_retakes`. Each candidate is a timeline
-range from the abandoned take to the start of the kept take. Read
-`abandonedText` and skip any candidate that is a deliberate repetition.
-Candidates come last to first, so cut them in the returned order. Cut each with
-a split at both ends and a ripple delete, on the clip and on the
-caption track together, or rerun `ensure_transcript` with `replace` set to true after
-the cuts. Pass a lower `minMatchWords` only when a short restart was missed,
-and check each extra candidate, since lower values match spoken lists.
+After `ensure_transcript`, save `get_transcript` with `includeWords`, then call
+`find_retakes`. Each candidate is a timeline range from the abandoned take to
+the start of the kept take. Read `abandonedText` and skip any candidate that is
+a deliberate repetition. Candidates come last to first, so cut them in the
+returned order, each with a split at both ends and a ripple delete on the clip
+only. Do not cut the caption track the same way, because a ripple delete keeps
+the gaps between captions and leaves every later word late. Rebuild captions
+instead with one `apply_captions` call per remaining clip, passing the saved
+transcript and that clip's `elementId`, with `replace` true on the first call
+and false after. Pass a lower `minMatchWords` only when a short restart was
+missed, and check each extra candidate, since lower values match spoken lists.
 
 ### Fade from black or fade to black
 

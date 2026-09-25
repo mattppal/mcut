@@ -150,6 +150,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Find retakes in the word-timed transcript: a phrase whose opening words are spoken again within maxLookaheadMs. ' +
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
     'Candidates come last to first; cut them in that order so no ripple delete shifts a range still to cut. ' +
+    'Cut the clip only, then rebuild captions with apply_captions per remaining clip; cutting the caption track leaves later words late. ' +
     'Review abandonedText before cutting. Needs captions with word timings; call ensure_transcript first.',
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +

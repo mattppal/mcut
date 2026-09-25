@@ -54,10 +54,19 @@ describe('findRetakes', () => {
   test('chained attempts merge into one range ending at the last take', () => {
     const words = [
       ...spoken('Now the neat thing is that it can use your computer.', 0),
-      ...spoken('Now the neat thing is that it can route traffic.', 5000),
-      ...spoken('Now the neat thing is that it can run commands.', 10_000),
+      ...spoken('Now the neat thing is that it can route traffic.', 12_000),
+      ...spoken('Now the neat thing is that it can run commands.', 24_000),
     ]
-    expect(findRetakes(words).map((c) => [c.startMs, c.endMs, c.keptText])).toEqual([[0, 10_000, 'Now the neat thing is that it can']])
+    expect(findRetakes(words).map((c) => [c.startMs, c.endMs, c.keptText])).toEqual([[0, 24_000, 'Now the neat thing is that it can']])
+  })
+
+  test('a pause broken by a filler still starts a phrase, and words that name Object members are plain words', () => {
+    const words = [
+      ...spoken('Here it is', 0),
+      { text: 'um', startMs: 1000, endMs: 1200 },
+      ...spoken('the constructor builds a page every single morning the constructor builds a page every single day.', 1500),
+    ]
+    expect(findRetakes(words).map((c) => [c.startMs, c.endMs])).toEqual([[1500, 3900]])
   })
 
   test('a period that arrives as its own word still ends the phrase', () => {

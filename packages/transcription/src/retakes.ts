@@ -28,7 +28,11 @@ const FILLERS = new Set(['um', 'uh', 'erm', 'ah', 'hmm', 'mm'])
 
 const normalize = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}']+/gu, '')
 
-const CONTRACTIONS: Record<string, readonly string[]> = { gotta: ['got', 'to'], gonna: ['going', 'to'], wanna: ['want', 'to'] }
+const CONTRACTIONS = new Map<string, readonly string[]>([
+  ['gotta', ['got', 'to']],
+  ['gonna', ['going', 'to']],
+  ['wanna', ['want', 'to']],
+])
 
 interface Token {
   norm: string
@@ -39,12 +43,14 @@ interface Token {
 function tokenize(words: readonly TimedWord[], pauseMs: number): Token[] {
   const tokens: Token[] = []
   let pendingBreak = true
+  let spokenUntilMs = Number.NEGATIVE_INFINITY
   words.forEach((word, index) => {
     const previous = words[index - 1]
-    if (previous && (word.startMs - previous.endMs >= pauseMs || /[.?!]$/.test(previous.text.trim()))) pendingBreak = true
+    if (word.startMs - spokenUntilMs >= pauseMs || /[.?!]$/.test(previous?.text.trim() ?? '')) pendingBreak = true
     const norm = normalize(word.text)
     if (norm === '' || FILLERS.has(norm)) return
-    for (const part of CONTRACTIONS[norm] ?? [norm]) {
+    spokenUntilMs = word.endMs
+    for (const part of CONTRACTIONS.get(norm) ?? [norm]) {
       tokens.push({ norm: part, word, opensPhrase: pendingBreak })
       pendingBreak = false
     }
