@@ -71,6 +71,7 @@ export interface EditorAction {
   shortcut?: Shortcut | Shortcut[]
   icon?: ComponentType<{ className?: string }>
   palette?: boolean
+  humanOnly?: string
   inputSchema?: Record<string, unknown>
   operator?: {
     id: OperatorId

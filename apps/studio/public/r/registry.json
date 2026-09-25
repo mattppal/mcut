@@ -234,6 +234,16 @@
           "target": "components/mcut/live-mcp-bridge.tsx"
         },
         {
+          "path": "registry/mcut/add-asset-src.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/add-asset-src.ts"
+        },
+        {
+          "path": "registry/mcut/import-granted-media.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/import-granted-media.ts"
+        },
+        {
           "path": "registry/mcut/bridge-request.ts",
           "type": "registry:lib",
           "target": "components/mcut/bridge-request.ts"

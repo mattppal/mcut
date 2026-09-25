@@ -29,6 +29,7 @@ const AGENT_TOOL_NAMES = [
   'export_video',
   'get_export',
   'cancel_export',
+  'import_media',
 ]
 
 const STUDIO_ORIGIN = 'app://studio'
