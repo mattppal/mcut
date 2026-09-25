@@ -364,6 +364,8 @@ describe('Studio action/operator MCP surface', () => {
       'apply_captions',
       'apply_silence_cuts',
       'lint_project',
+      'list_zooms',
+      'edit_zooms',
       'list_presets',
       'list_operators',
       'run_operator',

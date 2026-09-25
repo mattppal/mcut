@@ -1,0 +1,136 @@
+---
+title: "Zoom regions"
+description: "Punch-ins as one object with in, hold, and out timing, a target, easing, and motion blur."
+---
+
+A zoom region is one punch-in on a video, image, or multicam element. It zooms
+in over `inMs`, holds for `holdMs`, and zooms back out over `outMs`, all in
+element-local time. A multicam zoom names a `source` key, so every slot showing
+that source zooms and the other slots keep their framing. The screen can zoom
+while the camera overlay stays put.
+
+Regions on one target never overlap and never run past the element. Splits hand
+each region to the half it starts in. Growing a clip from its start shifts the
+regions with the content.
+
+```ts
+engine.dispatch({
+  type: 'addZoomRegion',
+  elementId: multicamId,
+  zoom: { preset: 'detailZoom', source: 'screen', atMs: 12_000, rect: { x: 0.55, y: 0.1, w: 0.4, h: 0.4 } },
+})
+```
+
+## Types
+
+### ZoomRegion
+
+```ts
+type ZoomRegion = z.infer<typeof zoomRegionSchema>
+```
+
+One stored zoom region with every field resolved.
+
+### ZoomRegionRef
+
+```ts
+interface ZoomRegionRef extends ZoomRegion {
+  elementId: string
+  startMs: number
+  endMs: number
+}
+```
+
+A zoom region with its element id and its timeline start and end.
+
+### ContentView
+
+```ts
+interface ContentView {
+  scale: number
+  focus: { x: number; y: number }
+}
+```
+
+How a clip or slot frames its source at one instant. `scale` multiplies the fit
+scale. `focus` is the anchor point from 0 to 1 that stays fixed while it scales.
+
+## Schemas
+
+### zoomRegionSchema
+
+```ts
+const zoomRegionSchema = z.object({
+  id: z.string().min(1),
+  source: z.string().min(1).optional(),
+  atMs: z.number().int().nonnegative(),
+  inMs: z.number().int().min(1),
+  holdMs: z.number().int().nonnegative(),
+  outMs: z.number().int().min(1),
+  focus: z.object({ x: unit, y: unit }),
+  scale: z.number().min(1).max(8),
+  easing: easingSchema,
+  motionBlur: unit,
+})
+```
+
+`focus` is the target center in source frame coordinates. `motionBlur` is the
+shutter as a fraction of one frame while the zoom moves, and 0 turns it off.
+
+### zoomCommandSchema
+
+```ts
+const zoomCommandSchema = z.discriminatedUnion('type', [addZoomRegion, updateZoomRegion, removeZoomRegion])
+```
+
+The three zoom commands with their `type`, the input of the MCP `edit_zooms` tool.
+
+## Presets
+
+### ZOOM_REGION_PRESETS
+
+```ts
+const ZOOM_REGION_PRESETS = {
+  subtlePunchIn: { scale: 1.15, inMs: 700, holdMs: 1600, outMs: 700 },
+  detailZoom: { scale: 1.5, inMs: 600, holdMs: 3000, outMs: 600 },
+}
+```
+
+`addZoomRegion` defaults to `subtlePunchIn`, `easeOutExpo`, and motion blur 0.5.
+Explicit fields override the preset. A `rect` sets both focus and scale.
+
+## Functions
+
+### listZoomRegions
+
+```ts
+function listZoomRegions(project: Project): ZoomRegionRef[]
+```
+
+Every zoom region in the project, in track and element order.
+
+### getSlotView
+
+```ts
+function getSlotView(element: MulticamElement, slot: LayoutSlot, timelineMs: number): ContentView
+```
+
+The one place a renderer reads a multicam slot's framing. Outside a zoom it
+returns the slot's own focus at scale 1.
+
+### getClipView
+
+```ts
+function getClipView(element: VideoElement | ImageElement, timelineMs: number): ContentView
+```
+
+The framing of a video or image clip inside its crop.
+
+### getZoomShutterMs
+
+```ts
+function getZoomShutterMs(element: VideoElement | ImageElement | MulticamElement, source: string | undefined, timelineMs: number, frameMs: number): number
+```
+
+The motion blur shutter in milliseconds while a zoom ramps, and 0 while it
+holds or rests. The compositor averages views sampled across this window.

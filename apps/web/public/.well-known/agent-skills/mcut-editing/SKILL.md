@@ -74,6 +74,26 @@ For clip-to-clip transitions, use `setTransition` only on the left clip of an
 exact butt cut. Built-ins: `dissolve`, `fade-black`, `fade-white`, `slide-left`,
 `slide-right`, `wipe-left`, `wipe-right`.
 
+### Punch-ins and detail zooms
+
+Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
+`edit_zooms` adds, updates, or removes any number of them as one undoable edit.
+
+```json
+{
+  "edits": [
+    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "subtlePunchIn", "source": "screen", "atMs": 0 } },
+    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "detailZoom", "source": "screen", "atMs": 42000, "holdMs": 4000, "rect": { "x": 0.55, "y": 0.1, "w": 0.4, "h": 0.4 } } }
+  ]
+}
+```
+
+Keep zooms subtle (1.1x to 1.5x), keep `easeOutExpo`, and keep `motionBlur` on.
+On a multicam, set `source` to the screen key so the camera overlay stays put.
+Place a detail zoom over the words that discuss the region, found with
+`search_transcript`. When asked to tone zooms down, lower `scale` rather than
+removing zooms or turning off motion blur.
+
 ## Timing rules
 
 - All project times are integer milliseconds.

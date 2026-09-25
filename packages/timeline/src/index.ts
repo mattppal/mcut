@@ -68,6 +68,18 @@ export {
   type ThumbnailTemplate,
 } from './thumbnails'
 
+export {
+  getClipView,
+  getSlotView,
+  getZoomShutterMs,
+  listZoomRegions,
+  ZOOM_REGION_PRESETS,
+  zoomRegionSchema,
+  type ContentView,
+  type ZoomRegion,
+  type ZoomRegionRef,
+} from './zoom-regions'
+export { zoomCommandSchema } from './commands/zooms'
 export { captureZoomPreset, expandZoomPreset, ZOOM_PRESETS, ZOOMABLE_PROPERTIES, zoomPresetSchema, type ZoomPreset } from './zoom-presets'
 
 export {

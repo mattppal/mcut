@@ -15,6 +15,8 @@ const AGENT_TOOL_NAMES = [
   'apply_captions',
   'apply_silence_cuts',
   'lint_project',
+  'list_zooms',
+  'edit_zooms',
   'list_presets',
   'list_operators',
   'run_operator',
@@ -24,7 +26,7 @@ const AGENT_TOOL_NAMES = [
   'redo',
 ]
 
-const FULL_TOOL_COUNT = 120
+const FULL_TOOL_COUNT = 125
 const STUDIO_ORIGIN = 'app://studio'
 
 const toolCatalogSchema = z.object({
