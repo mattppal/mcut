@@ -163,8 +163,7 @@ export class LiveMcutBridge {
       token: this.token,
       allowOrigin: (origin) => isAllowedOrigin(origin, allowedOrigins),
       address: () => this.server.address(),
-      request: (type, payload) => this.request(type, payload),
-      socket: () => this.socket,
+      request: (type, payload) => this.requestSent(type, payload),
     })
   }
 
@@ -263,11 +262,16 @@ export class LiveMcutBridge {
   }
 
   async request(type: string, payload: unknown = {}): Promise<unknown> {
+    const sent = await this.requestSent(type, payload)
+    return sent.result
+  }
+
+  private async requestSent(type: string, payload: unknown): Promise<{ result: unknown; socket: WebSocket }> {
     const timeoutMs = type === 'ensure_transcript' ? this.transcriptionTimeoutMs : this.requestTimeoutMs
     const socket = await this.waitForSocket(Math.min(timeoutMs, this.reconnectGraceMs))
     const id = String(this.nextId++)
     const body = JSON.stringify({ id, type, payload })
-    return await new Promise((resolve, reject) => {
+    const result = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id)
         reject(new LiveBridgeError('request-timeout', `Timed out waiting for browser response to ${type}.`))
@@ -280,6 +284,7 @@ export class LiveMcutBridge {
         reject(error)
       })
     })
+    return { result, socket }
   }
 
   createTarget(): McutMcpTarget {
@@ -314,8 +319,7 @@ export class LiveMcutBridge {
 
     socket.on('message', (raw) => this.receive(raw.toString()))
     socket.on('close', () => {
-      const current = this.socket === socket
-      if (current) {
+      if (this.socket === socket) {
         this.socket = null
         this.tabInfo = null
       }
@@ -325,7 +329,7 @@ export class LiveMcutBridge {
         this.pending.delete(id)
         pending.reject(new LiveBridgeError('browser-disconnected', `Browser disconnected before response ${id}.`))
       }
-      this.exports.disconnect(socket, current)
+      this.exports.disconnect(socket)
     })
   }
 

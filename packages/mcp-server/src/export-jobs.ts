@@ -62,8 +62,7 @@ export interface ExportJobsOptions {
   token: string | null
   allowOrigin: (origin: string | undefined) => boolean
   address: () => AddressInfo | string | null
-  request: (type: string, payload: unknown) => Promise<unknown>
-  socket: () => object | null
+  request: (type: string, payload: unknown) => Promise<{ result: unknown; socket: object }>
 }
 
 interface Upload {
@@ -165,19 +164,19 @@ export class ExportJobs {
       state: 'starting',
       jobId,
       startedAt,
-      owner: this.options.socket(),
+      owner: null,
       frames: [],
       format: target?.format ?? format ?? null,
       durationMs: null,
       outputPath: target?.path ?? null,
     })
     try {
-      const answer = await this.options.request('start_export', { jobId, format: target?.format ?? format, uploadUrl: this.uploadUrl(jobId) })
-      const parsed = startExportReplySchema.safeParse(answer)
+      const sent = await this.options.request('start_export', { jobId, format: target?.format ?? format, uploadUrl: this.uploadUrl(jobId) })
+      const parsed = startExportReplySchema.safeParse(sent.result)
       if (!parsed.success) {
         throw new LiveBridgeError('invalid-reply', `Studio answered start_export with an unexpected reply. ${z.prettifyError(parsed.error)}`)
       }
-      this.noteStart(jobId, parsed.data.format, parsed.data.durationMs)
+      this.noteStart(jobId, parsed.data.format, parsed.data.durationMs, sent.socket)
       const path = target?.path ?? (await freeExportPath(this.exportDir, parsed.data.filename, parsed.data.format))
       return this.beginRendering(jobId, path, parsed.data.format, parsed.data.durationMs)
     } catch (error) {
@@ -224,10 +223,10 @@ export class ExportJobs {
     return true
   }
 
-  disconnect(socket: object, current: boolean): void {
+  disconnect(socket: object): void {
     for (const job of this.jobs.values()) {
       if (job.state !== 'starting' && job.state !== 'rendering') continue
-      if (job.owner !== socket && !(job.owner === null && current)) continue
+      if (job.owner !== socket) continue
       this.failLive(job, DISCONNECTED)
     }
   }
@@ -302,15 +301,16 @@ export class ExportJobs {
     }
   }
 
-  private noteStart(jobId: string, format: ExportFormat, durationMs: number): void {
+  private noteStart(jobId: string, format: ExportFormat, durationMs: number, owner: object): void {
     const job = this.jobs.get(jobId)
     if (job?.state !== 'starting') return
-    this.put({ ...job, format, durationMs, owner: this.options.socket() ?? job.owner })
+    this.put({ ...job, format, durationMs, owner })
   }
 
   private beginRendering(jobId: string, outputPath: string, format: ExportFormat, durationMs: number) {
     const job = this.jobs.get(jobId)
-    if (job?.state !== 'starting') throw new LiveBridgeError('browser-disconnected', DISCONNECTED)
+    if (job?.state === 'cancelled') throw new LiveBridgeError('export-not-running', `Export ${jobId} is already cancelled.`)
+    if (job?.state !== 'starting') throw new LiveBridgeError('browser-disconnected', job?.state === 'failed' ? job.message : DISCONNECTED)
     this.put({ jobId, format, durationMs, startedAt: job.startedAt, outputPath, owner: job.owner, state: 'rendering', phase: 'audio', progress: 0 })
     for (const frame of job.frames) this.apply(frame)
     return { jobId, format, outputPath, durationMs }

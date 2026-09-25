@@ -1,4 +1,3 @@
-import { EventEmitter } from 'node:events'
 import * as fs from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -7,6 +6,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { describe, expect, mock, test } from 'bun:test'
 import { WebSocket } from 'ws'
 import { z } from 'zod'
+import { holdReplacedClose, holdSocketCloses } from './export-socket-holds'
 import { startExportRequestSchema } from './export-protocol'
 import { LiveMcutBridge } from './live-bridge'
 import { createMcutMcpServerForTarget } from './server'
@@ -92,43 +92,28 @@ function jsonBody(text: string): unknown {
   return JSON.parse(json ?? text)
 }
 
-function holdSocketCloses(): { release: () => void; restore: () => void } {
-  const queued: Array<() => void> = []
-  const original = EventEmitter.prototype.emit
-  let holding = true
-  EventEmitter.prototype.emit = function (this: EventEmitter, event: string | symbol, ...args: unknown[]): boolean {
-    if (holding && event === 'close' && this.constructor.name === 'BunWebSocketMocked') {
-      const emitter = this
-      queued.push(() => {
-        Reflect.apply(original, emitter, [event, ...args])
-      })
-      return true
-    }
-    return Reflect.apply(original, this, [event, ...args]) === true
-  }
-  const flush = () => {
-    holding = false
-    const pending = queued.splice(0)
-    for (const run of pending) run()
-  }
-  return {
-    release: () => {
-      if (queued.length === 0) throw new Error('The replaced tab did not close.')
-      flush()
-    },
-    restore: () => {
-      flush()
-      EventEmitter.prototype.emit = original
-    },
-  }
-}
-
 function openSocket(port: number): Promise<WebSocket> {
   const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp?token=test-token`, { headers: { Origin: 'http://localhost:3000' } })
   return new Promise((resolve, reject) => {
     socket.once('open', () => resolve(socket))
     socket.once('error', reject)
   })
+}
+
+const studioReply = { format: 'webm', filename: 'Demo.webm', durationMs: 2000 }
+
+function delayStart(socket: WebSocket): { seen: Promise<void>; reply: () => void } {
+  const seen = defer()
+  let send = () => {}
+  socket.on('message', (raw) => {
+    const start = startExportFrameSchema.safeParse(JSON.parse(raw.toString()))
+    if (!start.success) return
+    send = () => {
+      socket.send(JSON.stringify({ id: start.data.id, ok: true, result: studioReply }))
+    }
+    seen.resolve()
+  })
+  return { seen: seen.promise, reply: () => send() }
 }
 
 function bindStudio(socket: WebSocket, studio: Studio, progress: number | null): void {
@@ -139,7 +124,7 @@ function bindStudio(socket: WebSocket, studio: Studio, progress: number | null):
       const { jobId, uploadUrl } = start.data.payload
       studio.uploadUrl = uploadUrl
       if (progress !== null) socket.send(JSON.stringify({ type: 'export_progress', payload: { jobId, phase: 'video', progress } }))
-      socket.send(JSON.stringify({ id: start.data.id, ok: true, result: { format: 'webm', filename: 'Demo.webm', durationMs: 2000 } }))
+      socket.send(JSON.stringify({ id: start.data.id, ok: true, result: studioReply }))
       return
     }
     const cancel = cancelExportFrameSchema.safeParse(message)
@@ -310,6 +295,86 @@ describe('export jobs', () => {
         closes.restore()
         current?.close()
         previous?.close()
+      }
+    })
+  })
+
+  test('a start_export reply that crosses a tab replacement does not stay rendering', async () => {
+    const closes = holdReplacedClose()
+    await withSession(async ({ port, client }) => {
+      let first: WebSocket | undefined
+      let next: WebSocket | undefined
+      try {
+        first = await openSocket(port)
+        const delayed = delayStart(first)
+        const pending = call(client, 'export_video')
+        await delayed.seen
+        next = await openSocket(port)
+        bindStudio(next, { uploadUrl: '', onCancel: null }, null)
+        delayed.reply()
+        await pending
+        closes.release()
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        const view = viewSchema.parse(jsonBody((await call(client, 'get_export')).text))
+        expect(view).toMatchObject({ state: 'failed', error: 'Studio disconnected during export.' })
+        expect((await call(client, 'export_video')).isError).toBe(false)
+      } finally {
+        closes.restore()
+        first?.close()
+        next?.close()
+      }
+    })
+  })
+
+  test('an export_video sent while the current tab is closing finishes on the reconnected tab', async () => {
+    await withSession(async ({ port, client }) => {
+      const closes = holdSocketCloses()
+      let closing: WebSocket | undefined
+      let next: WebSocket | undefined
+      const studio: Studio = { uploadUrl: '', onCancel: null }
+      try {
+        closing = await openSocket(port)
+        closing.close()
+        await closes.held
+        const pending = call(client, 'export_video')
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        closes.release()
+        next = await openSocket(port)
+        bindStudio(next, studio, null)
+        const started = await pending
+        expect({ error: started.isError, text: started.text }).toEqual({ error: false, text: started.text })
+        const job = startedSchema.parse(jsonBody(started.text))
+        const upload = await fetch(studio.uploadUrl, { method: 'PUT', body: new Uint8Array([9, 8, 7]) })
+        expect(upload.status).toBe(200)
+        const done = viewSchema.parse(jsonBody((await call(client, 'get_export', { jobId: job.jobId })).text))
+        expect(done.state).toBe('done')
+      } finally {
+        closes.restore()
+        closing?.close()
+        next?.close()
+      }
+    })
+  })
+
+  test('cancel_export while starting tells export_video the job is cancelled', async () => {
+    await withSession(async ({ port, client }) => {
+      const socket = await openSocket(port)
+      socket.on('message', (raw) => {
+        const cancel = cancelExportFrameSchema.safeParse(JSON.parse(raw.toString()))
+        if (!cancel.success) return
+        socket.send(JSON.stringify({ id: cancel.data.id, ok: true, result: null }))
+      })
+      const delayed = delayStart(socket)
+      try {
+        const pending = call(client, 'export_video')
+        await delayed.seen
+        const cancel = await call(client, 'cancel_export')
+        const cancelled = viewSchema.parse(jsonBody(cancel.text))
+        expect(cancelled.state).toBe('cancelled')
+        delayed.reply()
+        expect(await pending).toEqual({ isError: true, text: `Export ${cancelled.jobId} is already cancelled.` })
+      } finally {
+        socket.close()
       }
     })
   })
