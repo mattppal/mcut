@@ -1,5 +1,49 @@
 # @mcut/transcription-local
 
+## 1.0.0-alpha.11
+
+### Patch Changes
+
+- Updated dependencies [[`d8d259b`](https://github.com/mattppal/mcut/commit/d8d259b1b390ff12eb0bacb5bfaa4449fe6ce3a2)]:
+  - @mcut/transcription@0.1.0-alpha.8
+
+## 0.1.0-alpha.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.7
+
+## 0.1.0-alpha.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.6
+
+## 0.1.0-alpha.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.5
+
+## 0.1.0-alpha.7
+
+### Patch Changes
+
+- [#163](https://github.com/mattppal/mcut/pull/163) [`9bef9e2`](https://github.com/mattppal/mcut/commit/9bef9e244af412f8385d15e96fd99beb0af4d4d9) Thanks [@mattppal](https://github.com/mattppal)! - Time out a stalled Whisper model load and restart the worker after any load failure, so every waiting transcription settles with the model-load error instead of hanging.
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.4
+
+## 0.1.0-alpha.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.3
+
 ## 0.1.0-alpha.5
 
 ### Patch Changes

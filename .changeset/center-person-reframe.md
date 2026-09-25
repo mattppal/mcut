@@ -4,4 +4,4 @@
 '@mcut/editor': minor
 ---
 
-Add center person reframing. A video or one multicam source can carry a reframe track of subject centers keyed by asset media time, so trims, splits, slips, and speed changes keep the framing on the subject. Adds the `setReframe` command, `getReframeCenter` and `centeredFocus`, compositor rendering that slides a video crop or a cover slot window onto the subject, and `planCenterPerson`, which turns face samples into one smoothed and simplified `setReframe` command.
+Add center person reframing. A video or one multicam source can carry a reframe track of subject centers keyed by asset media time, so trims, splits, slips, and speed changes keep the framing on the subject. Adds the `setReframe` command, `getReframeCenter`, `centeredFocus`, and the `VisibleFraction` type that `centeredFocus` and `getSlotView` take. The compositor slides a video crop or a cover slot window onto the subject, and a zoom region narrows from that reframed window. Adds `planCenterPerson`, which turns face samples into one smoothed and simplified `setReframe` command.

@@ -52,6 +52,8 @@ export {
   type ResolvedClipDragMode,
 } from './timeline-gesture'
 
+export { planZoomAtPlayhead, planZoomRegionDrag, type ZoomRegionDragMode, type ZoomShape } from './zoom-gesture'
+
 export {
   planSilenceCuts,
   silenceCutOptionsSchema,
@@ -63,6 +65,6 @@ export {
 
 export { centerPersonOptionsSchema, planCenterPerson, type CenterPersonOptions, type FaceSample } from './center-person'
 
-export { applyCommands, summarizeEngine } from './headless'
+export { applyCommands, summarizeEngine, withPlayheadDefaults } from './headless'
 export { lintProject, type LintIssue } from './lint'
 export { PLATFORM_PRESETS, getPlatformPreset, type PlatformPreset } from './platform-presets'

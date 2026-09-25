@@ -29,7 +29,38 @@ Minimum loop:
 4. If transcript is missing, `ensure_transcript`
 5. `list_actions`
 6. Prefer `run_action` high-level actions and task tools such as `edit_zooms` and `center_person` over raw commands
-7. Re-read the returned summary and context and verify timing
+7. Wrap one intent in one `transact` so undo removes the whole intent
+8. Re-read the returned summary and context and verify timing
+
+## One intent, one undo step
+
+One tool call is one undo step. `transact` runs a list of calls as that one
+step. If any call fails, the project stays as it was and the undo stack does
+not grow.
+
+A fade in and a fade out are one intent. Send them together.
+
+```json
+{
+  "name": "transact",
+  "arguments": {
+    "calls": [
+      {
+        "name": "applyAnimationPreset",
+        "arguments": { "elementId": "e-video", "preset": "fade-in" }
+      },
+      {
+        "name": "applyAnimationPreset",
+        "arguments": { "elementId": "e-video", "preset": "fade-out" }
+      }
+    ]
+  }
+}
+```
+
+`undo` then removes both presets. Two separate `applyAnimationPreset` calls
+undo one preset at a time. Each call is a timeline command, an `operator_*`
+tool, `run_operator`, `run_action`, or `apply_commands`.
 
 ## Required workflows
 
@@ -56,6 +87,21 @@ Minimum loop:
 This action uses word-timed captions and timeline commands. If it says there is
 no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 
+### Remove retakes
+
+After `ensure_transcript`, call `find_retakes` with the captioned clip's
+`elementId`. Each candidate is a timeline range from the abandoned take to the
+start of the kept take, and the reply's `transcript` holds that clip's words in
+source time. Read `abandonedText` and skip any candidate that is a deliberate
+repetition. Candidates come last to first, so cut them in the returned order,
+each with a split at both ends and a ripple delete on the clip only. Do not cut
+the caption track the same way, because a ripple delete keeps the gaps between
+captions and leaves every later word late. Rebuild captions instead with one
+`apply_captions` call per remaining clip, passing the reply's `transcript`
+unchanged and that clip's `elementId`, with `replace` true on the first call
+and false after. Pass a lower `minMatchWords` only when a short restart was
+missed, and check each extra candidate, since lower values match spoken lists.
+
 ### Fade from black or fade to black
 
 Use the built-in preset action instead of hand-authoring opacity keyframes:
@@ -74,6 +120,21 @@ For clip-to-clip transitions, use `setTransition` only on the left clip of an
 exact butt cut. Built-ins: `dissolve`, `fade-black`, `fade-white`, `slide-left`,
 `slide-right`, `wipe-left`, `wipe-right`.
 
+### Export a video
+
+Export runs as a job on the live bridge. Studio renders the timeline and the
+bridge writes the file, so no download or save dialog opens.
+
+1. `export_video` with `{ "format": "mp4" }`, or with no input so Studio picks
+   mp4 when it can encode H.264 and webm otherwise. Pass an absolute
+   `outputPath` when the user names a file.
+2. `get_export` with `{ "jobId": "...", "waitMs": 20000 }` until `state` is
+   `done`. Each answer carries the percent and `etaMs`.
+3. Report `outputPath` and `bytes` from the `done` answer.
+
+`export-busy` means an export is already running. Wait for it with `get_export`
+or stop it with `cancel_export`.
+
 ### Punch-ins and detail zooms
 
 Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
@@ -83,7 +144,7 @@ Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
 {
   "edits": [
     { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "subtlePunchIn", "source": "screen", "atMs": 0 } },
-    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "detailZoom", "source": "screen", "atMs": 42000, "holdMs": 4000, "rect": { "x": 0.55, "y": 0.1, "w": 0.4, "h": 0.4 } } }
+    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "detailZoom", "source": "screen", "atMs": 42000, "holdMs": 4000, "focus": { "x": 0.75, "y": 0.3 } } }
   ]
 }
 ```
@@ -128,7 +189,8 @@ for a steadier frame. Do not hand-author reframe keys or crop with ffmpeg.
 ## When to use raw commands
 
 Use `apply_commands` or raw command tools only when there is no high-level
-action or operator for the intent. Batch related commands in one transaction.
+action or operator for the intent. Put every call that belongs to one intent
+inside one `transact`.
 
 Common raw-command cases:
 
@@ -148,4 +210,4 @@ Load only when needed:
 - `references/captions.md` for transcript and caption shaping.
 - `references/multicam.md` for multicam edits.
 - `references/platforms.md` for delivery formats and safe areas.
-- `references/export.md` for browser export.
+- `references/export.md` for containers, codecs, bitrates, and export outside Studio.

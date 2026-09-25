@@ -3,6 +3,7 @@ import type { MulticamElement, VideoElement } from './model'
 import { getMulticamSourceTimeMs } from './multicam'
 import { getSourceTimeMs } from './speed'
 import { valueAt } from './value-at'
+import { anchorOf, type VisibleFraction } from './zoom-regions'
 
 const unit = z.number().min(0).max(1)
 
@@ -47,8 +48,6 @@ export function getReframeCenter(element: VideoElement | MulticamElement, source
   return source?.reframe ? sampleReframe(source.reframe, getMulticamSourceTimeMs(element, source, timelineMs)) : null
 }
 
-const anchorOf = (center: number, window: number): number => (window >= 1 ? 0.5 : Math.min(1, Math.max(0, (center - window / 2) / (1 - window))))
-
-export function centeredFocus(center: Point, window: { w: number; h: number }): Point {
-  return { x: anchorOf(center.x, window.w), y: anchorOf(center.y, window.h) }
+export function centeredFocus(center: Point, visible: VisibleFraction): Point {
+  return { x: anchorOf(center.x, visible.x), y: anchorOf(center.y, visible.y) }
 }

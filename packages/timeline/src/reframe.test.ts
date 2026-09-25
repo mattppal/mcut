@@ -154,8 +154,8 @@ describe('getReframeCenter', () => {
 
 describe('centeredFocus', () => {
   test('centers the window on the subject until the window meets the frame edge', () => {
-    expect(centeredFocus({ x: 0.375, y: 0.4375 }, { w: 0.5, h: 0.75 })).toEqual({ x: 0.25, y: 0.25 })
-    expect(centeredFocus({ x: 0.9, y: 0.1 }, { w: 0.5, h: 0.5 })).toEqual({ x: 1, y: 0 })
-    expect(centeredFocus({ x: 0.9, y: 0.5 }, { w: 1, h: 0.5 })).toEqual({ x: 0.5, y: 0.5 })
+    expect(centeredFocus({ x: 0.375, y: 0.4375 }, { x: 0.5, y: 0.75 })).toEqual({ x: 0.25, y: 0.25 })
+    expect(centeredFocus({ x: 0.9, y: 0.1 }, { x: 0.5, y: 0.5 })).toEqual({ x: 1, y: 0 })
+    expect(centeredFocus({ x: 0.9, y: 0.5 }, { x: 1, y: 0.5 })).toEqual({ x: 0.5, y: 0.5 })
   })
 })

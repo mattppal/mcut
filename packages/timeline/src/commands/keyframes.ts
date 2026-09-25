@@ -12,7 +12,6 @@ import {
   type Keyframe,
 } from '../keyframes'
 import { elementIdSchema, type Project, type TimelineElement } from '../model'
-import { expandZoomPreset, zoomPresetSchema } from '../zoom-presets'
 import { defineCommand, mustLocate, replaceTrack } from './shared'
 
 function mustSupportProperty(element: TimelineElement, property: AnimatableProperty): void {
@@ -159,15 +158,21 @@ export const applyAnimationPreset = defineCommand({
     'In: fade-in, slide-in, pop-in, scale-in, zoom-in, whip-in, blur-in. ' +
     'Out: fade-out, slide-out, pop-out, zoom-out, whip-out, blur-out. ' +
     'Emphasis (whole clip): ken-burns, punch-zoom, pulse, breathe, float, sway, shake. ' +
-    'Fast presets (whip-in/out, punch-zoom) also enable per-element motion blur.',
+    'Fast presets (whip-in/out, punch-zoom) also enable per-element motion blur. ' +
+    '`atMs` is element-local and places the preset, clamped to fit the clip: in and emphasis ' +
+    'presets start there, out presets end there. Without it, in presets start at the clip start, ' +
+    'out presets end at the clip end, and emphasis spans the clip. The MCP server and Studio ' +
+    'fill `atMs` from the playhead when the playhead is on the clip. ' +
+    'To fade a clip in and out as one undo step, run the live editor action effects.fade-open-close instead of two presets.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     preset: animationPresetSchema,
     options: animationPresetOptionsSchema.optional(),
+    atMs: z.number().int().nonnegative().optional(),
   }),
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
-    const expanded = expandAnimationPreset(element, payload.preset, payload.options)
+    const expanded = expandAnimationPreset(element, payload.preset, payload.options, payload.atMs)
     for (const property of Object.keys(expanded) as AnimatableProperty[]) {
       mustSupportProperty(element, property)
     }
@@ -182,33 +187,6 @@ export const applyAnimationPreset = defineCommand({
     return replaceTrack(project, track.id, (t) => ({
       ...t,
       elements: t.elements.map((e) => (e.id === element.id ? nextElement : e)),
-    }))
-  },
-})
-
-export const applyZoomPreset = defineCommand({
-  type: 'applyZoomPreset',
-  description:
-    'Apply a saved zoom (relative keyframe pattern: scale multipliers + ' +
-    'position deltas) to an element at an element-local time. Expands into ' +
-    'editable keyframes; existing keyframes inside the window are replaced. ' +
-    'Override durationMs to retime the move.',
-  payloadSchema: z.object({
-    elementId: elementIdSchema,
-    preset: zoomPresetSchema,
-    atMs: z.number().int().nonnegative(),
-    durationMs: z.number().int().min(100).optional(),
-  }),
-  reduce: (project, payload) => {
-    const { track, element } = mustLocate(project, payload.elementId)
-    for (const property of Object.keys(payload.preset.tracks) as AnimatableProperty[]) {
-      mustSupportProperty(element, property)
-    }
-    const keyframes = expandZoomPreset(element, payload.preset, payload.atMs, payload.durationMs)
-    const next: TimelineElement = { ...element, keyframes }
-    return replaceTrack(project, track.id, (t) => ({
-      ...t,
-      elements: t.elements.map((e) => (e.id === element.id ? next : e)),
     }))
   },
 })

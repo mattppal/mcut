@@ -7,7 +7,14 @@ audio mixed offline. Same input produces the same output.
 ## The constraint
 
 **Export runs only in a browser** (OffscreenCanvas + VideoEncoder). Node or Bun
-headless can build and edit projects but cannot render them. The hand-off:
+headless can build and edit projects but cannot render them.
+
+On the live bridge, Studio is that browser. Call `export_video`, then call
+`get_export` with `waitMs` set to `20000` until `state` is `done`. Studio
+renders the timeline and uploads the file to the bridge, which writes it to the
+`outputPath` the job reports.
+
+Without the bridge, hand off:
 
 1. Headless, MCP, or CLI editing produces a valid `project.json` (run `mcut validate`).
 2. A browser context renders it. Use the mcut editor UI export dialog, or about 15 lines
@@ -18,9 +25,9 @@ import { exportProject } from '@mcut/media'
 import { parseProject } from '@mcut/timeline'
 
 const project = parseProject(await (await fetch('/project.json')).json())
-const blob = await exportProject(project, {
+const { blob } = await exportProject(project, {
   format: 'mp4',                        // 'mp4' | 'webm' | 'mkv'
-  onProgress: (p) => console.log(p),    // 0..1
+  onProgress: ({ phase, progress }) => console.log(phase, progress), // progress is 0..1
   // videoBitrate: 8_000_000,           // bits/s. Omit for the quality preset
   // abortController.signal,
 })

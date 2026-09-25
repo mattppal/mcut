@@ -72,16 +72,19 @@ export {
   getClipView,
   getSlotView,
   getZoomShutterMs,
+  isZoomable,
   listZoomRegions,
   ZOOM_REGION_PRESETS,
+  zoomRegionEndMs,
   zoomRegionSchema,
   type ContentView,
+  type VisibleFraction,
+  type ZoomableElement,
   type ZoomRegion,
   type ZoomRegionRef,
 } from './zoom-regions'
 export { zoomCommandSchema } from './commands/zooms'
 export { centeredFocus, getReframeCenter } from './reframe'
-export { captureZoomPreset, expandZoomPreset, ZOOM_PRESETS, ZOOMABLE_PROPERTIES, zoomPresetSchema, type ZoomPreset } from './zoom-presets'
 
 export {
   EFFECT_PARAMS,
@@ -278,6 +281,7 @@ export {
 export { CAPTION_STYLE_PRESETS, type CaptionStylePreset } from './caption-presets'
 
 export { summarizeProject } from './summarize'
+export { describeLayoutChange } from './layout-summary'
 
 export {
   getProjectCaptions,

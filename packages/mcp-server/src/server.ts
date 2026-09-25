@@ -10,15 +10,21 @@ import {
   planSilenceCuts,
   runOperator,
   summarizeEngine,
+  withPlayheadDefaults,
   type OperatorId,
 } from '@mcut/editor'
 import {
   CommandError,
   EditorEngine,
   ProjectFormatError,
+  describeLayoutChange,
   getProjectCaptions,
   getProjectMediaContext,
+  getElement,
   getProjectTranscript,
+  getSourceTimeMs,
+  type ElementId,
+  type ProjectTranscriptWordContext,
   listZoomRegions,
   parseCommand,
   parseProject,
@@ -26,7 +32,7 @@ import {
   type Project,
   type ProjectTranscriptOptions,
 } from '@mcut/timeline'
-import { buildCaptionsCommand, searchCaptions } from '@mcut/transcription'
+import { buildCaptionsCommand, findRetakes, searchCaptions } from '@mcut/transcription'
 import { z } from 'zod'
 import {
   MCP_SERVER_STATIC_TOOL_CALL_SCHEMA,
@@ -34,7 +40,9 @@ import {
   listServerToolDefinitions,
   operatorToolName,
   type McpServerStaticToolCall,
+  type TransactSubRequest,
 } from './contract'
+import { runEngineTransact, translateTransactCalls } from './transact'
 
 export interface McutMcpTarget {
   getSummary(): string | Promise<string>
@@ -53,6 +61,10 @@ export interface McutMcpTarget {
   runOperator(operatorId: OperatorId, input: unknown): unknown | Promise<unknown>
   dispatchCommand(commandName: string, input: unknown): unknown | Promise<unknown>
   applyCommands(commands: BuiltinCommand[]): unknown | Promise<unknown>
+  exportVideo?(input: unknown): unknown | Promise<unknown>
+  getExport?(input: unknown): unknown | Promise<unknown>
+  cancelExport?(input: unknown): unknown | Promise<unknown>
+  transact(requests: readonly TransactSubRequest[]): unknown | Promise<unknown>
 }
 
 export interface McutMcpServerOptions {
@@ -73,9 +85,19 @@ const failure = (value: string) => ({ ...text(value), isError: true })
 
 const targetProject = async (target: McutMcpTarget): Promise<Project> => parseProject(await target.getProject())
 
+const savedLayoutArgs = z.object({ layout: z.object({ id: z.string() }) })
+
 type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure>
 
 const withResult = (lead: string, result: unknown) => (result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`)
+
+const spokenWords = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s']/gu, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(' ')
 
 function searchProjectTranscript(project: Project, query: string): unknown {
   const captionRefs = getProjectCaptions(project)
@@ -147,14 +169,30 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
       return result
     },
     dispatchCommand: async (commandName, input) => {
-      engine.dispatch(parseCommand(Object.assign({}, input, { type: commandName })))
+      engine.dispatch(withPlayheadDefaults(engine, parseCommand(Object.assign({}, input, { type: commandName }))))
       await onChange()
     },
     applyCommands: async (commands) => {
       applyCommands(engine, commands)
       await onChange()
     },
+    transact: (requests) => runEngineTransact(engine, requests, onChange),
   }
+}
+
+function toClipSourceWords(project: Project, elementId: ElementId, words: readonly ProjectTranscriptWordContext[]): ProjectTranscriptWordContext[] {
+  const clip = getElement(project, elementId)
+  if (clip?.type !== 'video' && clip?.type !== 'audio')
+    throw new CommandError('invalid-payload', `find_retakes elementId must name a video or audio clip, got "${elementId}"`)
+  if (clip.reversed) throw new CommandError('invalid-payload', `clip "${elementId}" plays reversed, so its captions have no forward source time`)
+  const endMs = clip.startMs + clip.durationMs
+  return words
+    .filter((word) => word.startMs >= clip.startMs && word.startMs < endMs)
+    .map((word) => ({
+      text: word.text,
+      startMs: Math.round(getSourceTimeMs(clip, word.startMs - clip.startMs)),
+      endMs: Math.round(getSourceTimeMs(clip, Math.min(word.endMs, endMs) - clip.startMs)),
+    }))
 }
 
 async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCall): Promise<ToolResult> {
@@ -172,6 +210,16 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'search_transcript':
       if (!target.searchTranscript) return failure('search_transcript is not available on this target.')
       return text(JSON.stringify(await target.searchTranscript(call.arguments.query), null, 2))
+    case 'find_retakes': {
+      const project = await targetProject(target)
+      const transcript = getProjectTranscript(project, { includeWords: true })
+      const words = transcript.captions.flatMap((caption) => caption.words ?? [])
+      if (words.length === 0) return failure('find_retakes needs a word-timed transcript. Call ensure_transcript first.')
+      const { elementId, ...options } = call.arguments
+      const candidates = findRetakes(words, options)
+      if (elementId === undefined) return text(JSON.stringify({ wordCount: words.length, candidates }, null, 2))
+      return text(JSON.stringify({ wordCount: words.length, candidates, transcript: { words: toClipSourceWords(project, elementId, words) } }, null, 2))
+    }
     case 'ensure_transcript': {
       if (!target.ensureTranscript) return failure('ensure_transcript is not available on this target.')
       const result = await target.ensureTranscript(call.arguments)
@@ -196,9 +244,27 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
     case 'apply_captions': {
       const { transcript, ...options } = call.arguments
-      const command = buildCaptionsCommand(await targetProject(target), transcript, options)
+      const project = await targetProject(target)
+      const command = buildCaptionsCommand(project, transcript, options)
+      if (command.captions.length === 0) {
+        return failure(
+          'No captions were applied. The transcript has no timed words or segments, or with elementId none fall inside the source span that clip plays. ' +
+            'Pass words or segments with startMs and endMs in source-media time.',
+        )
+      }
+      const incoming = spokenWords(transcript.words.length > 0 ? transcript.words.map((w) => w.text).join(' ') : transcript.text)
+      const transcribed = spokenWords(
+        getProjectCaptions(project)
+          .map(({ caption }) => caption.text)
+          .join(' '),
+      )
       await target.applyCommands([command])
-      return text(`OK: ${command.captions.length} caption(s) applied.\n\n${await target.getSummary()}`)
+      const origin =
+        incoming.length > 0 && ` ${transcribed} `.includes(` ${incoming} `)
+          ? 'The transcript matches captions already in the project.'
+          : 'Warning: this transcript does not match any transcript in the project, so ensure_transcript did not produce it. ' +
+            'If it did not come from a transcription provider either, undo and run ensure_transcript.'
+      return text(`OK: ${command.captions.length} caption(s) applied. ${origin}\n\n${await target.getSummary()}`)
     }
     case 'apply_silence_cuts': {
       const { elementId, transcript, ...options } = call.arguments
@@ -217,12 +283,31 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const result = await target.runAction(actionId, input)
       return text(`${withResult(`OK: action ${actionId} applied.`, result)}\n\n${await target.getSummary()}`)
     }
+    case 'transact': {
+      const requests = translateTransactCalls(call.arguments.calls)
+      const results = await target.transact(requests)
+      const lead = `OK: ${requests.length} calls applied as one undo step.`
+      return text(`${withResult(lead, results)}\n\n${await target.getSummary()}`)
+    }
     case 'undo':
       if (!(await target.undo())) return failure('Nothing to undo.')
       return text(`Undone.\n\n${await target.getSummary()}`)
     case 'redo':
       if (!(await target.redo())) return failure('Nothing to redo.')
       return text(`Redone.\n\n${await target.getSummary()}`)
+    case 'export_video': {
+      if (!target.exportVideo) return failure('export_video requires the live bridge connected to Studio.')
+      const started = await target.exportVideo(call.arguments)
+      return text(
+        withResult('OK: export started. Studio renders it in the background. Call get_export { jobId, waitMs: 20000 } until its state is done.', started),
+      )
+    }
+    case 'get_export':
+      if (!target.getExport) return failure('get_export requires the live bridge connected to Studio.')
+      return text(JSON.stringify(await target.getExport(call.arguments), null, 2))
+    case 'cancel_export':
+      if (!target.cancelExport) return failure('cancel_export requires the live bridge connected to Studio.')
+      return text(withResult('OK: export cancelled.', await target.cancelExport(call.arguments)))
   }
 }
 
@@ -258,8 +343,11 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
         const result = await target.runOperator(operatorId, args ?? {})
         return text(`${withResult(`OK: operator ${operatorId} applied.`, result)}\n\n${await target.getSummary()}`)
       }
+      const layoutId = name === 'saveLayout' ? savedLayoutArgs.safeParse(args).data?.layout.id : undefined
+      const before = layoutId ? await targetProject(target) : null
       await target.dispatchCommand(name, args ?? {})
-      return text(`OK: ${name} applied.\n\n${await target.getSummary()}`)
+      const change = before && layoutId ? describeLayoutChange(before, await targetProject(target), layoutId) : []
+      return text([`OK: ${name} applied.`, ...change, '', await target.getSummary()].join('\n'))
     } catch (error) {
       if (error instanceof CommandError || error instanceof ProjectFormatError || error instanceof OperatorError) {
         return failure(`${error.name} (${error.code}): ${error.message}`)

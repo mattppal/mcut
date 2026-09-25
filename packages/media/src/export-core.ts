@@ -16,6 +16,7 @@ import {
 import { renderFrame, type FrameSource } from '@mcut/compositor'
 import { getFrameRequests, getProjectDurationMs, getRenderableElements, type AssetId, type Project } from '@mcut/timeline'
 import { containerFormats, type ContainerFormat } from './container-formats'
+import { audioEncoderDelaySeconds } from './encoder-delay'
 import { ensureFallbackAudioEncoders } from './encoders'
 import { inputFor } from './probe'
 import { AUDIO_SAMPLE_RATE, type ContainerFormatId, type ExportProgress, type MixedAudioData } from './export-types'
@@ -108,12 +109,14 @@ export async function runExportPipeline(project: Project, options: ExportPipelin
   output.addVideoTrack(videoSource, { frameRate: fps })
 
   let audioSource: AudioSampleSource | null = null
+  let audioDelay = 0
   if (mixedAudio) {
     const audioCodec = await getFirstEncodableAudioCodec(format.getSupportedAudioCodecs(), {
       numberOfChannels: 2,
       sampleRate: mixedAudio.sampleRate,
     })
     if (audioCodec) {
+      audioDelay = await audioEncoderDelaySeconds(container, audioCodec, mixedAudio.sampleRate)
       audioSource = new AudioSampleSource({ codec: audioCodec, bitrate: QUALITY_MEDIUM })
       output.addAudioTrack(audioSource)
     }
@@ -130,7 +133,7 @@ export async function runExportPipeline(project: Project, options: ExportPipelin
           format: 'f32-planar',
           numberOfChannels: 2,
           sampleRate: mixedAudio.sampleRate,
-          timestamp: chunk.timestamp,
+          timestamp: chunk.timestamp - audioDelay,
         })
         await audioSource.add(sample)
         sample.close()

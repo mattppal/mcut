@@ -21,6 +21,8 @@ import './editor-default-actions'
 import { formatShortcut, getEditorAction, isActionEnabled, runEditorAction, type ActionContext } from './action-registry'
 import { editorClipboard } from './editor-clipboard'
 import { useEditorUI, useLiveActionEnabledStates, type EditorUIValue } from './editor-ui'
+import { openSettings } from './settings-dialog'
+import { host } from './studio-host'
 
 interface ActionEntry {
   kind?: 'action'
@@ -151,6 +153,7 @@ export function MainMenu() {
           </DropdownMenuSub>
         ))}
         <DropdownMenuSeparator />
+        {host.transcriptionSettings && <DropdownMenuItem onClick={openSettings}>Settings…</DropdownMenuItem>}
         {shortcutsAction && (
           <DropdownMenuItem onClick={() => runEditorAction(shortcutsAction, context)}>
             Keyboard shortcuts

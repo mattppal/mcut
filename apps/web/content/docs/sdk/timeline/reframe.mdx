@@ -9,7 +9,9 @@ beside a `crop`, and the renderer slides the crop window onto each center. A
 video without a crop ignores its track. On a multicam the track sits on one
 source, and every layout slot that shows that source slides its window the same
 way, so each slot keeps its rect. The window stops at the frame edge. Keys follow
-the media, so trims, splits, slips, and speed changes keep them aligned.
+the media, so trims, splits, slips, and speed changes keep them aligned. A zoom
+region on the same clip or slot starts from the reframed window and narrows from
+there.
 
 ```ts
 engine.dispatch({
@@ -39,7 +41,8 @@ outside them.
 
 ### centeredFocus
 
-`centeredFocus(center, window)` returns the `focus` anchor that puts `center` in
-the middle of a window of size `{ w, h }`, both as fractions of the source frame.
-The anchor clamps so the window stays inside the frame, and an axis where the
-window spans the whole frame anchors at 0.5.
+`centeredFocus(center, visible)` returns the `focus` anchor that puts `center` in
+the middle of a window that shows `visible`, the `{ x, y }` fraction of the source
+frame on each axis. It is the same `VisibleFraction` that `getSlotView` takes. The
+anchor clamps so the window stays inside the frame, and an axis where the window
+spans the whole frame anchors at 0.5.

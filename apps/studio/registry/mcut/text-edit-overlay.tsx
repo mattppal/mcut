@@ -290,7 +290,7 @@ function TextEditor({ element }: { element: TextElement }) {
       {selection && selection.end > selection.start && (
         <div
           data-mcut-text-toolbar=""
-          className="absolute z-30 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-md bg-overlay/85 p-0.5 shadow-md backdrop-blur"
+          className="absolute z-30 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-md bg-overlay/85 p-0.5 backdrop-blur"
           style={{ left: selection.x, top: Math.max(28, selection.y) - 6 }}
           onPointerDown={keepTheEditableSelectionThroughToolbarPresses}
         >

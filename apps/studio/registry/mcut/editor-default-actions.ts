@@ -21,11 +21,11 @@ import { openCommandPalette } from './command-palette-events'
 import { clearEditorLayoutStorage } from './editor-layout'
 import { trackOfSelection } from './editor-actions'
 import { copySelection, cutSelection, pasteAtPlayheadFromAnywhere } from './editor-clipboard'
-import { importMediaFiles, pickFiles } from './media-import'
+import { MEDIA_FILE_ACCEPT, importMediaFiles, pickFiles } from './media-import'
 import { clearSavedSession, saveAssetBlob } from './persistence'
 import { host } from './studio-host'
 import { focusTranscriptSearch } from './transcript-keywords'
-import { applyOpeningClosingFades, exportProjectVideo, removeTranscriptSilence } from './agent-edit-actions'
+import { applyOpeningClosingFades, removeTranscriptSilence } from './agent-edit-actions'
 import { runCenterPersonAction, selectedReframeElement } from './center-person'
 
 const hasSelection = ({ engine }: ActionContext) => engine.selection.elementIds.length > 0
@@ -672,7 +672,7 @@ defineAction({
   shortcut: { key: 'i', meta: true },
   icon: UploadIcon,
   run: ({ engine }) =>
-    void pickFiles('video/*,audio/*,image/*,.mkv').then(async (files) => {
+    void pickFiles(MEDIA_FILE_ACCEPT).then(async (files) => {
       if (files.length === 0) return
       const imported = await importMediaFiles(engine, files, (asset, file) => void saveAssetBlob(asset, file))
       if (imported.length > 0) {
@@ -729,30 +729,4 @@ defineAction({
   category: 'help',
   palette: false,
   run: () => openCommandPalette(),
-})
-
-defineAction({
-  id: 'file.export-video',
-  label: 'Export video file',
-  description:
-    'Render the whole timeline to a video file in this browser with WebCodecs and save it as a download. Returns the container, filename, and byte size. Use format webm when the browser has no H.264 encoder.',
-  category: 'file',
-  palette: false,
-  inputSchema: {
-    type: 'object',
-    properties: {
-      format: {
-        type: 'string',
-        enum: ['webm', 'mp4', 'mkv'],
-        description: 'Container format. Defaults to webm.',
-      },
-      download: {
-        type: 'boolean',
-        description: 'Save the rendered file through the browser download. Defaults to true.',
-      },
-    },
-    additionalProperties: false,
-  },
-  enabled: ({ engine }) => getProjectDurationMs(engine.project) > 0,
-  run: ({ engine, input }) => exportProjectVideo(engine, input),
 })

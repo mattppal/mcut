@@ -142,6 +142,18 @@ interface ResolvedClipDragMode {
 
 The drag mode after fallback, with the id of the clip whose edge rolls or `null`.
 
+### ZoomRegionDragMode
+
+```ts
+type ZoomRegionDragMode = 'move' | 'start' | 'in' | 'out' | 'end'
+```
+
+The part of a zoom region a drag moves. `move` shifts the whole zoom. `start` moves the start and gives the difference to the hold, so the end stays put. `in` and `out` move the inner edge of a ramp and trade time with the hold. `end` lengthens or shortens the hold.
+
+### ZoomShape
+
+`ZoomShape` is `Pick<ZoomRegion, 'scale' | 'inMs' | 'holdMs' | 'outMs' | 'easing'>`, an explicit zoom that `planZoomAtPlayhead` places instead of a preset. Studio builds one from each saved zoom template.
+
 ### SilenceCutOptions
 
 ```ts

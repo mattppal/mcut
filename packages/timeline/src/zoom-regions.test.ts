@@ -77,8 +77,8 @@ describe('zoom regions on a clip', () => {
     expect(getClipView(clip, 1100).scale).toBeCloseTo(1.5, 1)
     expect(getClipView(clip, 2500)).toEqual({ scale: 2, focus: { x: 1, y: 1 } })
     expect(getClipView(clip, 4000)).toEqual({ scale: 1, focus: { x: 0.5, y: 0.5 } })
-    expect(getZoomShutterMs(clip, undefined, 1100, 40)).toBe(20)
-    expect(getZoomShutterMs(clip, undefined, 2500, 40)).toBe(0)
+    expect(getZoomShutterMs(clip, 1100, 40)).toBe(20)
+    expect(getZoomShutterMs(clip, 2500, 40)).toBe(0)
   })
 
   test('overlapping zooms, zooms past the clip end, and multicam-only sources are rejected', () => {
@@ -94,11 +94,25 @@ describe('zoom regions on a clip', () => {
     })
   })
 
-  test('a split hands each zoom to the half it starts in', () => {
-    const project = applyCommand(projectWithScreenAndCam(), { type: 'addZoomRegion', elementId: 'e-screen', zoom: { id: 'z-late', atMs: 20_000 } })
-    const { left, right } = splitElementAt(video(project, 'e-screen'), 10_000)
-    expect(left.type === 'video' && left.zooms).toEqual([])
-    expect(right.type === 'video' && right.zooms?.map((z) => [z.id, z.atMs])).toEqual([['z-late', 10_000]])
+  test('a split through a zoom keeps the picture on both sides of the cut', () => {
+    const project = applyCommand(projectWithScreenAndCam(), {
+      type: 'addZoomRegion',
+      elementId: 'e-screen',
+      zoom: { id: 'z-mid', atMs: 9000, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 1.5, focus: { x: 0.3, y: 0.3 } },
+    })
+    const whole = video(project, 'e-screen')
+    const split = applyCommand(project, { type: 'splitElement', elementId: 'e-screen', atMs: 10_500, rightElementId: 'e-right' })
+    const left = video(split, 'e-screen')
+    const right = video(split, 'e-right')
+    for (const t of [10_000, 10_400]) expect(getClipView(left, t)).toEqual(getClipView(whole, t))
+    for (const t of [10_500, 11_500]) expect(getClipView(right, t)).toEqual(getClipView(whole, t))
+  })
+
+  test('a zoom left past the clip end by a trim does not block edits to other zooms', () => {
+    let project = applyCommand(projectWithScreenAndCam(), { type: 'addZoomRegion', elementId: 'e-screen', zoom: { id: 'z-end', atMs: 26_000 } })
+    project = applyCommand(project, { type: 'trimEdge', elementId: 'e-screen', edge: 'end', deltaMs: -2000 })
+    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-screen', zoom: { id: 'z-open', atMs: 0 } })
+    expect(listZoomRegions(project).map((z) => z.id)).toEqual(['z-open', 'z-end'])
   })
 })
 
@@ -115,5 +129,23 @@ describe('zoom regions on a multicam slot', () => {
     expect(thrownBy(() => applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { atMs: 5000 } }))).toMatchObject({
       message: expect.stringContaining('screen'),
     })
+  })
+
+  test('the target center lands in the middle of a slot narrower than the video', () => {
+    let project = applyCommand(projectWithScreenAndCam(), { type: 'createMulticam', elementIds: ['e-screen', 'e-cam'], multicamId: 'e-mc' })
+    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0, scale: 1.5, focus: { x: 0.43, y: 0.5 } } })
+    const slot = project.layouts.find((l) => l.name === 'Screen + Cam 3:4')?.slots.find((s) => s.source === 'screen')
+    if (!slot) throw new Error('3:4 layout lost its screen slot')
+    const visibleX = (slot.rect.w * 1280) / (slot.rect.h * 720 * (1280 / 720))
+    const view = getSlotView(multicam(project), slot, 1000, { x: visibleX, y: 1 })
+    const windowX = visibleX / view.scale
+    expect((1 - windowX) * view.focus.x + windowX / 2).toBeCloseTo(0.43, 5)
+  })
+
+  test('renaming a source key carries its zooms along', () => {
+    let project = applyCommand(projectWithScreenAndCam(), { type: 'createMulticam', elementIds: ['e-screen', 'e-cam'], multicamId: 'e-mc' })
+    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0 } })
+    project = applyCommand(project, { type: 'setMulticamSourceKey', elementId: 'e-mc', sourceKey: 'screen', newKey: 'display' })
+    expect(listZoomRegions(project).map((z) => z.source)).toEqual(['display'])
   })
 })

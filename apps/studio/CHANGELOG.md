@@ -1,5 +1,132 @@
 # mcut-studio
 
+## 0.1.1-alpha.20
+
+### Patch Changes
+
+- Updated dependencies [[`d8d259b`](https://github.com/mattppal/mcut/commit/d8d259b1b390ff12eb0bacb5bfaa4449fe6ce3a2)]:
+  - @mcut/transcription@0.1.0-alpha.8
+  - @mcut/mcp-server@0.1.0-alpha.13
+  - @mcut/transcription-local@1.0.0-alpha.11
+
+## 0.1.1-alpha.19
+
+### Patch Changes
+
+- Updated dependencies [[`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33), [`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33)]:
+  - @mcut/timeline@0.1.0-alpha.7
+  - @mcut/editor@0.1.0-alpha.7
+  - @mcut/compositor@0.1.0-alpha.7
+  - @mcut/desktop-ipc@0.1.0-alpha.9
+  - @mcut/mcp-server@0.1.0-alpha.12
+  - @mcut/media@0.1.0-alpha.9
+  - @mcut/react@0.1.0-alpha.10
+  - @mcut/transcription@0.1.0-alpha.7
+  - @mcut/transcription-local@0.1.0-alpha.10
+
+## 0.1.1-alpha.18
+
+### Patch Changes
+
+- Updated dependencies [[`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f), [`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f)]:
+  - @mcut/timeline@0.1.0-alpha.6
+  - @mcut/compositor@0.1.0-alpha.6
+  - @mcut/mcp-server@0.1.0-alpha.11
+  - @mcut/desktop-ipc@0.1.0-alpha.8
+  - @mcut/editor@0.1.0-alpha.6
+  - @mcut/media@0.1.0-alpha.8
+  - @mcut/react@0.1.0-alpha.9
+  - @mcut/transcription@0.1.0-alpha.6
+  - @mcut/transcription-local@0.1.0-alpha.9
+
+## 0.1.1-alpha.17
+
+### Patch Changes
+
+- Updated dependencies [[`bb7411b`](https://github.com/mattppal/mcut/commit/bb7411b8ae17dfe3e8c373fb67719abe5060505f)]:
+  - @mcut/media@0.1.0-alpha.7
+  - @mcut/react@0.1.0-alpha.8
+
+## 0.1.1-alpha.16
+
+### Patch Changes
+
+- Updated dependencies [[`7b3a0c7`](https://github.com/mattppal/mcut/commit/7b3a0c71334f6bdc7981de5d1cda1323bbdcc25e)]:
+  - @mcut/mcp-server@0.1.0-alpha.10
+
+## 0.1.1-alpha.15
+
+### Patch Changes
+
+- Updated dependencies [[`814105a`](https://github.com/mattppal/mcut/commit/814105a74a3159f57d18865e885ef72681ae1032)]:
+  - @mcut/mcp-server@0.1.0-alpha.9
+
+## 0.1.1-alpha.14
+
+### Patch Changes
+
+- Updated dependencies [[`7de9d8d`](https://github.com/mattppal/mcut/commit/7de9d8de87bf0446cb1ffa78a0b3f7885053bb15)]:
+  - @mcut/mcp-server@0.1.0-alpha.8
+
+## 0.1.1-alpha.13
+
+### Patch Changes
+
+- Updated dependencies [[`1cc9630`](https://github.com/mattppal/mcut/commit/1cc963001005ace3da7b856cd300dc6b2794f0e3)]:
+  - @mcut/mcp-server@0.1.0-alpha.7
+
+## 0.1.1-alpha.12
+
+### Patch Changes
+
+- Updated dependencies [[`53b78d7`](https://github.com/mattppal/mcut/commit/53b78d7fdaaeed29df8d1654702d073eacf75e65)]:
+  - @mcut/mcp-server@0.1.0-alpha.6
+  - @mcut/timeline@0.1.0-alpha.5
+  - @mcut/compositor@0.1.0-alpha.5
+  - @mcut/desktop-ipc@0.1.0-alpha.7
+  - @mcut/editor@0.1.0-alpha.5
+  - @mcut/media@0.1.0-alpha.6
+  - @mcut/react@0.1.0-alpha.7
+  - @mcut/transcription@0.1.0-alpha.5
+  - @mcut/transcription-local@0.1.0-alpha.8
+
+## 0.1.1-alpha.11
+
+### Patch Changes
+
+- Updated dependencies [[`b6f0765`](https://github.com/mattppal/mcut/commit/b6f07651f745e393b59e5db6dbc4e67f370939b3), [`9bef9e2`](https://github.com/mattppal/mcut/commit/9bef9e244af412f8385d15e96fd99beb0af4d4d9)]:
+  - @mcut/timeline@0.1.0-alpha.4
+  - @mcut/mcp-server@0.1.0-alpha.5
+  - @mcut/transcription-local@0.1.0-alpha.7
+  - @mcut/compositor@0.1.0-alpha.4
+  - @mcut/desktop-ipc@0.1.0-alpha.6
+  - @mcut/editor@0.1.0-alpha.4
+  - @mcut/media@0.1.0-alpha.5
+  - @mcut/react@0.1.0-alpha.6
+  - @mcut/transcription@0.1.0-alpha.4
+
+## 0.1.1-alpha.10
+
+### Patch Changes
+
+- Updated dependencies [[`fa25629`](https://github.com/mattppal/mcut/commit/fa256296c4f284c58f289fc448564fc9c2fe2b88)]:
+  - @mcut/mcp-server@0.1.0-alpha.4
+
+## 0.1.1-alpha.9
+
+### Patch Changes
+
+- Updated dependencies [[`9b17ac7`](https://github.com/mattppal/mcut/commit/9b17ac71a1314a9197d350ae110783537b13243a)]:
+  - @mcut/timeline@0.1.0-alpha.3
+  - @mcut/editor@0.1.0-alpha.3
+  - @mcut/mcp-server@0.1.0-alpha.3
+  - @mcut/compositor@0.1.0-alpha.3
+  - @mcut/desktop-ipc@0.1.0-alpha.5
+  - @mcut/media@0.1.0-alpha.4
+  - @mcut/react@0.1.0-alpha.5
+  - @mcut/transcription@0.1.0-alpha.3
+  - @mcut/transcription-local@0.1.0-alpha.6
+
 ## 0.1.1-alpha.8
 
 ### Patch Changes

@@ -340,6 +340,31 @@ function resolveToolMode(
 
 Downgrades a drag mode to one whose structural requirements the anchor element meets, and names the roll partner when rolling.
 
+### planZoomAtPlayhead
+
+```ts
+function planZoomAtPlayhead(
+  element: ZoomableElement,
+  zoom: keyof typeof ZOOM_REGION_PRESETS | ZoomShape,
+  playheadMs: number,
+): CommandOfType<'addZoomRegion'>
+```
+
+Returns an `addZoomRegion` command that starts the preset at the playhead in element-local time, moved earlier when the zoom would run past the element. On a multicam the zoom targets the `screen` source, or the first source when there is no `screen`.
+
+### planZoomRegionDrag
+
+```ts
+function planZoomRegionDrag(
+  element: ZoomableElement,
+  zoom: ZoomRegion,
+  mode: ZoomRegionDragMode,
+  deltaMs: number,
+): ZoomRegion
+```
+
+Returns the zoom region after a drag of `deltaMs`. Ramps stay at least 1 ms long and the hold stays at least 0 ms. Within those limits a move, start, or end drag keeps the zoom inside the element and clear of other zooms on its target, which pulls a zoom that a split or trim left running past an edge back inside. A ramp drag keeps the span, so on such a zoom `updateZoomRegion` rejects the result.
+
 ### planSilenceCuts
 
 ```ts
@@ -372,7 +397,15 @@ Turns face samples into one `setReframe` command. It smooths the face centers wi
 function applyCommands(engine: EditorEngine, commands: readonly BuiltinCommand[]): void
 ```
 
-Dispatches the commands in order inside one transaction, so the batch becomes a single undo entry.
+Dispatches the commands in order inside one transaction, so the batch becomes a single undo entry. Each command passes through `withPlayheadDefaults` first.
+
+### withPlayheadDefaults
+
+```ts
+function withPlayheadDefaults(engine: EditorEngine, command: BuiltinCommand): BuiltinCommand
+```
+
+Returns an `applyAnimationPreset` command without `atMs` with `atMs` set to the playhead's element-local time when the playhead is on the clip. An out preset needs the playhead past the clip start. Any other command, or a playhead off the clip, comes back unchanged, so the preset falls back to the clip edge.
 
 ### summarizeEngine
 

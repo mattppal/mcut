@@ -10,7 +10,7 @@ const focusSchema = z.object({ x: unit, y: unit })
 export const zoomRegionSchema = z.object({
   id: z.string().min(1),
   source: z.string().min(1).optional(),
-  atMs: z.number().int().nonnegative(),
+  atMs: z.number().int(),
   inMs: z.number().int().min(1),
   holdMs: z.number().int().nonnegative(),
   outMs: z.number().int().min(1),
@@ -122,11 +122,10 @@ function amountAt(phase: Phase): number {
   return phase.kind === 'in' ? eased : 1 - eased
 }
 
-function anchorOf(center: number, scale: number): number {
-  if (scale <= 1) return center
-  const width = 1 / scale
-  const start = Math.min(1 - width, Math.max(0, center - width / 2))
-  return start / (1 - width)
+export function anchorOf(center: number, visibleAtHold: number): number {
+  if (visibleAtHold >= 1) return 0.5
+  const start = Math.min(1 - visibleAtHold, Math.max(0, center - visibleAtHold / 2))
+  return start / (1 - visibleAtHold)
 }
 
 export interface ContentView {
@@ -134,43 +133,59 @@ export interface ContentView {
   focus: { x: number; y: number }
 }
 
-const CENTERED: ContentView = { scale: 1, focus: { x: 0.5, y: 0.5 } }
+export interface VisibleFraction {
+  x: number
+  y: number
+}
 
-function zoomViewAt(zooms: readonly ZoomRegion[] | undefined, source: string | undefined, localMs: number, base: ContentView): ContentView {
+const FULL_FRAME: VisibleFraction = { x: 1, y: 1 }
+
+function zoomViewAt(
+  zooms: readonly ZoomRegion[] | undefined,
+  source: string | undefined,
+  localMs: number,
+  base: ContentView,
+  visible: VisibleFraction,
+): ContentView {
   const phase = phaseAt(zooms, source, localMs)
   if (!phase) return base
   const amount = amountAt(phase)
   const { scale, focus } = phase.region
   const lerp = (from: number, to: number) => from + (to - from) * amount
+  const holdScale = base.scale * scale
   return {
     scale: base.scale * lerp(1, scale),
-    focus: { x: lerp(base.focus.x, anchorOf(focus.x, scale)), y: lerp(base.focus.y, anchorOf(focus.y, scale)) },
+    focus: {
+      x: lerp(base.focus.x, anchorOf(focus.x, visible.x / holdScale)),
+      y: lerp(base.focus.y, anchorOf(focus.y, visible.y / holdScale)),
+    },
   }
 }
 
-export function getSlotView(element: MulticamElement, slot: LayoutSlot, timelineMs: number): ContentView {
-  return zoomViewAt(element.zooms, slot.source, timelineMs - element.startMs, { scale: 1, focus: slot.focus })
+export function getSlotView(element: MulticamElement, slot: LayoutSlot, timelineMs: number, visible: VisibleFraction = FULL_FRAME): ContentView {
+  return zoomViewAt(element.zooms, slot.source, timelineMs - element.startMs, { scale: 1, focus: slot.focus }, visible)
 }
 
 export function getClipView(element: VideoElement | ImageElement, timelineMs: number): ContentView {
-  return zoomViewAt(element.zooms, undefined, timelineMs - element.startMs, CENTERED)
+  return zoomViewAt(element.zooms, undefined, timelineMs - element.startMs, { scale: 1, focus: { x: 0.5, y: 0.5 } }, FULL_FRAME)
 }
 
-export function getZoomShutterMs(
-  element: VideoElement | ImageElement | MulticamElement,
-  source: string | undefined,
-  timelineMs: number,
-  frameMs: number,
-): number {
-  const phase = phaseAt(element.zooms, source, timelineMs - element.startMs)
-  if (!phase || phase.kind === 'hold') return 0
-  return frameMs * phase.region.motionBlur
+export function getZoomShutterMs(element: TimelineElement, timelineMs: number, frameMs: number): number {
+  if (!isZoomable(element)) return 0
+  const localMs = timelineMs - element.startMs
+  const sources = new Set((element.zooms ?? []).map((z) => z.source))
+  let shutterMs = 0
+  for (const source of sources) {
+    const phase = phaseAt(element.zooms, source, localMs)
+    if (phase && phase.kind !== 'hold') shutterMs = Math.max(shutterMs, frameMs * phase.region.motionBlur)
+  }
+  return shutterMs
 }
 
 export function splitZoomRegions(zooms: readonly ZoomRegion[], offsetMs: number): { left: ZoomRegion[]; right: ZoomRegion[] } {
   return {
     left: zooms.filter((z) => z.atMs < offsetMs),
-    right: zooms.filter((z) => z.atMs >= offsetMs).map((z) => ({ ...z, atMs: z.atMs - offsetMs })),
+    right: zooms.filter((z) => zoomRegionEndMs(z) > offsetMs).map((z) => ({ ...z, atMs: z.atMs - offsetMs })),
   }
 }
 

@@ -2,7 +2,6 @@ import {
   getActiveLayout,
   getClipView,
   getSlotView,
-  getZoomShutterMs,
   getAngleTransitionAt,
   getLayout,
   getMulticamSourceTimeMs,
@@ -27,7 +26,7 @@ import { applyChrome, type LayerChrome } from './backend'
 import { toCanvasPoint } from './geometry'
 import { reframedCrop, reframedSlot } from './reframe-views'
 import { transitionRenderers } from './transition-renderers'
-import { applyView, runningAverageAlpha, sampleViews } from './zoom-views'
+import { applyView } from './zoom-views'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
 import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
 
@@ -141,23 +140,18 @@ function cropSourceRect(crop: Crop | undefined, frame: CanvasImageSource): { sx:
 
 function drawMediaFrame(context: ElementRenderContext, element: VideoElement | ImageElement, frame: CanvasImageSource, dw: number, dh: number): void {
   const { width: fw, height: fh } = getImageSize(frame)
-  const base = cropSourceRect(reframedCrop(element, context.timeMs), frame) ?? { sx: 0, sy: 0, sw: fw, sh: fh }
-  const shutterMs = getZoomShutterMs(element, undefined, context.timeMs, 1000 / context.project.fps)
-  const views = sampleViews((timeMs) => getClipView(element, timeMs), context.timeMs, shutterMs)
-  const chrome = chromeOf(context, element)
-  views.forEach((view, index) => {
-    const src = view.scale === 1 && !element.crop ? null : applyView(base, view)
-    const sampleChrome = { ...chrome, opacity: chrome.opacity * runningAverageAlpha(index) }
-    if (!element.stroke && !element.shadow) {
-      context.backend.drawImageQuad({ image: frame, src, dw, dh, cornerRadius: (element.cornerRadius ?? 0) * Math.min(dw, dh) }, sampleChrome)
-      return
-    }
-    const ctx = context.ctx
-    applyChrome(ctx, sampleChrome, () => {
-      withFrameChrome(ctx, element, dw, dh, () => {
-        if (src) ctx.drawImage(frame, src.sx, src.sy, src.sw, src.sh, -dw / 2, -dh / 2, dw, dh)
-        else ctx.drawImage(frame, -dw / 2, -dh / 2, dw, dh)
-      })
+  const base = cropSourceRect(reframedCrop(element, context.timeMs), frame)
+  const view = getClipView(element, context.viewTimeMs)
+  const src = view.scale === 1 ? base : applyView(base ?? { sx: 0, sy: 0, sw: fw, sh: fh }, view)
+  if (!element.stroke && !element.shadow) {
+    context.backend.drawImageQuad({ image: frame, src, dw, dh, cornerRadius: (element.cornerRadius ?? 0) * Math.min(dw, dh) }, chromeOf(context, element))
+    return
+  }
+  const ctx = context.ctx
+  withTransform(ctx, context, element, () => {
+    withFrameChrome(ctx, element, dw, dh, () => {
+      if (src) ctx.drawImage(frame, src.sx, src.sy, src.sw, src.sh, -dw / 2, -dh / 2, dw, dh)
+      else ctx.drawImage(frame, -dw / 2, -dh / 2, dw, dh)
     })
   })
 }
@@ -361,24 +355,19 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
         }
 
         const fitScale = slot.fit === 'cover' ? Math.max(rw / fw, rh / fh) : Math.min(rw / fw, rh / fh)
-        const framed = reframedSlot(element, slot, { w: rw / fitScale / fw, h: rh / fitScale / fh }, context.timeMs)
-        const shutterMs = getZoomShutterMs(element, slot.source, context.timeMs, 1000 / project.fps)
-        const views = sampleViews((timeMs) => getSlotView(element, framed, timeMs), context.timeMs, shutterMs)
+        const visible = { x: rw / (fitScale * fw), y: rh / (fitScale * fh) }
+        const view = getSlotView(element, reframedSlot(element, slot, visible, context.timeMs), context.viewTimeMs, visible)
+        const scale = fitScale * view.scale
+        const sw = Math.min(fw, rw / scale)
+        const sh = Math.min(fh, rh / scale)
+        const dw = sw * scale
+        const dh = sh * scale
 
         ctx.save()
         ctx.beginPath()
         ctx.roundRect(rx, ry, rw, rh, radius)
         ctx.clip()
-        const baseAlpha = ctx.globalAlpha
-        views.forEach((view, index) => {
-          const scale = fitScale * view.scale
-          const sw = Math.min(fw, rw / scale)
-          const sh = Math.min(fh, rh / scale)
-          const dw = sw * scale
-          const dh = sh * scale
-          ctx.globalAlpha = baseAlpha * runningAverageAlpha(index)
-          ctx.drawImage(frame, (fw - sw) * view.focus.x, (fh - sh) * view.focus.y, sw, sh, rx + (rw - dw) / 2, ry + (rh - dh) / 2, dw, dh)
-        })
+        ctx.drawImage(frame, (fw - sw) * view.focus.x, (fh - sh) * view.focus.y, sw, sh, rx + (rw - dw) / 2, ry + (rh - dh) / 2, dw, dh)
         ctx.restore()
 
         if (slot.stroke) {
