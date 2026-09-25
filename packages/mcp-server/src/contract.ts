@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
-import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
+import { captionsCommandOptionsSchema, retakeOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
 import { commandBatchSchema } from './transact-shape'
 
@@ -49,6 +49,7 @@ export const MCP_AGENT_TOOL_NAMES = [
   'get_audio_activity',
   'get_transcript',
   'search_transcript',
+  'find_retakes',
   'ensure_transcript',
   'list_commands',
   'apply_commands',
@@ -105,6 +106,15 @@ export const MCP_TOOL_INPUTS = {
   search_transcript: z.strictObject({
     query: z.string().trim().min(1, 'search_transcript requires a non-empty query string.'),
   }),
+  find_retakes: retakeOptionsSchema
+    .extend({
+      elementId: elementIdSchema
+        .describe(
+          'The video or audio clip the captions came from. The reply then includes transcript, its words in source ms, ready to pass to apply_captions per remaining clip after the cuts.',
+        )
+        .optional(),
+    })
+    .strict(),
   ensure_transcript: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
     replace: z.boolean().describe('When true, replace captions overlapping the target clip. Defaults to false.').optional(),
@@ -162,6 +172,12 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Do not use ffmpeg or shell media analysis as a substitute for transcript-aware edits.',
   search_transcript:
     'Search the caption-derived transcript and return timeline times for matches. ' + 'Use this to locate spoken words/phrases before cutting or annotating.',
+  find_retakes:
+    'Find retakes in the word-timed transcript: a phrase whose opening words are spoken again within maxLookaheadMs. ' +
+    'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
+    'Candidates come last to first; cut them in that order so no ripple delete shifts a range still to cut. ' +
+    'Pass elementId to get transcript back in source ms. Cut the clip only, then call apply_captions once per remaining clip with that transcript and the clip elementId; cutting the caption track leaves later words late. ' +
+    'Review abandonedText before cutting. Needs captions with word timings; call ensure_transcript first.',
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
@@ -237,6 +253,7 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('get_media_context'),
   staticToolCall('get_transcript'),
   staticToolCall('search_transcript'),
+  staticToolCall('find_retakes'),
   staticToolCall('ensure_transcript'),
   staticToolCall('get_audio_activity'),
   staticToolCall('apply_captions'),
