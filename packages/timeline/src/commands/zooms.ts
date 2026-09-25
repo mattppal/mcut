@@ -14,27 +14,27 @@ import {
 } from '../zoom-regions'
 import { defineCommand, mustLocate, replaceTrack } from './shared'
 
-function withZooms(project: Project, elementId: string, update: (zooms: ZoomRegion[], element: ZoomableElement) => ZoomRegion[]): Project {
+function withZooms(project: Project, elementId: string, update: (zooms: ZoomRegion[]) => { zooms: ZoomRegion[]; touched: ZoomRegion | null }): Project {
   const { track, element } = mustLocate(project, elementIdSchema.parse(elementId))
   if (!isZoomable(element)) {
     throw new CommandError('invalid-payload', `"${element.type}" elements cannot zoom; use a video, image, or multicam element`)
   }
-  const zooms = update([...(element.zooms ?? [])], element)
-    .map((zoom) => mustFit(element, zoom))
-    .sort((a, b) => a.atMs - b.atMs)
-  mustNotOverlap(zooms)
-  const next: ZoomableElement = { ...element, zooms }
-  if (zooms.length === 0) delete next.zooms
+  const { zooms, touched } = update([...(element.zooms ?? [])])
+  if (touched) mustFit(element, touched)
+  const sorted = [...zooms].sort((a, b) => a.atMs - b.atMs)
+  mustNotOverlap(sorted)
+  const next: ZoomableElement = { ...element, zooms: sorted }
+  if (sorted.length === 0) delete next.zooms
   return replaceTrack(project, track.id, (t) => ({ ...t, elements: t.elements.map((e) => (e.id === element.id ? next : e)) }))
 }
 
-function mustFit(element: ZoomableElement, zoom: ZoomRegion): ZoomRegion {
-  if (zoomRegionEndMs(zoom) > element.durationMs) {
-    throw new CommandError('out-of-bounds', `zoom "${zoom.id}" ends at ${zoomRegionEndMs(zoom)}ms, past the ${element.durationMs}ms element`)
+function mustFit(element: ZoomableElement, zoom: ZoomRegion): void {
+  if (zoom.atMs < 0 || zoomRegionEndMs(zoom) > element.durationMs) {
+    throw new CommandError('out-of-bounds', `zoom "${zoom.id}" spans ${zoom.atMs} to ${zoomRegionEndMs(zoom)}ms, outside the ${element.durationMs}ms element`)
   }
   if (element.type !== 'multicam') {
     if (zoom.source !== undefined) throw new CommandError('invalid-payload', `source applies only to multicam zooms; "${element.id}" is ${element.type}`)
-    return zoom
+    return
   }
   if (zoom.source === undefined) {
     const keys = element.sources.map((s) => s.key).join(', ')
@@ -43,7 +43,6 @@ function mustFit(element: ZoomableElement, zoom: ZoomRegion): ZoomRegion {
   if (!element.sources.some((s) => s.key === zoom.source)) {
     throw new CommandError('invalid-payload', `multicam "${element.id}" has no source "${zoom.source}"`)
   }
-  return zoom
 }
 
 function mustNotOverlap(zooms: readonly ZoomRegion[]): void {
@@ -70,7 +69,8 @@ export const addZoomRegion = defineCommand({
     withZooms(project, payload.elementId, (zooms) => {
       const id = payload.zoom.id ?? createZoomId()
       if (zooms.some((z) => z.id === id)) throw new CommandError('invalid-payload', `zoom "${id}" already exists`)
-      return [...zooms, resolveZoomRegion(payload.zoom, id)]
+      const touched = resolveZoomRegion(payload.zoom, id)
+      return { zooms: [...zooms, touched], touched }
     }),
 })
 
@@ -80,8 +80,8 @@ export const updateZoomRegion = defineCommand({
   payloadSchema: z.object({ elementId: elementIdSchema, zoomId: z.string().min(1), patch: zoomRegionPatchSchema }),
   reduce: (project, payload) =>
     withZooms(project, payload.elementId, (zooms) => {
-      const next = patchZoomRegion(mustFind(zooms, payload.zoomId), payload.patch)
-      return zooms.map((z) => (z.id === next.id ? next : z))
+      const touched = patchZoomRegion(mustFind(zooms, payload.zoomId), payload.patch)
+      return { zooms: zooms.map((z) => (z.id === touched.id ? touched : z)), touched }
     }),
 })
 
@@ -92,7 +92,7 @@ export const removeZoomRegion = defineCommand({
   reduce: (project, payload) =>
     withZooms(project, payload.elementId, (zooms) => {
       mustFind(zooms, payload.zoomId)
-      return zooms.filter((z) => z.id !== payload.zoomId)
+      return { zooms: zooms.filter((z) => z.id !== payload.zoomId), touched: null }
     }),
 })
 

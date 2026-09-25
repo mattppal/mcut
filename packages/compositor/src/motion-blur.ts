@@ -1,4 +1,4 @@
-import { resolveAnimatedElement, toCompositeOperation, type MotionBlur, type Project, type TimelineElement, type Track } from '@mcut/timeline'
+import { getZoomShutterMs, resolveAnimatedElement, toCompositeOperation, type MotionBlur, type Project, type TimelineElement, type Track } from '@mcut/timeline'
 import { Canvas2DBackend, createElementContext, type RenderBackend } from './backend'
 import type { Canvas2D, ElementRenderer, RenderFrameOptions } from './types'
 
@@ -31,6 +31,15 @@ function isMovingBetween(element: TimelineElement, t0: number, t1: number): bool
   return Math.abs(to.scaleX - from.scaleX) >= MIN_SCALE_DELTA || Math.abs(to.scaleY - from.scaleY) >= MIN_SCALE_DELTA
 }
 
+function transformShutterMs(element: TimelineElement, timeMs: number, frameMs: number): number {
+  const blur = getMotionBlur(element)
+  if (!blur?.enabled || !hasTransformMotion(element)) return 0
+  const windowMs = frameMs * (blur.shutterAngle / 360)
+  if (!(windowMs > 0)) return 0
+  const start = timeMs - windowMs / 2
+  return isMovingBetween(element, start, start + windowMs) ? windowMs : 0
+}
+
 let cachedScratch: OffscreenCanvasRenderingContext2D | null = null
 
 function acquireScratch(width: number, height: number, options: RenderFrameOptions): Canvas2D | null {
@@ -54,13 +63,11 @@ export function renderElementWithMotionBlur(
   options: RenderFrameOptions,
   renderer: ElementRenderer,
 ): boolean {
-  const blur = getMotionBlur(element)
-  if (!blur?.enabled) return false
-  if (!hasTransformMotion(element)) return false
-  const windowMs = (1000 / project.fps) * (blur.shutterAngle / 360)
+  const frameMs = 1000 / project.fps
+  const transformWindowMs = transformShutterMs(element, timeMs, frameMs)
+  const windowMs = Math.max(transformWindowMs, getZoomShutterMs(element, timeMs, frameMs))
   if (!(windowMs > 0)) return false
   const start = timeMs - windowMs / 2
-  if (!isMovingBetween(element, start, start + windowMs)) return false
   const scratch = acquireScratch(project.width, project.height, options)
   if (!scratch) return false
 
@@ -71,9 +78,10 @@ export function renderElementWithMotionBlur(
   scratch.globalAlpha = 1 / samples
   const subBackend = new Canvas2DBackend(scratch, project.width, project.height)
   for (let i = 0; i < samples; i++) {
-    const resolved = resolveAnimatedElement(element, start + windowMs * ((i + 0.5) / samples))
+    const sampleMs = start + windowMs * ((i + 0.5) / samples)
+    const resolved = resolveAnimatedElement(element, transformWindowMs > 0 ? sampleMs : timeMs)
     const sub = 'blendMode' in resolved && resolved.blendMode ? { ...resolved, blendMode: undefined } : resolved
-    renderer(sub, createElementContext(subBackend, project, track, timeMs, options.source))
+    renderer(sub, createElementContext(subBackend, project, track, timeMs, options.source, sampleMs))
   }
   scratch.restore()
 

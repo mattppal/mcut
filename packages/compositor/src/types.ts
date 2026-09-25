@@ -20,6 +20,7 @@ export interface ElementRenderContext {
   project: Project
   track: Track
   timeMs: number
+  viewTimeMs: number
   source: FrameSource | undefined
 }
 
