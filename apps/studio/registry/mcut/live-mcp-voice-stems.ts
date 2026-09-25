@@ -49,6 +49,6 @@ export async function ensureVoiceStemsForBridge(
 ): Promise<{ elements: VoiceStemReport[] }> {
   const targets = pickVoiced(engine, elementIds)
   for (const { asset } of targets) stems.start(asset)
-  if (wait) await stems.settled(targets.map(({ asset }) => asset.id))
-  return { elements: targets.map(({ elementId, asset }) => report(elementId, asset.id, stems.status(asset.id))) }
+  if (wait) await stems.settled(targets.map(({ asset }) => asset))
+  return { elements: targets.map(({ elementId, asset }) => report(elementId, asset.id, stems.status(asset))) }
 }

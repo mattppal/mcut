@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from 'react'
 import { extractAudioToWav, isMediaStoreSupported } from '@mcut/media'
 import { useEditorContext, useEngineSync } from '@mcut/react'
-import type { AssetId } from '@mcut/timeline'
+import type { AssetRef } from '@mcut/timeline'
 import { VOICE_SAMPLE_RATE, cleanVoice, decodeWav } from '@mcut/voice/browser'
 import { IDLE, createVoiceStems, type StemStatus } from './voice-stems'
 
@@ -53,10 +53,10 @@ export const voiceStems = createVoiceStems({
 
 const subscribeStems = (onChange: () => void) => voiceStems.subscribe(onChange).unsubscribe
 
-export function useVoiceStem(assetId: AssetId | undefined): StemStatus {
+export function useVoiceStem(asset: AssetRef | undefined): StemStatus {
   return useSyncExternalStore(
     subscribeStems,
-    () => (assetId ? voiceStems.status(assetId) : IDLE),
+    () => (asset ? voiceStems.status(asset) : IDLE),
     () => IDLE,
   )
 }

@@ -1,9 +1,14 @@
 import { describe, expect, test } from 'bun:test'
-import { parseProject, type Project, type Voice } from '@mcut/timeline'
+import { parseProject, type AssetRef, type Project, type Voice } from '@mcut/timeline'
 import { decodeWav, encodeWav } from '@mcut/voice'
 import { createVoiceStems, type VoiceStemDeps, type VoiceStems } from './voice-stems'
 
-function project(voice?: Voice): Project {
+interface Media {
+  src: string
+  hash?: string
+}
+
+function project(voice?: Voice, media: Media = { src: 'blob:talk', hash: 'abc' }): Project {
   return parseProject({
     id: 'p-voice',
     name: 'Voice',
@@ -11,7 +16,7 @@ function project(voice?: Voice): Project {
     height: 1080,
     fps: 30,
     assets: {
-      'a-talk': { id: 'a-talk', kind: 'video', src: 'blob:talk', hash: 'abc', name: 'talk.mp4', durationMs: 5000, width: 1920, height: 1080 },
+      'a-talk': { id: 'a-talk', kind: 'video', ...media, name: 'talk.mp4', durationMs: 5000, width: 1920, height: 1080 },
     },
     tracks: [
       {
@@ -21,6 +26,12 @@ function project(voice?: Voice): Project {
       },
     ],
   })
+}
+
+function talk(current: Project): AssetRef {
+  const asset = current.assets['a-talk']
+  if (!asset) throw new Error('the project has no a-talk asset')
+  return asset
 }
 
 function fakeDeps(clean: (samples: Float32Array) => Promise<Float32Array> = async (samples) => samples.map((sample) => sample / 2)) {
@@ -49,11 +60,11 @@ async function samplesAt(url: string | undefined): Promise<number[]> {
 
 async function processed(stems: VoiceStems, current: Project): Promise<void> {
   stems.reconcile(current)
-  await stems.settled(['a-talk'])
+  await stems.settled([talk(current)])
 }
 
-function readyUrl(stems: VoiceStems): string {
-  const stem = stems.status('a-talk')
+function readyUrl(stems: VoiceStems, current: Project): string {
+  const stem = stems.status(talk(current))
   if (stem.state !== 'ready') throw new Error(`stem is ${stem.state}`)
   return stem.url
 }
@@ -64,11 +75,11 @@ describe('voice stems', () => {
     const stems = createVoiceStems(deps)
     const voiced = project({ enabled: true, amount: 1 })
     stems.reconcile(voiced)
-    expect(stems.status('a-talk').state).toBe('processing')
-    await stems.settled(['a-talk'])
+    expect(stems.status(talk(voiced)).state).toBe('processing')
+    await stems.settled([talk(voiced)])
     stems.reconcile(voiced)
-    expect(stems.audioSources(voiced).get('e-talk')).toBe(readyUrl(stems))
-    expect(await samplesAt(readyUrl(stems))).toEqual([0.25, -0.25, 0.125, 0])
+    expect(stems.audioSources(voiced).get('e-talk')).toBe(readyUrl(stems, voiced))
+    expect(await samplesAt(readyUrl(stems, voiced))).toEqual([0.25, -0.25, 0.125, 0])
     expect(calls.clean).toBe(1)
   })
 
@@ -77,18 +88,38 @@ describe('voice stems', () => {
     const stems = createVoiceStems(deps)
     const off = project({ enabled: false, amount: 1 })
     stems.reconcile(off)
-    expect(stems.status('a-talk')).toEqual({ state: 'idle' })
+    expect(stems.status(talk(off))).toEqual({ state: 'idle' })
     expect([...stems.audioSources(off)]).toEqual([])
     expect(calls.clean).toBe(0)
   })
 
+  test.each([
+    { identity: 'content hash', first: { src: 'blob:first', hash: 'first' }, second: { src: 'blob:second', hash: 'second' } },
+    { identity: 'source URL', first: { src: 'blob:first' }, second: { src: 'blob:second' } },
+  ])('cleans the new media when another project reuses its asset id, told apart by $identity', async ({ first, second }) => {
+    const decoded: string[] = []
+    const stems = createVoiceStems({
+      ...fakeDeps().deps,
+      decode: async (src) => {
+        decoded.push(src)
+        return Float32Array.of(src === 'blob:first' ? 0.25 : 0.75)
+      },
+    })
+    const voice = { enabled: true, amount: 1 }
+    await stems.ready(project(voice, first))
+    const sources = await stems.ready(project(voice, second))
+    expect(decoded).toEqual(['blob:first', 'blob:second'])
+    expect(await samplesAt(sources.get('e-talk'))).toEqual([0.375])
+  })
+
   test('reuses the stem saved by an earlier session instead of cleaning again', async () => {
     const { deps, saved, calls } = fakeDeps()
-    await processed(createVoiceStems(deps), project({ enabled: true, amount: 1 }))
+    const voiced = project({ enabled: true, amount: 1 })
+    await processed(createVoiceStems(deps), voiced)
     const nextSession = createVoiceStems(deps)
-    await processed(nextSession, project({ enabled: true, amount: 1 }))
+    await processed(nextSession, voiced)
     expect([...saved.keys()]).toEqual(['voice-dfn3-cli-thresholds-1-abc.wav'])
-    expect(await samplesAt(readyUrl(nextSession))).toEqual([0.25, -0.25, 0.125, 0])
+    expect(await samplesAt(readyUrl(nextSession, voiced))).toEqual([0.25, -0.25, 0.125, 0])
     expect(calls.clean).toBe(1)
   })
 
@@ -96,8 +127,9 @@ describe('voice stems', () => {
     const { deps, saved, calls } = fakeDeps()
     saved.set('voice-dfn3-cli-thresholds-1-abc.wav', new Blob([encodeWav(Float32Array.from([0.1]), 48_000)]))
     const stems = createVoiceStems(deps)
-    await processed(stems, project({ enabled: true, amount: 1 }))
-    expect(await samplesAt(readyUrl(stems))).toEqual([0.25, -0.25, 0.125, 0])
+    const voiced = project({ enabled: true, amount: 1 })
+    await processed(stems, voiced)
+    expect(await samplesAt(readyUrl(stems, voiced))).toEqual([0.25, -0.25, 0.125, 0])
     expect(calls.clean).toBe(1)
   })
 
@@ -123,12 +155,12 @@ describe('voice stems', () => {
     const voiced = project({ enabled: true, amount: 1 })
     await processed(stems, voiced)
     stems.reconcile(voiced)
-    expect(stems.status('a-talk')).toEqual({ state: 'failed', error: 'voice worker crashed' })
+    expect(stems.status(talk(voiced))).toEqual({ state: 'failed', error: 'voice worker crashed' })
     expect(calls.clean).toBe(1)
     failing = false
     stems.reconcile(project({ enabled: false, amount: 1 }))
     await processed(stems, voiced)
-    expect(await samplesAt(readyUrl(stems))).toEqual([0.5, -0.5, 0.25, 0])
+    expect(await samplesAt(readyUrl(stems, voiced))).toEqual([0.5, -0.5, 0.25, 0])
     expect(calls.clean).toBe(2)
   })
 
@@ -146,10 +178,11 @@ describe('voice stems', () => {
 
   test('settled reports progress and rejects when its signal aborts', async () => {
     const stems = createVoiceStems(fakeDeps(() => new Promise(() => {})).deps)
-    stems.reconcile(project({ enabled: true, amount: 1 }))
+    const voiced = project({ enabled: true, amount: 1 })
+    stems.reconcile(voiced)
     const controller = new AbortController()
     const progress: number[] = []
-    const waiting = stems.settled(['a-talk'], { signal: controller.signal, onProgress: (value) => progress.push(value) })
+    const waiting = stems.settled([talk(voiced)], { signal: controller.signal, onProgress: (value) => progress.push(value) })
     await Bun.sleep(0)
     controller.abort(new DOMException('Export canceled', 'AbortError'))
     await expect(waiting).rejects.toThrow('Export canceled')

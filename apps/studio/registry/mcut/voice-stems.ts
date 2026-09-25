@@ -1,5 +1,5 @@
 import type { EngineStore } from '@mcut/react'
-import { getVoiceSource, type AssetId, type AssetRef, type ElementId, type Project } from '@mcut/timeline'
+import { getVoiceSource, type AssetRef, type ElementId, type Project } from '@mcut/timeline'
 import { VOICE_MODEL, VOICE_SAMPLE_RATE, decodeWav, encodeWav, mixVoice } from '@mcut/voice'
 
 export type StemStatus =
@@ -8,7 +8,9 @@ export type StemStatus =
   | { state: 'ready'; url: string; processingMs: number }
   | { state: 'failed'; error: string }
 
-export type StemState = ReadonlyMap<AssetId, StemStatus>
+type StemKey = `hash:${string}` | `src:${string}`
+
+export type StemState = ReadonlyMap<StemKey, StemStatus>
 
 export interface VoiceStemDeps {
   decode: (src: string) => Promise<Float32Array>
@@ -23,9 +25,9 @@ export interface SettleOptions {
 }
 
 export interface VoiceStems extends EngineStore<StemState> {
-  status: (assetId: AssetId) => StemStatus
+  status: (asset: AssetRef) => StemStatus
   start: (asset: AssetRef) => void
-  settled: (assetIds: readonly AssetId[], options?: SettleOptions) => Promise<void>
+  settled: (assets: readonly AssetRef[], options?: SettleOptions) => Promise<void>
   reconcile: (project: Project) => void
   ready: (project: Project, options?: SettleOptions) => Promise<ReadonlyMap<ElementId, string>>
   audioSources: (project: Project) => ReadonlyMap<ElementId, string>
@@ -33,15 +35,17 @@ export interface VoiceStems extends EngineStore<StemState> {
 
 export const IDLE: StemStatus = { state: 'idle' }
 
-export function voicedElements(project: Project): { elementId: ElementId; asset: AssetRef }[] {
+export function voicedElements(project: Project): { elementId: ElementId; asset: AssetRef; amount: number }[] {
   return project.tracks.flatMap((track) =>
     track.elements.flatMap((element) => {
       const voice = getVoiceSource(project, element)
       const asset = voice ? project.assets[voice.assetId] : undefined
-      return asset ? [{ elementId: element.id, asset }] : []
+      return voice && asset ? [{ elementId: element.id, asset, amount: voice.amount }] : []
     }),
   )
 }
+
+const stemKey = (asset: AssetRef): StemKey => (asset.hash ? `hash:${asset.hash}` : `src:${asset.src}`)
 
 async function stemName(asset: AssetRef): Promise<string> {
   if (asset.hash) return `voice-${VOICE_MODEL}-${asset.hash}.wav`
@@ -57,13 +61,13 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
   let state: StemState = new Map()
   let active: ReadonlySet<ElementId> = new Set()
   const listeners = new Set<(state: StemState) => void>()
-  const decoded = new Map<AssetId, { dry: Float32Array; wet: Float32Array }>()
+  const decoded = new Map<StemKey, { dry: Float32Array; wet: Float32Array }>()
   const mixes = new Map<string, string>()
 
-  const status = (assetId: AssetId): StemStatus => state.get(assetId) ?? IDLE
+  const status = (asset: AssetRef): StemStatus => state.get(stemKey(asset)) ?? IDLE
 
-  const set = (assetId: AssetId, next: StemStatus): void => {
-    state = new Map(state).set(assetId, next)
+  const set = (key: StemKey, next: StemStatus): void => {
+    state = new Map(state).set(key, next)
     for (const listener of listeners) listener(state)
   }
 
@@ -87,20 +91,21 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
   }
 
   function start(asset: AssetRef): void {
-    const current = status(asset.id).state
+    const key = stemKey(asset)
+    const current = status(asset).state
     if (current === 'processing' || current === 'ready') return
     const startedAt = Date.now()
-    set(asset.id, { state: 'processing', progress: 0, startedAt })
-    prepare(asset, (progress) => set(asset.id, { state: 'processing', progress, startedAt })).then(
+    set(key, { state: 'processing', progress: 0, startedAt })
+    prepare(asset, (progress) => set(key, { state: 'processing', progress, startedAt })).then(
       ({ dry, wet, wav }) => {
-        decoded.set(asset.id, { dry, wet })
-        set(asset.id, { state: 'ready', url: URL.createObjectURL(wav), processingMs: Date.now() - startedAt })
+        decoded.set(key, { dry, wet })
+        set(key, { state: 'ready', url: URL.createObjectURL(wav), processingMs: Date.now() - startedAt })
       },
-      (error: unknown) => set(asset.id, { state: 'failed', error: errorMessage(error) }),
+      (error: unknown) => set(key, { state: 'failed', error: errorMessage(error) }),
     )
   }
 
-  function settled(assetIds: readonly AssetId[], { signal, onProgress }: SettleOptions = {}): Promise<void> {
+  function settled(assets: readonly AssetRef[], { signal, onProgress }: SettleOptions = {}): Promise<void> {
     return new Promise((resolve, reject) => {
       const subscription = subscribe(check)
       function finish(): void {
@@ -112,7 +117,7 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
         reject(signal?.reason)
       }
       function check(): void {
-        const stems = assetIds.map(status)
+        const stems = assets.map(status)
         if (stems.every((stem) => stem.state !== 'processing')) {
           finish()
           resolve()
@@ -129,33 +134,31 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
   function reconcile(project: Project): void {
     const voiced = voicedElements(project)
     for (const { elementId, asset } of voiced) {
-      if (!active.has(elementId) || status(asset.id).state === 'idle') start(asset)
+      if (!active.has(elementId) || status(asset).state === 'idle') start(asset)
     }
     active = new Set(voiced.map(({ elementId }) => elementId))
   }
 
-  function srcFor(assetId: AssetId, amount: number): string | undefined {
-    const stem = status(assetId)
-    const samples = decoded.get(assetId)
-    if (stem.state !== 'ready' || !samples) return undefined
+  function srcFor(asset: AssetRef, amount: number): string | undefined {
+    const key = stemKey(asset)
+    const stem = state.get(key)
+    const samples = decoded.get(key)
+    if (stem?.state !== 'ready' || !samples) return undefined
     const percent = Math.round(amount * 100)
     if (percent >= 100) return stem.url
-    const key = `${assetId}@${percent}`
-    const existing = mixes.get(key)
+    const mixKey = `${key}@${percent}`
+    const existing = mixes.get(mixKey)
     if (existing) return existing
     const url = URL.createObjectURL(wavBlob(mixVoice(samples.dry, samples.wet, percent / 100)))
-    mixes.set(key, url)
+    mixes.set(mixKey, url)
     return url
   }
 
   function audioSources(project: Project): ReadonlyMap<ElementId, string> {
     const sources = new Map<ElementId, string>()
-    for (const track of project.tracks) {
-      for (const element of track.elements) {
-        const voice = getVoiceSource(project, element)
-        const src = voice ? srcFor(voice.assetId, voice.amount) : undefined
-        if (src) sources.set(element.id, src)
-      }
+    for (const { elementId, asset, amount } of voicedElements(project)) {
+      const src = srcFor(asset, amount)
+      if (src) sources.set(elementId, src)
     }
     const live = new Set(sources.values())
     for (const [key, url] of mixes) {
@@ -167,11 +170,11 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
   }
 
   async function ready(project: Project, options?: SettleOptions): Promise<ReadonlyMap<ElementId, string>> {
-    const assets = new Map(voicedElements(project).map(({ asset }) => [asset.id, asset]))
+    const assets = new Map(voicedElements(project).map(({ asset }) => [stemKey(asset), asset]))
     for (const asset of assets.values()) start(asset)
-    await settled([...assets.keys()], options)
+    await settled([...assets.values()], options)
     for (const asset of assets.values()) {
-      const stem = status(asset.id)
+      const stem = status(asset)
       if (stem.state === 'failed') throw new Error(`Clean up voice failed for ${asset.name ?? asset.id}. ${stem.error}`)
     }
     return audioSources(project)

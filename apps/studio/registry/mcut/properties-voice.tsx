@@ -11,7 +11,8 @@ import { useVoiceStem } from './voice-cleanup'
 export function VoiceFields({ element }: { element: VideoElement | AudioElement | MulticamElement }) {
   const engine = useEditor()
   const project = useProject()
-  const stem = useVoiceStem(getVoiceSource(project, element)?.assetId)
+  const source = getVoiceSource(project, element)
+  const stem = useVoiceStem(source ? project.assets[source.assetId] : undefined)
   const [draft, setDraft] = useState<number | null>(null)
   const voice = element.voice
   const amount = draft ?? Math.round((voice?.amount ?? 1) * 100)
