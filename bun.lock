@@ -167,6 +167,9 @@
       "dependencies": {
         "@mcut/timeline": "workspace:*",
       },
+      "devDependencies": {
+        "@playwright/test": "1.60.0",
+      },
     },
     "packages/desktop-ipc": {
       "name": "@mcut/desktop-ipc",
