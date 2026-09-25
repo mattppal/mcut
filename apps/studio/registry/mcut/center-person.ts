@@ -43,6 +43,7 @@ interface CenterPersonResult {
   samples: number
   keys: number
   sourceRange: { startMs: number; endMs: number }
+  filled: boolean
 }
 
 const PROGRESS_TOAST_ID = 'mcut-center-person'
@@ -130,17 +131,17 @@ function resolveTarget(engine: EditorEngine, input: CenterPersonInput): CenterPe
 export async function centerPerson(engine: EditorEngine, input: CenterPersonInput, detect: DetectFaces = detectFacesOnDevice): Promise<CenterPersonResult> {
   const { element, source, asset } = resolveTarget(engine, input)
   const samples = await detect(asset.src)
-  const command = planCenterPerson(engine.project, { elementId: element.id, source: source?.key }, samples, {
-    aspect: input.aspect,
-    smoothing: input.smoothing,
+  const plan = planCenterPerson(engine.project, { elementId: element.id, source: source?.key }, samples, input)
+  engine.transact(() => {
+    for (const command of plan) engine.dispatch(command)
   })
-  engine.dispatch(command)
-  const keys = command.track ?? []
+  const keys = plan[0].track ?? []
   return {
     target: { elementId: element.id, ...(source ? { source: source.key } : {}), assetId: asset.id, ...(asset.name ? { assetName: asset.name } : {}) },
     samples: samples.length,
     keys: keys.length,
     sourceRange: { startMs: keys[0]?.sourceMs ?? 0, endMs: keys.at(-1)?.sourceMs ?? 0 },
+    filled: plan.some((command) => command.type === 'updateElement'),
   }
 }
 

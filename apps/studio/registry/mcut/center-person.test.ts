@@ -91,6 +91,7 @@ describe('centerPerson', () => {
       samples: 2,
       keys: 2,
       sourceRange: { startMs: 0, endMs: 1000 },
+      filled: false,
     })
     expect(multicamSource(engine, 'camera')?.reframe).toEqual([
       { sourceMs: 0, x: 0.5, y: 0.4 },
@@ -114,18 +115,30 @@ describe('centerPerson', () => {
     expect(result.target).toEqual({ elementId: 'e-multicam', source: 'screen', assetId: 'a-screen', assetName: 'screen.mp4' })
   })
 
-  test('a video gets a crop at the target aspect whose center follows the face', async () => {
+  test('a video at the project aspect gets a face-following crop and fills the frame in one undo step', async () => {
     const engine = new EditorEngine({ project: videoProject() })
 
     const result = await centerPerson(engine, { elementId: 'e-video', ...OPTIONS }, recordingDetector(STILL_FACE).detect)
-    const element = getElementLocation(engine.project, 'e-video')?.element
+    const video = () => {
+      const element = getElementLocation(engine.project, 'e-video')?.element
+      return element?.type === 'video' ? { crop: element.crop, reframe: element.reframe, transform: element.transform } : undefined
+    }
 
     expect(result.target).toEqual({ elementId: 'e-video', assetId: 'a-camera', assetName: 'camera.mp4' })
-    expect(element?.type === 'video' && element.crop).toEqual({ x: 0.3418, y: 0, w: 0.3164, h: 1 })
-    expect(element?.type === 'video' && element.reframe).toEqual([
-      { sourceMs: 0, x: 0.5, y: 0.5 },
-      { sourceMs: 1000, x: 0.5, y: 0.5 },
-    ])
+    expect(result.filled).toBe(true)
+    expect(video()).toEqual({
+      crop: { x: 0.3418, y: 0, w: 0.3164, h: 1 },
+      reframe: [
+        { sourceMs: 0, x: 0.5, y: 0.5 },
+        { sourceMs: 1000, x: 0.5, y: 0.5 },
+      ],
+      transform: { x: 0, y: 0, scaleX: 1.7778, scaleY: 1.7778, rotation: 0 },
+    })
+
+    engine.undo()
+
+    expect(video()).toEqual({ crop: undefined, reframe: undefined, transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 } })
+    expect(engine.canUndo()).toBe(false)
   })
 
   test('a source on a video clip fails before detection runs', async () => {

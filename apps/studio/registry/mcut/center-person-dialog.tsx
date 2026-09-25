@@ -70,8 +70,10 @@ function CenterPersonForm({ element, initial, onClose }: { element: VideoElement
       <DialogHeader>
         <DialogTitle>Center person</DialogTitle>
         <DialogDescription>
-          {element.type === 'video' ? 'Crops the clip to the aspect and follows the face.' : 'Follows the face inside the camera slot.'} Detection runs on this
-          device.
+          {element.type === 'video'
+            ? 'Crops the clip to the aspect and follows the face. At the project aspect it also fills the frame.'
+            : 'Follows the face inside the camera slot.'}{' '}
+          Detection runs on this device.
         </DialogDescription>
       </DialogHeader>
       {element.type === 'video' && <ChoiceRow label="Aspect" choices={ASPECTS} value={aspect} onChange={setAspect} />}

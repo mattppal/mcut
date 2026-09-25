@@ -19,6 +19,12 @@ export const centerPersonOptionsSchema = z.object({
     .max(1)
     .default(0.5)
     .describe('How calmly the framing follows the face, from 0 for a tight follow to 1 for a steady frame. Default 0.5.'),
+  fill: z
+    .boolean()
+    .optional()
+    .describe(
+      'Video only. true scales the clip to fill the frame and centers it, false keeps its size and position. By default it fills only when the crop aspect is within 1% of the project aspect, since a clip at another aspect is likely picture in picture.',
+    ),
 })
 
 export type CenterPersonOptions = z.infer<typeof centerPersonOptionsSchema>
@@ -36,6 +42,7 @@ interface Motion {
 
 const SUBSTEPS = 10
 const TOLERANCE = 0.004
+const FILL_ASPECT_TOLERANCE = 0.01
 
 const round4 = (value: number): number => Math.round(value * 10_000) / 10_000
 
@@ -113,16 +120,32 @@ function smoothTrack(centers: readonly Key[], motion: Motion, window: { w: numbe
   return simplify(smoothed).map((key) => ({ sourceMs: key.sourceMs, x: round4(key.x), y: round4(key.y) }))
 }
 
-function centeredCrop(project: Project, element: VideoElement, aspect: number): Crop {
+interface Size {
+  width: number
+  height: number
+}
+
+function videoSize(project: Project, element: VideoElement): Size {
   const asset = project.assets[element.assetId]
   if (!asset) throw new OperatorError('unknown-asset', `no asset "${element.assetId}" for element "${element.id}"`)
   const { width, height } = asset
   if (width === undefined || height === undefined) {
     throw new OperatorError('unsupported', `asset "${asset.id}" has no width and height; probe the media before centering`)
   }
+  return { width, height }
+}
+
+function centeredCrop({ width, height }: Size, aspect: number): Crop {
   const w = Math.min(1, (height * aspect) / width)
   const h = Math.min(1, width / aspect / height)
   return { x: round4((1 - w) / 2), y: round4((1 - h) / 2), w: round4(w), h: round4(h) }
+}
+
+function fillFrame(project: Project, element: VideoElement, cropped: Size, fill: boolean | undefined): Array<CommandOfType<'updateElement'>> {
+  const aspectMatches = Math.abs(cropped.width / cropped.height / (project.width / project.height) - 1) <= FILL_ASPECT_TOLERANCE
+  if (!(fill ?? aspectMatches)) return []
+  const scale = round4(Math.max(project.width / cropped.width, project.height / cropped.height))
+  return [{ type: 'updateElement', elementId: element.id, patch: { transform: { ...element.transform, x: 0, y: 0, scaleX: scale, scaleY: scale } } }]
 }
 
 export function planCenterPerson(
@@ -130,17 +153,21 @@ export function planCenterPerson(
   target: { elementId: ElementId; source?: string },
   samples: readonly FaceSample[],
   options: CenterPersonOptions,
-): CommandOfType<'setReframe'> {
+): [CommandOfType<'setReframe'>, ...Array<CommandOfType<'updateElement'>>] {
   const element = getElementLocation(project, target.elementId)?.element
   if (!element) throw new OperatorError('unknown-element', `no element "${target.elementId}" in project`)
   const motion = { omega: 5 - 4 * options.smoothing, dead: 0.01 + 0.03 * options.smoothing }
   switch (element.type) {
     case 'video': {
-      const crop = centeredCrop(project, element, options.aspect)
-      return { type: 'setReframe', elementId: element.id, source: target.source, track: smoothTrack(faceCenters(samples), motion, crop), crop }
+      const size = videoSize(project, element)
+      const crop = centeredCrop(size, options.aspect)
+      return [
+        { type: 'setReframe', elementId: element.id, source: target.source, track: smoothTrack(faceCenters(samples), motion, crop), crop },
+        ...fillFrame(project, element, { width: size.width * crop.w, height: size.height * crop.h }, options.fill),
+      ]
     }
     case 'multicam':
-      return { type: 'setReframe', elementId: element.id, source: target.source, track: smoothTrack(faceCenters(samples), motion, { w: 0, h: 0 }) }
+      return [{ type: 'setReframe', elementId: element.id, source: target.source, track: smoothTrack(faceCenters(samples), motion, { w: 0, h: 0 }) }]
     case 'audio':
     case 'image':
     case 'text':

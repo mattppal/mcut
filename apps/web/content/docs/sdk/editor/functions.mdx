@@ -386,10 +386,10 @@ function planCenterPerson(
   target: { elementId: ElementId; source?: string },
   samples: ReadonlyArray<FaceSample>,
   options: CenterPersonOptions,
-): CommandOfType<'setReframe'>
+): [CommandOfType<'setReframe'>, ...Array<CommandOfType<'updateElement'>>]
 ```
 
-Turns face samples into one `setReframe` command. It smooths the face centers with a critically damped spring and a dead zone, keeps the window inside the frame, and drops keys that a straight line between their neighbors already covers. Higher `smoothing` slows the spring and widens the dead zone. On a video it also sets a centered `crop` at `options.aspect`, which needs the asset's width and height. On a multicam, `target.source` names the source to follow. Throws an `OperatorError` when no sample has a face.
+Turns face samples into a list of commands to apply in one `engine.transact`, so they are one undo step. The first is a `setReframe`. It smooths the face centers with a critically damped spring and a dead zone, keeps the window inside the frame, and drops keys that a straight line between their neighbors already covers. Higher `smoothing` slows the spring and widens the dead zone. On a video it also sets a centered `crop` at `options.aspect`, which needs the asset's width and height. When the crop aspect is within 1% of the project aspect, an `updateElement` follows that scales the clip to cover the frame and centers it. `options.fill` true adds it at any aspect, and false leaves the size alone. On a multicam, `target.source` names the source to follow, and there is no fill. Throws an `OperatorError` when no sample has a face.
 
 ### applyCommands
 

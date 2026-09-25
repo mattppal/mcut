@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, createProject, getElement, type Project } from '@mcut/timeline'
-import { centerPersonOptionsSchema, planCenterPerson, type FaceSample } from './center-person'
+import { centerPersonOptionsSchema, planCenterPerson, type CenterPersonOptions, type FaceSample } from './center-person'
 import { OperatorError } from './operators'
 
 function thrownBy(run: () => unknown): unknown {
@@ -14,8 +14,8 @@ function thrownBy(run: () => unknown): unknown {
 
 const defaults = centerPersonOptionsSchema.parse({})
 
-function projectWithCamera(dimensions: { width?: number; height?: number } = { width: 1280, height: 720 }): Project {
-  let project = createProject({ width: 1920, height: 1080 })
+function projectWithCamera(dimensions: { width?: number; height?: number } = { width: 1280, height: 720 }, size = { width: 1920, height: 1080 }): Project {
+  let project = createProject(size)
   project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000, ...dimensions } })
   project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'blob:s', durationMs: 60_000, width: 1920, height: 1080 } })
   project = applyCommand(project, {
@@ -40,10 +40,33 @@ function faces(seconds: number, centerAt: (sourceMs: number) => number | null): 
   })
 }
 
+const verticalCamera = () => projectWithCamera(undefined, { width: 1080, height: 1920 })
+
+const pipCamera = () =>
+  applyCommand(projectWithCamera(), {
+    type: 'updateElement',
+    elementId: 'e-cam',
+    patch: { transform: { x: 640, y: 300, scaleX: 0.25, scaleY: 0.25, rotation: 0 } },
+  })
+
+function cameraTransformAfter(project: Project, options: Partial<CenterPersonOptions>) {
+  const plan = planCenterPerson(
+    project,
+    { elementId: 'e-cam' },
+    faces(1, () => 0.5),
+    { ...defaults, ...options },
+  )
+  const camera = getElement(
+    plan.reduce<Project>((next, command) => applyCommand(next, command), project),
+    'e-cam',
+  )
+  return camera?.type === 'video' ? camera.transform : undefined
+}
+
 describe('planCenterPerson', () => {
   test('one jump pans once, settles on the new center, and dispatches as a valid setReframe', () => {
     const project = projectWithCamera()
-    const command = planCenterPerson(
+    const [command] = planCenterPerson(
       project,
       { elementId: 'e-cam' },
       faces(10, (ms) => (ms < 4000 ? 0.3 : 0.7)),
@@ -66,17 +89,17 @@ describe('planCenterPerson', () => {
 
   test('a sway inside the dead zone keeps the frame still, and zero smoothing follows it', () => {
     const sway = faces(10, (ms) => (Math.floor(ms / 2000) % 2 === 0 ? 0.5 : 0.52))
-    expect(planCenterPerson(projectWithCamera(), { elementId: 'e-cam' }, sway, defaults).track).toEqual([
+    expect(planCenterPerson(projectWithCamera(), { elementId: 'e-cam' }, sway, defaults)[0].track).toEqual([
       { sourceMs: 0, x: 0.5, y: 0.5 },
       { sourceMs: 10_000, x: 0.5, y: 0.5 },
     ])
-    const tight = planCenterPerson(projectWithCamera(), { elementId: 'e-cam' }, sway, { ...defaults, smoothing: 0 })
+    const [tight] = planCenterPerson(projectWithCamera(), { elementId: 'e-cam' }, sway, { ...defaults, smoothing: 0 })
     expect(Math.max(...(tight.track ?? []).map((key) => key.x))).toBeCloseTo(0.52, 3)
   })
 
   test('leading misses take the first face and gaps hold the last one', () => {
     const gappy = faces(10, (ms) => (ms < 1000 || (ms > 5000 && ms < 7000) ? null : 0.3))
-    expect(planCenterPerson(projectWithCamera(), { elementId: 'e-cam' }, gappy, defaults).track).toEqual([
+    expect(planCenterPerson(projectWithCamera(), { elementId: 'e-cam' }, gappy, defaults)[0].track).toEqual([
       { sourceMs: 0, x: 0.3, y: 0.5 },
       { sourceMs: 10_000, x: 0.3, y: 0.5 },
     ])
@@ -84,8 +107,8 @@ describe('planCenterPerson', () => {
 
   test('the video crop is the largest centered window of the aspect', () => {
     const still = faces(1, () => 0.5)
-    expect(planCenterPerson(projectWithCamera(), { elementId: 'e-cam' }, still, defaults).crop).toEqual({ x: 0.3418, y: 0, w: 0.3164, h: 1 })
-    expect(planCenterPerson(projectWithCamera({ width: 720, height: 1280 }), { elementId: 'e-cam' }, still, { ...defaults, aspect: 16 / 9 }).crop).toEqual({
+    expect(planCenterPerson(projectWithCamera(), { elementId: 'e-cam' }, still, defaults)[0].crop).toEqual({ x: 0.3418, y: 0, w: 0.3164, h: 1 })
+    expect(planCenterPerson(projectWithCamera({ width: 720, height: 1280 }), { elementId: 'e-cam' }, still, { ...defaults, aspect: 16 / 9 })[0].crop).toEqual({
       x: 0,
       y: 0.3418,
       w: 1,
@@ -93,24 +116,37 @@ describe('planCenterPerson', () => {
     })
   })
 
-  test('a multicam source keeps the raw face center and gets no crop', () => {
+  test('a crop at the project aspect also fills the frame, and another aspect keeps the picture in picture size', () => {
+    expect(cameraTransformAfter(verticalCamera(), { aspect: 9 / 16 })).toEqual({ x: 0, y: 0, scaleX: 2.6667, scaleY: 2.6667, rotation: 0 })
+    expect(cameraTransformAfter(verticalCamera(), { aspect: 0.55 })).toEqual({ x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 })
+    expect(cameraTransformAfter(pipCamera(), { aspect: 9 / 16 })).toEqual({ x: 640, y: 300, scaleX: 0.25, scaleY: 0.25, rotation: 0 })
+  })
+
+  test('fill true fills at any aspect and fill false keeps the size at the project aspect', () => {
+    expect(cameraTransformAfter(pipCamera(), { fill: true })).toEqual({ x: 0, y: 0, scaleX: 4.7408, scaleY: 4.7408, rotation: 0 })
+    expect(cameraTransformAfter(verticalCamera(), { fill: false })).toEqual({ x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 })
+  })
+
+  test('a multicam source keeps the raw face center, gets no crop, and ignores fill', () => {
     const project = applyCommand(projectWithCamera(), { type: 'createMulticam', elementIds: ['e-screen', 'e-cam'], multicamId: 'e-mc' })
     expect(
       planCenterPerson(
         project,
         { elementId: 'e-mc', source: 'camera' },
         faces(2, () => 0.3),
-        defaults,
+        { ...defaults, fill: true },
       ),
-    ).toEqual({
-      type: 'setReframe',
-      elementId: 'e-mc',
-      source: 'camera',
-      track: [
-        { sourceMs: 0, x: 0.3, y: 0.4 },
-        { sourceMs: 2000, x: 0.3, y: 0.4 },
-      ],
-    })
+    ).toEqual([
+      {
+        type: 'setReframe',
+        elementId: 'e-mc',
+        source: 'camera',
+        track: [
+          { sourceMs: 0, x: 0.3, y: 0.4 },
+          { sourceMs: 2000, x: 0.3, y: 0.4 },
+        ],
+      },
+    ])
   })
 
   test('no face, a video without dimensions, and a text element are refused', () => {

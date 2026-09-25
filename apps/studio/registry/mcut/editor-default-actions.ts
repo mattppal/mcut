@@ -331,7 +331,7 @@ defineAction({
   id: 'frame.center-person',
   label: 'Center person',
   description:
-    'Find the face on this device and keep it in frame as one undoable edit. A video gets a crop at the target aspect that follows the face. A multicam follows the face inside its camera slot, and the slot rect keeps its aspect. Over MCP, call center_person, which waits for the analysis.',
+    'Find the face on this device and keep it in frame as one undoable edit. A video gets a crop at the target aspect that follows the face, and when that aspect matches the project it also scales to fill the frame. A multicam follows the face inside its camera slot, and the slot rect keeps its aspect. Over MCP, call center_person, which waits for the analysis.',
   category: 'edit',
   inputSchema: {
     type: 'object',
@@ -350,6 +350,11 @@ defineAction({
         minimum: 0,
         maximum: 1,
         description: 'From 0 for a tight follow to 1 for a steady frame. Defaults to 0.5.',
+      },
+      fill: {
+        type: 'boolean',
+        description:
+          'Video only. true scales the clip to fill the frame and centers it, false keeps its size. Defaults to filling only when the crop aspect is within 1% of the project aspect.',
       },
       source: {
         type: 'string',

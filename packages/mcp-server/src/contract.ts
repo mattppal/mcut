@@ -213,8 +213,10 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   center_person:
     'Live bridge only: find the face on device in the connected editor and keep the person in frame as one undoable edit. Waits for the analysis. ' +
     'On a video, it crops to aspect, 9:16 by default, and the crop follows the face. ' +
+    'When the crop aspect is within 1% of the project aspect, it also scales the clip to fill the frame and centers it in the same undo step. ' +
+    'At another aspect the clip keeps its size, since it is likely picture in picture. Pass fill true or false to override. ' +
     'On a head overlay multicam, run it on the camera source, which is the default. The layout slot rect keeps its size and aspect, and the camera framing inside it follows the face. ' +
-    'Returns the target, the sample count, the key count, and the source range the keys cover. Undo removes it in one step.',
+    'Returns the target, the sample count, the key count, the source range the keys cover, and whether it filled the frame. Undo removes it in one step.',
   list_presets: 'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',
   list_operators:
     'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' + 'use raw command tools for low-level document edits.',

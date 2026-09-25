@@ -169,10 +169,14 @@ waits for the analysis, and the first run also downloads the face model.
 ```
 
 On a video it crops to `aspect`, 9:16 by default, and the crop follows the face.
-It does not resize the project or scale the clip, so for a vertical cut follow the
-reformat steps in `references/platforms.md`. On a head overlay multicam it follows
-the `camera` source by default and ignores `aspect`. Raise `smoothing` toward 1
-for a steadier frame. Do not hand-author reframe keys or crop with ffmpeg.
+When that aspect is within 1% of the project aspect, it also scales the clip to
+fill the frame and centers it in the same undo step. At another aspect the clip
+keeps its size, as a picture in picture camera should. Pass `fill` true or false
+to override. It never resizes the project, so for a vertical cut run
+`updateProject` first, as in `references/platforms.md`. On a head overlay multicam
+it follows the `camera` source by default and ignores `aspect` and `fill`. Raise
+`smoothing` toward 1 for a steadier frame. Do not hand-author reframe keys or crop
+with ffmpeg.
 
 ## Timing rules
 
