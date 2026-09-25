@@ -132,7 +132,7 @@ ids and payload.
 
 ## Import local media
 
-`import_media` takes `paths`, from 1 to 50 absolute file paths. The bridge
+`import_media` takes `paths`, from 1 to 50 absolute file paths. A leading `~/` expands to the home folder. The bridge
 checks that each path exists, is a non-empty regular file, and has a known
 media extension. Studio fetches each accepted file from a one-call bridge URL,
 then probes it, registers the asset, and stores the bytes the same way the

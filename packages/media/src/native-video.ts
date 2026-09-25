@@ -31,15 +31,15 @@ export interface CanvasSurface {
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
 }
 
-export function createCanvasSurface(width: number, height: number): CanvasSurface {
+export function createCanvasSurface(width: number, height: number, settings?: CanvasRenderingContext2DSettings): CanvasSurface {
   if (typeof document !== 'undefined') {
     const canvas = document.createElement('canvas')
     canvas.width = width
     canvas.height = height
-    return { canvas, ctx: canvas.getContext('2d') }
+    return { canvas, ctx: canvas.getContext('2d', settings) }
   }
   const canvas = new OffscreenCanvas(width, height)
-  return { canvas, ctx: canvas.getContext('2d') }
+  return { canvas, ctx: canvas.getContext('2d', settings) }
 }
 
 function loadVideoMetadata(video: HTMLVideoElement, src: string): Promise<void> {

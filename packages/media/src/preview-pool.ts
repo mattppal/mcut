@@ -1,7 +1,8 @@
-import type { CanvasSink, Input } from 'mediabunny'
+import type { Input, VideoSampleSink } from 'mediabunny'
 import type { FrameSource } from '@mcut/compositor'
 import { ScrubFrameCache } from './scrub-cache'
 import { inputFor } from './probe'
+import { sampleCanvas } from './sample-bitmap'
 import { canUseNativeVideoPreview } from './video-capabilities'
 import {
   getEffectiveVolume,
@@ -142,7 +143,7 @@ const DECODED_INIT_RETRY_MS = 3000
 interface DecodedVideoState {
   src: string | null
   input: Input | null
-  sink: CanvasSink | null
+  sink: VideoSampleSink | null
   frames: Map<number, CanvasImageSource>
   pendingKey: number | null
   failed: boolean
@@ -518,11 +519,8 @@ export class PreviewMediaPool implements FrameSource {
           input.dispose()
           return null
         }
-        const { CanvasSink } = await import('mediabunny')
-        state.sink = new CanvasSink(track, {
-          width: Math.min(1280, asset.width ?? 1280),
-          fit: 'contain',
-        })
+        const { VideoSampleSink } = await import('mediabunny')
+        state.sink = new VideoSampleSink(track)
         state.input = input
       } catch (error) {
         state.lastInitFailureAt = performance.now()
@@ -530,8 +528,8 @@ export class PreviewMediaPool implements FrameSource {
         throw error
       }
     }
-    const wrapped = await state.sink.getCanvas(sourceTimeMs / 1000)
-    return wrapped?.canvas ?? null
+    const sample = await state.sink.getSample(sourceTimeMs / 1000)
+    return sample ? await sampleCanvas(sample, Math.min(1280, asset.width ?? 1280), 'contain') : null
   }
 
   private trimDecodedVideoFrames(state: DecodedVideoState, centerKey: number): void {
