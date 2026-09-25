@@ -34,6 +34,17 @@ function talk(current: Project): AssetRef {
   return asset
 }
 
+function withoutClips(current: Project): Project {
+  return { ...current, tracks: current.tracks.map((track) => ({ ...track, elements: [] })) }
+}
+
+function stalled(signals: AbortSignal[]): VoiceStemDeps['clean'] {
+  return (_samples, _onProgress, signal) => {
+    signals.push(signal)
+    return new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }))
+  }
+}
+
 function fakeDeps(clean: (samples: Float32Array) => Promise<Float32Array> = async (samples) => samples.map((sample) => sample / 2)) {
   const saved = new Map<string, Blob>()
   const calls = { clean: 0 }
@@ -176,7 +187,7 @@ describe('voice stems', () => {
     await expect(failing.ready(voiced)).rejects.toThrow('Clean up voice failed for talk.mp4. voice worker crashed')
   })
 
-  test('settled reports progress and rejects when its signal aborts', async () => {
+  test('settled reports progress, and canceling it keeps a cleanup the project still uses', async () => {
     const stems = createVoiceStems(fakeDeps(() => new Promise(() => {})).deps)
     const voiced = project({ enabled: true, amount: 1 })
     stems.reconcile(voiced)
@@ -187,5 +198,54 @@ describe('voice stems', () => {
     controller.abort(new DOMException('Export canceled', 'AbortError'))
     await expect(waiting).rejects.toThrow('Export canceled')
     expect(progress).toEqual([0, 0.5])
+    expect(stems.status(talk(voiced)).state).toBe('processing')
+  })
+
+  test('releases the stem and revokes its URLs once no clip uses it, and reloads the saved stem later', async () => {
+    const { deps, calls } = fakeDeps()
+    const stems = createVoiceStems(deps)
+    const half = project({ enabled: true, amount: 0.5 })
+    await processed(stems, half)
+    const wetUrl = readyUrl(stems, half)
+    const mixUrl = stems.audioSources(half).get('e-talk')
+    expect(await samplesAt(wetUrl)).toEqual([0.25, -0.25, 0.125, 0])
+    expect(await samplesAt(mixUrl)).toEqual([0.375, -0.375, 0.1875, 0])
+    stems.reconcile(withoutClips(half))
+    expect(stems.status(talk(half))).toEqual({ state: 'idle' })
+    expect([...stems.get().keys()]).toEqual([])
+    await expect(samplesAt(wetUrl)).rejects.toThrow()
+    await expect(samplesAt(mixUrl)).rejects.toThrow()
+    await processed(stems, half)
+    expect(await samplesAt(stems.audioSources(half).get('e-talk'))).toEqual([0.375, -0.375, 0.1875, 0])
+    expect(calls.clean).toBe(1)
+  })
+
+  test('aborts a cleanup in progress when its clip is removed and nothing waits for it', async () => {
+    const signals: AbortSignal[] = []
+    const stems = createVoiceStems({ ...fakeDeps().deps, clean: stalled(signals) })
+    const voiced = project({ enabled: true, amount: 1 })
+    stems.reconcile(voiced)
+    await Bun.sleep(0)
+    stems.reconcile(withoutClips(voiced))
+    await Bun.sleep(0)
+    expect(signals.map((signal) => signal.aborted)).toEqual([true])
+    expect([...stems.get().keys()]).toEqual([])
+  })
+
+  test('keeps a cleanup that export waits for after its clip is removed, and aborts it when export is canceled', async () => {
+    const signals: AbortSignal[] = []
+    const stems = createVoiceStems({ ...fakeDeps().deps, clean: stalled(signals) })
+    const voiced = project({ enabled: true, amount: 1 })
+    stems.reconcile(voiced)
+    const controller = new AbortController()
+    const exporting = stems.ready(voiced, { signal: controller.signal })
+    await Bun.sleep(0)
+    stems.reconcile(withoutClips(voiced))
+    expect(stems.status(talk(voiced)).state).toBe('processing')
+    expect(signals.map((signal) => signal.aborted)).toEqual([false])
+    controller.abort(new DOMException('Export canceled', 'AbortError'))
+    await expect(exporting).rejects.toThrow('Export canceled')
+    expect(signals.map((signal) => signal.aborted)).toEqual([true])
+    expect([...stems.get().keys()]).toEqual([])
   })
 })

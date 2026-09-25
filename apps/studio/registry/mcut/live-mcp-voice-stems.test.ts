@@ -36,7 +36,7 @@ function deps(clean: VoiceStemDeps['clean']): VoiceStemDeps {
   }
 }
 
-const halve: VoiceStemDeps['clean'] = async (samples) => samples.map((sample) => sample / 2)
+const halve = async (samples: Float32Array): Promise<Float32Array> => samples.map((sample) => sample / 2)
 
 beforeEach(() => setSystemTime(new Date('2026-09-25T12:00:00Z')))
 afterEach(() => setSystemTime())
@@ -56,7 +56,7 @@ describe('ensureVoiceStemsForBridge', () => {
         await new Promise<void>((resolve) => {
           release = resolve
         })
-        return halve(samples, () => {})
+        return halve(samples)
       }),
     )
     const editor = engine()
@@ -73,10 +73,10 @@ describe('ensureVoiceStemsForBridge', () => {
   test('reports a failed stem with its error and retries it when asked again', async () => {
     let attempts = 0
     const stems = createVoiceStems(
-      deps(async (samples, onProgress) => {
+      deps(async (samples) => {
         attempts++
         if (attempts === 1) throw new Error('The voice model crashed.')
-        return halve(samples, onProgress)
+        return halve(samples)
       }),
     )
     const editor = engine()

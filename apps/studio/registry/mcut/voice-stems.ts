@@ -10,11 +10,16 @@ export type StemStatus =
 
 type StemKey = `hash:${string}` | `src:${string}`
 
+type Stem =
+  | { state: 'processing'; progress: number; startedAt: number; job: AbortController }
+  | { state: 'ready'; url: string; processingMs: number; dry: Float32Array; wet: Float32Array; mixes: Map<number, string> }
+  | { state: 'failed'; error: string }
+
 export type StemState = ReadonlyMap<StemKey, StemStatus>
 
 export interface VoiceStemDeps {
   decode: (src: string) => Promise<Float32Array>
-  clean: (samples: Float32Array, onProgress: (progress: number) => void) => Promise<Float32Array>
+  clean: (samples: Float32Array, onProgress: (progress: number) => void, signal: AbortSignal) => Promise<Float32Array>
   load: (name: string) => Promise<Blob | null>
   save: (name: string, wav: Blob) => Promise<void>
 }
@@ -58,17 +63,31 @@ const wavBlob = (samples: Float32Array): Blob => new Blob([encodeWav(samples, VO
 const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
 export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
-  let state: StemState = new Map()
+  let state: ReadonlyMap<StemKey, Stem> = new Map()
   let active: ReadonlySet<ElementId> = new Set()
+  let live: ReadonlySet<StemKey> = new Set()
+  const waits = new Set<ReadonlySet<StemKey>>()
   const listeners = new Set<(state: StemState) => void>()
-  const decoded = new Map<StemKey, { dry: Float32Array; wet: Float32Array }>()
-  const mixes = new Map<string, string>()
 
   const status = (asset: AssetRef): StemStatus => state.get(stemKey(asset)) ?? IDLE
 
-  const set = (key: StemKey, next: StemStatus): void => {
-    state = new Map(state).set(key, next)
+  const replace = (next: ReadonlyMap<StemKey, Stem>): void => {
+    state = next
     for (const listener of listeners) listener(state)
+  }
+
+  const set = (key: StemKey, stem: Stem): void => replace(new Map(state).set(key, stem))
+
+  const unwanted = (key: StemKey): boolean => !live.has(key) && ![...waits].some((keys) => keys.has(key))
+
+  function release(key: StemKey): void {
+    const stem = state.get(key)
+    if (!stem) return
+    if (stem.state === 'processing') stem.job.abort()
+    if (stem.state === 'ready') for (const url of [stem.url, ...stem.mixes.values()]) URL.revokeObjectURL(url)
+    const next = new Map(state)
+    next.delete(key)
+    replace(next)
   }
 
   const subscribe = (listener: (state: StemState) => void) => {
@@ -76,7 +95,7 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
     return { unsubscribe: () => void listeners.delete(listener) }
   }
 
-  async function prepare(asset: AssetRef, onProgress: (progress: number) => void) {
+  async function prepare(asset: AssetRef, signal: AbortSignal, onProgress: (progress: number) => void) {
     const dry = await deps.decode(asset.src)
     const name = await stemName(asset)
     const cached = await deps.load(name)
@@ -84,7 +103,7 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
       const wet = decodeWav(new Uint8Array(await cached.arrayBuffer())).samples
       if (wet.length === dry.length) return { dry, wet, wav: cached }
     }
-    const wet = await deps.clean(dry, onProgress)
+    const wet = await deps.clean(dry, onProgress, signal)
     const wav = wavBlob(wet)
     await deps.save(name, wav)
     return { dry, wet, wav }
@@ -92,32 +111,44 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
 
   function start(asset: AssetRef): void {
     const key = stemKey(asset)
-    const current = status(asset).state
+    const current = state.get(key)?.state
     if (current === 'processing' || current === 'ready') return
+    const job = new AbortController()
     const startedAt = Date.now()
-    set(key, { state: 'processing', progress: 0, startedAt })
-    prepare(asset, (progress) => set(key, { state: 'processing', progress, startedAt })).then(
+    const owns = (): boolean => {
+      const stem = state.get(key)
+      return stem?.state === 'processing' && stem.job === job
+    }
+    set(key, { state: 'processing', progress: 0, startedAt, job })
+    prepare(asset, job.signal, (progress) => {
+      if (owns()) set(key, { state: 'processing', progress, startedAt, job })
+    }).then(
       ({ dry, wet, wav }) => {
-        decoded.set(key, { dry, wet })
-        set(key, { state: 'ready', url: URL.createObjectURL(wav), processingMs: Date.now() - startedAt })
+        if (owns()) set(key, { state: 'ready', url: URL.createObjectURL(wav), processingMs: Date.now() - startedAt, dry, wet, mixes: new Map() })
       },
-      (error: unknown) => set(key, { state: 'failed', error: errorMessage(error) }),
+      (error: unknown) => {
+        if (owns()) set(key, { state: 'failed', error: errorMessage(error) })
+      },
     )
   }
 
   function settled(assets: readonly AssetRef[], { signal, onProgress }: SettleOptions = {}): Promise<void> {
+    const keys: ReadonlySet<StemKey> = new Set(assets.map(stemKey))
     return new Promise((resolve, reject) => {
       const subscription = subscribe(check)
+      waits.add(keys)
       function finish(): void {
         subscription.unsubscribe()
         signal?.removeEventListener('abort', abort)
+        waits.delete(keys)
       }
       function abort(): void {
         finish()
+        for (const key of keys) if (unwanted(key)) release(key)
         reject(signal?.reason)
       }
       function check(): void {
-        const stems = assets.map(status)
+        const stems = [...keys].map((key) => state.get(key) ?? IDLE)
         if (stems.every((stem) => stem.state !== 'processing')) {
           finish()
           resolve()
@@ -133,6 +164,8 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
 
   function reconcile(project: Project): void {
     const voiced = voicedElements(project)
+    live = new Set(voiced.map(({ asset }) => stemKey(asset)))
+    for (const key of state.keys()) if (unwanted(key)) release(key)
     for (const { elementId, asset } of voiced) {
       if (!active.has(elementId) || status(asset).state === 'idle') start(asset)
     }
@@ -140,17 +173,14 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
   }
 
   function srcFor(asset: AssetRef, amount: number): string | undefined {
-    const key = stemKey(asset)
-    const stem = state.get(key)
-    const samples = decoded.get(key)
-    if (stem?.state !== 'ready' || !samples) return undefined
+    const stem = state.get(stemKey(asset))
+    if (stem?.state !== 'ready') return undefined
     const percent = Math.round(amount * 100)
     if (percent >= 100) return stem.url
-    const mixKey = `${key}@${percent}`
-    const existing = mixes.get(mixKey)
+    const existing = stem.mixes.get(percent)
     if (existing) return existing
-    const url = URL.createObjectURL(wavBlob(mixVoice(samples.dry, samples.wet, percent / 100)))
-    mixes.set(mixKey, url)
+    const url = URL.createObjectURL(wavBlob(mixVoice(stem.dry, stem.wet, percent / 100)))
+    stem.mixes.set(percent, url)
     return url
   }
 
@@ -160,11 +190,14 @@ export function createVoiceStems(deps: VoiceStemDeps): VoiceStems {
       const src = srcFor(asset, amount)
       if (src) sources.set(elementId, src)
     }
-    const live = new Set(sources.values())
-    for (const [key, url] of mixes) {
-      if (live.has(url)) continue
-      URL.revokeObjectURL(url)
-      mixes.delete(key)
+    const used = new Set(sources.values())
+    for (const stem of state.values()) {
+      if (stem.state !== 'ready') continue
+      for (const [percent, url] of stem.mixes) {
+        if (used.has(url)) continue
+        URL.revokeObjectURL(url)
+        stem.mixes.delete(percent)
+      }
     }
     return sources
   }

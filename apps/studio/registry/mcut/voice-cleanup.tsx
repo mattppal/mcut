@@ -46,7 +46,7 @@ async function decodeVoice(src: string): Promise<Float32Array> {
 
 export const voiceStems = createVoiceStems({
   decode: decodeVoice,
-  clean: (samples, onProgress) => cleanVoice(samples, { onProgress: ({ done, total }) => onProgress(total > 0 ? done / total : 1) }),
+  clean: (samples, onProgress, signal) => cleanVoice(samples, { signal, onProgress: ({ done, total }) => onProgress(total > 0 ? done / total : 1) }),
   load: loadStem,
   save: saveStem,
 })
