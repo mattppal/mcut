@@ -1,0 +1,89 @@
+---
+title: "Zoom regions"
+description: "Punch-ins as one object with in, hold, and out timing, a target, easing, and motion blur."
+---
+
+A zoom region is one punch-in on a video, image, or multicam element. It zooms
+in over `inMs`, holds for `holdMs`, and zooms back out over `outMs`, all in
+element-local time. A multicam zoom names a `source` key, so every slot showing
+that source zooms and the other slots keep their framing. The screen can zoom
+while the camera overlay stays put.
+
+Regions on one target never overlap. The zoom commands keep the region they add
+or change inside the element. A split copies a region that crosses the cut into
+both halves, so the picture on each side stays the same, and a trim can leave a
+region running past an edge, where it plays cut off. Growing a clip from
+its start shifts the regions with the content.
+
+```ts
+engine.dispatch({
+  type: 'addZoomRegion',
+  elementId: 'e-multicam',
+  zoom: { preset: 'detailZoom', source: 'screen', atMs: 12_000, focus: { x: 0.75, y: 0.3 } },
+})
+```
+
+## Types
+
+### ZoomRegion
+
+`ZoomRegion` is `z.infer<typeof zoomRegionSchema>`, one stored zoom region with every field resolved.
+
+### ZoomRegionRef
+
+`ZoomRegionRef` extends `ZoomRegion` with `elementId` and the region's timeline `startMs` and `endMs`.
+
+### ContentView
+
+`ContentView` is `{ scale, focus }`, how a clip or slot frames its source at one
+instant. `scale` multiplies the fit scale. `focus` is the anchor point from 0 to
+1 that stays fixed while it scales.
+
+## Schemas
+
+### zoomRegionSchema
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | Stable id, minted as `z-...` when omitted |
+| `source` | string, optional | Multicam source key whose slots zoom. Absent on clips |
+| `atMs` | integer ms | Element-local start of the zoom-in, negative on the right half of a split through a zoom |
+| `inMs`, `holdMs`, `outMs` | integer ms | Ramp in, hold, ramp out |
+| `focus` | `{ x, y }` from 0 to 1 | Target center, across the cropped frame of a clip or across the source frame of a multicam slot |
+| `scale` | 1 to 8 | Scale at the hold |
+| `easing` | `Easing` | Applied to both ramps |
+| `motionBlur` | 0 to 1 | Shutter as a fraction of one frame while the zoom moves. 0 turns it off |
+
+### zoomCommandSchema
+
+`zoomCommandSchema` is the discriminated union of `addZoomRegion`, `updateZoomRegion`, and `removeZoomRegion` with their `type`. It is the input of the MCP `edit_zooms` tool.
+
+## Presets
+
+### ZOOM_REGION_PRESETS
+
+| Preset | Scale | In | Hold | Out |
+| --- | --- | --- | --- | --- |
+| `subtlePunchIn` | 1.15 | 700 ms | 1600 ms | 700 ms |
+| `detailZoom` | 1.5 | 600 ms | 3000 ms | 600 ms |
+
+`addZoomRegion` defaults to `subtlePunchIn`, `easeOutExpo`, and motion blur 0.5.
+Explicit fields override the preset. A `rect` sets both focus and scale.
+
+## Functions
+
+### listZoomRegions
+
+`listZoomRegions(project)` returns every zoom region in the project as `ZoomRegionRef[]`, in track and element order.
+
+### getSlotView
+
+`getSlotView(element, slot, timelineMs, visible)` returns the `ContentView` of one multicam layout slot. It is the one place a renderer reads a slot's framing. `visible` is the fraction of the source each axis shows at scale 1, which differs from 1 when the slot's shape differs from the video, and it defaults to the full frame. Outside a zoom it returns the slot's own focus at scale 1.
+
+### getClipView
+
+`getClipView(element, timelineMs)` returns the `ContentView` of a video or image clip inside its crop.
+
+### getZoomShutterMs
+
+`getZoomShutterMs(element, timelineMs, frameMs)` returns the motion blur shutter in milliseconds while any zoom on the element ramps, and 0 while every zoom holds or rests. The compositor renders the element at views sampled across this window into a scratch canvas and composites the average once, the same path as keyframe motion blur.

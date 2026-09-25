@@ -69,7 +69,7 @@ Zod schema for the nine keyframeable properties, position, scale, rotation, opac
 
 ```ts
 const easingSchema = z.union([
-  z.enum(['linear', 'hold', 'easeIn', 'easeOut', 'easeInOut']),
+  z.enum(['linear', 'hold', 'easeIn', 'easeOut', 'easeInOut', 'easeInExpo', 'easeOutExpo', 'easeInOutExpo']),
   z.object({ cubicBezier: z.tuple([z.number(), z.number(), z.number(), z.number()]) }),
 ])
 ```

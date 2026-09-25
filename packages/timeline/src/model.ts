@@ -12,6 +12,7 @@ import { cropSchema, shadowSchema, strokeSchema } from './style'
 import { textRunSchema } from './rich-text'
 import { splitAngles } from './multicam'
 import { transitionSchema } from './transitions'
+import { splitZoomRegions, zoomRegionSchema } from './zoom-regions'
 
 export const MIN_ELEMENT_DURATION_MS = 10
 
@@ -130,6 +131,7 @@ const videoShape = {
   ...fadeShape,
   ...visualShape,
   ...frameStyleShape,
+  zooms: z.array(zoomRegionSchema).optional(),
 }
 
 const audioShape = {
@@ -148,6 +150,7 @@ const imageShape = {
   opacity: z.number().min(0).max(1).default(1),
   ...visualShape,
   ...frameStyleShape,
+  zooms: z.array(zoomRegionSchema).optional(),
 }
 
 const textShape = {
@@ -183,6 +186,7 @@ const multicamShape = {
   muted: z.boolean().default(false),
   ...fadeShape,
   ...visualShape,
+  zooms: z.array(zoomRegionSchema).optional(),
 }
 
 const captionShape = {
@@ -367,6 +371,11 @@ function timingHalves<E extends TimelineElement>(element: E, offsetMs: number): 
     const split = splitKeyframes(element.keyframes, offsetMs)
     setKeyframes(left, split.left)
     setKeyframes(right, split.right)
+  }
+  if ('zooms' in element && element.zooms && 'zooms' in left && 'zooms' in right) {
+    const split = splitZoomRegions(element.zooms, offsetMs)
+    left.zooms = split.left
+    right.zooms = split.right
   }
   return { left, right }
 }

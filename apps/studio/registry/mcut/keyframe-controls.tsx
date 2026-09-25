@@ -12,6 +12,9 @@ export const EASING_PRESETS: Array<{ label: string; value: Easing }> = [
   { label: 'Ease in', value: 'easeIn' },
   { label: 'Ease out', value: 'easeOut' },
   { label: 'Ease in-out', value: 'easeInOut' },
+  { label: 'Expo in', value: 'easeInExpo' },
+  { label: 'Expo out', value: 'easeOutExpo' },
+  { label: 'Expo in-out', value: 'easeInOutExpo' },
   { label: 'Hold', value: 'hold' },
 ]
 
