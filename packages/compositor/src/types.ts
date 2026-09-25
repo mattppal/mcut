@@ -11,6 +11,7 @@ export interface RenderFrameOptions {
   backgroundColor?: string
   skipElementIds?: ReadonlySet<string>
   motionBlurSamples?: number
+  renderScale?: number
   createScratchContext?: (width: number, height: number) => Canvas2D | null
 }
 

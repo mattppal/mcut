@@ -156,6 +156,23 @@ describe('zoom motion blur', () => {
     expect(main.callsTo('drawImage')).toHaveLength(1)
   })
 
+  test('at renderScale 0.5 the passes render at half scale into half-size scratch and composite over the whole frame', () => {
+    const main = new FakeContext2D()
+    const { sample, accumulate, create } = scratchPair()
+    const sizes: number[][] = []
+    const createScratchContext = (width: number, height: number) => {
+      sizes.push([width, height])
+      return create()
+    }
+    renderFrame(asCtx(main), zoomedClip(1), 100, { source, motionBlurSamples: 4, renderScale: 0.5, createScratchContext })
+    expect(sizes).toEqual([
+      [640, 360],
+      [640, 360],
+    ])
+    expect(sample.callsTo('setTransform').map((c) => c.args)).toEqual([[0.5, 0, 0, 0.5, 0, 0]])
+    expect(main.callsTo('drawImage').map((c) => c.args)).toEqual([[accumulate.canvas, 0, 0, 1280, 720]])
+  })
+
   test('a hold draws one sharp pass straight into the frame', () => {
     const main = new FakeContext2D()
     const { sample, create } = scratchPair()
