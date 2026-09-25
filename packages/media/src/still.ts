@@ -101,7 +101,7 @@ function outputSize(projectWidth: number, projectHeight: number, maxWidth: numbe
 }
 
 class StillFrameSource implements FrameSource {
-  private readonly inputs = new Map<AssetId, { input: Input; sink: VideoSampleSink | null }>()
+  private readonly inputs = new Map<AssetId, { input: Input; sink: VideoSampleSink }>()
   private readonly images = new Map<AssetId, ImageBitmap>()
   private readonly bitmaps: ImageBitmap[] = []
   private readonly frames = new Map<string, CanvasImageSource>()
@@ -149,8 +149,7 @@ class StillFrameSource implements FrameSource {
 
   private async ensureSink(assetId: AssetId): Promise<VideoSampleSink> {
     const existing = this.inputs.get(assetId)
-    if (existing?.sink) return existing.sink
-    if (existing) throw new Error(`Asset ${assetId} has no video track.`)
+    if (existing) return existing.sink
     const asset = this.project.assets[assetId]
     if (!asset) throw new Error(`Asset ${assetId} is not in the project.`)
     const input = await inputFor(asset.src)
