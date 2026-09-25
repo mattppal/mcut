@@ -103,17 +103,3 @@ export function drawFramedMedia(ctx: Canvas2D, frame: CanvasImageSource, box: Fr
   const { src, dest } = placeSource(cropSourceRect(style.crop, frame) ?? { sx: 0, sy: 0, sw: width, sh: height }, box, fit, viewFor)
   withFrameChrome(ctx, style, box, () => ctx.drawImage(frame, src.sx, src.sy, src.sw, src.sh, dest.x, dest.y, dest.w, dest.h))
 }
-
-export function drawFramedComposite(ctx: Canvas2D, size: { width: number; height: number }, style: FrameStyle, draw: () => void): void {
-  const crop = style.crop ?? { x: 0, y: 0, w: 1, h: 1 }
-  const box = { x: (-crop.w * size.width) / 2, y: (-crop.h * size.height) / 2, w: crop.w * size.width, h: crop.h * size.height }
-  withFrameChrome(ctx, style, box, () => {
-    if (style.crop) {
-      ctx.beginPath()
-      ctx.rect(box.x, box.y, box.w, box.h)
-      ctx.clip()
-      ctx.translate((0.5 - crop.x - crop.w / 2) * size.width, (0.5 - crop.y - crop.h / 2) * size.height)
-    }
-    draw()
-  })
-}

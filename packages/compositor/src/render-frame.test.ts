@@ -299,9 +299,9 @@ describe('multicam rendering', () => {
   }
 
   const render = (project: Project, timeMs: number, source = new FakeSource()) => {
-    const fake = new FakeContext2D()
-    renderFrame(asCtx(fake), project, timeMs, { source })
-    return fake
+    const composed = new FakeContext2D(project.width, project.height)
+    renderFrame(asCtx(new FakeContext2D()), project, timeMs, { source, createScratchContext: () => asCtx(composed) })
+    return composed
   }
 
   test('draws every slot of the active layout, then switches at the cut', () => {
