@@ -75,7 +75,7 @@ An audio element as inferred from `audioElementSchema`.
 type AngleCutRef = MulticamElement['angles'][number]
 ```
 
-One entry of a multicam element's `angles` list, the time a layout takes effect and the layout id.
+One entry of a multicam element's `angles` list, the source clock time a layout takes effect and the layout id.
 
 ### CaptionElement
 
@@ -153,7 +153,7 @@ A multicam element as inferred from `multicamElementSchema`.
 type MulticamSource = z.infer<typeof multicamSourceSchema>
 ```
 
-One synced source of a multicam element, a role key, an asset id, and a trim offset.
+One synced source of a multicam element, a role key, an asset id, and `offsetMs`, the source media time that plays at source clock time 0. A source with an audio asset is audio-only and is never drawn.
 
 ### Project
 
