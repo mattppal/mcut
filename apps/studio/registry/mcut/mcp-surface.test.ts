@@ -53,7 +53,7 @@ describe('MCP tool manifest', () => {
     expect(body.profile).toBe('agent')
     expect(tools).toEqual(listMcpToolDefinitions('agent'))
     expect(tools).toEqual(JSON.parse(JSON.stringify(MCP_AGENT_TOOL_DEFINITIONS)))
-    expect(tools.length, '16 server static tools + 3 bridge-only tools (list_commands, apply_commands, run_operator)').toBe(19)
+    expect(tools.length, '22 server static tools + 3 bridge-only tools (list_commands, apply_commands, run_operator)').toBe(25)
     expect(toolNames.size).toBe(tools.length)
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true)
     for (const command of listCommands()) expect(toolNames.has(command.type)).toBe(false)
@@ -77,7 +77,7 @@ describe('MCP tool manifest', () => {
 
     expect(body.profile).toBe('full')
     expect(tools).toEqual(listMcpToolDefinitions('full'))
-    expect(tools.length, '19 agent tools + 43 editor operators + 59 timeline commands').toBe(121)
+    expect(tools.length, '25 agent tools + 43 editor operators + 61 timeline commands').toBe(129)
     expect(toolNames.size).toBe(tools.length)
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true)
     for (const id of operatorIds) expect(toolNames.has(liveMcpOperatorToolName(id))).toBe(true)
@@ -364,13 +364,19 @@ describe('Studio action/operator MCP surface', () => {
       'apply_captions',
       'apply_silence_cuts',
       'lint_project',
+      'list_zooms',
+      'edit_zooms',
       'list_presets',
       'list_operators',
       'run_operator',
       'list_actions',
       'run_action',
+      'transact',
       'undo',
       'redo',
+      'export_video',
+      'get_export',
+      'cancel_export',
     ])
     expect(LIVE_MCP_DYNAMIC_TOOL_REQUESTS).toEqual(['dispatch_command'])
   })

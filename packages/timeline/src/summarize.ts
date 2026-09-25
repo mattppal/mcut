@@ -67,6 +67,10 @@ function describeElement(project: Project, element: TimelineElement): string {
   if ('transition' in element && element.transition) {
     suffix += ` [→ ${element.transition.type} ${element.transition.durationMs}ms]`
   }
+  if ('zooms' in element && element.zooms && element.zooms.length > 0) {
+    const zooms = element.zooms.map((z) => `${z.id}${z.source ? ` ${z.source}` : ''} ${z.scale}x @ ${seconds(element.startMs + z.atMs)}`)
+    suffix += ` [zooms: ${zooms.join(', ')}]`
+  }
   const fadeIn = 'fadeInMs' in element ? (element.fadeInMs ?? 0) : 0
   const fadeOut = 'fadeOutMs' in element ? (element.fadeOutMs ?? 0) : 0
   if (fadeIn > 0 || fadeOut > 0) {

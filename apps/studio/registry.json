@@ -129,16 +129,6 @@
           "target": "components/mcut/animations-panel.tsx"
         },
         {
-          "path": "registry/mcut/animation-presets.ts",
-          "type": "registry:lib",
-          "target": "components/mcut/animation-presets.ts"
-        },
-        {
-          "path": "registry/mcut/zoom-presets.ts",
-          "type": "registry:lib",
-          "target": "components/mcut/zoom-presets.ts"
-        },
-        {
           "path": "registry/mcut/timeline-panel.tsx",
           "type": "registry:component",
           "target": "components/mcut/timeline-panel.tsx"
@@ -247,6 +237,11 @@
           "path": "registry/mcut/bridge-request.ts",
           "type": "registry:lib",
           "target": "components/mcut/bridge-request.ts"
+        },
+        {
+          "path": "registry/mcut/live-mcp-export.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/live-mcp-export.ts"
         },
         {
           "path": "registry/mcut/live-mcp-transcript.ts",
@@ -359,9 +354,9 @@
           "target": "components/mcut/text-edit-overlay.tsx"
         },
         {
-          "path": "registry/mcut/template-store.ts",
+          "path": "registry/mcut/saved-zooms.ts",
           "type": "registry:lib",
-          "target": "components/mcut/template-store.ts"
+          "target": "components/mcut/saved-zooms.ts"
         },
         {
           "path": "registry/mcut/element-ui.ts",
@@ -452,6 +447,11 @@
           "path": "registry/mcut/clip-fades.tsx",
           "type": "registry:component",
           "target": "components/mcut/clip-fades.tsx"
+        },
+        {
+          "path": "registry/mcut/clip-zooms.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/clip-zooms.tsx"
         },
         {
           "path": "registry/mcut/command-palette-events.ts",
@@ -666,7 +666,8 @@
         "unicode-animations@1.0.3",
         "@mcut/editor",
         "@mcut/transcription",
-        "zod"
+        "zod",
+        "sonner"
       ],
       "registryDependencies": ["button", "context-menu", "input", "slider"],
       "files": [
@@ -789,6 +790,11 @@
           "path": "registry/mcut/clip-fades.tsx",
           "type": "registry:component",
           "target": "components/mcut/clip-fades.tsx"
+        },
+        {
+          "path": "registry/mcut/clip-zooms.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/clip-zooms.tsx"
         }
       ],
       "cssVars": {

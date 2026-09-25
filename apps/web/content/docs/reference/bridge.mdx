@@ -6,7 +6,9 @@ description: The live bridge inside mcut Studio, and the standalone bridge proce
 The live bridge keeps the open editor as the source of truth while agents or
 scripts edit through MCP-style tools. It listens on localhost for a WebSocket
 from the editor at `/mcut-mcp`, Streamable HTTP MCP at `/mcp`, and a local RPC
-endpoint for the CLI commands below.
+endpoint for the CLI commands below. The editor uploads each finished
+`export_video` render to `/exports/<jobId>`, and the bridge writes the file to
+disk.
 
 ## The bridge in Studio
 

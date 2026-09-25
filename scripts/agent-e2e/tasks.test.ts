@@ -22,6 +22,7 @@ const firstTask = (): E2ETask => {
 
 const headlessTasks = TASKS.filter((task) => task.target === 'any')
 const bridgeTasks = TASKS.filter((task) => task.target === 'bridge')
+const liveOnlyTools = new Set(['run_action', 'export_video', 'get_export'])
 
 const repeating = (turn: ModelTurn): ModelClient => ({
   model: 'repeating',
@@ -66,12 +67,12 @@ describe('agent e2e task registry', () => {
     }
   })
 
-  test('bridge tasks need the live tab, so the headless server rejects their run_action calls', async () => {
+  test('bridge tasks need the live tab, so the headless server rejects their live-only calls', async () => {
     for (const task of bridgeTasks) {
-      expect(task.scripted.map((call) => call.name)).toContain('run_action')
+      expect(task.scripted.some((call) => liveOnlyTools.has(call.name))).toBe(true)
       const run = await runTask(task, session, createScriptedModel(task.scripted), DEFAULT_CAPS)
       expect(run.verdict.pass).toBe(false)
-      expect(run.toolCalls.some((call) => call.name === 'run_action' && call.isError)).toBe(true)
+      expect(run.toolCalls.some((call) => liveOnlyTools.has(call.name) && call.isError)).toBe(true)
     }
   })
 

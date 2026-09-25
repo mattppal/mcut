@@ -1,7 +1,12 @@
 import { z } from 'zod'
 import { operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinition, type OperatorId } from '@mcut/editor'
-import { elementIdSchema, listToolDefinitions } from '@mcut/timeline'
+import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
 import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
+import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
+import { commandBatchSchema } from './transact-shape'
+
+export * from './export-protocol'
+export { applyTransact, transactSubRequestSchema, type TransactSubRequest } from './transact-shape'
 
 export interface McpToolDefinition {
   name: string
@@ -50,13 +55,19 @@ export const MCP_AGENT_TOOL_NAMES = [
   'apply_captions',
   'apply_silence_cuts',
   'lint_project',
+  'list_zooms',
+  'edit_zooms',
   'list_presets',
   'list_operators',
   'run_operator',
   'list_actions',
   'run_action',
+  'transact',
   'undo',
   'redo',
+  'export_video',
+  'get_export',
+  'cancel_export',
 ] as const
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
@@ -101,17 +112,25 @@ export const MCP_TOOL_INPUTS = {
   }),
   list_commands: EMPTY_INPUT,
   apply_commands: z.strictObject({
-    commands: z
+    commands: commandBatchSchema,
+  }),
+  transact: z.strictObject({
+    calls: z
       .array(
-        z.looseObject({
-          type: z.string().describe('Timeline command type, e.g. splitElement, trimElement, addElement.'),
+        z.strictObject({
+          name: z.string(),
+          arguments: z.record(z.string(), z.unknown()).optional(),
         }),
       )
-      .min(1),
+      .min(1)
+      .max(100)
+      .describe('Tool calls to apply as one undo step. Each name is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.'),
   }),
   apply_captions: applyCaptionsInputSchema,
   apply_silence_cuts: applySilenceCutsInputSchema,
   lint_project: EMPTY_INPUT,
+  list_zooms: EMPTY_INPUT,
+  edit_zooms: z.strictObject({ edits: z.array(zoomCommandSchema).min(1) }),
   list_presets: EMPTY_INPUT,
   list_operators: EMPTY_INPUT,
   run_operator: z.strictObject({ operatorId: z.string(), input: TOOL_INPUT }),
@@ -119,6 +138,9 @@ export const MCP_TOOL_INPUTS = {
   run_action: z.strictObject({ actionId: z.string(), input: TOOL_INPUT }),
   undo: EMPTY_INPUT,
   redo: EMPTY_INPUT,
+  export_video: exportVideoInputSchema,
+  get_export: getExportInputSchema,
+  cancel_export: cancelExportInputSchema,
 } satisfies Record<McpAgentToolName, z.ZodType>
 
 const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
@@ -159,20 +181,40 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   lint_project:
     'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
     'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',
+  list_zooms:
+    'List every zoom region in the project in one call: element id, source slot for multicam, element-local atMs, timeline startMs and endMs, ' +
+    'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. Read this before revising zooms.',
+  edit_zooms:
+    'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
+    'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.5x) with rect or focus on the discussed screen region. ' +
+    'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the screen key so the camera overlay stays put.',
   list_presets: 'List platform delivery presets (dimensions, fps, safe areas, notes) to size a new project for its destination.',
   list_operators:
     'List user-level editor operators available to agents. Prefer these for UI-parity actions; ' + 'use raw command tools for low-level document edits.',
   run_operator: 'Run a user-level editor operator by id. Use list_operators first when you need the available ids and input schemas.',
   list_actions:
     'List browser editor actions available in the live editor, including menu/palette/hotkey actions. ' +
-    'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence, effects.fade-open-close, ' +
-    'and file.export-video, which renders and saves the video.',
+    'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close. ' +
+    'To render the finished video, use export_video instead.',
   run_action:
     'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette. ' +
     'Prefer high-level actions over hand-authored command sequences when available. ' +
-    'To export or render the finished video, run file.export-video with input {"format":"mp4"} or {"format":"webm"}.',
-  undo: 'Undo the most recent edit.',
+    'To export or render the finished video, call export_video, then get_export until it is done.',
+  transact:
+    'Apply 1 to 100 tool calls as one undo step. If any call fails, nothing stays applied. ' +
+    'Wrap one intent in one transact, for example a fade in and a fade out, so undo removes the whole intent. ' +
+    'Each call is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.',
+  undo: 'Undo the most recent edit. One undo step is one tool call or one whole transact.',
   redo: 'Redo the most recently undone edit.',
+  export_video:
+    'Live bridge only: render the whole timeline to a video file in Studio and write it to disk through the bridge. No dialog opens. ' +
+    'Returns at once with a jobId while Studio renders in the background, which takes minutes for a long timeline. ' +
+    'Then call get_export { jobId, waitMs: 20000 } until state is done, which reports the file path and byte size. One export runs at a time.',
+  get_export:
+    'Report an export job from export_video: state (rendering, writing, done, failed, or cancelled), percent, elapsedMs, ' +
+    'an etaMs estimate while rendering, outputPath, and bytes once done. waitMs long-polls until the job ends or the wait runs out, ' +
+    'so call it with waitMs 20000 until state is done.',
+  cancel_export: 'Cancel the running export from export_video. Studio stops rendering and nothing is written.',
 }
 
 const toolDefinition = (name: McpAgentToolName): McpToolDefinition => ({
@@ -200,12 +242,18 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('apply_captions'),
   staticToolCall('apply_silence_cuts'),
   staticToolCall('lint_project'),
+  staticToolCall('list_zooms'),
+  staticToolCall('edit_zooms'),
   staticToolCall('list_presets'),
   staticToolCall('list_operators'),
   staticToolCall('list_actions'),
   staticToolCall('run_action'),
+  staticToolCall('transact'),
   staticToolCall('undo'),
   staticToolCall('redo'),
+  staticToolCall('export_video'),
+  staticToolCall('get_export'),
+  staticToolCall('cancel_export'),
 ])
 
 export type McpServerStaticToolCall = z.infer<typeof MCP_SERVER_STATIC_TOOL_CALL_SCHEMA>
