@@ -288,7 +288,7 @@ describe('multicam composite', () => {
     expect(modes(composed)).toEqual(['source-over', 'source-over'])
   })
 
-  test('a multicam composes at the project size, or at the render scale of a larger target', () => {
+  test('a multicam composes at the render scale of its target', () => {
     const composeAt = (scale: number) => {
       const main = new FakeContext2D(1920 * scale, 1080 * scale)
       main.setTransform(scale, 0, 0, scale, 0, 0)
@@ -315,13 +315,14 @@ describe('multicam composite', () => {
       frame: [[true, 0, 0, 3840, 2160]],
     })
     expect(composeAt(0.5)).toEqual({
-      scratch: { width: 1920, height: 1080 },
+      scratch: { width: 960, height: 540 },
       slots: [
-        [0, 0, 1920, 1080],
-        [1440, 810, 480, 270],
+        [0, 0, 960, 540],
+        [720, 405, 240, 135],
       ],
       frame: [[true, 0, 0, 960, 540]],
     })
+    expect(composeAt(0).scratch).toEqual({ width: 1, height: 1 })
   })
 
   test('a keyed multicam reaches the backend as one image quad with the chrome of a keyed clip, off the raster', () => {

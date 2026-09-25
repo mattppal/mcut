@@ -251,8 +251,8 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
   const frames = context.source
   if (!frames) return
   const { width, height } = context.project
-  const density = Math.max(1, context.backend.renderScale)
-  const surface = context.acquireScratch(Math.ceil(width * density), Math.ceil(height * density))
+  const { renderScale } = context.backend
+  const surface = context.acquireScratch(Math.max(1, Math.ceil(width * renderScale)), Math.max(1, Math.ceil(height * renderScale)))
   if (!surface) return
   composeMulticam(surface, element, context, frames)
   drawMediaFrame(context, element, surface.canvas, width * (element.crop?.w ?? 1), height * (element.crop?.h ?? 1), WHOLE_FRAME)
