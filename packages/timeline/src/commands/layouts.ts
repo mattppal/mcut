@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import { CommandError } from '../errors'
-import { defaultSlotAnchor } from '../layout-summary'
-import { layoutSchema, layoutSlotSchema, resizeSlotRect, slotResizeSchema, type Layout, type LayoutSlot } from '../layouts'
+import { defaultSlotAnchor, slotRole } from '../layout-summary'
+import { layoutSchema, layoutSlotSchema, pipFrameStyle, resizeSlotRect, slotResizeSchema, type Layout, type LayoutSlot } from '../layouts'
+import type { Project } from '../model'
 import { frameStyleSchema, type FrameStyle } from '../style'
 import { defineCommand, mustGetLayout } from './shared'
 
@@ -18,9 +19,13 @@ const slotPatchSchema = z.object({
   shadow: styleShape.shadow.nullable(),
 })
 
-type SlotPatch = z.output<typeof slotPatchSchema>
+const layoutPatchSchema = layoutSchema.extend({ slots: z.array(slotPatchSchema).min(1) })
+
+type LayoutPatch = z.output<typeof layoutPatchSchema>
+type SlotPatch = LayoutPatch['slots'][number]
 
 const STYLE_FIELDS = frameStyleSchema.keyof().options
+const LOOK_FIELDS = ['cornerRadius', 'stroke', 'shadow'] as const
 
 function patchField<K extends keyof FrameStyle>(style: FrameStyle, key: K, value: FrameStyle[K] | null): void {
   if (value === null) delete style[key]
@@ -35,6 +40,15 @@ function mergeSlot(old: LayoutSlot | undefined, patch: SlotPatch, layoutName: st
   return slot
 }
 
+function saveSlots(prev: Layout | undefined, patch: LayoutPatch, canvas: Pick<Project, 'width' | 'height'>): LayoutSlot[] {
+  const saved = patch.slots.map((input) => {
+    const old = prev?.slots.find((slot) => slot.source === input.source)
+    return { slot: mergeSlot(old, input, patch.name), bare: old === undefined && LOOK_FIELDS.every((key) => input[key] === undefined) }
+  })
+  const layout = { ...patch, slots: saved.map(({ slot }) => slot) }
+  return saved.map(({ slot, bare }, i) => (bare && slotRole(layout, i) === 'overlay' ? { ...slot, ...pipFrameStyle(slot.rect, canvas) } : slot))
+}
+
 export const saveLayout = defineCommand({
   type: 'saveLayout',
   description:
@@ -42,21 +56,13 @@ export const saveLayout = defineCommand({
     'on the canvas in normalized 0..1 rects; first slot paints bottom). A slot takes the same frame style ' +
     'as a video clip (crop, cornerRadius, stroke, shadow); its crop picks the source region that is fitted into the rect. ' +
     'Each slot merges by source into the saved slot, so an omitted field keeps its value, null clears a frame style field, ' +
-    'and rect is required only for a source new to the layout. A saved slot whose source is not in the list is removed.',
-  payloadSchema: z.object({ layout: layoutSchema.extend({ slots: z.array(slotPatchSchema).min(1) }) }),
+    'and rect is required only for a source new to the layout. A saved slot whose source is not in the list is removed. ' +
+    'An overlay slot new to the layout that sets none of cornerRadius, stroke, and shadow gets the picture-in-picture look, ' +
+    'cornerRadius 0.12 and a soft shadow sized to the slot. Set any of them, or null, to style it yourself.',
+  payloadSchema: z.object({ layout: layoutPatchSchema }),
   reduce: (project, { layout: patch }) => {
     const prev = project.layouts.find((l) => l.id === patch.id)
-    const layout: Layout = {
-      id: patch.id,
-      name: patch.name,
-      slots: patch.slots.map((slot) =>
-        mergeSlot(
-          prev?.slots.find((s) => s.source === slot.source),
-          slot,
-          patch.name,
-        ),
-      ),
-    }
+    const layout: Layout = { id: patch.id, name: patch.name, slots: saveSlots(prev, patch, project) }
     return { ...project, layouts: prev ? project.layouts.map((l) => (l === prev ? layout : l)) : [...project.layouts, layout] }
   },
 })

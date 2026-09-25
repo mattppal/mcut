@@ -23,7 +23,7 @@ function coversFrame(slot: LayoutSlot): boolean {
   return x <= 0 && y <= 0 && x + w >= 1 && y + h >= 1
 }
 
-function slotRole(layout: Layout, index: number): SlotRole {
+export function slotRole(layout: Layout, index: number): SlotRole {
   const slot = layout.slots[index]
   if (slot === undefined || coversFrame(slot)) return 'full-frame'
   return layout.slots.slice(0, index).some(coversFrame) ? 'overlay' : 'panel'

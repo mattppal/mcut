@@ -48,3 +48,48 @@ describe('saveLayout', () => {
     expect(() => save(styledPip(), [{ source: 'screen' }, { source: 'cam-2' }])).toThrow('slot "cam-2" is new to layout "PiP", so it needs a rect')
   })
 })
+
+describe('saveLayout overlay defaults', () => {
+  const bottomLeft = { x: 0.025, y: 0.69, w: 0.275, h: 0.275 }
+
+  test('a new overlay that sets no corner radius, stroke, or shadow gets the picture-in-picture look, crop or not', () => {
+    const crop = { x: 0.25, y: 0, w: 0.5, h: 1 }
+    const project = save(createProject({ width: 1920, height: 1080 }), [
+      { source: 'screen', rect: full },
+      { source: 'camera', rect: camera },
+      { source: 'cam-2', rect: bottomLeft, crop },
+    ])
+
+    expect(slotsOf(project)).toStrictEqual([
+      { source: 'screen', rect: full, fit: 'cover' },
+      { source: 'camera', rect: camera, fit: 'cover', cornerRadius: 0.12, shadow },
+      { source: 'cam-2', rect: bottomLeft, fit: 'cover', crop, cornerRadius: 0.12, shadow },
+    ])
+  })
+
+  test('a new overlay that sets any of them, even to null, keeps only what it set', () => {
+    const topLeft = { x: 0.025, y: 0.05, w: 0.2, h: 0.2 }
+    const topRight = { x: 0.775, y: 0.05, w: 0.2, h: 0.2 }
+    const project = save(styledPip(), [
+      { source: 'screen' },
+      { source: 'camera' },
+      { source: 'cam-2', rect: topLeft, shadow: null },
+      { source: 'cam-3', rect: topRight, stroke: { width: 2, color: '#ffffff' } },
+    ])
+
+    expect(slotsOf(project)?.slice(2)).toStrictEqual([
+      { source: 'cam-2', rect: topLeft, fit: 'cover' },
+      { source: 'cam-3', rect: topRight, fit: 'cover', stroke: { color: '#ffffff', width: 2 } },
+    ])
+  })
+
+  test('an overlay already in the layout stays unstyled when re-saved', () => {
+    const flat = save(createProject({ width: 1920, height: 1080 }), [
+      { source: 'screen', rect: full },
+      { source: 'camera', rect: camera, shadow: null },
+    ])
+    const after = save(flat, [{ source: 'screen' }, { source: 'camera', rect: bottomLeft }])
+
+    expect(slotsOf(after)?.[1]).toStrictEqual({ source: 'camera', rect: bottomLeft, fit: 'cover' })
+  })
+})

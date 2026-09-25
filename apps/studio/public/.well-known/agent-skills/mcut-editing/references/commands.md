@@ -296,7 +296,7 @@ Trim a clip edge AND ripple. Everything downstream of the edit shifts by the sam
 
 ## saveLayout
 
-Add or replace a multicam layout in the project (slots position sources on the canvas in normalized 0..1 rects; first slot paints bottom). A slot takes the same frame style as a video clip (crop, cornerRadius, stroke, shadow); its crop picks the source region that is fitted into the rect. Each slot merges by source into the saved slot, so an omitted field keeps its value, null clears a frame style field, and rect is required only for a source new to the layout. A saved slot whose source is not in the list is removed.
+Add or replace a multicam layout in the project (slots position sources on the canvas in normalized 0..1 rects; first slot paints bottom). A slot takes the same frame style as a video clip (crop, cornerRadius, stroke, shadow); its crop picks the source region that is fitted into the rect. Each slot merges by source into the saved slot, so an omitted field keeps its value, null clears a frame style field, and rect is required only for a source new to the layout. A saved slot whose source is not in the list is removed. An overlay slot new to the layout that sets none of cornerRadius, stroke, and shadow gets the picture-in-picture look, cornerRadius 0.12 and a soft shadow sized to the slot. Set any of them, or null, to style it yourself.
 
 - `layout` (object, required)
 

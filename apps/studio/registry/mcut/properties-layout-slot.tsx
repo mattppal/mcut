@@ -25,6 +25,8 @@ export const SLOT_ASPECTS: ReadonlyArray<readonly [label: string, ratio: number]
 
 const focusOf = (offset: number, size: number) => (size < 1 ? offset / (1 - size) : 0.5)
 
+const withoutDefaults = (slot: LayoutSlot) => ({ cornerRadius: null, stroke: null, shadow: null, ...slot })
+
 export function LayoutSlotInspector({ layout, className }: { layout: Layout; className?: string }) {
   const engine = useEditor()
   const project = useProject()
@@ -86,7 +88,7 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
     try {
       engine.dispatch({
         type: 'saveLayout',
-        layout: { ...layout, id: createLayoutId(), name },
+        layout: { ...layout, id: createLayoutId(), name, slots: layout.slots.map(withoutDefaults) },
       })
       toast.success(`"${name}" added to the layout bank`)
     } catch {
