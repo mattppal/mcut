@@ -328,16 +328,17 @@ function renderPreview(target: RenderTarget, renderer: Renderer, project: Projec
   const height = Math.max(1, Math.round(project.height * scale))
   if (canvas.width !== width) canvas.width = width
   if (canvas.height !== height) canvas.height = height
+  const frameOptions = { ...options, renderScale: scale }
   if (renderer === 'webgpu' && isWebGPUSupported()) {
     const backend = target.gpu.backendFor(project.width, project.height)
     if (!backend) return false
-    renderFrameWith(backend, project, timeMs, options)
+    renderFrameWith(backend, project, timeMs, frameOptions)
     return true
   }
   const ctx = canvas.getContext('2d')
   if (!ctx) return false
   ctx.setTransform(scale, 0, 0, scale, 0, 0)
-  renderFrame(ctx, project, timeMs, options)
+  renderFrame(ctx, project, timeMs, frameOptions)
   return true
 }
 

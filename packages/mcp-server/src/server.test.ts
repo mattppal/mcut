@@ -42,6 +42,7 @@ function frameTarget(frame: unknown): McutMcpTarget {
     applyCommands: unused,
     transact: unused,
     getFrame: async () => frame,
+    getContactSheet: async () => frame,
   }
 }
 
@@ -265,6 +266,26 @@ describe('createMcutMcpServer', () => {
     expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
   })
 
+  test('a rejected edit_zooms batch leaves the project and the undo stack unchanged', async () => {
+    const engine = new EditorEngine({ project: talkProject() })
+    const client = await connect(engine)
+    const before = JSON.parse(JSON.stringify(engine.toJSON()))
+
+    const failed = await client.callTool({
+      name: 'edit_zooms',
+      arguments: {
+        edits: [
+          { type: 'addZoomRegion', elementId: 'e-video', zoom: { id: 'z-open', atMs: 0 } },
+          { type: 'addZoomRegion', elementId: 'e-video', zoom: { id: 'z-clash', atMs: 1000 } },
+        ],
+      },
+    })
+    expect(failed.isError).toBe(true)
+    expect(contentText(failed)).toContain('zooms "z-open" and "z-clash" overlap on the same target')
+    expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
+    expect(engine.canUndo()).toBe(false)
+  })
+
   test('transact rejects a disallowed tool before it changes the project', async () => {
     const engine = new EditorEngine({ project: talkProject() })
     let persisted = 0
@@ -427,6 +448,9 @@ describe('createMcutMcpServer', () => {
     const frame = await client.callTool({ name: 'get_frame', arguments: { timeMs: 0 } })
     expect(frame.isError).toBe(true)
     expect(contentText(frame)).toBe('get_frame requires the live bridge connected to Studio.')
+    const changes = await client.callTool({ name: 'find_scene_changes', arguments: {} })
+    expect(changes.isError).toBe(true)
+    expect(contentText(changes)).toBe('find_scene_changes requires the live bridge connected to Studio.')
     const centered = await client.callTool({ name: 'center_person', arguments: {} })
     expect(centered.isError).toBe(true)
     expect(contentText(centered)).toBe('center_person requires a live browser bridge connected to an editor tab.')
@@ -849,6 +873,26 @@ describe('createMcutMcpServer', () => {
         type: 'text',
         text: '{"timeMs":1000,"width":8,"height":4,"elementId":"e-video","visibleElementIds":["e-video"]}',
       },
+    ])
+  })
+  test('get_contact_sheet returns the sheet PNG and its tile times', async () => {
+    const data = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const sheet = {
+      mimeType: 'image/png',
+      data,
+      width: 652,
+      height: 188,
+      columns: 2,
+      elementId: 'e-multicam',
+      source: 'screen',
+      tiles: [{ timeMs: 0 }, { timeMs: 45000 }],
+    }
+    const client = await connectTarget(frameTarget(sheet))
+    const result = await client.callTool({ name: 'get_contact_sheet', arguments: { timesMs: [0, 45000] } })
+    expect(result.isError).toBeFalsy()
+    expect(result.content).toEqual([
+      { type: 'image', data, mimeType: 'image/png' },
+      { type: 'text', text: '{"width":652,"height":188,"columns":2,"elementId":"e-multicam","source":"screen","tiles":[{"timeMs":0},{"timeMs":45000}]}' },
     ])
   })
 })

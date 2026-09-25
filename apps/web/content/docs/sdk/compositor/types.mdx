@@ -323,8 +323,9 @@ interface RenderFrameOptions {
   backgroundColor?: string
   skipElementIds?: ReadonlySet<string>
   motionBlurSamples?: number
+  renderScale?: number
   createScratchContext?: (width: number, height: number) => Canvas2D | null
 }
 ```
 
-Options for rendering a frame, the frame source, background color, elements to skip, motion blur samples, and a scratch context factory. The renderer calls `createScratchContext` each time it needs a scratch surface, for a motion blur pass or a multicam composite. Without it the renderer keeps one `OffscreenCanvas` per purpose and reuses it across frames.
+Options for rendering a frame, the frame source, background color, elements to skip, motion blur samples, the motion blur render scale, and a scratch context factory. `renderScale` renders motion blur samples at that fraction of the project resolution, for a preview drawn below full size. It defaults to 1. The renderer calls `createScratchContext` each time it needs a scratch surface, for a motion blur pass or a multicam composite. Without it the renderer keeps one `OffscreenCanvas` per purpose and reuses it across frames.

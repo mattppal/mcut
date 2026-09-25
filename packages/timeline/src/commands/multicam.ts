@@ -4,6 +4,7 @@ import { createElementId, createTrackId, type AssetId, type ElementId } from '..
 import { elementIdSchema, MIN_ELEMENT_DURATION_MS, validateElement, type Project, type TimelineElement, type Track } from '../model'
 import { getVisibleAngleCuts, isAudioOnlySource } from '../multicam'
 import { transitionSchema } from '../transitions'
+import { listZoomRegions, renameSplitCopies, zoomRegionEndMs } from '../zoom-regions'
 import { defineCommand, mustGetLayout, mustLocate, replaceTrack } from './shared'
 
 function mustBeMulticam(element: TimelineElement): asserts element is TimelineElement & {
@@ -219,7 +220,8 @@ export const flattenMulticam = defineCommand({
     'Destructive: removes the multicam and replaces it with plain clips, one muted video element per ' +
     'layout slot per visible cut span on new tracks (layout geometry baked into transforms, approximate, ' +
     'no crop primitive) plus one audio element from the audio source. The multicam, its angle schedule, ' +
-    'and its effects are gone afterwards; only undo restores them. Requires 1x forward playback (no timeMap, not reversed).',
+    'and its effects are gone afterwards; only undo restores them. Zooms and the reframe track on a source ' +
+    'move onto the clips cut from that source. Requires 1x forward playback (no timeMap, not reversed).',
   payloadSchema: z.object({ elementId: elementIdSchema }),
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
@@ -253,6 +255,7 @@ export const flattenMulticam = defineCommand({
       elements: [],
     }))
 
+    const takenZoomIds = new Set(listZoomRegions(project).map((z) => z.id))
     for (const span of spans) {
       if (span.toMs - span.fromMs < MIN_ELEMENT_DURATION_MS) continue
       const layout = mustGetLayout(project, span.layoutId)
@@ -260,6 +263,12 @@ export const flattenMulticam = defineCommand({
         const source = element.sources.find((s) => s.key === slot.source)
         const slotTrack = slotTracks[slotIndex]
         if (!source || !slotTrack || isAudioOnlySource(project, source)) return
+        const zooms = renameSplitCopies(
+          (element.zooms ?? [])
+            .filter((z) => z.source === slot.source && z.atMs < span.toMs && zoomRegionEndMs(z) > span.fromMs)
+            .map(({ source: _source, ...zoom }) => ({ ...zoom, atMs: zoom.atMs - span.fromMs })),
+          takenZoomIds,
+        )
         const rw = slot.rect.w * project.width
         const rh = slot.rect.h * project.height
         const aw = W(source.assetId)
@@ -283,6 +292,7 @@ export const flattenMulticam = defineCommand({
           volume: 1,
           muted: true,
           ...(source.reframe ? { reframe: source.reframe } : {}),
+          ...(zooms.length > 0 && { zooms }),
         })
       })
     }

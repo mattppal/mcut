@@ -1,5 +1,40 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.21
+
+### Patch Changes
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - The `detailZoom` preset now zooms to 1.3x instead of 1.5x, so a detail punch-in stays subtle. The `addZoomRegion` preset description and the `edit_zooms` tool description say 1.3x.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - `find_retakes` with `elementId` now rejects a clip with a time remap, as it already did a reversed clip. `apply_captions` cannot scope captions to such a clip, so the agent learns this before it cuts anything.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - The `find_retakes` tool description now tells the agent to rebuild captions once per remaining piece of the cut clip, passing `replace` true until a call reports OK. Because that call clears the caption track, the agent also takes a `find_retakes` transcript for every other captioned clip on that track before cutting and rebuilds those clips the same way.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - `EditorEngine.transact` now rolls back when its function throws. The project and selection return to where that `transact` began and no undo step is recorded, so `edit_zooms`, `apply_commands`, and `apply_captions` apply all of their commands or none. A nested `transact` that throws rolls back only its own dispatches.
+
+- [#189](https://github.com/mattppal/mcut/pull/189) [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78) Thanks [@mattppal](https://github.com/mattppal)! - A zoom `rect` now aims at its center and fills it only up to the preset scale, so a region never makes a detail zoom severe. MCP zoom edits warn when any zoom goes above 1.5x.
+
+- Updated dependencies [[`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78)]:
+  - @mcut/timeline@0.1.0-alpha.11
+  - @mcut/editor@0.1.0-alpha.11
+  - @mcut/transcription@0.1.0-alpha.12
+
+## 0.1.0-alpha.20
+
+### Minor Changes
+
+- [#195](https://github.com/mattppal/mcut/pull/195) [`c5aed4a`](https://github.com/mattppal/mcut/commit/c5aed4a4615a3fd5dcb1d76c385cd28ea3574b40) Thanks [@mattppal](https://github.com/mattppal)! - Find where the picture changes with `findSceneChanges`, and render a labelled thumbnail grid with `renderContactSheet`. Both read one video clip or one multicam source over a timeline range. Agents get them as the `find_scene_changes` and `get_contact_sheet` MCP tools on the live Studio bridge.
+
+  `find_scene_changes` compares 64 by 36 luma frames every `stepMs`, reports a change when the changed fraction of the picture passes the `sensitivity` threshold, and refines each change to the exact frame. It returns the changes and the stable segments between them.
+
+  `McutMcpTarget.findSceneChanges` and `getContactSheet` are optional. On a target without them, the tools fail with `find_scene_changes requires the live bridge connected to Studio.` and the same for `get_contact_sheet`.
+
+## 0.1.0-alpha.19
+
+### Patch Changes
+
+- [#191](https://github.com/mattppal/mcut/pull/191) [`5222666`](https://github.com/mattppal/mcut/commit/52226663d12d2ee8ae8b29284d5c216bb6eef5d8) Thanks [@mattppal](https://github.com/mattppal)! - `import_media` expands a leading `~` to the home folder, and its path errors name the resolved absolute path and the home folder.
+
 ## 0.1.0-alpha.18
 
 ### Minor Changes

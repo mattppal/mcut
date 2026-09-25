@@ -402,7 +402,7 @@ Reassign a multicam source's role key ('screen', 'camera', …). The key layout 
 
 ## flattenMulticam
 
-Destructive. Removes the multicam and replaces it with plain clips, one muted video element per layout slot per visible cut span on new tracks (layout geometry baked into transforms, approximate, no crop primitive) plus one audio element from the audio source. The multicam, its angle schedule, and its effects are gone afterwards; only undo restores them. Requires 1x forward playback (no timeMap, not reversed).
+Destructive. Removes the multicam and replaces it with plain clips, one muted video element per layout slot per visible cut span on new tracks (layout geometry baked into transforms, approximate, no crop primitive) plus one audio element from the audio source. The multicam, its angle schedule, and its effects are gone afterwards; only undo restores them. Zooms and the reframe track on a source move onto the clips cut from that source. Requires 1x forward playback (no timeMap, not reversed).
 
 - `elementId` (string, required)
 

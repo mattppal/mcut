@@ -1,5 +1,36 @@
 # mcut-studio
 
+## 0.1.1-alpha.31
+
+### Patch Changes
+
+- Updated dependencies [[`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78)]:
+  - @mcut/timeline@0.1.0-alpha.11
+  - @mcut/mcp-server@0.1.0-alpha.21
+  - @mcut/compositor@0.1.0-alpha.11
+  - @mcut/react@0.1.0-alpha.20
+  - @mcut/editor@0.1.0-alpha.11
+  - @mcut/desktop-ipc@0.1.0-alpha.13
+  - @mcut/media@0.1.0-alpha.19
+  - @mcut/transcription@0.1.0-alpha.12
+  - @mcut/transcription-local@1.0.0-alpha.15
+
+## 0.1.1-alpha.30
+
+### Patch Changes
+
+- Updated dependencies [[`c5aed4a`](https://github.com/mattppal/mcut/commit/c5aed4a4615a3fd5dcb1d76c385cd28ea3574b40)]:
+  - @mcut/media@0.1.0-alpha.18
+  - @mcut/mcp-server@0.1.0-alpha.20
+  - @mcut/react@0.1.0-alpha.19
+
+## 0.1.1-alpha.29
+
+### Patch Changes
+
+- Updated dependencies [[`5222666`](https://github.com/mattppal/mcut/commit/52226663d12d2ee8ae8b29284d5c216bb6eef5d8)]:
+  - @mcut/mcp-server@0.1.0-alpha.19
+
 ## 0.1.1-alpha.28
 
 ### Patch Changes

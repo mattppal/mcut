@@ -1,10 +1,12 @@
-import { renderProjectStill } from '@mcut/media'
+import { findSceneChanges, renderContactSheet, renderProjectStill } from '@mcut/media'
 import type { MCP_TOOL_INPUTS } from '@mcut/mcp-server/contract'
 import type { EditorEngine } from '@mcut/timeline'
 import type { z } from 'zod'
 import { ensureProjectFontsLoaded } from './font-library'
 
 type GetFrameInput = z.infer<typeof MCP_TOOL_INPUTS.get_frame>
+type FindSceneChangesInput = z.infer<typeof MCP_TOOL_INPUTS.find_scene_changes>
+type GetContactSheetInput = z.infer<typeof MCP_TOOL_INPUTS.get_contact_sheet>
 
 const BASE64_GROUP_BYTES = 3
 const BASE64_CHUNK_GROUPS = 10_922
@@ -37,4 +39,13 @@ export async function handleGetFrame(engine: EditorEngine, input: GetFrameInput)
     ...(input.elementId !== undefined ? { elementId: input.elementId } : {}),
     visibleElementIds: still.visibleElementIds,
   }
+}
+
+export function handleFindSceneChanges(engine: EditorEngine, input: FindSceneChangesInput) {
+  return findSceneChanges(engine.project, input)
+}
+
+export async function handleGetContactSheet(engine: EditorEngine, input: GetContactSheetInput) {
+  const { blob, ...sheet } = await renderContactSheet(engine.project, input)
+  return { mimeType: 'image/png' as const, data: bytesToBase64(new Uint8Array(await blob.arrayBuffer())), ...sheet }
 }
