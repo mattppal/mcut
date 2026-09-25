@@ -91,7 +91,12 @@ function requireSolo(project: Project, timeMs: number, elementId: ElementId, vis
   throw new Error(`Element ${elementId} is not on screen at ${secondsText(timeMs)} s. It spans ${secondsText(start)} to ${secondsText(end)} s.`)
 }
 
+function convertsToRgba(sample: VideoSample): boolean {
+  return sample.allocationSize({ format: 'RGBA' }) === sample.visibleRect.width * sample.visibleRect.height * 4
+}
+
 async function sampleBitmap(sample: VideoSample): Promise<ImageBitmap> {
+  if (!convertsToRgba(sample)) return createImageBitmap(sample.toCanvasImageSource())
   const image = new ImageData(sample.visibleRect.width, sample.visibleRect.height)
   await sample.copyTo(image.data, { format: 'RGBA' })
   return createImageBitmap(image, { resizeWidth: sample.squarePixelWidth, resizeHeight: sample.squarePixelHeight })
