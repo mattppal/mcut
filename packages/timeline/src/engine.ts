@@ -111,15 +111,19 @@ export class EditorEngine {
 
   transact(fn: () => void, options: TransactionOptions = {}): void {
     this.beginTransaction()
-    try {
-      batch(fn)
-      if (options.selection !== undefined) {
-        this.transactionDeclaredSelection = true
-        this.commitProject(this.project, { elementIds: options.selection })
+    batch(() => {
+      try {
+        fn()
+        if (options.selection !== undefined) {
+          this.transactionDeclaredSelection = true
+          this.commitProject(this.project, { elementIds: options.selection })
+        }
+      } catch (error) {
+        this.cancelTransaction()
+        throw error
       }
-    } finally {
       this.endTransaction()
-    }
+    })
   }
 
   beginTransaction(): void {

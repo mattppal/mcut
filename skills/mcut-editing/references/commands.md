@@ -388,7 +388,7 @@ Reassign a multicam source's role key ('screen', 'camera', …). The key layout 
 
 ## flattenMulticam
 
-Explode a multicam into plain clips. One video element per cut-span slot (on new tracks, layout geometry baked into transforms. Approximate, no crop primitive) plus one audio element from the audio source. One-way; undo restores the multicam.
+Explode a multicam into plain clips. One video element per cut-span slot (on new tracks, layout geometry baked into transforms. Approximate, no crop primitive) plus one audio element from the audio source. One-way; undo restores the multicam. Zooms on a source move onto the clips cut from that source.
 
 - `elementId` (string, required)
 

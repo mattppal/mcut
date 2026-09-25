@@ -30,7 +30,7 @@ const ZOOM_DRAG_RULES: Record<ZoomRegionDragMode, ZoomDragRule> = {
     apply: (zoom, shiftMs) => ({ ...zoom, holdMs: zoom.holdMs + shiftMs, outMs: zoom.outMs - shiftMs }),
   },
   end: {
-    range: (zoom, free) => [-zoom.holdMs, Math.max(-zoom.holdMs, free.endMs - zoomRegionEndMs(zoom))],
+    range: (zoom, free) => [-zoom.holdMs, free.endMs - zoomRegionEndMs(zoom)],
     apply: (zoom, shiftMs) => ({ ...zoom, holdMs: zoom.holdMs + shiftMs }),
   },
 }
@@ -46,6 +46,7 @@ function freeSpan(element: ZoomableElement, zoom: ZoomRegion): FreeSpan {
 export function planZoomRegionDrag(element: ZoomableElement, zoom: ZoomRegion, mode: ZoomRegionDragMode, deltaMs: number): ZoomRegion {
   const rule = ZOOM_DRAG_RULES[mode]
   const [minMs, maxMs] = rule.range(zoom, freeSpan(element, zoom))
+  if (minMs > maxMs) return zoom
   return rule.apply(zoom, Math.min(maxMs, Math.max(minMs, Math.round(deltaMs))))
 }
 

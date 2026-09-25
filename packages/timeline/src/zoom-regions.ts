@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CommandError } from './errors'
 import { easingSchema, evaluateEasing } from './keyframes'
 import type { LayoutSlot } from './layouts'
 import type { ImageElement, MulticamElement, Project, TimelineElement, VideoElement } from './model'
@@ -24,7 +25,7 @@ export type ZoomRegion = z.infer<typeof zoomRegionSchema>
 
 export const ZOOM_REGION_PRESETS = {
   subtlePunchIn: { scale: 1.15, inMs: 700, holdMs: 1600, outMs: 700 },
-  detailZoom: { scale: 1.5, inMs: 600, holdMs: 3000, outMs: 600 },
+  detailZoom: { scale: 1.3, inMs: 600, holdMs: 3000, outMs: 600 },
 } as const satisfies Record<string, Pick<ZoomRegion, 'scale' | 'inMs' | 'holdMs' | 'outMs'>>
 
 const presetSchema = z.enum(['subtlePunchIn', 'detailZoom'])
@@ -34,7 +35,11 @@ const rectSchema = z.object({ x: unit, y: unit, w: z.number().gt(0).max(1), h: z
 const targetShape = {
   focus: focusSchema.describe('Point to zoom into, 0 to 1 across the clip or the slot source frame.').optional(),
   scale: z.number().min(1).max(8).optional(),
-  rect: rectSchema.describe('Region to fill the frame, 0 to 1 in source frame coordinates. Sets focus and scale; do not pass them with it.').optional(),
+  rect: rectSchema
+    .describe(
+      'Region to zoom toward, 0 to 1 in source frame coordinates. Sets focus to its center and fills it up to the preset scale; pass focus and scale instead for a stronger zoom.',
+    )
+    .optional(),
 }
 
 const noRectWithFocus = (value: { rect?: unknown; focus?: unknown; scale?: unknown }) =>
@@ -44,7 +49,7 @@ const rectMessage = 'pass either rect or focus/scale, not both'
 export const zoomRegionInputSchema = z
   .object({
     id: z.string().min(1).optional(),
-    preset: presetSchema.default('subtlePunchIn').describe('subtlePunchIn is 1.15x, detailZoom is 1.5x. Explicit fields override it.'),
+    preset: presetSchema.default('subtlePunchIn').describe('subtlePunchIn is 1.15x, detailZoom is 1.3x. Explicit fields override it.'),
     source: z.string().min(1).describe('Multicam only: the source key whose slots zoom, e.g. "screen". Other slots stay put.').optional(),
     atMs: z.number().int().nonnegative().describe('Element-local time the zoom-in starts.'),
     inMs: z.number().int().min(1).optional(),
@@ -70,18 +75,18 @@ export const zoomRegionPatchSchema = z
 
 type ZoomTarget = z.infer<z.ZodObject<typeof targetShape>>
 
-function resolveTarget(target: ZoomTarget): Partial<Pick<ZoomRegion, 'focus' | 'scale'>> {
+function resolveTarget(target: ZoomTarget, rectScaleCap: number): Partial<Pick<ZoomRegion, 'focus' | 'scale'>> {
   if (!target.rect) return { ...(target.focus ? { focus: target.focus } : {}), ...(target.scale !== undefined ? { scale: target.scale } : {}) }
   const { x, y, w, h } = target.rect
   return {
     focus: { x: Math.min(1, x + w / 2), y: Math.min(1, y + h / 2) },
-    scale: Math.min(8, Math.max(1, 1 / Math.max(w, h))),
+    scale: Math.min(rectScaleCap, Math.max(1, 1 / Math.max(w, h))),
   }
 }
 
 export function resolveZoomRegion(input: z.output<typeof zoomRegionInputSchema>, id: string): ZoomRegion {
   const preset = ZOOM_REGION_PRESETS[input.preset]
-  const target = resolveTarget(input)
+  const target = resolveTarget(input, preset.scale)
   return zoomRegionSchema.parse({
     id,
     ...(input.source !== undefined ? { source: input.source } : {}),
@@ -99,10 +104,18 @@ export function resolveZoomRegion(input: z.output<typeof zoomRegionInputSchema>,
 export function patchZoomRegion(region: ZoomRegion, patch: z.output<typeof zoomRegionPatchSchema>): ZoomRegion {
   const { atMs, inMs, holdMs, outMs, easing, motionBlur } = patch
   const timing = Object.fromEntries(Object.entries({ atMs, inMs, holdMs, outMs, easing, motionBlur }).filter(([, value]) => value !== undefined))
-  return zoomRegionSchema.parse({ ...region, ...timing, ...resolveTarget(patch) })
+  return zoomRegionSchema.parse({ ...region, ...timing, ...resolveTarget(patch, region.scale) })
 }
 
 export const zoomRegionEndMs = (region: ZoomRegion): number => region.atMs + region.inMs + region.holdMs + region.outMs
+
+export function mustNotOverlap(zooms: readonly ZoomRegion[]): void {
+  const sorted = [...zooms].sort((a, b) => a.atMs - b.atMs)
+  for (const [index, zoom] of sorted.entries()) {
+    const clash = sorted.slice(index + 1).find((other) => other.source === zoom.source && other.atMs < zoomRegionEndMs(zoom))
+    if (clash) throw new CommandError('invalid-payload', `zooms "${zoom.id}" and "${clash.id}" overlap on the same target`)
+  }
+}
 
 type Phase = { kind: 'in' | 'out'; region: ZoomRegion; progress: number } | { kind: 'hold'; region: ZoomRegion }
 
@@ -189,6 +202,16 @@ export function splitZoomRegions(zooms: readonly ZoomRegion[], offsetMs: number)
   }
 }
 
+export function renameSplitCopies(zooms: readonly ZoomRegion[], taken: Set<string>): ZoomRegion[] {
+  return zooms.map((zoom) => {
+    if (zoom.atMs >= 0) return zoom
+    let id = `${zoom.id}-r`
+    while (taken.has(id)) id += '-r'
+    taken.add(id)
+    return { ...zoom, id }
+  })
+}
+
 export const shiftZoomRegions = (zooms: readonly ZoomRegion[], deltaMs: number): ZoomRegion[] => zooms.map((z) => ({ ...z, atMs: z.atMs + deltaMs }))
 
 export type ZoomableElement = VideoElement | ImageElement | MulticamElement
@@ -203,15 +226,16 @@ export interface ZoomRegionRef extends ZoomRegion {
   endMs: number
 }
 
+export function zoomRegionRefs(element: ZoomableElement): ZoomRegionRef[] {
+  const onTimeline = (localMs: number) => element.startMs + Math.min(element.durationMs, Math.max(0, localMs))
+  return (element.zooms ?? []).map((region) => ({
+    ...region,
+    elementId: element.id,
+    startMs: onTimeline(region.atMs),
+    endMs: onTimeline(zoomRegionEndMs(region)),
+  }))
+}
+
 export function listZoomRegions(project: Project): ZoomRegionRef[] {
-  return project.tracks.flatMap((track) =>
-    track.elements.filter(isZoomable).flatMap((element) =>
-      (element.zooms ?? []).map((region) => ({
-        ...region,
-        elementId: element.id,
-        startMs: element.startMs + region.atMs,
-        endMs: element.startMs + zoomRegionEndMs(region),
-      })),
-    ),
-  )
+  return project.tracks.flatMap((track) => track.elements.filter(isZoomable).flatMap(zoomRegionRefs))
 }

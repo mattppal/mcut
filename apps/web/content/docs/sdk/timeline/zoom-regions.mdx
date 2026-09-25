@@ -11,9 +11,10 @@ while the camera overlay stays put.
 
 Regions on one target never overlap. The zoom commands keep the region they add
 or change inside the element. A split copies a region that crosses the cut into
-both halves, so the picture on each side stays the same, and a trim can leave a
-region running past an edge, where it plays cut off. Growing a clip from
-its start shifts the regions with the content.
+both halves, so the picture on each side stays the same. The right half's copy
+gets the id with `-r` appended, so no two pieces share a zoom id. A trim can
+leave a region running past an edge, where it plays cut off. Growing a clip
+from its start shifts the regions with the content.
 
 ```ts
 engine.dispatch({
@@ -31,7 +32,7 @@ engine.dispatch({
 
 ### ZoomRegionRef
 
-`ZoomRegionRef` extends `ZoomRegion` with `elementId` and the region's timeline `startMs` and `endMs`.
+`ZoomRegionRef` extends `ZoomRegion` with `elementId` and the region's timeline `startMs` and `endMs`, cut at the element's edges. A region that crosses a split lists the part each piece plays.
 
 ### ZoomableElement
 
@@ -75,10 +76,10 @@ at scale 1. An axis where the clip or slot shows the whole frame is 1.
 | Preset | Scale | In | Hold | Out |
 | --- | --- | --- | --- | --- |
 | `subtlePunchIn` | 1.15 | 700 ms | 1600 ms | 700 ms |
-| `detailZoom` | 1.5 | 600 ms | 3000 ms | 600 ms |
+| `detailZoom` | 1.3 | 600 ms | 3000 ms | 600 ms |
 
 `addZoomRegion` defaults to `subtlePunchIn`, `easeOutExpo`, and motion blur 0.5.
-Explicit fields override the preset. A `rect` sets both focus and scale.
+Explicit fields override the preset. A `rect` aims the zoom at its center and fills it only up to the preset scale, so a region never makes a detail zoom severe. Pass `focus` and `scale` for a stronger zoom. The MCP tools warn when any zoom goes above 1.5x.
 
 ## Functions
 
