@@ -39,9 +39,11 @@ import {
   isMcpServerStaticToolName,
   listServerToolDefinitions,
   operatorToolName,
+  MCP_TOOL_INPUTS,
   type McpServerStaticToolCall,
   type TransactSubRequest,
 } from './contract'
+import { liveBridgeAudioActivityMessage, pickAudioActivitySource } from './audio-activity-target'
 import { runEngineTransact, translateTransactCalls } from './transact'
 
 export interface McutMcpTarget {
@@ -143,8 +145,10 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
     ensureTranscript: async () => {
       throw new Error('ensure_transcript requires a live browser bridge connected to an editor tab.')
     },
-    getAudioActivity: async () => {
-      throw new Error('get_audio_activity requires a live browser bridge connected to an editor tab.')
+    getAudioActivity: async (input) => {
+      const payload = MCP_TOOL_INPUTS.get_audio_activity.parse(input ?? {})
+      const source = pickAudioActivitySource(engine.project, engine.selection.elementIds, payload.elementId)
+      throw new Error(liveBridgeAudioActivityMessage(source))
     },
     listActions: () => [],
     listOperators: () =>

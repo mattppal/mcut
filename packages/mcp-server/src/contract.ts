@@ -6,6 +6,7 @@ import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema }
 import { commandBatchSchema } from './transact-shape'
 
 export * from './export-protocol'
+export { pickAudioActivitySource } from './audio-activity-target'
 export { applyTransact, transactSubRequestSchema, type TransactSubRequest } from './transact-shape'
 
 export interface McpToolDefinition {
@@ -38,7 +39,7 @@ export const toToolInputSchema = (schema: z.ZodType): Record<string, unknown> =>
 
 const EMPTY_INPUT = z.strictObject({})
 
-const ELEMENT_ID_INPUT = elementIdSchema.describe('Optional video/audio element id. Defaults to selected media, then first video, then first audio.').optional()
+const ELEMENT_ID_INPUT = elementIdSchema.describe('Optional clip id. Defaults to the selected clip, then the first clip with source audio.').optional()
 
 const TOOL_INPUT = z.record(z.string(), z.unknown()).default({})
 
@@ -80,7 +81,9 @@ export const applyCaptionsInputSchema = captionsCommandOptionsSchema.extend({
 })
 
 export const applySilenceCutsInputSchema = silenceCutOptionsSchema.extend({
-  elementId: elementIdSchema.describe('The video/audio element to cut. It must play at 1x, with no time remap.'),
+  elementId: elementIdSchema.describe(
+    'The clip to cut. It must play forward at 1x, with no time remap. A multicam is cut on its audio source, and one with none fails until setMulticamAudio.',
+  ),
   transcript: transcriptInput,
 })
 
@@ -163,7 +166,8 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Agent-friendly project/video metadata: project dimensions/fps/duration, playback, selection, ' +
     'assets, tracks, elements, clip source ranges, markers, and transcript availability. Use this before content-aware edits.',
   get_audio_activity:
-    'Live bridge only: analyze a video/audio clip and return compact source sound/silence windows. ' +
+    'Live bridge only: analyze a clip with source audio and return compact sound and silence windows in audio-asset time. ' +
+    'A multicam uses its audio source. One with none fails until setMulticamAudio. The fallback is the first clip with source audio. ' +
     'Use this only through the connected browser for audio-aware inspection; do not fall back to ffmpeg. ' +
     'For spoken-word silence removal, prefer ensure_transcript followed by the live editor action transcript.remove-silence.',
   get_transcript:
@@ -188,14 +192,16 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'To mix commands with operators or actions in one undo step, use transact.',
   apply_captions:
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
-    'Pass elementId to caption only the source span one video/audio clip plays, at its timeline position. ' +
+    'Pass elementId to caption only the source span one clip plays, at its timeline position. A multicam uses its audio source. ' +
     'styleId picks a caption style preset. Returns the updated project summary. ' +
     'Pass a timed transcript from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
     'Never invent a transcript when transcription fails. ' +
     'The result warns when the transcript matches no transcript in the project.',
   apply_silence_cuts:
-    'Cut transcript silence out of one video/audio element (splits, ripple deletes, and edge trims) ' +
-    'as one undoable edit. Returns the removed silence windows in source-media time and the updated project summary.',
+    'Cut transcript silence out of one clip with source audio (splits, ripple deletes, and edge trims) ' +
+    'as one undoable edit. A multicam is cut on its audio source, before volume, fades, and mute. ' +
+    'One with no audio source fails until setMulticamAudio. ' +
+    'Returns the removed silence windows in audio-asset time and the updated project summary.',
   lint_project:
     'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
     'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',
