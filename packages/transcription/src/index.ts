@@ -40,3 +40,5 @@ export {
   type TranscriptCaption,
   type TranscriptMatch,
 } from './transcript-tools'
+
+export { findRetakes, retakeOptionsSchema, type RetakeCandidate, type RetakeOptions } from './retakes'
