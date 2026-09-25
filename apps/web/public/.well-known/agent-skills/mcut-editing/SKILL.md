@@ -91,6 +91,21 @@ opens a dialog for a person and imports nothing. `addAsset` cannot load a
 This action uses word-timed captions and timeline commands. If it says there is
 no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 
+### Remove retakes
+
+After `ensure_transcript`, call `find_retakes` with the captioned clip's
+`elementId`. Each candidate is a timeline range from the abandoned take to the
+start of the kept take, and the reply's `transcript` holds that clip's words in
+source time. Read `abandonedText` and skip any candidate that is a deliberate
+repetition. Candidates come last to first, so cut them in the returned order,
+each with a split at both ends and a ripple delete on the clip only. Do not cut
+the caption track the same way, because a ripple delete keeps the gaps between
+captions and leaves every later word late. Rebuild captions instead with one
+`apply_captions` call per remaining clip, passing the reply's `transcript`
+unchanged and that clip's `elementId`, with `replace` true on the first call
+and false after. Pass a lower `minMatchWords` only when a short restart was
+missed, and check each extra candidate, since lower values match spoken lists.
+
 ### Fade from black or fade to black
 
 Use the built-in preset action instead of hand-authoring opacity keyframes:
@@ -123,6 +138,26 @@ bridge writes the file, so no download or save dialog opens.
 
 `export-busy` means an export is already running. Wait for it with `get_export`
 or stop it with `cancel_export`.
+
+### Punch-ins and detail zooms
+
+Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
+`edit_zooms` adds, updates, or removes any number of them as one undoable edit.
+
+```json
+{
+  "edits": [
+    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "subtlePunchIn", "source": "screen", "atMs": 0 } },
+    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "detailZoom", "source": "screen", "atMs": 42000, "holdMs": 4000, "focus": { "x": 0.75, "y": 0.3 } } }
+  ]
+}
+```
+
+Keep zooms subtle (1.1x to 1.5x), keep `easeOutExpo`, and keep `motionBlur` on.
+On a multicam, set `source` to the screen key so the camera overlay stays put.
+Place a detail zoom over the words that discuss the region, found with
+`search_transcript`. When asked to tone zooms down, lower `scale` rather than
+removing zooms or turning off motion blur.
 
 ## Timing rules
 
