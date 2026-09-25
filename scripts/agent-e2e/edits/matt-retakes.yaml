@@ -1,0 +1,10 @@
+# Matt's retake pass on a transcript from a transcription provider. The transcript file sits next to the media in --media.
+edits:
+  - id: 01-multicam
+    ask: Put the talking track, the screen recording, and the audio file together as one synced multicam clip. Use the separate audio file as the audio source.
+    checks: [multicam sources 3, multicam audio from audio file]
+  - id: 02-retakes
+    transcript: matt-transcript.json
+    ask: Find the retakes and remove them, keeping the good take each time. Cut them in the order find_retakes returns, then re-caption what remains so the captions stay in sync with the speech.
+    checks: [duration shorter by at most 60s, retakes removed, captions in sync]
+    note: The runner applies the transcript with apply_captions first, as a transcription provider would. Whisper can't download on this VM.

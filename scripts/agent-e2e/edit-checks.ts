@@ -1,6 +1,7 @@
 import { getProjectDurationMs, type LayoutSlot, type Project } from '@mcut/timeline'
 import { type OverlaySample, REFERENCE_LOOK, rectOffReference, sampleOverlay } from './export-frames'
 import { type CheckInput, type CheckResult, type CheckRule, elements, multicamOf, ofType, outcome, same, seconds, sourceAssetName } from './check-kit'
+import { RETAKE_RULES } from './retake-checks'
 import { ZOOM_RULES } from './zoom-checks'
 
 export class UnknownCheckError extends Error {}
@@ -304,6 +305,7 @@ const RULES: CheckRule[] = [
   [/^changed$/, ({ before, after }) => outcome(!same(before, after), 'project changed', 'project unchanged')],
   [/^unchanged$/, ({ before, after }) => outcome(same(before, after), 'project unchanged', 'project changed')],
   ...ZOOM_RULES,
+  ...RETAKE_RULES,
 ]
 
 export const CHECK_VOCABULARY = RULES.map(([pattern]) => pattern.source.replace(/^\^|\$$/g, ''))

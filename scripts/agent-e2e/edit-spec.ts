@@ -14,6 +14,7 @@ export interface EditStep {
   checks: string[]
   capability: Capability
   note: string
+  transcript?: string
 }
 
 export interface EditSpec {
@@ -40,6 +41,7 @@ const stepSchema = z.object({
   checks: z.array(z.string()).default(['changed']),
   capability: z.enum(['exists', 'partial', 'missing']).default('exists'),
   note: z.string().default(''),
+  transcript: z.string().optional(),
 })
 
 const specSchema = z.object({
@@ -83,7 +85,16 @@ export function loadEditSpec(file: string, mediaDir: string | undefined): EditSp
   if (missing.length > 0) throw new EditSpecError(`media not found: ${missing.join(', ')}`)
   const edits = parsed.data.edits.map((step, index): EditStep => {
     step.checks.forEach(assertKnownCheck)
-    return { id: step.id ?? slug(step.ask, index), ask: step.ask, checks: step.checks, capability: step.capability, note: step.note }
+    const transcript = step.transcript === undefined ? undefined : isAbsolute(step.transcript) ? step.transcript : resolve(base, step.transcript)
+    if (transcript !== undefined && !existsSync(transcript)) throw new EditSpecError(`transcript not found: ${transcript}`)
+    return {
+      id: step.id ?? slug(step.ask, index),
+      ask: step.ask,
+      checks: step.checks,
+      capability: step.capability,
+      note: step.note,
+      ...(transcript === undefined ? {} : { transcript }),
+    }
   })
   return { media, place: parsed.data.place, edits }
 }

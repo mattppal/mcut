@@ -11,6 +11,7 @@ import { readEditReport, writeEditReport, type EditReport, type EditRow } from '
 import { classifyFailure, loadEditSpec, type EditStep } from './edit-spec'
 import { GROK_INSTALL_COMMAND, GrokBuildAuthError, findGrokBinary, runGrokPrompt, writeGrokProject, type AgentTurn } from './grok-build'
 import { DEFAULT_CAPS, type Caps } from './loop'
+import { jsonObjectSchema } from './json'
 import { connectMcp, createTransport, type McpSession } from './mcp'
 import { startMcpRecorder } from './mcp-recorder'
 import type { Prompt } from './model'
@@ -109,12 +110,25 @@ function snapshot(runDir: string, file: string, project: Project): string {
   return path
 }
 
+async function applyTranscript(mcp: McpSession, file: string): Promise<void> {
+  const transcript = jsonObjectSchema.parse(JSON.parse(readFileSync(file, 'utf8')))
+  const project = await mcp.getProject()
+  const clip = project.tracks
+    .flatMap((track) => track.elements)
+    .find((element) => element.type === 'multicam' || element.type === 'video' || element.type === 'audio')
+  if (clip === undefined) throw new Error(`no clip to caption with ${file}`)
+  const result = await mcp.callTool('apply_captions', { transcript, elementId: clip.id })
+  if (result.isError) throw new Error(`apply_captions with ${file} failed. ${result.text.slice(0, 300)}`)
+  log(`captioned ${clip.id} from ${basename(file)}`)
+}
+
 async function runStep(
   step: EditStep,
   context: { mcp: McpSession; page: StudioPage; driver: Driver; recorder: ReturnType<typeof startMcpRecorder>; runDir: string },
 ): Promise<EditRow> {
   const { mcp, page, driver, recorder, runDir } = context
   const startedAt = Date.now()
+  if (step.transcript !== undefined) await applyTranscript(mcp, step.transcript)
   const before = await mcp.getProject()
   await page.drain()
   const mark = recorder.mark()
