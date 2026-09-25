@@ -13,6 +13,7 @@ export interface LiveBridgeOptions {
   requestTimeoutMs?: number
   transcriptionTimeoutMs?: number
   reconnectGraceMs?: number
+  onError?: (error: unknown) => void
 }
 
 interface PendingRequest {
@@ -126,7 +127,10 @@ export class LiveMcutBridge {
   readonly transcriptionTimeoutMs: number
   readonly reconnectGraceMs: number
 
-  private readonly server = createServer((req, res) => void this.handleHttp(req, res))
+  private readonly onError: (error: unknown) => void
+  private readonly server = createServer((req, res) => {
+    this.handleHttp(req, res).catch((error: unknown) => this.failRequest(res, error))
+  })
   private readonly wss: WebSocketServer
   private readonly pending = new Map<string, PendingRequest>()
   private readonly socketWaiters = new Set<SocketWaiter>()
@@ -140,9 +144,17 @@ export class LiveMcutBridge {
     this.requestTimeoutMs = options.requestTimeoutMs ?? 30_000
     this.transcriptionTimeoutMs = options.transcriptionTimeoutMs ?? 10 * 60_000
     this.reconnectGraceMs = options.reconnectGraceMs ?? 5_000
+    this.onError =
+      options.onError ?? ((error) => process.stderr.write(`mcut bridge error: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`))
     const allowedOrigins = options.allowedOrigins ?? []
-    const verifyClient: VerifyClientCallbackSync = ({ origin, req }) =>
-      (this.token === null || tokenFrom(req) === this.token) && isAllowedOrigin(origin, allowedOrigins)
+    const verifyClient: VerifyClientCallbackSync = ({ origin, req }) => {
+      try {
+        return (this.token === null || tokenFrom(req) === this.token) && isAllowedOrigin(origin, allowedOrigins)
+      } catch (error) {
+        this.onError(error)
+        return false
+      }
+    }
     this.wss = new WebSocketServer({
       server: this.server,
       path: '/mcut-mcp',
@@ -364,6 +376,15 @@ export class LiveMcutBridge {
       return
     }
     pending.resolve(message.result)
+  }
+
+  private failRequest(res: ServerResponse, error: unknown): void {
+    this.onError(error)
+    if (res.headersSent) {
+      res.destroy()
+      return
+    }
+    sendJson(res, 500, { ok: false, error: 'Internal bridge error.' })
   }
 
   private async handleHttp(req: IncomingMessage, res: ServerResponse): Promise<void> {
