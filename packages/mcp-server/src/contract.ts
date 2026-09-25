@@ -110,7 +110,7 @@ export const MCP_TOOL_INPUTS = {
     .extend({
       elementId: elementIdSchema
         .describe(
-          'The video or audio clip the captions came from. The reply then includes transcript, its words in source ms, ready to pass to apply_captions per remaining clip after the cuts.',
+          'The video or audio clip the captions came from. The reply then includes transcript, its words in source ms, ready to pass to apply_captions per remaining piece of that clip after the cuts.',
         )
         .optional(),
     })
@@ -176,7 +176,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Find retakes in the word-timed transcript: a phrase whose opening words are spoken again within maxLookaheadMs. ' +
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
     'Candidates come last to first; cut them in that order so no ripple delete shifts a range still to cut. ' +
-    'Pass elementId to get transcript back in source ms. Cut the clip only, then call apply_captions once per remaining clip with that transcript and the clip elementId; cutting the caption track leaves later words late. ' +
+    'Pass elementId to get transcript back in source ms. Cut the clip only, then call apply_captions once per remaining piece of that clip with that transcript and the piece elementId, passing replace true until a call reports OK and false after. ' +
+    'That call clears the caption track, so before cutting also call find_retakes for each other captioned clip on it, and rebuild its pieces from its own transcript. ' +
+    'Cutting the caption track instead leaves later words late. ' +
     'Review abandonedText before cutting. Needs captions with word timings; call ensure_transcript first.',
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +

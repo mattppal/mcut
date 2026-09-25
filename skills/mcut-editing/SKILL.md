@@ -97,10 +97,15 @@ repetition. Candidates come last to first, so cut them in the returned order,
 each with a split at both ends and a ripple delete on the clip only. Do not cut
 the caption track the same way, because a ripple delete keeps the gaps between
 captions and leaves every later word late. Rebuild captions instead with one
-`apply_captions` call per remaining clip, passing the reply's `transcript`
-unchanged and that clip's `elementId`, with `replace` true on the first call
-and false after. Pass a lower `minMatchWords` only when a short restart was
-missed, and check each extra candidate, since lower values match spoken lists.
+`apply_captions` call per remaining piece of that clip, passing the reply's
+`transcript` unchanged and the piece's `elementId`. Pass `replace` true until a
+call reports OK, then false. That first OK call clears the whole caption track,
+so when another clip has captions on it, call `find_retakes` with that clip's
+`elementId` too before cutting, and rebuild its pieces the same way from its
+own `transcript`. Expect the calls after it to warn that the transcript matches
+none in the project, since that first call replaced those captions. Pass a
+lower `minMatchWords` only when a short restart was missed, and check each
+extra candidate, since lower values match spoken lists.
 
 ### Fade from black or fade to black
 
