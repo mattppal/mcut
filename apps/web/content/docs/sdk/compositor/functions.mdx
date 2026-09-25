@@ -135,6 +135,14 @@ function toCanvasPoint(project: Project, x: number, y: number): { x: number; y: 
 
 Converts center-origin element coordinates to canvas pixels.
 
+### getSlotBoxes
+
+```ts
+function getSlotBoxes(project: Project, element: MulticamElement, timelineMs: number): SlotBox[]
+```
+
+Resolves the multicam at `timelineMs` and returns one box per drawn slot of its active layout, in canvas pixels under the multicam's crop and transform. The boxes come from the same slot placement the renderer composes with, so a slot whose source is missing or audio only has no box. A box is not clipped to the crop, and the list is empty when no layout is active.
+
 ### renderFrame
 
 ```ts

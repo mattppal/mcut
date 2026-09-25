@@ -13,6 +13,7 @@ import {
   toCanvasPoint,
   type SizeHelpers,
 } from './geometry'
+import { getSlotBoxes, type SlotBox } from './multicam'
 
 describe('coordinate conversion', () => {
   test('round-trips center-origin coordinates', () => {
@@ -104,14 +105,24 @@ describe('getElementOBB', () => {
   })
 })
 
-function screenAndCamera(): Project {
-  let project = applyCommand(createProject({ width: 1920, height: 1080 }), { type: 'addTrack', id: 't-cam' })
-  project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'blob:s', durationMs: 60_000, width: 2560, height: 1440 } })
-  project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000, width: 1920, height: 1080 } })
-  const screen = { type: 'video', id: 'e-s', assetId: 'a-screen', startMs: 0, durationMs: 10_000 }
-  project = applyCommand(project, { type: 'addElement', trackId: 't-default', element: screen })
-  project = applyCommand(project, { type: 'addElement', trackId: 't-cam', element: { ...screen, id: 'e-c', assetId: 'a-cam' } })
-  return applyCommand(project, { type: 'createMulticam', sources: [{ elementId: 'e-s' }, { elementId: 'e-c' }], multicamId: 'e-mc' })
+function screenAndCamera(element: object = {}): Project {
+  let project = createProject({ width: 1920, height: 1080 })
+  project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'blob:s', durationMs: 60_000 } })
+  project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000 } })
+  const slots = [
+    { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 } },
+    { source: 'camera', rect: { x: 0.75, y: 0.75, w: 0.25, h: 0.25 } },
+  ]
+  project = applyCommand(project, { type: 'saveLayout', layout: { id: 'l-pip', name: 'Screen + Cam', slots } })
+  const sources = [
+    { key: 'screen', assetId: 'a-screen' },
+    { key: 'camera', assetId: 'a-cam' },
+  ]
+  return applyCommand(project, {
+    type: 'addElement',
+    trackId: 't-default',
+    element: { id: 'e-mc', type: 'multicam', startMs: 0, durationMs: 5000, sources, angles: [{ atMs: 0, layoutId: 'l-pip' }], ...element },
+  })
 }
 
 function multicamIn(project: Project): MulticamElement {
@@ -120,17 +131,32 @@ function multicamIn(project: Project): MulticamElement {
   return element
 }
 
+const rounded = (boxes: SlotBox[]) =>
+  boxes.map(({ sourceKey, obb }) => ({ sourceKey, obb: Object.fromEntries(Object.entries(obb).map(([key, value]) => [key, Math.round(value * 1000) / 1000])) }))
+
 describe('multicam geometry', () => {
   test('a multicam is the project frame, cut by its crop, under its transform', () => {
-    const project = applyCommand(screenAndCamera(), {
-      type: 'updateElement',
-      elementId: 'e-mc',
-      patch: { transform: { x: 100, y: -50, scaleX: 0.5, scaleY: -0.5, rotation: 30 }, crop: { x: 0, y: 0, w: 0.5, h: 1 } },
-    })
+    const project = screenAndCamera({ transform: { x: 100, y: -50, scaleX: 0.5, scaleY: -0.5, rotation: 30 }, crop: { x: 0, y: 0, w: 0.5, h: 1 } })
     const element = multicamIn(project)
     expect(getElementNaturalSize(project, element)).toEqual({ width: 960, height: 1080 })
     expect(getElementDisplaySize(project, element)).toEqual({ width: 480, height: 540 })
     expect(getElementOBB(project, element)).toEqual({ cx: 1060, cy: 490, width: 480, height: 540, rotation: 30 })
+  })
+
+  test('slot boxes place the screen over the frame and the camera in its corner', () => {
+    const project = screenAndCamera()
+    expect(getSlotBoxes(project, multicamIn(project), 1000)).toEqual([
+      { sourceKey: 'screen', obb: { cx: 960, cy: 540, width: 1920, height: 1080, rotation: 0 } },
+      { sourceKey: 'camera', obb: { cx: 1680, cy: 945, width: 480, height: 270, rotation: 0 } },
+    ])
+  })
+
+  test('slot boxes follow the crop, scale, rotation, and position of the multicam', () => {
+    const project = screenAndCamera({ transform: { x: 100, y: -50, scaleX: 0.5, scaleY: 0.5, rotation: 90 }, crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } })
+    expect(rounded(getSlotBoxes(project, multicamIn(project), 1000))).toEqual([
+      { sourceKey: 'screen', obb: { cx: 1195, cy: 250, width: 960, height: 540, rotation: 90 } },
+      { sourceKey: 'camera', obb: { cx: 992.5, cy: 610, width: 240, height: 135, rotation: 90 } },
+    ])
   })
 })
 

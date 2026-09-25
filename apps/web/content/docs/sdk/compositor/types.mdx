@@ -82,6 +82,17 @@ interface SizeHelpers {
 
 Optional callbacks that report an asset's pixel size and measure text, used to size elements.
 
+### SlotBox
+
+```ts
+interface SlotBox {
+  sourceKey: string
+  obb: OBB
+}
+```
+
+Where a multicam draws one slot, as the key of the slot's source and its oriented box in canvas pixels.
+
 ### ImageQuad
 
 ```ts

@@ -19,6 +19,8 @@ export {
   type SizeHelpers,
 } from './geometry'
 
+export { getSlotBoxes, type SlotBox } from './multicam'
+
 export { renderFrame, renderFrameWith } from './render-frame'
 
 export { applyChrome, Canvas2DBackend, createElementContext, drawImageQuad2D, type ImageQuad, type LayerChrome, type RenderBackend } from './backend'
