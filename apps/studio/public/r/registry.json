@@ -264,6 +264,31 @@
           "target": "components/mcut/timeline-drag.ts"
         },
         {
+          "path": "registry/mcut/timeline-drag-plan.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-plan.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-drag-preview.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-preview.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-drag-live.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-live.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-autoscroll.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-autoscroll.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-track-drag.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-track-drag.ts"
+        },
+        {
           "path": "registry/mcut/persistence.ts",
           "type": "registry:lib",
           "target": "components/mcut/persistence.ts"
@@ -684,6 +709,31 @@
           "path": "registry/mcut/timeline-drag.ts",
           "type": "registry:lib",
           "target": "components/mcut/timeline-drag.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-drag-plan.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-plan.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-drag-preview.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-preview.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-drag-live.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-drag-live.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-autoscroll.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-autoscroll.ts"
+        },
+        {
+          "path": "registry/mcut/timeline-track-drag.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/timeline-track-drag.ts"
         },
         {
           "path": "registry/mcut/format.ts",

@@ -5,7 +5,6 @@ import { toast } from 'sonner'
 import { isWebGPUSupported } from '@mcut/compositor'
 import { PlayerCanvas, useEditor, useEditorState } from '@mcut/react'
 import { getElement } from '@mcut/timeline'
-import { EditorDnd } from './editor-dnd'
 import { PanelCard } from './editor-primitives'
 import { useEditorUI } from './editor-ui'
 import { LayoutBank } from './layout-bank'
@@ -64,26 +63,5 @@ export function PreviewArea() {
       </div>
       <TransportBar />
     </PanelCard>
-  )
-}
-
-export function TrackSorter({ children }: { children: React.ReactNode }) {
-  const engine = useEditor()
-  return (
-    <EditorDnd
-      onTrackSort={(activeTrackId, overTrackId) => {
-        const toIndex = engine.project.tracks.findIndex((t) => t.id === overTrackId)
-        if (toIndex === -1) return
-        try {
-          engine.dispatch({
-            type: 'reorderTrack',
-            trackId: activeTrackId as `t-${string}`,
-            toIndex,
-          })
-        } catch {}
-      }}
-    >
-      {children}
-    </EditorDnd>
   )
 }

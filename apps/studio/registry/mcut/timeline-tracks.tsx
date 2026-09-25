@@ -2,8 +2,6 @@
 
 import { createElement, memo, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { EyeIcon, EyeOffIcon, GripVerticalIcon, LayersIcon, LockIcon, LockOpenIcon, MagnetIcon, Volume2Icon, VolumeXIcon, XIcon } from '@/lib/icons'
 import { useEditor, useEditorState } from '@mcut/react'
 import { type Track } from '@mcut/timeline'
@@ -17,6 +15,7 @@ import { type LaneDropData } from './editor-dnd'
 import { useDropPreview, useEditorUI, type WorkspaceLayout } from './editor-ui'
 import { formatTimecode } from './format'
 import { NEW_TRACK_LANE_HEIGHT, RULER_HEIGHT, TRACK_HEIGHT } from './timeline-drag'
+import { useTrackDrag } from './timeline-track-drag'
 import { Clip } from './timeline-clip'
 
 const GRIP_TOUCH_TARGET: Record<WorkspaceLayout, string> = {
@@ -34,8 +33,9 @@ function keepsTranscriptTimingSoNeverCompacts(track: Track): boolean {
   return track.elements.length > 0 && track.elements.every((e) => e.type === 'caption')
 }
 
-function TrackHeader({ track, gripProps }: { track: Track; gripProps?: Record<string, unknown> }) {
+function TrackHeader({ track }: { track: Track }) {
   const engine = useEditor()
+  const trackDrag = useTrackDrag()
   const { layout, timelineHeaderPx } = useEditorUI()
   const [renaming, setRenaming] = useState(false)
 
@@ -55,9 +55,25 @@ function TrackHeader({ track, gripProps }: { track: Track; gripProps?: Record<st
       >
         <button
           type="button"
-          className={cn('cursor-grab touch-none text-muted-foreground/50 hover:text-muted-foreground', GRIP_TOUCH_TARGET[layout])}
+          className={cn(
+            'cursor-grab touch-none rounded-sm text-muted-foreground/50 outline-none hover:text-muted-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing',
+            GRIP_TOUCH_TARGET[layout],
+          )}
           aria-label="Reorder track"
-          {...gripProps}
+          data-mcut-track-grip={track.id}
+          aria-keyshortcuts="ArrowUp ArrowDown"
+          title="Drag, or press the arrow keys, to reorder"
+          onPointerDown={(event) => {
+            if (event.button !== 0) return
+            event.stopPropagation()
+            trackDrag.begin(event, track.id)
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+            event.preventDefault()
+            event.stopPropagation()
+            trackDrag.nudge(track.id, event.key === 'ArrowUp' ? -1 : 1)
+          }}
         >
           <GripVerticalIcon className="size-3.5" />
         </button>
@@ -220,7 +236,7 @@ const Lane = memo(function Lane({ track, pxPerMs, contentWidth }: { track: Track
     <div
       data-mcut-lane={track.id}
       className={cn(
-        'relative before:pointer-events-none before:absolute before:inset-x-0 before:inset-y-1 before:rounded-lg before:bg-foreground/[0.045]',
+        'relative before:pointer-events-none before:absolute before:inset-x-0 before:inset-y-1 before:rounded-lg before:bg-foreground/[0.045] before:transition-colors data-[drop-target=invalid]:before:bg-destructive/10 data-[drop-target=valid]:before:bg-primary/15',
         track.locked && 'opacity-60',
         track.hidden && '[&_[data-mcut-clip]]:opacity-50',
       )}
@@ -234,14 +250,13 @@ const Lane = memo(function Lane({ track, pxPerMs, contentWidth }: { track: Track
   )
 })
 
-export const SortableRow = memo(function SortableRow({ track, pxPerMs, contentWidth }: { track: Track; pxPerMs: number; contentWidth: number }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: track.id,
-    data: { kind: 'track', trackId: track.id },
-  })
+export const TrackRow = memo(function TrackRow({ track, pxPerMs, contentWidth }: { track: Track; pxPerMs: number; contentWidth: number }) {
   return (
-    <div ref={setNodeRef} className={cn('flex', isDragging && 'z-40 opacity-70')} style={{ transform: CSS.Transform.toString(transform), transition }}>
-      <TrackHeader track={track} gripProps={{ ...attributes, ...listeners }} />
+    <div
+      data-mcut-track-row={track.id}
+      className="relative flex data-dragging:z-40 data-settling:z-40 data-settling:bg-card data-dragging:bg-card"
+    >
+      <TrackHeader track={track} />
       <Lane track={track} pxPerMs={pxPerMs} contentWidth={contentWidth} />
     </div>
   )
@@ -263,8 +278,9 @@ export function NewTrackLane({ contentWidth, dragActive }: { contentWidth: numbe
       </div>
       <div
         ref={setNodeRef}
+        data-mcut-new-track-lane=""
         className={cn(
-          'relative before:pointer-events-none before:absolute before:inset-x-1 before:inset-y-0.5 before:rounded-lg before:border before:border-dashed before:border-primary/35 before:opacity-0 before:transition-opacity',
+          'relative before:pointer-events-none before:absolute before:inset-x-1 before:inset-y-0.5 before:rounded-lg before:border before:border-dashed before:border-primary/35 before:opacity-0 before:transition-opacity data-drop-target:bg-primary/10 data-drop-target:before:opacity-100',
           dragActive && 'before:opacity-100',
           isOver && 'bg-primary/10',
         )}

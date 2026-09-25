@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import {
-  closestCenter,
   DndContext,
   DragOverlay,
   PointerSensor,
@@ -23,10 +22,7 @@ import { elementForAsset, elementForTextPreset, insertElementOnNewTrack, insertE
 import { collectSnapTargets, pointerToTimelineMs, snapClip, type SnapTarget } from './timeline-snap'
 import { formatDurationBadge } from './format'
 
-export type EditorDragData =
-  | { kind: 'asset'; asset: AssetRef; thumb?: string }
-  | { kind: 'text-preset'; preset: TextPreset }
-  | { kind: 'track'; trackId: TrackId }
+export type EditorDragData = { kind: 'asset'; asset: AssetRef; thumb?: string } | { kind: 'text-preset'; preset: TextPreset }
 
 export interface LaneDropData {
   laneTrackId: string | 'new-track'
@@ -44,14 +40,12 @@ function dragDurationMs(data: EditorDragData): number {
   if (data.kind === 'asset') {
     return data.asset.kind === 'image' ? 4000 : (data.asset.durationMs ?? 3000)
   }
-  if (data.kind === 'text-preset') return data.preset.durationMs
-  return 0
+  return data.preset.durationMs
 }
 
 function dragLabel(data: EditorDragData): string {
   if (data.kind === 'asset') return data.asset.name ?? data.asset.kind
-  if (data.kind === 'text-preset') return data.preset.name
-  return ''
+  return data.preset.name
 }
 
 function isLaneDropData(data: unknown): data is LaneDropData {
@@ -68,7 +62,6 @@ function dragDataOf(active: Active): EditorDragData | null {
 }
 
 const collisionDetection: CollisionDetection = (args) => {
-  if (dragDataOf(args.active)?.kind === 'track') return closestCenter(args)
   const droppableContainers = args.droppableContainers.filter((container) => {
     const dropData = container.data.current
     return isLaneDropData(dropData)
@@ -106,7 +99,7 @@ function DragGhost({ data }: { data: EditorDragData }) {
   )
 }
 
-export function EditorDnd({ children, onTrackSort }: { children: ReactNode; onTrackSort?: (activeTrackId: string, overTrackId: string) => void }) {
+export function EditorDnd({ children }: { children: ReactNode }) {
   const engine = useEditor()
   const project = useProject()
   const { pxPerMs, snapEnabled, editMode, setDropPreview, setSnapGuideMs } = useEditorUI()
@@ -123,7 +116,7 @@ export function EditorDnd({ children, onTrackSort }: { children: ReactNode; onTr
 
   const previewFor = (event: DragMoveEvent): DropPreview | null => {
     const data = dragDataOf(event.active)
-    if (!data || data.kind === 'track') return null
+    if (!data) return null
     const over = event.over
     const laneData = over?.data.current as LaneDropData | undefined
     if (!over || !laneData?.laneTrackId) return null
@@ -151,21 +144,13 @@ export function EditorDnd({ children, onTrackSort }: { children: ReactNode; onTr
   }
 
   const handleDragMove = (event: DragMoveEvent) => {
-    const data = dragDataOf(event.active)
-    if (!data || data.kind === 'track') return
+    if (!dragDataOf(event.active)) return
     setDropPreview(previewFor(event))
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const data = dragDataOf(event.active)
     try {
-      if (data?.kind === 'track') {
-        const overId = event.over?.id
-        if (overId && overId !== event.active.id && onTrackSort) {
-          onTrackSort(String(event.active.id), String(overId))
-        }
-        return
-      }
       const preview = previewFor(event)
       if (!data || !preview) return
       const element = data.kind === 'asset' ? elementForAsset(engine, data.asset) : elementForTextPreset(engine, data.preset)
@@ -191,7 +176,7 @@ export function EditorDnd({ children, onTrackSort }: { children: ReactNode; onTr
     >
       <ActiveDragContext.Provider value={activeDrag}>
         {children}
-        <DragOverlay dropAnimation={null}>{activeDrag && activeDrag.kind !== 'track' ? <DragGhost data={activeDrag} /> : null}</DragOverlay>
+        <DragOverlay dropAnimation={null}>{activeDrag ? <DragGhost data={activeDrag} /> : null}</DragOverlay>
       </ActiveDragContext.Provider>
     </DndContext>
   )
