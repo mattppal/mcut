@@ -1,4 +1,14 @@
-import { getActiveAngleIndex, type Crop, type EditorEngine, type LayoutSlot, type MulticamElement, type Project } from '@mcut/timeline'
+import {
+  getActiveAngleIndex,
+  getElementLocation,
+  getMulticamGroupTimeMs,
+  type Crop,
+  type EditorEngine,
+  type ElementId,
+  type LayoutSlot,
+  type MulticamElement,
+  type Project,
+} from '@mcut/timeline'
 import { clamp, roundTo } from './math'
 
 interface Size {
@@ -49,15 +59,23 @@ export function findTargetMulticam(project: Project, selectedIds: readonly strin
   return underPlayhead ?? first
 }
 
+export function multicamSourcesInSelection(project: Project, selectedIds: readonly ElementId[]): { elementId: ElementId }[] {
+  return selectedIds.flatMap((elementId) => {
+    const type = getElementLocation(project, elementId)?.element.type
+    return type === 'video' || type === 'audio' ? [{ elementId }] : []
+  })
+}
+
 export function switchToLayout(engine: EditorEngine, element: MulticamElement, layoutId: string): void {
   const playheadMs = engine.playback.state.currentTimeMs
   const localMs = Math.round(playheadMs - element.startMs)
   if (localMs < 0 || localMs >= element.durationMs) return
+  const groupMs = Math.round(getMulticamGroupTimeMs(element, playheadMs))
   try {
     if (engine.playback.state.isPlaying && localMs > 0) {
-      engine.dispatch({ type: 'addAngleCut', elementId: element.id, atMs: localMs, layoutId })
+      engine.dispatch({ type: 'addAngleCut', elementId: element.id, atMs: groupMs, layoutId })
     } else {
-      const span = element.angles[getActiveAngleIndex(element.angles, localMs)]
+      const span = element.angles[getActiveAngleIndex(element.angles, groupMs)]
       if (!span) return
       engine.dispatch({
         type: 'setAngleLayout',

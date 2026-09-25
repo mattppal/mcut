@@ -766,6 +766,11 @@
           "target": "components/mcut/math.ts"
         },
         {
+          "path": "registry/mcut/multicam-ui.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/multicam-ui.ts"
+        },
+        {
           "path": "registry/mcut/timeline-clip.tsx",
           "type": "registry:component",
           "target": "components/mcut/timeline-clip.tsx"

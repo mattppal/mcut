@@ -121,16 +121,12 @@ function planMove(input: PlanInput): DragPlan {
 interface TrimMember {
   id: ElementId
   base: ClipDragBase
-  assetDurationMs: number | undefined
 }
 
 function trimMembers(project: Project, ids: readonly ElementId[], bases: ReadonlyMap<ElementId, ClipDragBase>): TrimMember[] {
   return ids.flatMap((id) => {
     const base = bases.get(id)
-    const element = getElementLocation(project, id)?.element
-    if (!base || !element) return []
-    const asset = 'assetId' in element ? project.assets[element.assetId] : undefined
-    return [{ id, base, assetDurationMs: asset?.durationMs }]
+    return base && getElementLocation(project, id) ? [{ id, base }] : []
   })
 }
 
@@ -144,17 +140,21 @@ function planTrim(input: PlanInput, edge: 'start' | 'end'): DragPlan {
   const snapped = snapTime(edgeMs + deltaRawMs, targets, thresholdMs, { enabled: snapping, fps: project.fps })
   const wanted = Math.round(snapped.ms) - edgeMs
   let deltaMs = wanted
-  for (const { base, assetDurationMs } of members) {
+  for (const { base } of members) {
+    const { sourceDurationMs } = base
     if (edge === 'end') {
-      if (!base.hasTimeMap && assetDurationMs !== undefined && base.trimStartMs !== undefined) {
-        deltaMs = Math.min(deltaMs, base.reversed ? base.trimStartMs : assetDurationMs - base.trimStartMs - base.durationMs)
+      if (!base.hasTimeMap && sourceDurationMs !== undefined && base.trimStartMs !== undefined) {
+        deltaMs = Math.min(deltaMs, base.reversed ? base.trimStartMs : sourceDurationMs - base.trimStartMs - base.durationMs)
       }
       deltaMs = Math.max(deltaMs, MIN_ELEMENT_DURATION_MS - base.durationMs)
       continue
     }
     deltaMs = Math.max(deltaMs, -base.startMs)
     if (!base.hasTimeMap && base.trimStartMs !== undefined) {
-      deltaMs = Math.max(deltaMs, base.reversed && assetDurationMs !== undefined ? -(assetDurationMs - base.trimStartMs - base.durationMs) : -base.trimStartMs)
+      deltaMs = Math.max(
+        deltaMs,
+        base.reversed && sourceDurationMs !== undefined ? -(sourceDurationMs - base.trimStartMs - base.durationMs) : -base.trimStartMs,
+      )
     }
     if (base.hasTimeMap && base.reversed) deltaMs = Math.max(deltaMs, 0)
     deltaMs = Math.min(deltaMs, base.durationMs - MIN_ELEMENT_DURATION_MS)
