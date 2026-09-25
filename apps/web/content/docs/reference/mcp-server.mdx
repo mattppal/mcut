@@ -44,6 +44,7 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `get_audio_activity` | Live bridge only. Sound and silence windows for one video or audio clip in source time. |
 | `get_transcript` | Caption-derived transcript. Never starts transcription. |
 | `search_transcript` | Find spoken words or phrases with timeline times. |
+| `find_retakes` | Retake candidates from the word-timed transcript, last to first, each a timeline range that keeps the last take. With `elementId`, also that clip's transcript in source time for `apply_captions`. |
 | `ensure_transcript` | Live bridge only. Transcribe the target clip in the editor and apply word-timed captions. |
 | `list_commands` | Live bridge only. Every raw timeline command schema. |
 | `apply_commands` | Live bridge only. Apply several commands in one undoable transaction. |
