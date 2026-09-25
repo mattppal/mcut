@@ -18,9 +18,9 @@ edits:
   - id: 05-undo
     ask: Undo that last edit.
     checks: [not picture fade in, not picture fade out]
-  - id: 06-vertical-fill
-    ask: Make it 9:16 again and scale the video so it fills the whole frame.
-    checks: [aspect 9:16]
-  - id: 07-undo-vertical
+  - id: 06-square-fill
+    ask: Make it square, 1:1, and scale the video so it fills the whole frame.
+    checks: [aspect 1:1]
+  - id: 07-undo-square
     ask: Undo that.
-    checks: [aspect 16:9]
+    checks: [aspect 9:16]
