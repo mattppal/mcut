@@ -20,6 +20,7 @@ import {
 import { addAsset, removeAsset, removePreset, savePreset, updateAsset, updateProject } from './commands/project'
 import { rippleTrim, rollEdit, setElementSpeed, setTimeMap, slideElement, slipElement, trimEdge } from './commands/timing'
 import { addTrack, compactTimelineGaps, compactTrackGaps, removeTrack, renameTrack, reorderTrack, setTrackFlags } from './commands/tracks'
+import { addZoomRegion, removeZoomRegion, updateZoomRegion } from './commands/zooms'
 import { addEffect, removeEffect, reorderEffect, setBlendMode, setMotionBlur, setTransition, updateEffect } from './commands/visual'
 
 export { CommandError } from './errors'
@@ -84,6 +85,9 @@ const commandDefinitions = commandTable({
   detachAudio,
   applyThumbnail,
   applyZoomPreset,
+  addZoomRegion,
+  updateZoomRegion,
+  removeZoomRegion,
   addMarker,
   updateMarker,
   removeMarker,

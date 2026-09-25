@@ -17,7 +17,7 @@ function isAnimatableProperty(value: string): value is AnimatableProperty {
 }
 
 export const easingSchema = z.union([
-  z.enum(['linear', 'hold', 'easeIn', 'easeOut', 'easeInOut']),
+  z.enum(['linear', 'hold', 'easeIn', 'easeOut', 'easeInOut', 'easeInExpo', 'easeOutExpo', 'easeInOutExpo']),
   z.object({ cubicBezier: z.tuple([z.number(), z.number(), z.number(), z.number()]) }),
 ])
 
@@ -35,12 +35,20 @@ export const keyframesSchema = z.partialRecord(animatablePropertySchema, z.array
 
 export type KeyframeMap = z.infer<typeof keyframesSchema>
 
-type NamedBezierEasing = Exclude<Extract<Easing, string>, 'linear' | 'hold'>
+type NamedEasing = Extract<Easing, string>
 
-const NAMED_BEZIERS: Record<NamedBezierEasing, readonly [number, number, number, number]> = {
-  easeIn: [0.42, 0, 1, 1],
-  easeOut: [0, 0, 0.58, 1],
-  easeInOut: [0.42, 0, 0.58, 1],
+const expoIn = (t: number) => (t <= 0 ? 0 : 2 ** (10 * t - 10))
+const expoOut = (t: number) => (t >= 1 ? 1 : 1 - 2 ** (-10 * t))
+
+const NAMED_EASINGS: Record<NamedEasing, (t: number) => number> = {
+  linear: (t) => t,
+  hold: () => 0,
+  easeIn: (t) => cubicBezierAt([0.42, 0, 1, 1], t),
+  easeOut: (t) => cubicBezierAt([0, 0, 0.58, 1], t),
+  easeInOut: (t) => cubicBezierAt([0.42, 0, 0.58, 1], t),
+  easeInExpo: expoIn,
+  easeOutExpo: expoOut,
+  easeInOutExpo: (t) => (t < 0.5 ? expoIn(2 * t) / 2 : (1 + expoOut(2 * t - 1)) / 2),
 }
 
 export function cubicBezierAt(points: readonly [number, number, number, number], x: number): number {
@@ -71,10 +79,9 @@ export function cubicBezierAt(points: readonly [number, number, number, number],
 }
 
 export function evaluateEasing(easing: Easing | undefined, t: number): number {
-  if (!easing || easing === 'linear') return t
-  if (easing === 'hold') return 0
+  if (easing === undefined) return t
   if (typeof easing === 'object') return cubicBezierAt(easing.cubicBezier, t)
-  return cubicBezierAt(NAMED_BEZIERS[easing], t)
+  return NAMED_EASINGS[easing](t)
 }
 
 export function interpolateTrack(track: readonly Keyframe[], localMs: number): number {

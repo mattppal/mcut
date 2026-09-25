@@ -1,5 +1,12 @@
 # @mcut/react
 
+## 0.1.0-alpha.8
+
+### Patch Changes
+
+- Updated dependencies [[`bb7411b`](https://github.com/mattppal/mcut/commit/bb7411b8ae17dfe3e8c373fb67719abe5060505f)]:
+  - @mcut/media@0.1.0-alpha.7
+
 ## 0.1.0-alpha.7
 
 ### Patch Changes
