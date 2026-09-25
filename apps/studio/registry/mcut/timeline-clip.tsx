@@ -7,6 +7,7 @@ import {
   getAverageSpeed,
   getGroupedElementIds,
   getLinkedElementIds,
+  isZoomable,
   TRANSITION_TYPES,
   type AssetRef,
   type BuiltinCommand,
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/context-menu'
 import { AudioWaveform, VideoFilmstrip } from './clip-media'
 import { FadeOverlay } from './clip-fades'
+import { ZoomLane } from './clip-zooms'
 import { getElementUI } from './element-ui'
 import { KeyframeMarkers, VolumeBand } from './clip-keyframes'
 import { duplicateElement, removeSelection, splitSelectionAtPlayhead, unlinkElements } from './editor-actions'
@@ -230,7 +232,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
             data-mcut-element-id={element.id}
             className={cn(
               'group absolute top-1 bottom-1 left-0 flex cursor-grab touch-none items-center overflow-hidden rounded-lg text-xs font-medium select-none active:cursor-grabbing',
-              'data-dragging:z-40 data-settling:z-40 data-dragging:cursor-grabbing data-drop-invalid:opacity-60 data-drop-invalid:ring-2 data-drop-invalid:ring-destructive',
+              'data-dragging:z-40 data-settling:z-40 data-dragging:cursor-grabbing data-drop-invalid:opacity-60 data-drop-invalid:outline-2 data-drop-invalid:outline-destructive',
               getElementUI(element.type).clipClassName,
               selected ? 'ring-2 ring-overlay-foreground' : 'ring-1 ring-overlay-foreground/10 hover:ring-overlay-foreground/30',
             )}
@@ -286,6 +288,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
         {element.type === 'audio' && <VolumeBand element={element} widthPx={widthPx} heightPx={heightPx + 8} interactive={selected} />}
         {element.type === 'multicam' && <MulticamWaveform element={element} widthPx={widthPx} heightPx={heightPx} />}
         {element.type === 'multicam' && <MulticamCutTicks element={element} pxPerMs={pxPerMs} />}
+        {isZoomable(element) && <ZoomLane element={element} pxPerMs={pxPerMs} />}
         {(element.type === 'video' || element.type === 'audio' || element.type === 'multicam') && (
           <FadeOverlay element={element} pxPerMs={pxPerMs} widthPx={widthPx} interactive={selected} />
         )}

@@ -1,5 +1,41 @@
 # @mcut/react
 
+## 0.1.0-alpha.11
+
+### Patch Changes
+
+- [#161](https://github.com/mattppal/mcut/pull/161) [`2efc9c8`](https://github.com/mattppal/mcut/commit/2efc9c80954559389c540502b63c821a9e1fe97d) Thanks [@mattppal](https://github.com/mattppal)! - Video, audio, and multicam clips can store an optional voice cleanup mix. The Clean up voice operator toggles that mix on the current selection in one undo step. Export and preview accept a replacement audio URL per clip so a cleaned stem can stand in for the clip's original audio.
+
+- Updated dependencies [[`2efc9c8`](https://github.com/mattppal/mcut/commit/2efc9c80954559389c540502b63c821a9e1fe97d)]:
+  - @mcut/timeline@0.1.0-alpha.8
+  - @mcut/media@0.1.0-alpha.10
+  - @mcut/compositor@0.1.0-alpha.8
+
+## 0.1.0-alpha.10
+
+### Patch Changes
+
+- Updated dependencies [[`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33), [`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33)]:
+  - @mcut/timeline@0.1.0-alpha.7
+  - @mcut/compositor@0.1.0-alpha.7
+  - @mcut/media@0.1.0-alpha.9
+
+## 0.1.0-alpha.9
+
+### Patch Changes
+
+- Updated dependencies [[`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f), [`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f)]:
+  - @mcut/timeline@0.1.0-alpha.6
+  - @mcut/compositor@0.1.0-alpha.6
+  - @mcut/media@0.1.0-alpha.8
+
+## 0.1.0-alpha.8
+
+### Patch Changes
+
+- Updated dependencies [[`bb7411b`](https://github.com/mattppal/mcut/commit/bb7411b8ae17dfe3e8c373fb67719abe5060505f)]:
+  - @mcut/media@0.1.0-alpha.7
+
 ## 0.1.0-alpha.7
 
 ### Patch Changes

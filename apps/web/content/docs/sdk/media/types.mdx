@@ -97,10 +97,11 @@ interface ActiveMediaItem {
   rate: number
   volume: number
   reversed?: boolean
+  audioSrc?: string
 }
 ```
 
-One media asset that is playing at a moment, with its source time, playback rate, volume, and reversal.
+One media asset that is playing at a moment, with its source time, playback rate, volume, reversal, and optional replacement audio URL.
 
 ### PreviewSyncOptions
 
@@ -155,12 +156,13 @@ interface ExportProjectOptions {
   format?: ContainerFormatId
   videoBitrate?: number | Quality
   fonts?: ExportFontFaceInit[]
+  audioSources?: ReadonlyMap<ElementId, string>
   onProgress?: (progress: ExportProgress) => void
   signal?: AbortSignal
 }
 ```
 
-Options for `exportProject`, the container format, video bitrate or quality, fonts, progress callback, and abort signal.
+Options for `exportProject`, the container format, video bitrate or quality, fonts, per-clip replacement audio URLs, progress callback, and abort signal.
 
 ### ExportResult
 

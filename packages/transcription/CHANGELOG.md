@@ -1,5 +1,32 @@
 # @mcut/transcription
 
+## 0.1.0-alpha.9
+
+### Patch Changes
+
+- Updated dependencies [[`2efc9c8`](https://github.com/mattppal/mcut/commit/2efc9c80954559389c540502b63c821a9e1fe97d)]:
+  - @mcut/timeline@0.1.0-alpha.8
+
+## 0.1.0-alpha.8
+
+### Minor Changes
+
+- [#160](https://github.com/mattppal/mcut/pull/160) [`d8d259b`](https://github.com/mattppal/mcut/commit/d8d259b1b390ff12eb0bacb5bfaa4449fe6ce3a2) Thanks [@mattppal](https://github.com/mattppal)! - Add `findRetakes` over word-timed transcripts and the `find_retakes` MCP tool, which returns candidate ranges that keep the last take, last to first. With `elementId` it also returns that clip's transcript in source time, ready to re-caption the clip after the cuts.
+
+## 0.1.0-alpha.7
+
+### Patch Changes
+
+- Updated dependencies [[`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33), [`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33)]:
+  - @mcut/timeline@0.1.0-alpha.7
+
+## 0.1.0-alpha.6
+
+### Patch Changes
+
+- Updated dependencies [[`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f), [`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f)]:
+  - @mcut/timeline@0.1.0-alpha.6
+
 ## 0.1.0-alpha.5
 
 ### Patch Changes

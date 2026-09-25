@@ -343,3 +343,5 @@ class EditorEngine {
 ```
 
 The headless editor that applies validated commands to a project with undo history and transactions, holds the selection, and keeps a playback store for transport state.
+
+Transactions nest. `endTransaction` closes the innermost open transaction, and closing the outermost one records everything inside as one undo step. `cancelTransaction` restores the project and selection the innermost transaction began with and leaves any outer transaction open.

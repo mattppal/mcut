@@ -17,7 +17,7 @@ export {
 
 export { getEffectiveVolume, getFadeGain, hasFades, type FadeableElement } from './audio'
 
-export { resolveElementAudioSource, type ElementAudioSource, type ElementAudioSourceType } from './audio-source'
+export { getVoiceSource, resolveElementAudioSource, type ElementAudioSource, type ElementAudioSourceType } from './audio-source'
 
 export { migrateProject, ProjectFormatError, PROJECT_VERSION } from './migrations'
 
@@ -68,7 +68,21 @@ export {
   type ThumbnailTemplate,
 } from './thumbnails'
 
-export { captureZoomPreset, expandZoomPreset, ZOOM_PRESETS, ZOOMABLE_PROPERTIES, zoomPresetSchema, type ZoomPreset } from './zoom-presets'
+export {
+  getClipView,
+  getSlotView,
+  getZoomShutterMs,
+  isZoomable,
+  listZoomRegions,
+  ZOOM_REGION_PRESETS,
+  zoomRegionEndMs,
+  zoomRegionSchema,
+  type ContentView,
+  type ZoomableElement,
+  type ZoomRegion,
+  type ZoomRegionRef,
+} from './zoom-regions'
+export { zoomCommandSchema } from './commands/zooms'
 
 export {
   EFFECT_PARAMS,
@@ -159,6 +173,7 @@ export {
   trackSchema,
   transformSchema,
   videoElementSchema,
+  voiceSchema,
   type AssetKind,
   type AssetRef,
   type AudioElement,
@@ -184,6 +199,7 @@ export {
   type Track,
   type Transform,
   type VideoElement,
+  type Voice,
 } from './model'
 
 export {

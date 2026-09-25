@@ -32,6 +32,7 @@ app.
 | 2 | `@mcut/editor` | Operators, the user-level intents that compose commands and define `enabled` preconditions |
 | 2 | `@mcut/compositor` | Frame rendering, element and transition renderers, Canvas2D and WebGPU backends, hit testing, text layout |
 | 2 | `@mcut/transcription` | Provider interface, normalized transcripts, captions, SRT and VTT |
+| 2 | `@mcut/voice` | DeepFilterNet3 WASM voice cleanup, chunked worker pool for browser and Node, WAV codec, dry and wet mix |
 | 3 | `@mcut/media` | Media probing, preview pools, filmstrips, audio peaks, browser export, container formats |
 | 3 | `@mcut/transcription-local`, `@mcut/transcription-ai-sdk`, `@mcut/transcription-assemblyai` | One transcription provider each |
 | 3 | `@mcut/cli`, `@mcut/mcp-server` | The `mcut` binary and the MCP server, both tools over commands and operators |
