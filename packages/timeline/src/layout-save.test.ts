@@ -49,6 +49,55 @@ describe('saveLayout', () => {
   })
 })
 
+describe('describeLayoutChange styling', () => {
+  const header = 'Layout "PiP" (picture-in-picture), before → after:'
+  const screen = '  screen full-frame 1920×1080 px, aspect 1.78 (16:9) (unchanged)'
+
+  test('a null shadow shows as removed and warns how to restore it', () => {
+    const before = styledPip()
+    const after = save(before, [{ source: 'screen' }, { source: 'camera', shadow: null }])
+
+    expect(describeLayoutChange(before, after, 'l-pip')).toEqual([
+      header,
+      screen,
+      '  camera overlay bottom-right 528×297 px, aspect 1.78 (16:9) (shadow removed)',
+      'Warning: the camera overlay lost its shadow. To restore it, save this layout with ' +
+        '{"source":"camera","shadow":{"color":"rgba(0, 0, 0, 0.45)","blur":36,"offsetX":0,"offsetY":12}} as the camera slot.',
+    ])
+  })
+
+  test('each style change is listed next to a resize, and a lost corner radius warns', () => {
+    const before = styledPip()
+    const after = save(before, [
+      { source: 'screen' },
+      {
+        source: 'camera',
+        rect: { x: 0.6, y: 0.59, w: 0.375, h: 0.375 },
+        cornerRadius: 0,
+        stroke: { width: 2, color: '#ffffff' },
+        shadow: { ...shadow, blur: 48 },
+      },
+    ])
+
+    expect(describeLayoutChange(before, after, 'l-pip')).toEqual([
+      header,
+      screen,
+      '  camera overlay bottom-right 528×297 px, aspect 1.78 (16:9) → camera overlay bottom-right 720×405 px, aspect 1.78 (16:9) ' +
+        '(width +36%, height +36%, corner radius 0.12 → 0, stroke added (2 px #ffffff), shadow blur 36 → 48)',
+      'Warning: the camera overlay lost its corner radius. To restore it, save this layout with {"source":"camera","cornerRadius":0.12} as the camera slot.',
+    ])
+  })
+
+  test('a restyle in place names the fields instead of a bare restyled', () => {
+    const before = styledPip()
+    const after = save(before, [{ source: 'screen' }, { source: 'camera', fit: 'contain', crop: { x: 0.25, y: 0, w: 0.5, h: 1 }, cornerRadius: 0.2 }])
+
+    expect(describeLayoutChange(before, after, 'l-pip').at(-1)).toBe(
+      '  camera overlay bottom-right 528×297 px, aspect 1.78 (16:9) (fit cover → contain, crop added (x 0.25, y 0, w 0.5, h 1), corner radius 0.12 → 0.2)',
+    )
+  })
+})
+
 describe('saveLayout overlay defaults', () => {
   const bottomLeft = { x: 0.025, y: 0.69, w: 0.275, h: 0.275 }
 

@@ -3,7 +3,7 @@ import { CommandError } from '../errors'
 import { defaultSlotAnchor, slotRole } from '../layout-summary'
 import { layoutSchema, layoutSlotSchema, pipFrameStyle, resizeSlotRect, slotResizeSchema, type Layout, type LayoutSlot } from '../layouts'
 import type { Project } from '../model'
-import { frameStyleSchema, type FrameStyle } from '../style'
+import { FRAME_STYLE_FIELDS, frameStyleSchema, type FrameStyle } from '../style'
 import { defineCommand, mustGetLayout } from './shared'
 
 const slotShape = layoutSlotSchema.shape
@@ -24,19 +24,19 @@ const layoutPatchSchema = layoutSchema.extend({ slots: z.array(slotPatchSchema).
 type LayoutPatch = z.output<typeof layoutPatchSchema>
 type SlotPatch = LayoutPatch['slots'][number]
 
-const STYLE_FIELDS = frameStyleSchema.keyof().options
 const LOOK_FIELDS = ['cornerRadius', 'stroke', 'shadow'] as const
 
 function patchField<K extends keyof FrameStyle>(style: FrameStyle, key: K, value: FrameStyle[K] | null): void {
+  if (value === undefined) return
   if (value === null) delete style[key]
-  else if (value !== undefined) style[key] = value
+  else style[key] = value
 }
 
 function mergeSlot(old: LayoutSlot | undefined, patch: SlotPatch, layoutName: string): LayoutSlot {
   const rect = patch.rect ?? old?.rect
   if (rect === undefined) throw new CommandError('invalid-payload', `slot "${patch.source}" is new to layout "${layoutName}", so it needs a rect`)
   const slot: LayoutSlot = { ...old, source: patch.source, rect, fit: patch.fit ?? old?.fit ?? 'cover' }
-  for (const key of STYLE_FIELDS) patchField(slot, key, patch[key])
+  for (const key of FRAME_STYLE_FIELDS) patchField(slot, key, patch[key])
   return slot
 }
 
