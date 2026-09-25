@@ -1,17 +1,9 @@
 ---
-title: "Animation and zoom presets"
+title: "Animation presets"
 description: "Preset names, easings, and the expansion of presets into keyframes."
 ---
 
 ## Types
-
-### ZoomPreset
-
-```ts
-type ZoomPreset = z.infer<typeof zoomPresetSchema>
-```
-
-A zoom preset as inferred from `zoomPresetSchema`.
 
 ### AnimationPreset
 
@@ -30,18 +22,6 @@ type AnimationPresetOptions = z.infer<typeof animationPresetOptionsSchema>
 Preset options as inferred from `animationPresetOptionsSchema`.
 
 ## Schemas
-
-### zoomPresetSchema
-
-```ts
-const zoomPresetSchema = z.object({
-  name: z.string().min(1),
-  durationMs: z.number().int().min(100).default(600),
-  tracks: z.partialRecord(z.enum(ZOOMABLE_PROPERTIES), z.array(zoomKeySchema).min(2)),
-})
-```
-
-Zod schema for a zoom preset, a name, a default duration of at least 100 ms, and per-property tracks of at least two normalized keys.
 
 ### animationPresetOptionsSchema
 
@@ -85,22 +65,6 @@ const animationPresetSchema = z.enum([
 Zod schema for the twenty preset names, seven entrances, six exits, and seven combined or looping motions.
 
 ## Constants
-
-### ZOOM_PRESETS
-
-```ts
-const ZOOM_PRESETS: ZoomPreset[]
-```
-
-The four built-in zoom presets, punch in, punch out, slow push, and zoom hold return.
-
-### ZOOMABLE_PROPERTIES
-
-```ts
-const ZOOMABLE_PROPERTIES = ['position.x', 'position.y', 'scale.x', 'scale.y'] as const
-```
-
-The four properties a zoom preset can animate, position and scale on both axes.
 
 ### ANIMATION_PRESET_CATEGORIES
 
@@ -147,32 +111,6 @@ const MOTION_BLUR_PRESETS: ReadonlySet<AnimationPreset>
 The presets that turn on motion blur when applied, `whip-in`, `whip-out`, and `punch-zoom`.
 
 ## Functions
-
-### captureZoomPreset
-
-```ts
-function captureZoomPreset(
-  element: TimelineElement,
-  name: string,
-  fromLocalMs?: number,
-  toLocalMs?: number,
-): ZoomPreset | null
-```
-
-Returns a zoom preset built from the zoomable keyframes between two element-local times, normalized against each track's first keyframe, or `null` when no track has two keyframes in the range.
-
-### expandZoomPreset
-
-```ts
-function expandZoomPreset(
-  element: TimelineElement,
-  preset: ZoomPreset,
-  atLocalMs: number,
-  durationMs?: number,
-): KeyframeMap
-```
-
-Returns the element's keyframe map with the preset expanded into absolute keyframes from `atLocalMs`, where scale keys multiply and position keys offset the animated value at that time, replacing keyframes inside the window.
 
 ### expandAnimationPreset
 

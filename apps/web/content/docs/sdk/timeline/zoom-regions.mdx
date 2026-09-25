@@ -33,6 +33,10 @@ engine.dispatch({
 
 `ZoomRegionRef` extends `ZoomRegion` with `elementId` and the region's timeline `startMs` and `endMs`.
 
+### ZoomableElement
+
+`ZoomableElement` is a video, image, or multicam element, the element types that hold zoom regions.
+
 ### ContentView
 
 `ContentView` is `{ scale, focus }`, how a clip or slot frames its source at one
@@ -75,6 +79,14 @@ Explicit fields override the preset. A `rect` sets both focus and scale.
 ### listZoomRegions
 
 `listZoomRegions(project)` returns every zoom region in the project as `ZoomRegionRef[]`, in track and element order.
+
+### isZoomable
+
+`isZoomable(element)` returns `true` for a video, image, or multicam element and narrows it to `ZoomableElement`.
+
+### zoomRegionEndMs
+
+`zoomRegionEndMs(region)` returns the element-local time a zoom region ends, `atMs + inMs + holdMs + outMs`.
 
 ### getSlotView
 

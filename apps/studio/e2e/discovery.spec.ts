@@ -30,7 +30,7 @@ const AGENT_TOOL_NAMES = [
   'cancel_export',
 ]
 
-const FULL_TOOL_COUNT = 129
+const FULL_TOOL_COUNT = 128
 const STUDIO_ORIGIN = 'app://studio'
 
 const toolCatalogSchema = z.object({
@@ -80,7 +80,7 @@ test('serves the curated agent profile at /tools.json and every command under ?p
   expect(fullRes.ok).toBe(true)
   const full = toolCatalogSchema.parse(fullRes.body)
   expect(full.profile).toBe('full')
-  expect(full.tools.length, '20 agent tools (17 server static + 3 bridge only) + 42 editor operators + 59 timeline commands').toBe(FULL_TOOL_COUNT)
+  expect(full.tools.length, '25 agent tools (22 server static + 3 bridge only) + 42 editor operators + 61 timeline commands').toBe(FULL_TOOL_COUNT)
   const split = full.tools.find((tool) => tool.name === 'splitElement')
   expect(split?.description).toContain('Split')
   expect(split?.inputSchema.type).toBe('object')
