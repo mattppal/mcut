@@ -1,3 +1,4 @@
+import { isMediaClip } from './media-clip'
 import type { Project, TimelineElement, Track } from './model'
 import { getSourceSpanMs } from './speed'
 import { getTransitionPair } from './transitions'
@@ -49,13 +50,10 @@ function mediaReference(project: Project, element: TimelineElement): OtioValue {
 }
 
 function clip(project: Project, element: TimelineElement): OtioValue {
-  const trimStartMs = 'trimStartMs' in element ? element.trimStartMs : 0
-  const hasMap = 'timeMap' in element && element.timeMap !== undefined
-  const sourceDurationMs = hasMap ? getSourceSpanMs(element as { durationMs: number }) : element.durationMs
   return {
     OTIO_SCHEMA: 'Clip.2',
     name: describeName(project, element),
-    source_range: timeRange(trimStartMs, hasMap ? sourceDurationMs : element.durationMs),
+    source_range: isMediaClip(element) ? timeRange(element.trimStartMs, getSourceSpanMs(element)) : timeRange(0, element.durationMs),
     media_references: { DEFAULT_MEDIA: mediaReference(project, element) },
     active_media_reference_key: 'DEFAULT_MEDIA',
     effects: [],

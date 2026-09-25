@@ -127,10 +127,12 @@ export const createMulticam = defineCommand({
       next = { ...next, layouts: createDefaultLayouts() }
     }
 
+    const groupMs = videos.map((video) => Math.max(0, video.trimStartMs - (video.startMs - startMs)))
+    const trimStartMs = Math.min(...groupMs)
     const sources = videos.map((video, i) => ({
       key: keys[i]!,
       assetId: video.assetId,
-      trimStartMs: Math.max(0, video.trimStartMs - (video.startMs - startMs)),
+      offsetMs: groupMs[i]! - trimStartMs,
     }))
 
     const audioKey = keys.includes('camera') ? 'camera' : keys[0]!
@@ -139,8 +141,9 @@ export const createMulticam = defineCommand({
       type: 'multicam',
       startMs,
       durationMs: endMs - startMs,
+      trimStartMs,
       sources,
-      angles: [{ atMs: 0, layoutId: next.layouts[0]!.id }],
+      angles: [{ atMs: trimStartMs, layoutId: next.layouts[0]!.id }],
       audioSource: audioKey,
       transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
       opacity: 1,

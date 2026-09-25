@@ -56,22 +56,9 @@ test(`${seeds.length} random command sequences of ${length} steps keep every eng
 test('seed 1 always yields the same second step', () => {
   const plan = generatePlan({ seed: 1, tools: listToolDefinitions(), length: 2, overrides: commandOverrides })
   expect(plan.steps[1]).toEqual({
-    tool: 'addElement',
+    tool: 'addAsset',
     args: {
-      trackId: { $slot: 'track', index: 4 },
-      element: {
-        type: 'audio',
-        startMs: 19834,
-        durationMs: 4771,
-        linkId: 'clip',
-        assetId: { $slot: 'asset', index: 5 },
-        timeMap: [
-          { timeMs: 0, value: 0 },
-          { timeMs: 4349, value: 3976 },
-        ],
-        reversed: true,
-        muted: true,
-      },
+      asset: { id: 'a-fz531a1b', kind: 'video', src: 'camera', mimeType: 'Hello world', nativePreview: true },
     },
   })
 })

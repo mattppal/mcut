@@ -21,7 +21,7 @@ export interface TimeMappedElement {
   reversed?: boolean | undefined
 }
 
-const hasTimeMap = (element: { timeMap?: TimeMap | undefined }): element is { timeMap: TimeMap } =>
+export const hasTimeMap = (element: { timeMap?: TimeMap | undefined }): element is { timeMap: TimeMap } =>
   Array.isArray(element.timeMap) && element.timeMap.length >= 2
 
 export function getSourceTimeMs(element: TimeMappedElement, localMs: number): number {

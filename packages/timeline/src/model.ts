@@ -10,7 +10,7 @@ import { layoutSchema } from './layouts'
 import { propertyPresetSchema } from './presets'
 import { cropSchema, shadowSchema, strokeSchema } from './style'
 import { textRunSchema } from './rich-text'
-import { splitAngles } from './multicam'
+import { getMediaSourceDurationMs, type MediaClip } from './media-clip'
 import { transitionSchema } from './transitions'
 
 export const MIN_ELEMENT_DURATION_MS = 10
@@ -113,33 +113,28 @@ const frameStyleShape = {
   crop: cropSchema.optional(),
 }
 
-const fadeShape = {
+const mediaWindowShape = {
+  trimStartMs: z.number().int().nonnegative().default(0),
+  timeMap: timeMapSchema.optional(),
+  reversed: z.boolean().optional(),
+  volume: z.number().min(0).max(2).default(1),
+  muted: z.boolean().default(false),
   fadeInMs: z.number().int().nonnegative().optional(),
   fadeOutMs: z.number().int().nonnegative().optional(),
 }
 
 const videoShape = {
   assetId: assetIdSchema,
-  trimStartMs: z.number().int().nonnegative().default(0),
-  timeMap: timeMapSchema.optional(),
-  reversed: z.boolean().optional(),
+  ...mediaWindowShape,
   transform: transformSchema,
   opacity: z.number().min(0).max(1).default(1),
-  volume: z.number().min(0).max(2).default(1),
-  muted: z.boolean().default(false),
-  ...fadeShape,
   ...visualShape,
   ...frameStyleShape,
 }
 
 const audioShape = {
   assetId: assetIdSchema,
-  trimStartMs: z.number().int().nonnegative().default(0),
-  timeMap: timeMapSchema.optional(),
-  reversed: z.boolean().optional(),
-  volume: z.number().min(0).max(2).default(1),
-  muted: z.boolean().default(false),
-  ...fadeShape,
+  ...mediaWindowShape,
 }
 
 const imageShape = {
@@ -163,7 +158,7 @@ const textShape = {
 const multicamSourceSchema = z.object({
   key: z.string().min(1),
   assetId: assetIdSchema,
-  trimStartMs: z.number().int().nonnegative().default(0),
+  offsetMs: z.number().int().nonnegative().default(0),
 })
 
 const angleCutSchema = z.object({
@@ -176,13 +171,11 @@ const multicamShape = {
   angles: z.array(angleCutSchema).min(1),
   angleTransition: transitionSchema.optional(),
   audioSource: z.string().optional(),
-  timeMap: timeMapSchema.optional(),
+  ...mediaWindowShape,
   transform: transformSchema,
   opacity: z.number().min(0).max(1).default(1),
-  volume: z.number().min(0).max(2).default(1),
-  muted: z.boolean().default(false),
-  ...fadeShape,
   ...visualShape,
+  ...frameStyleShape,
 }
 
 const captionShape = {
@@ -309,23 +302,27 @@ export type Marker = z.infer<typeof markerSchema>
 export type Track = z.infer<typeof trackSchema>
 export type Project = z.infer<typeof projectSchema>
 
-function validateAssetClip(project: Project, element: VideoElement | AudioElement | ImageElement): void {
-  const asset = project.assets[element.assetId]
-  if (!asset) throw new CommandError('unknown-asset', `no asset "${element.assetId}"`)
-  if (element.type === 'image') return
-  const sourceSpanMs = getSourceSpanMs(element)
-  if (asset.durationMs !== undefined && element.trimStartMs + sourceSpanMs > asset.durationMs) {
+function mustHaveAsset(project: Project, assetId: AssetId, owner = ''): AssetRef {
+  const asset = project.assets[assetId]
+  if (!asset) throw new CommandError('unknown-asset', `no asset "${assetId}"${owner}`)
+  return asset
+}
+
+function validateMediaWindow(project: Project, clip: MediaClip): void {
+  const sourceDurationMs = getMediaSourceDurationMs(project, clip)
+  const sourceSpanMs = getSourceSpanMs(clip)
+  if (sourceDurationMs !== undefined && clip.trimStartMs + sourceSpanMs > sourceDurationMs) {
     throw new CommandError(
       'out-of-bounds',
-      `element plays past the end of asset "${asset.id}" ` + `(trimStartMs ${element.trimStartMs} + source span ${sourceSpanMs} > ${asset.durationMs})`,
+      `element "${clip.id}" plays past the end of its source (trimStartMs ${clip.trimStartMs} + source span ${sourceSpanMs} > ${sourceDurationMs})`,
     )
   }
 }
 
-function validateMulticam(project: Project, element: MulticamElement): void {
+function validateMulticamSources(project: Project, element: MulticamElement): void {
   for (const source of element.sources) {
-    if (!project.assets[source.assetId]) {
-      throw new CommandError('unknown-asset', `no asset "${source.assetId}" (source "${source.key}")`)
+    if (mustHaveAsset(project, source.assetId, ` (source "${source.key}")`).kind === 'image') {
+      throw new CommandError('invalid-payload', `multicam source "${source.key}" is an image; sources must be video or audio`)
     }
   }
 }
@@ -334,10 +331,14 @@ export function validateElement(project: Project, element: TimelineElement): voi
   switch (element.type) {
     case 'video':
     case 'audio':
-    case 'image':
-      return validateAssetClip(project, element)
+      mustHaveAsset(project, element.assetId)
+      return validateMediaWindow(project, element)
     case 'multicam':
-      return validateMulticam(project, element)
+      validateMulticamSources(project, element)
+      return validateMediaWindow(project, element)
+    case 'image':
+      mustHaveAsset(project, element.assetId)
+      return
     case 'text':
     case 'caption':
       return
@@ -371,7 +372,7 @@ function timingHalves<E extends TimelineElement>(element: E, offsetMs: number): 
   return { left, right }
 }
 
-function splitTrimmedMedia(element: VideoElement | AudioElement, offsetMs: number): SplitHalves<VideoElement | AudioElement> {
+function splitTrimmedMedia(element: MediaClip, offsetMs: number): SplitHalves<MediaClip> {
   const { left, right } = timingHalves(element, offsetMs)
   const originalSpanMs = getSourceSpanMs(element)
   if (element.timeMap) {
@@ -400,33 +401,17 @@ function splitCaption(element: CaptionElement, offsetMs: number): SplitHalves<Ca
   return { left, right }
 }
 
-function splitMulticam(element: MulticamElement, offsetMs: number): SplitHalves<MulticamElement> {
-  const { left, right } = timingHalves(element, offsetMs)
-  const angleHalves = splitAngles(element.angles, offsetMs)
-  left.angles = angleHalves.left
-  right.angles = angleHalves.right
-  if (element.timeMap) {
-    const halves = splitTimeMap(element.timeMap, offsetMs)
-    left.timeMap = halves.left
-    right.timeMap = halves.right
-  } else {
-    right.sources = right.sources.map((s) => ({ ...s, trimStartMs: s.trimStartMs + offsetMs }))
-  }
-  return { left, right }
-}
-
 export function splitElementAt(element: TimelineElement, offsetMs: number): SplitHalves {
   switch (element.type) {
     case 'video':
     case 'audio':
+    case 'multicam':
       return splitTrimmedMedia(element, offsetMs)
     case 'image':
     case 'text':
       return timingHalves(element, offsetMs)
     case 'caption':
       return splitCaption(element, offsetMs)
-    case 'multicam':
-      return splitMulticam(element, offsetMs)
     default:
       return assertNever(element)
   }

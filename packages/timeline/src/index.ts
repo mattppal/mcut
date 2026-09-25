@@ -17,7 +17,9 @@ export {
 
 export { getEffectiveVolume, getFadeGain, hasFades, type FadeableElement } from './audio'
 
-export { resolveElementAudioSource, type ElementAudioSource, type ElementAudioSourceType } from './audio-source'
+export { resolveElementAudioSource, type ElementAudioSource } from './audio-source'
+
+export { getElementAssetIds, getMediaSourceDurationMs, isMediaClip, type MediaClip } from './media-clip'
 
 export { migrateProject, ProjectFormatError, PROJECT_VERSION } from './migrations'
 
@@ -45,11 +47,13 @@ export {
   getActiveAngleIndex,
   getActiveLayout,
   getAngleTransitionAt,
-  getMulticamAudioSource,
+  getMulticamGroupTimeMs,
   getMulticamSourceTimeMs,
-  splitAngles,
+  getVisibleAngleCuts,
+  isAudioOnlySource,
   type AngleCut,
   type AngleTransitionWindow,
+  type VisibleAngleCut,
 } from './multicam'
 
 export { getFrameRequests, type FrameRequest } from './frame-requests'

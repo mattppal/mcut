@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError } from './commands'
 import { getFrameRequests } from './frame-requests'
 import { createProject, type MulticamElement, type Project } from './model'
-import { getActiveAngleIndex, getActiveLayout, getAngleTransitionAt, getMulticamSourceTimeMs, splitAngles } from './multicam'
+import { getActiveAngleIndex, getActiveLayout, getAngleTransitionAt, getMulticamSourceTimeMs } from './multicam'
 import { getElement } from './selectors'
 
 function projectWithRecordings(): { project: Project; trackId: `t-${string}` } {
@@ -62,8 +62,9 @@ describe('createMulticam', () => {
     const camera = element.sources.find((s) => s.key === 'camera')!
     expect(screen.assetId).toBe('a-screen')
     expect(camera.assetId).toBe('a-cam')
-    expect(screen.trimStartMs).toBe(0)
-    expect(camera.trimStartMs).toBe(0)
+    expect(element.trimStartMs).toBe(0)
+    expect(screen.offsetMs).toBe(0)
+    expect(camera.offsetMs).toBe(0)
     expect(element.audioSource).toBe('camera')
     expect(element.angles).toEqual([{ atMs: 0, layoutId: next.layouts[0]!.id }])
     expect(next.layouts.length).toBeGreaterThanOrEqual(5)
@@ -307,14 +308,14 @@ describe('angle transitions', () => {
 })
 
 describe('source time + frame requests', () => {
-  test('per-source trim feeds source time; requests follow the active layout', () => {
+  test('per-source offset feeds source time; requests follow the active layout', () => {
     const { project } = projectWithRecordings()
     let next = createMc(project)
     next = applyCommand(next, {
-      type: 'setMulticamSourceTrim',
+      type: 'setMulticamSourceOffset',
       elementId: 'e-mc',
       sourceKey: 'camera',
-      trimStartMs: 1500,
+      offsetMs: 1500,
     })
     const element = mc(next)
     const camera = element.sources.find((s) => s.key === 'camera')!
@@ -331,7 +332,7 @@ describe('source time + frame requests', () => {
 })
 
 describe('split + flatten', () => {
-  test('splitting a multicam divides the switch list', () => {
+  test('splitting a multicam moves the window and copies the switch list', () => {
     const { project } = projectWithRecordings()
     let next = createMc(project)
     const camLayout = next.layouts.find((l) => l.name === 'Camera')!
@@ -340,24 +341,15 @@ describe('split + flatten', () => {
 
     const left = mc(next)
     const right = getElement(next, 'e-mc2' as `e-${string}`) as MulticamElement
-    expect(left.angles).toEqual([{ atMs: 0, layoutId: next.layouts[0]!.id }])
-    expect(right.angles.map((a) => a.atMs)).toEqual([0, 4000])
-    expect(right.sources.find((s) => s.key === 'screen')!.trimStartMs).toBe(6000)
-  })
-
-  test('splitAngles helper keeps the active layout at the boundary', () => {
-    const { left, right } = splitAngles(
-      [
-        { atMs: 0, layoutId: 'lay-a' },
-        { atMs: 5000, layoutId: 'lay-b' },
-      ],
-      7000,
-    )
-    expect(left).toEqual([
-      { atMs: 0, layoutId: 'lay-a' },
-      { atMs: 5000, layoutId: 'lay-b' },
-    ])
-    expect(right[0]).toEqual({ atMs: 0, layoutId: 'lay-b' })
+    const schedule = [
+      { atMs: 0, layoutId: next.layouts[0]!.id },
+      { atMs: 10_000, layoutId: camLayout.id },
+    ]
+    expect(left.angles).toEqual(schedule)
+    expect(right.angles).toEqual(schedule)
+    expect(right.trimStartMs).toBe(6000)
+    expect(right.sources.map((s) => s.offsetMs)).toEqual([0, 0])
+    expect(getActiveLayout(next, right, 15_000)?.id).toBe(camLayout.id)
   })
 
   test('flatten explodes spans into plain clips + audio', () => {

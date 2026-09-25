@@ -15,7 +15,7 @@ import {
   setMulticamAngleTransition,
   setMulticamAudio,
   setMulticamSourceKey,
-  setMulticamSourceTrim,
+  setMulticamSourceOffset,
 } from './commands/multicam'
 import { addAsset, removeAsset, removePreset, savePreset, updateAsset, updateProject } from './commands/project'
 import { rippleTrim, rollEdit, setElementSpeed, setTimeMap, slideElement, slipElement, trimEdge } from './commands/timing'
@@ -77,7 +77,7 @@ const commandDefinitions = commandTable({
   removeAngleCut,
   setAngleLayout,
   setMulticamAudio,
-  setMulticamSourceTrim,
+  setMulticamSourceOffset,
   setMulticamAngleTransition,
   setMulticamSourceKey,
   flattenMulticam,
