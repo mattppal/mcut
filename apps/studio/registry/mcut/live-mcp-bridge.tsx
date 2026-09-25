@@ -29,7 +29,7 @@ import { prepareAddAssetCommand } from './add-asset-src'
 import { formatShortcut, getEditorAction, isActionEnabled, listEditorActions, runEditorAction, type EditorAction } from './action-registry'
 import { isExportRequest, parseBridgeFrame, type BridgeRequest } from './bridge-request'
 import { centerPerson } from './center-person'
-import { handleGetFrame } from './get-frame'
+import { handleFindSceneChanges, handleGetContactSheet, handleGetFrame } from './get-frame'
 import { importGrantedMedia } from './import-granted-media'
 import { editorClipboard } from './editor-clipboard'
 import { useEditorUI } from './editor-ui'
@@ -277,6 +277,10 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
       })
     case 'get_frame':
       return await handleGetFrame(engine, request.payload)
+    case 'find_scene_changes':
+      return await handleFindSceneChanges(engine, request.payload)
+    case 'get_contact_sheet':
+      return await handleGetContactSheet(engine, request.payload)
     case 'get_transcript':
       return getProjectTranscript(engine.project, request.payload)
     case 'search_transcript':
