@@ -244,6 +244,11 @@
           "target": "components/mcut/live-mcp-bridge.tsx"
         },
         {
+          "path": "registry/mcut/get-frame.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/get-frame.ts"
+        },
+        {
           "path": "registry/mcut/bridge-request.ts",
           "type": "registry:lib",
           "target": "components/mcut/bridge-request.ts"

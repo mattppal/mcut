@@ -26,6 +26,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { formatShortcut, getEditorAction, isActionEnabled, listEditorActions, runEditorAction } from './action-registry'
 import { isExportRequest, parseBridgeFrame, type BridgeRequest } from './bridge-request'
+import { handleGetFrame } from './get-frame'
 import { editorClipboard } from './editor-clipboard'
 import { useEditorUI } from './editor-ui'
 import { handleExportRequest } from './live-mcp-export'
@@ -263,6 +264,8 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
         playback: engine.playback.state,
         selection: engine.selection,
       })
+    case 'get_frame':
+      return await handleGetFrame(engine, request.payload)
     case 'get_transcript':
       return getProjectTranscript(engine.project, request.payload)
     case 'search_transcript':
