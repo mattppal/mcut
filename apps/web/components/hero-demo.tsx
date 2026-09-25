@@ -58,11 +58,7 @@ export function HeroDemo({ clip, traceIntro, phoneHeroLabel }: { clip: typeof DE
         </div>
         <div className="order-1 flex min-w-0 flex-col xl:order-2">
           <div ref={attachContainer} className="relative z-20 aspect-[1100/859] w-[calc(100%+1.5rem)] sm:aspect-video sm:w-full">
-            <div
-              ref={attachFrameCard}
-              className="absolute inset-0 overflow-hidden rounded-l-xl shadow-[0_24px_64px_-24px] shadow-overlay/45 sm:overflow-visible sm:rounded-xl"
-              style={frameStyle(lifted)}
-            >
+            <div ref={attachFrameCard} className="absolute inset-0 overflow-hidden rounded-l-xl sm:overflow-visible sm:rounded-xl" style={frameStyle(lifted)}>
               <div
                 ref={attachStage}
                 className={cn(

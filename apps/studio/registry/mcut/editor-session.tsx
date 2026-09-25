@@ -45,7 +45,7 @@ export function SessionPersistence() {
     <div
       role="dialog"
       aria-label="Restore previous session"
-      className="fixed right-4 bottom-4 z-50 flex items-center gap-3 rounded-lg border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg"
+      className="fixed right-4 bottom-4 z-50 flex items-center gap-3 rounded-lg border bg-popover px-4 py-3 text-sm text-popover-foreground "
     >
       <span>Restore previous session?</span>
       <Button

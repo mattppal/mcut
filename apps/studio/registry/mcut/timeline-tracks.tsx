@@ -252,10 +252,7 @@ const Lane = memo(function Lane({ track, pxPerMs, contentWidth }: { track: Track
 
 export const TrackRow = memo(function TrackRow({ track, pxPerMs, contentWidth }: { track: Track; pxPerMs: number; contentWidth: number }) {
   return (
-    <div
-      data-mcut-track-row={track.id}
-      className="relative flex data-dragging:z-40 data-settling:z-40 data-settling:bg-card data-dragging:shadow-[0_12px_28px_rgba(0,0,0,0.45)] data-dragging:bg-card"
-    >
+    <div data-mcut-track-row={track.id} className="relative flex data-dragging:z-40 data-settling:z-40 data-settling:bg-card data-dragging:bg-card">
       <TrackHeader track={track} />
       <Lane track={track} pxPerMs={pxPerMs} contentWidth={contentWidth} />
     </div>
@@ -305,7 +302,7 @@ export function DropGhostOverlay({ rows, pxPerMs }: { rows: Array<{ track: Track
   return (
     <div
       data-mcut-drop-ghost=""
-      className="pointer-events-none absolute z-40 flex items-end gap-1.5 overflow-hidden rounded-lg border border-primary/80 bg-primary/25 px-1.5 py-0.5 shadow-[0_14px_32px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.14),inset_0_1px_0_rgba(255,255,255,0.18)] ring-1 ring-primary/35"
+      className="pointer-events-none absolute z-40 flex items-end gap-1.5 overflow-hidden rounded-lg border border-primary/80 bg-primary/25 px-1.5 py-0.5 ring-1 ring-primary/35"
       style={{
         left: timelineHeaderPx + ghost.startMs * pxPerMs,
         top,

@@ -82,7 +82,7 @@ function DragGhost({ data }: { data: EditorDragData }) {
   const thumb = data.kind === 'asset' ? data.thumb : undefined
   if (preview) return null
   return (
-    <div className="pointer-events-none flex w-44 items-center gap-2 rounded-lg border bg-popover p-1.5 shadow-xl ring-1 ring-primary/40">
+    <div className="pointer-events-none flex w-44 items-center gap-2 rounded-lg border bg-popover p-1.5 ring-1 ring-primary/40">
       <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
