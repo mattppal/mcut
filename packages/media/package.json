@@ -31,8 +31,8 @@
   "dependencies": {
     "@mcut/compositor": "workspace:*",
     "@mcut/timeline": "workspace:*",
-    "@mediabunny/aac-encoder": "1.46.0",
-    "mediabunny": "1.46.0",
+    "@mediabunny/aac-encoder": "1.60.0",
+    "mediabunny": "1.60.0",
     "signalsmith-stretch": "1.3.2"
   },
   "devDependencies": {
