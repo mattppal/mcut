@@ -3,5 +3,3 @@ edits:
   - id: 00-agent-import
     ask: Import my three recordings from ~/Downloads/sample-video into the project. They are "Rec 9-22-2026 3-stream-0-video-tscc2 1.mp4" (screen), "Rec 9-22-2026 3-stream-1-video-h264 1.mp4" (camera), and "Rec 9-22-2026 3-stream-2-audio-aac.aac" (the audio).
     checks: [probed assets 3]
-    capability: missing
-    note: No bridge tool imports a local path. file.import opens the native dialog.
