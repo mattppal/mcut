@@ -474,7 +474,7 @@ export class PreviewMediaPool implements FrameSource {
         frames: new Map(),
         pendingKey: null,
         failed: false,
-        lastInitFailureAt: 0,
+        lastInitFailureAt: Number.NEGATIVE_INFINITY,
       }
       this.decodedVideos.set(assetId, state)
     }
@@ -498,7 +498,9 @@ export class PreviewMediaPool implements FrameSource {
           this.markFrameChanged()
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!this.disposed) setTimeout(this.markFrameChanged, DECODED_INIT_RETRY_MS)
+      })
       .finally(() => {
         const current = this.decodedVideos.get(assetId)
         if (current?.pendingKey === key) current.pendingKey = null
