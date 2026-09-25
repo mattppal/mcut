@@ -1,5 +1,12 @@
 # mcp-server-example
 
+## 0.0.1-alpha.12
+
+### Patch Changes
+
+- Updated dependencies [[`d8d259b`](https://github.com/mattppal/mcut/commit/d8d259b1b390ff12eb0bacb5bfaa4449fe6ce3a2)]:
+  - @mcut/mcp-server@0.1.0-alpha.13
+
 ## 0.0.1-alpha.11
 
 ### Patch Changes

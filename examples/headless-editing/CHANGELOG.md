@@ -1,5 +1,12 @@
 # headless-editing-example
 
+## 0.0.1-alpha.7
+
+### Patch Changes
+
+- Updated dependencies [[`d8d259b`](https://github.com/mattppal/mcut/commit/d8d259b1b390ff12eb0bacb5bfaa4449fe6ce3a2)]:
+  - @mcut/transcription@0.1.0-alpha.8
+
 ## 0.0.1-alpha.6
 
 ### Patch Changes

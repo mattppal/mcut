@@ -43,7 +43,7 @@ Zod schema for a project asset, its id, kind, source URL, and optional hash, nam
 const audioElementSchema = composeFull('audio', audioShape)
 ```
 
-Zod schema for an audio element, the shared id and timing fields plus asset, trim, time map, reversal, volume, mute, and fades.
+Zod schema for an audio element, the shared id and timing fields plus asset, trim, time map, reversal, volume, mute, fades, and an optional voice mix.
 
 ### captionElementSchema
 
@@ -165,7 +165,7 @@ Zod schema for a project marker, a named point on the time ruler with an optiona
 const multicamElementSchema = composeFull('multicam', multicamShape)
 ```
 
-Zod schema for a multicam element, the shared id and timing fields plus synced sources, angle cuts, angle transition, audio source, time map, transform, and audio fields.
+Zod schema for a multicam element, the shared id and timing fields plus synced sources, angle cuts, angle transition, audio source, time map, transform, audio fields, and an optional voice mix.
 
 ### projectSchema
 
@@ -297,7 +297,13 @@ Zod schema for position, scale, and rotation, where coordinates are center-origi
 const videoElementSchema = composeFull('video', videoShape)
 ```
 
-Zod schema for a video element, the shared id and timing fields plus asset, trim, time map, reversal, transform, opacity, audio fields, visual effects, and frame styling.
+Zod schema for a video element, the shared id and timing fields plus asset, trim, time map, reversal, transform, opacity, audio fields, an optional voice mix, visual effects, and frame styling.
+
+### voiceSchema
+
+`const voiceSchema = z.object({ enabled: z.boolean(), amount: z.number().min(0).max(1) })`
+
+Zod schema for the optional voice cleanup mix on video, audio, and multicam clips. `enabled` turns the cleaned stem on, and `amount` is the wet level from 0 to 1.
 
 ## Constants
 

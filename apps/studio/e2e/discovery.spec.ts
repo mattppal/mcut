@@ -32,7 +32,7 @@ const AGENT_TOOL_NAMES = [
   'import_media',
 ]
 
-const FULL_TOOL_COUNT = 130
+const FULL_TOOL_COUNT = 131
 const STUDIO_ORIGIN = 'app://studio'
 
 const toolCatalogSchema = z.object({
