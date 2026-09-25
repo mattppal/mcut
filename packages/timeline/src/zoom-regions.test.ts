@@ -42,7 +42,7 @@ describe('zoom regions on a clip', () => {
   test('add, update, and remove are one undo step each and list in timeline time', () => {
     const engine = new EditorEngine({ project: projectWithScreenAndCam() })
     engine.dispatch({ type: 'addZoomRegion', elementId: 'e-screen', zoom: { id: 'z-open', atMs: 0 } })
-    engine.dispatch({ type: 'updateZoomRegion', elementId: 'e-screen', zoomId: 'z-open', patch: { rect: { x: 0.5, y: 0, w: 0.5, h: 0.5 } } })
+    engine.dispatch({ type: 'updateZoomRegion', elementId: 'e-screen', zoomId: 'z-open', patch: { focus: { x: 0.75, y: 0.25 }, scale: 2 } })
     expect(listZoomRegions(engine.project)).toEqual([
       {
         id: 'z-open',
@@ -71,7 +71,7 @@ describe('zoom regions on a clip', () => {
     const project = applyCommand(projectWithScreenAndCam(), {
       type: 'addZoomRegion',
       elementId: 'e-screen',
-      zoom: { preset: 'detailZoom', atMs: 1000, inMs: 1000, holdMs: 1000, outMs: 1000, rect: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } },
+      zoom: { preset: 'detailZoom', atMs: 1000, inMs: 1000, holdMs: 1000, outMs: 1000, focus: { x: 0.75, y: 0.75 }, scale: 2 },
     })
     const clip = video(project, 'e-screen')
     expect(getClipView(clip, 500)).toEqual({ scale: 1, focus: { x: 0.5, y: 0.5 } })
@@ -80,6 +80,17 @@ describe('zoom regions on a clip', () => {
     expect(getClipView(clip, 4000)).toEqual({ scale: 1, focus: { x: 0.5, y: 0.5 } })
     expect(getZoomShutterMs(clip, 1100, 40)).toBe(20)
     expect(getZoomShutterMs(clip, 2500, 40)).toBe(0)
+  })
+
+  test('a rect aims the zoom at its center and fills it only up to the preset scale', () => {
+    const add = (zoom: { preset?: 'subtlePunchIn' | 'detailZoom'; rect: { x: number; y: number; w: number; h: number } }) =>
+      listZoomRegions(applyCommand(projectWithScreenAndCam(), { type: 'addZoomRegion', elementId: 'e-screen', zoom: { id: 'z', atMs: 0, ...zoom } }))[0]
+    const detail = add({ preset: 'detailZoom', rect: { x: 0.2, y: 0.1, w: 0.5, h: 0.4 } })
+    expect(detail?.scale).toBe(1.3)
+    expect(detail?.focus.x).toBeCloseTo(0.45, 6)
+    expect(detail?.focus.y).toBeCloseTo(0.3, 6)
+    expect(add({ rect: { x: 0.2, y: 0.1, w: 0.5, h: 0.4 } })?.scale).toBe(1.15)
+    expect(add({ preset: 'detailZoom', rect: { x: 0, y: 0, w: 0.9, h: 0.9 } })?.scale).toBeCloseTo(1.111, 3)
   })
 
   test('overlapping zooms, zooms past the clip end, and multicam-only sources are rejected', () => {

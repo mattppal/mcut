@@ -43,6 +43,7 @@ import {
   type McpServerStaticToolCall,
   type TransactSubRequest,
 } from './contract'
+import { severeZoomNote } from './zoom-warnings'
 import { frameContent, frameGrabSchema } from './frame-content'
 import { runEngineTransact, translateTransactCalls } from './transact'
 
@@ -255,7 +256,9 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       return text(JSON.stringify(listZoomRegions(await targetProject(target)), null, 2))
     case 'edit_zooms':
       await target.applyCommands(call.arguments.edits)
-      return text(`OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}`)
+      return text(
+        `OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}${severeZoomNote(await targetProject(target))}`,
+      )
     case 'center_person': {
       if (!target.centerPerson) return failure('center_person is not available on this target.')
       const result = await target.centerPerson(call.arguments)
@@ -309,7 +312,7 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const requests = translateTransactCalls(call.arguments.calls)
       const results = await target.transact(requests)
       const lead = `OK: ${requests.length} calls applied as one undo step.`
-      return text(`${withResult(lead, results)}\n\n${await target.getSummary()}`)
+      return text(`${withResult(lead, results)}\n\n${await target.getSummary()}${severeZoomNote(await targetProject(target))}`)
     }
     case 'undo':
       if (!(await target.undo())) return failure('Nothing to undo.')
@@ -380,7 +383,10 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
       const before = layoutId ? await targetProject(target) : null
       await target.dispatchCommand(name, args ?? {})
       const change = before && layoutId ? describeLayoutChange(before, await targetProject(target), layoutId) : []
-      return text([`OK: ${name} applied.`, ...change, '', await target.getSummary()].join('\n'))
+      return text(
+        [`OK: ${name} applied.`, ...change, '', await target.getSummary()].join('\n') +
+          (name.endsWith('ZoomRegion') ? severeZoomNote(await targetProject(target)) : ''),
+      )
     } catch (error) {
       if (error instanceof CommandError || error instanceof ProjectFormatError || error instanceof OperatorError) {
         return failure(`${error.name} (${error.code}): ${error.message}`)

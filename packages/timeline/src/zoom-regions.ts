@@ -35,7 +35,11 @@ const rectSchema = z.object({ x: unit, y: unit, w: z.number().gt(0).max(1), h: z
 const targetShape = {
   focus: focusSchema.describe('Point to zoom into, 0 to 1 across the clip or the slot source frame.').optional(),
   scale: z.number().min(1).max(8).optional(),
-  rect: rectSchema.describe('Region to fill the frame, 0 to 1 in source frame coordinates. Sets focus and scale; do not pass them with it.').optional(),
+  rect: rectSchema
+    .describe(
+      'Region to zoom toward, 0 to 1 in source frame coordinates. Sets focus to its center and fills it up to the preset scale; pass focus and scale instead for a stronger zoom.',
+    )
+    .optional(),
 }
 
 const noRectWithFocus = (value: { rect?: unknown; focus?: unknown; scale?: unknown }) =>
@@ -71,18 +75,18 @@ export const zoomRegionPatchSchema = z
 
 type ZoomTarget = z.infer<z.ZodObject<typeof targetShape>>
 
-function resolveTarget(target: ZoomTarget): Partial<Pick<ZoomRegion, 'focus' | 'scale'>> {
+function resolveTarget(target: ZoomTarget, rectScaleCap: number): Partial<Pick<ZoomRegion, 'focus' | 'scale'>> {
   if (!target.rect) return { ...(target.focus ? { focus: target.focus } : {}), ...(target.scale !== undefined ? { scale: target.scale } : {}) }
   const { x, y, w, h } = target.rect
   return {
     focus: { x: Math.min(1, x + w / 2), y: Math.min(1, y + h / 2) },
-    scale: Math.min(8, Math.max(1, 1 / Math.max(w, h))),
+    scale: Math.min(rectScaleCap, Math.max(1, 1 / Math.max(w, h))),
   }
 }
 
 export function resolveZoomRegion(input: z.output<typeof zoomRegionInputSchema>, id: string): ZoomRegion {
   const preset = ZOOM_REGION_PRESETS[input.preset]
-  const target = resolveTarget(input)
+  const target = resolveTarget(input, preset.scale)
   return zoomRegionSchema.parse({
     id,
     ...(input.source !== undefined ? { source: input.source } : {}),
@@ -100,7 +104,7 @@ export function resolveZoomRegion(input: z.output<typeof zoomRegionInputSchema>,
 export function patchZoomRegion(region: ZoomRegion, patch: z.output<typeof zoomRegionPatchSchema>): ZoomRegion {
   const { atMs, inMs, holdMs, outMs, easing, motionBlur } = patch
   const timing = Object.fromEntries(Object.entries({ atMs, inMs, holdMs, outMs, easing, motionBlur }).filter(([, value]) => value !== undefined))
-  return zoomRegionSchema.parse({ ...region, ...timing, ...resolveTarget(patch) })
+  return zoomRegionSchema.parse({ ...region, ...timing, ...resolveTarget(patch, region.scale) })
 }
 
 export const zoomRegionEndMs = (region: ZoomRegion): number => region.atMs + region.inMs + region.holdMs + region.outMs
