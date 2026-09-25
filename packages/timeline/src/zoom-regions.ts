@@ -34,7 +34,9 @@ const rectSchema = z.object({ x: unit, y: unit, w: z.number().gt(0).max(1), h: z
 const targetShape = {
   focus: focusSchema.describe('Point to zoom into, 0 to 1 across the cropped frame of the clip or slot.').optional(),
   scale: z.number().min(1).max(8).optional(),
-  rect: rectSchema.describe('Region to fill the frame, 0 to 1 across the cropped frame of the clip or slot. Sets focus and scale; do not pass them with it.').optional(),
+  rect: rectSchema
+    .describe('Region to fill the frame, 0 to 1 across the cropped frame of the clip or slot. Sets focus and scale; do not pass them with it.')
+    .optional(),
 }
 
 const noRectWithFocus = (value: { rect?: unknown; focus?: unknown; scale?: unknown }) =>
