@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { CaptionsIcon, DownloadIcon, SparklesIcon, Trash2Icon } from '@/lib/icons'
 import { toast } from 'sonner'
 import { extractAudioToWav } from '@mcut/media'
@@ -19,13 +19,13 @@ import {
 import { buildApplyCaptionsCommand, toSrt, toVtt, type SubtitleCue, type TranscriptResult } from '@mcut/transcription'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { EmptyState, PanelHeader, PanelSectionLabel, Spinner } from './editor-primitives'
 import { formatTimecode } from './format'
 import { defaultModelDownloadLabel, isLocalTranscriptionSupported, setOnDeviceTranscriptionEnabled, useOnDeviceTranscription } from './local-transcription'
+import { openSettings, useTranscriptionConfigured } from './settings-dialog'
 import { host, type TranscriptionSettings } from './studio-host'
 
 export interface CaptionsPanelProps {
@@ -135,49 +135,16 @@ function OnDeviceToggle() {
   )
 }
 
-const TRANSCRIPTION_KEY_QUERY = ['mcut', 'transcription-key'] as const
-
-function TranscriptionKeyField({ settings }: { settings: TranscriptionSettings }) {
-  const [key, setKey] = useState('')
-  const queryClient = useQueryClient()
-  const configured = useQuery({ queryKey: TRANSCRIPTION_KEY_QUERY, queryFn: () => settings.isConfigured(), staleTime: Infinity })
-  const save = useMutation({
-    mutationFn: (value: string) => settings.setKey(value),
-    onSuccess: (isConfigured) => {
-      queryClient.setQueryData(TRANSCRIPTION_KEY_QUERY, isConfigured)
-      setKey('')
-      toast.success(isConfigured ? 'AssemblyAI key saved' : 'AssemblyAI key removed')
-    },
-  })
-  const isConfigured = configured.data === true
+function TranscriptionKeyStatus({ settings }: { settings: TranscriptionSettings }) {
+  const onDevice = useOnDeviceTranscription()
+  const configured = useTranscriptionConfigured(settings)
+  if (configured || onDevice) return null
   return (
-    <div data-slot="transcription-key-field" className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>AssemblyAI API key</span>
-        {isConfigured && <span className="text-2xs font-medium text-foreground">Configured</span>}
-      </div>
-      <div className="flex gap-1.5">
-        <Input
-          aria-label="AssemblyAI API key"
-          type="password"
-          autoComplete="off"
-          className="h-7 text-xs"
-          placeholder={isConfigured ? 'Paste a new key to replace it' : 'Paste your AssemblyAI API key'}
-          value={key}
-          onChange={(event) => setKey(event.target.value)}
-        />
-        <Button variant="outline" size="xs" disabled={key.trim().length === 0 || save.isPending} onClick={() => save.mutate(key)}>
-          Save
-        </Button>
-        {isConfigured && (
-          <Button variant="ghost" size="xs" disabled={save.isPending} onClick={() => save.mutate('')}>
-            Remove
-          </Button>
-        )}
-      </div>
-      <p className="text-2xs text-muted-foreground">
-        Stored by the desktop app with the system keychain. On Linux without a keyring it is only obfuscated, not encrypted.
-      </p>
+    <div data-slot="transcription-key-status" className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+      <span>No AssemblyAI API key set.</span>
+      <Button variant="outline" size="xs" onClick={openSettings}>
+        Open Settings
+      </Button>
     </div>
   )
 }
@@ -278,7 +245,7 @@ export function CaptionsPanel({ className, transcribe }: CaptionsPanelProps) {
           </p>
         )}
         <OnDeviceToggle />
-        {host.transcriptionSettings && <TranscriptionKeyField settings={host.transcriptionSettings} />}
+        {host.transcriptionSettings && <TranscriptionKeyStatus settings={host.transcriptionSettings} />}
 
         {captions.length > 0 && (
           <>
