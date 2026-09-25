@@ -163,8 +163,10 @@ removing zooms or turning off motion blur.
 - Timeline positions are absolute.
 - Keyframes, time maps, and animation preset internals are element-local.
 - Multicam angle cuts are on the source clock the multicam's sources share.
-- Transcript word times from captions are timeline times. Silence cuts convert
-  them back to source time for 1x clips.
+- Transcript word times from captions are timeline times. Silence cuts, captions
+  scoped to a clip, and audio activity read that clip's audio source. A multicam
+  uses its `audioSource`. They convert back to that asset's media time for forward
+  1x clips.
 - `trimStartMs` is source-media time.
 - `rippleDelete` closes gaps. `removeElement` leaves gaps.
 - Tracks render bottom-up. Later tracks appear on top.
