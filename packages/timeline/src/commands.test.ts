@@ -536,8 +536,10 @@ describe('caller-supplied ids', () => {
 
   test('createMulticam rejects a multicamId that already exists', () => {
     const { project } = projectWithTwoVideos()
-    expect(() => applyCommand(project, { type: 'createMulticam', elementIds: ['e-one'], multicamId: 'e-two' })).toThrow('element "e-two" already exists')
-    const multicam = applyCommand(project, { type: 'createMulticam', elementIds: ['e-one'], multicamId: 'e-mc' })
+    expect(() => applyCommand(project, { type: 'createMulticam', sources: [{ elementId: 'e-one' }], multicamId: 'e-two' })).toThrow(
+      'element "e-two" already exists',
+    )
+    const multicam = applyCommand(project, { type: 'createMulticam', sources: [{ elementId: 'e-one' }], multicamId: 'e-mc' })
     expect(allIds(multicam)).toEqual(['e-mc', 'e-two'])
   })
 

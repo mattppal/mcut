@@ -43,7 +43,7 @@ function projectWithRecordings(): { project: Project; trackId: `t-${string}` } {
 function createMc(project: Project): Project {
   return applyCommand(project, {
     type: 'createMulticam',
-    elementIds: ['e-screen', 'e-cam'],
+    sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
     multicamId: 'e-mc',
   })
 }
@@ -102,7 +102,7 @@ describe('createMulticam', () => {
     })
     const next = applyCommand(project, {
       type: 'createMulticam',
-      elementIds: ['e-top', 'e-bottom'],
+      sources: [{ elementId: 'e-top' }, { elementId: 'e-bottom' }],
       multicamId: 'e-mc',
     })
     const element = mc(next)
@@ -118,7 +118,7 @@ describe('createMulticam', () => {
       trackId,
       element: { type: 'text', id: 'e-t', text: 'x', startMs: 0, durationMs: 1000 },
     })
-    expect(() => applyCommand(project, { type: 'createMulticam', elementIds: ['e-t'] })).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'createMulticam', sources: [{ elementId: 'e-t' }] })).toThrow(CommandError)
   })
 })
 
