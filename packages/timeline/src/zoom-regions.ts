@@ -124,7 +124,7 @@ function amountAt(phase: Phase): number {
   return phase.kind === 'in' ? eased : 1 - eased
 }
 
-function anchorOf(center: number, visibleAtHold: number): number {
+export function anchorOf(center: number, visibleAtHold: number): number {
   if (visibleAtHold >= 1) return 0.5
   const start = Math.min(1 - visibleAtHold, Math.max(0, center - visibleAtHold / 2))
   return start / (1 - visibleAtHold)
@@ -142,27 +142,41 @@ export interface VisibleFraction {
 
 const FULL_FRAME: VisibleFraction = { x: 1, y: 1 }
 
-function zoomViewAt(zooms: readonly ZoomRegion[] | undefined, source: string | undefined, localMs: number, visible: VisibleFraction): ContentView {
+const CENTER: ContentView['focus'] = { x: 0.5, y: 0.5 }
+
+function zoomViewAt(
+  zooms: readonly ZoomRegion[] | undefined,
+  source: string | undefined,
+  localMs: number,
+  visible: VisibleFraction,
+  rest: ContentView['focus'],
+): ContentView {
   const phase = phaseAt(zooms, source, localMs)
-  if (!phase) return { scale: 1, focus: { x: 0.5, y: 0.5 } }
+  if (!phase) return { scale: 1, focus: rest }
   const amount = amountAt(phase)
   const { scale, focus } = phase.region
   const lerp = (from: number, to: number) => from + (to - from) * amount
   return {
     scale: lerp(1, scale),
     focus: {
-      x: lerp(0.5, anchorOf(focus.x, visible.x / scale)),
-      y: lerp(0.5, anchorOf(focus.y, visible.y / scale)),
+      x: lerp(rest.x, anchorOf(focus.x, visible.x / scale)),
+      y: lerp(rest.y, anchorOf(focus.y, visible.y / scale)),
     },
   }
 }
 
-export function getSlotView(element: MulticamElement, slot: LayoutSlot, timelineMs: number, visible: VisibleFraction = FULL_FRAME): ContentView {
-  return zoomViewAt(element.zooms, slot.source, timelineMs - element.startMs, visible)
+export function getSlotView(
+  element: MulticamElement,
+  slot: LayoutSlot,
+  timelineMs: number,
+  visible: VisibleFraction = FULL_FRAME,
+  rest: ContentView['focus'] = CENTER,
+): ContentView {
+  return zoomViewAt(element.zooms, slot.source, timelineMs - element.startMs, visible, rest)
 }
 
 export function getClipView(element: VideoElement | ImageElement, timelineMs: number): ContentView {
-  return zoomViewAt(element.zooms, undefined, timelineMs - element.startMs, FULL_FRAME)
+  return zoomViewAt(element.zooms, undefined, timelineMs - element.startMs, FULL_FRAME, CENTER)
 }
 
 export function getZoomShutterMs(element: TimelineElement, timelineMs: number, frameMs: number): number {

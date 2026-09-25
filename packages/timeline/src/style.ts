@@ -28,6 +28,8 @@ export const frameStyleSchema = z.object({
   shadow: shadowSchema.optional(),
 })
 
+export const FRAME_STYLE_FIELDS = frameStyleSchema.keyof().options
+
 export type Stroke = z.infer<typeof strokeSchema>
 export type Shadow = z.infer<typeof shadowSchema>
 export type Crop = z.infer<typeof cropSchema>

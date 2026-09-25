@@ -77,11 +77,30 @@ same frame style as a video clip (`crop`, `cornerRadius`, `stroke`, `shadow`). `
 picks the source region that is fitted into the rect. Point it at the speaker's face
 for tight crops. `removeLayout` refuses while any angle cut uses it.
 
+Saving a layout merges each slot by source into the saved slot. An omitted field
+keeps its value and `null` clears a frame style field, so
+`{ "source": "camera", "rect": { ... } }` moves the camera and keeps its rounding
+and shadow. Only a source new to the layout needs a `rect`. A source left out of
+`slots` is removed, so list every slot you keep. `{ "source": "screen" }` is enough
+for a slot you leave as is. An overlay new to the layout that sets none of
+`cornerRadius`, `stroke`, and `shadow` gets the picture-in-picture look, a 0.12
+corner radius and a soft shadow. The result lists each slot's geometry and style
+changes and warns when an overlay loses its rounding or shadow, with the slot to
+save to restore it.
+
 To change a slot's size or aspect ("make the camera taller", "a 9:16 camera"), use
 `resizeLayoutSlot { layoutId, source, aspect?, widthPx?, heightPx?, scale?, keep?,
 anchor? }`. The slot stays anchored, to its corner for an overlay and to its center
 for a full-frame or panel slot, so it does not jump across the frame. Every cut to
 that layout changes.
+
+When the speaker drifts inside a head overlay, call `center_person` on the live bridge
+instead of hand-tuning the slot `crop`. It finds the face on device and writes one reframe
+track on the `camera` source, the default, as one undo step. While the track exists, every
+slot that shows that source slides its crop onto the face, and a slot without a crop slides
+the part of the frame its fit shows. Each slot rect keeps its size and aspect and each crop
+keeps its size, so only the framing inside the slot follows the face. `setReframe` with a
+null `track` stops the follow and puts each crop back where the layout saved it.
 
 ## Switching rhythm (the editorial part)
 

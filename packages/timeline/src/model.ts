@@ -8,6 +8,7 @@ import { getSourceSpanMs, splitTimeMap, timeMapSchema } from './speed'
 import { blendModeSchema, effectsSchema, motionBlurSchema } from './effects'
 import { layoutSchema } from './layouts'
 import { propertyPresetSchema } from './presets'
+import { reframeTrackSchema } from './reframe'
 import { frameStyleSchema, shadowSchema, strokeSchema } from './style'
 import { textRunSchema } from './rich-text'
 import { getMediaSourceDurationMs, type MediaClip } from './media-clip'
@@ -135,6 +136,7 @@ const videoShape = {
   ...visualShape,
   ...frameStyleShape,
   zooms: z.array(zoomRegionSchema).optional(),
+  reframe: reframeTrackSchema.optional(),
 }
 
 const audioShape = {
@@ -165,6 +167,7 @@ const multicamSourceSchema = z.object({
   key: z.string().min(1),
   assetId: assetIdSchema,
   offsetMs: z.number().int().nonnegative().default(0),
+  reframe: reframeTrackSchema.optional(),
 })
 
 const angleCutSchema = z.object({

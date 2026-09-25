@@ -324,10 +324,9 @@ export function MediaBin({ className, onAssetImported }: { className?: string; o
       importMediaFiles(engine, files, (asset, file) => {
         onAssetImported?.(asset, file)
       }),
-    onSuccess: (imported) => {
-      if (imported.length > 0) {
-        toast.success(`Imported ${imported.length} file${imported.length > 1 ? 's' : ''}`)
-      }
+    onSuccess: (results) => {
+      const imported = results.filter((result) => result.ok).length
+      if (imported > 0) toast.success(`Imported ${imported} file${imported > 1 ? 's' : ''}`)
     },
   })
 

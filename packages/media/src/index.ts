@@ -34,6 +34,8 @@ export {
 
 export { containerFormats, listContainerFormats, type ContainerFormat, type ContainerFormatEntry } from './container-formats'
 
+export { renderProjectStill, type ProjectStill, type RenderProjectStillOptions } from './still'
+
 export { getFilmstrip, type Filmstrip, type FilmstripOptions } from './filmstrip'
 
 export { canUseNativeVideoPreview, isMatroskaLike, type VideoPreviewCapability } from './video-capabilities'
@@ -60,3 +62,6 @@ export { ScrubFrameCache } from './scrub-cache'
 export { constantSpeedOf, stretchStereo, type ConstantSpeed, type StereoData } from './time-stretch'
 
 export { crossCorrelateEnvelopes, extractEnvelope, findSyncOffsetMs, type AudioSyncOptions, type SyncResult } from './audio-sync'
+
+export { createLocalFaceDetector } from './face-detector'
+export type { FaceSample } from './face-detector-protocol'

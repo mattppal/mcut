@@ -1,0 +1,26 @@
+# The first prompts a new user tries, on the demo clip the homepage uses.
+media:
+  - ../../../apps/web/public/demo/sample.mp4
+place: [sample.mp4]
+edits:
+  - id: 01-summarize
+    ask: Summarize the project that is open in mcut Studio.
+    checks: [unchanged]
+  - id: 02-title
+    ask: Add a title that says "Big Buck Bunny" at the playhead.
+    checks: [text "Big Buck Bunny"]
+  - id: 03-vertical
+    ask: Make it 9:16.
+    checks: [aspect 9:16]
+  - id: 04-fade
+    ask: Fade the video in and out.
+    checks: [picture fade in, picture fade out]
+  - id: 05-undo
+    ask: Undo that last edit.
+    checks: [not picture fade in, not picture fade out]
+  - id: 06-square-fill
+    ask: Make it square, 1:1, and scale the video so it fills the whole frame.
+    checks: [aspect 1:1]
+  - id: 07-undo-square
+    ask: Undo that.
+    checks: [aspect 9:16]

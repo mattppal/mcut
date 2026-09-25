@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { assertNever, CommandError } from './errors'
 import { createLayoutId } from './id'
 import type { Project } from './model'
-import { frameStyleSchema, type Shadow } from './style'
+import { frameStyleSchema, type FrameStyle, type Shadow } from './style'
 
 export const layoutSlotSchema = z.object({
   source: z.string().min(1),
@@ -97,10 +97,14 @@ export function slotShadow(rect: { w: number; h: number }, canvas: Canvas): Shad
   return { color: 'rgba(0, 0, 0, 0.45)', blur: Math.round(size * 0.12), offsetX: 0, offsetY: Math.round(size * 0.04) }
 }
 
+export function pipFrameStyle(rect: Rect, canvas: Canvas): FrameStyle {
+  return { cornerRadius: 0.12, shadow: slotShadow(rect, canvas) }
+}
+
 export function createDefaultLayouts(canvas: Canvas): Layout[] {
   const pip = (corner: 'br' | 'bl'): LayoutSlot => {
     const rect = { x: corner === 'br' ? 0.7 : 0.025, y: 0.69, w: 0.275, h: 0.275 }
-    return { source: 'camera', rect, fit: 'cover', cornerRadius: 0.12, shadow: slotShadow(rect, canvas) }
+    return { source: 'camera', rect, fit: 'cover', ...pipFrameStyle(rect, canvas) }
   }
   const full = (source: string): LayoutSlot => ({ source, rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover' })
   const panel = (source: string, rect: LayoutSlot['rect']): LayoutSlot => ({ source, rect, fit: 'cover', cornerRadius: 0.06 })

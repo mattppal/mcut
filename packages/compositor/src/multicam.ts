@@ -4,7 +4,6 @@ import {
   getLayout,
   getMulticamGroupTimeMs,
   getMulticamSourceTimeMs,
-  getSlotView,
   getTransitionCompletion,
   isAudioOnlySource,
   resolveAnimatedElement,
@@ -16,6 +15,7 @@ import {
 } from '@mcut/timeline'
 import { drawFramedMedia, type FrameBox } from './framed-media'
 import { degToRad, toCanvasPoint, type OBB } from './geometry'
+import { reframedSlot } from './reframe-views'
 import { transitionRenderers } from './transition-renderers'
 import type { Canvas2D, ElementRenderContext, FrameSource } from './types'
 
@@ -78,7 +78,9 @@ export function composeMulticam(surface: Canvas2D, element: MulticamElement, con
     surface.translate(project.width / 2, project.height / 2)
     for (const { slot, source, box } of placeSlots(project, element, layout)) {
       const frame = frames.getFrame(source.assetId, getMulticamSourceTimeMs(element, source, context.timeMs))
-      if (frame) drawFramedMedia(surface, frame, box, slot, slot.fit, (visible) => getSlotView(element, slot, context.viewTimeMs, visible))
+      if (!frame) continue
+      const framing = reframedSlot(element, slot, context.timeMs, context.viewTimeMs)
+      drawFramedMedia(surface, frame, box, framing.slot, slot.fit, framing.viewFor)
     }
     surface.restore()
   }

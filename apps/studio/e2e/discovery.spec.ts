@@ -6,6 +6,7 @@ const AGENT_TOOL_NAMES = [
   'get_summary',
   'get_project',
   'get_media_context',
+  'get_frame',
   'get_audio_activity',
   'get_transcript',
   'search_transcript',
@@ -18,6 +19,7 @@ const AGENT_TOOL_NAMES = [
   'lint_project',
   'list_zooms',
   'edit_zooms',
+  'center_person',
   'list_presets',
   'list_operators',
   'run_operator',
@@ -29,6 +31,7 @@ const AGENT_TOOL_NAMES = [
   'export_video',
   'get_export',
   'cancel_export',
+  'import_media',
 ]
 
 const STUDIO_ORIGIN = 'app://studio'

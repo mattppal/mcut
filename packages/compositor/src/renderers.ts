@@ -18,6 +18,7 @@ import { applyChrome, type LayerChrome } from './backend'
 import { drawFramedMedia, frameRadius, getImageSize, viewSourceRect } from './framed-media'
 import { toCanvasPoint } from './geometry'
 import { composeMulticam } from './multicam'
+import { reframedCrop } from './reframe-views'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
 import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
 
@@ -95,7 +96,7 @@ const renderVideo: ElementRenderer<VideoElement> = (element, context) => {
   if (width <= 0 || height <= 0) return
   const dw = width * (element.crop?.w ?? 1)
   const dh = height * (element.crop?.h ?? 1)
-  drawMediaFrame(context, element, frame, dw, dh, getClipView(element, context.viewTimeMs))
+  drawMediaFrame(context, { ...element, crop: reframedCrop(element, context.timeMs) }, frame, dw, dh, getClipView(element, context.viewTimeMs))
 }
 
 const renderImage: ElementRenderer<ImageElement> = (element, context) => {
@@ -106,7 +107,7 @@ const renderImage: ElementRenderer<ImageElement> = (element, context) => {
   if (width <= 0 || height <= 0) return
   const dw = width * (element.crop?.w ?? 1)
   const dh = height * (element.crop?.h ?? 1)
-  drawMediaFrame(context, element, frame, dw, dh, getClipView(element, context.viewTimeMs))
+  drawMediaFrame(context, { ...element, crop: reframedCrop(element, context.timeMs) }, frame, dw, dh, getClipView(element, context.viewTimeMs))
 }
 
 const renderText: ElementRenderer<TextElement> = (element, context) => {

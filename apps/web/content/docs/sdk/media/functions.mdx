@@ -197,6 +197,10 @@ async function getExportSupport(format: ContainerFormatId = 'mp4'): Promise<{
 
 Resolves with whether the browser can encode video and audio for the given container format.
 
+### renderProjectStill
+
+Renders one timeline frame to a PNG blob. A `timeMs` past the project end throws, and the error names the project duration. A `timeMs` at the project end renders the last frame. `soloElementId` draws only that element, including a multicam composite, and throws when that element is not on screen. `width` caps the PNG width and keeps the project aspect ratio. Omit it to render at the project size. The result carries the PNG blob, the pixel size, and the ids of the elements drawn.
+
 ### listContainerFormats
 
 ```ts
@@ -364,3 +368,13 @@ async function findSyncOffsetMs(
 ```
 
 Returns how many milliseconds after recording `a` started recording `b` started, with a confidence score, or `null` when either has no audio.
+
+### createLocalFaceDetector
+
+`createLocalFaceDetector(options)` returns a detector whose `detect(src, { sampleRateHz, signal })` reads a video in a module worker, 5 times a second by default, and resolves to one `FaceSample` per sample time. The first run downloads the YuNet model from `huggingface.co` into Cache Storage. Calls run one at a time, and an aborted `signal` rejects its call and stops the worker.
+
+| Option | Meaning |
+| --- | --- |
+| `ortWasmPaths` | `{ mjs, wasm }` URLs of the onnxruntime files, loaded instead of the jsDelivr copies |
+| `onProgress` | Called with `{ phase, progress }`, where `phase` is `model` during the download and `detect` while frames are read, and `progress` runs from 0 to 1 |
+| `createWorker` | Replaces the worker the detector starts |

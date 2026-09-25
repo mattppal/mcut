@@ -1,5 +1,60 @@
 # @mcut/react
 
+## 0.1.0-alpha.18
+
+### Patch Changes
+
+- Updated dependencies [[`0792372`](https://github.com/mattppal/mcut/commit/0792372e344836d0a7ae62b87039eec934bfccda)]:
+  - @mcut/media@0.1.0-alpha.17
+
+## 0.1.0-alpha.17
+
+### Patch Changes
+
+- Updated dependencies [[`5f65e81`](https://github.com/mattppal/mcut/commit/5f65e81bc45b09fe8b24b53a384aee1922717263)]:
+  - @mcut/media@0.1.0-alpha.16
+
+## 0.1.0-alpha.16
+
+### Patch Changes
+
+- Updated dependencies [[`670b34b`](https://github.com/mattppal/mcut/commit/670b34b4279a1e3f344674cf8aa2673fdd86c455), [`670b34b`](https://github.com/mattppal/mcut/commit/670b34b4279a1e3f344674cf8aa2673fdd86c455), [`670b34b`](https://github.com/mattppal/mcut/commit/670b34b4279a1e3f344674cf8aa2673fdd86c455), [`670b34b`](https://github.com/mattppal/mcut/commit/670b34b4279a1e3f344674cf8aa2673fdd86c455)]:
+  - @mcut/media@0.1.0-alpha.15
+
+## 0.1.0-alpha.15
+
+### Patch Changes
+
+- Updated dependencies [[`fed2a9e`](https://github.com/mattppal/mcut/commit/fed2a9e931caf36072346453da30835824944580)]:
+  - @mcut/media@0.1.0-alpha.14
+
+## 0.1.0-alpha.14
+
+### Patch Changes
+
+- [#187](https://github.com/mattppal/mcut/pull/187) [`2ade70e`](https://github.com/mattppal/mcut/commit/2ade70e1316317492c4be49c2b19ea7f9f989008) Thanks [@mattppal](https://github.com/mattppal)! - A paused `PlayerCanvas` paints once and then skips the render until the project, playhead, size, selection, fonts, or a media frame changes, so a motion-blurred frame no longer redraws on every animation frame. `PreviewMediaPool` exposes `frameVersion`, which moves when a seek starts or lands, a video loads, a decoded frame arrives, or an image loads. `extractAudioToWav` takes an `AbortSignal` and cancels the conversion when it fires.
+
+- Updated dependencies [[`2ade70e`](https://github.com/mattppal/mcut/commit/2ade70e1316317492c4be49c2b19ea7f9f989008)]:
+  - @mcut/media@0.1.0-alpha.13
+
+## 0.1.0-alpha.13
+
+### Patch Changes
+
+- Updated dependencies [[`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928), [`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928)]:
+  - @mcut/timeline@0.1.0-alpha.10
+  - @mcut/compositor@0.1.0-alpha.10
+  - @mcut/media@0.1.0-alpha.12
+
+## 0.1.0-alpha.12
+
+### Patch Changes
+
+- Updated dependencies [[`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2)]:
+  - @mcut/timeline@0.1.0-alpha.9
+  - @mcut/compositor@0.1.0-alpha.9
+  - @mcut/media@0.1.0-alpha.11
+
 ## 0.1.0-alpha.11
 
 ### Patch Changes

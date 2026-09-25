@@ -16,6 +16,7 @@ import {
   parseCommand,
   type AssetRef,
   type AudioElement,
+  type BuiltinCommand,
   type EditorEngine,
   type Project,
   type Track,
@@ -24,8 +25,12 @@ import {
 import { searchCaptions } from '@mcut/transcription'
 import { toast } from 'sonner'
 import { z } from 'zod'
-import { formatShortcut, getEditorAction, isActionEnabled, listEditorActions, runEditorAction } from './action-registry'
+import { prepareAddAssetCommand } from './add-asset-src'
+import { formatShortcut, getEditorAction, isActionEnabled, listEditorActions, runEditorAction, type EditorAction } from './action-registry'
 import { isExportRequest, parseBridgeFrame, type BridgeRequest } from './bridge-request'
+import { centerPerson } from './center-person'
+import { handleGetFrame } from './get-frame'
+import { importGrantedMedia } from './import-granted-media'
 import { editorClipboard } from './editor-clipboard'
 import { useEditorUI } from './editor-ui'
 import { handleExportRequest } from './live-mcp-export'
@@ -224,6 +229,13 @@ export async function handleGetAudioActivity(
   }
 }
 
+function actionAcceptsInput(action: EditorAction, input: unknown): boolean {
+  if (action.inputSchema) return true
+  const parsed = z.record(z.string(), z.unknown()).safeParse(input ?? {})
+  if (!parsed.success) return false
+  return Object.keys(parsed.data).length === 0
+}
+
 function serializeError(error: unknown) {
   if (error instanceof CommandError || error instanceof ProjectFormatError || error instanceof OperatorError) {
     return { name: error.name, code: error.code, message: error.message }
@@ -263,18 +275,25 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
         playback: engine.playback.state,
         selection: engine.selection,
       })
+    case 'get_frame':
+      return await handleGetFrame(engine, request.payload)
     case 'get_transcript':
       return getProjectTranscript(engine.project, request.payload)
     case 'search_transcript':
       return searchProjectTranscript(engine.project, request.payload.query)
     case 'ensure_transcript':
       return await ensureTranscriptForBridge(engine, request.payload)
+    case 'center_person':
+      return await centerPerson(engine, request.payload)
     case 'get_audio_activity':
       return await handleGetAudioActivity(engine, request.payload)
     case 'list_commands':
       return listToolDefinitions()
     case 'apply_commands': {
-      const commands = request.payload.commands.map(parseCommand)
+      const commands: BuiltinCommand[] = []
+      for (const command of request.payload.commands) {
+        commands.push(parseCommand(await prepareAddAssetCommand(command)))
+      }
       applyCommands(engine, commands)
       return { applied: commands.length, summary: summarizeEngine(engine) }
     }
@@ -298,6 +317,7 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
         shortcut: formatShortcut(action.shortcut),
         palette: action.palette ?? true,
         inputSchema: action.inputSchema,
+        ...(action.humanOnly ? { humanOnly: action.humanOnly } : {}),
         operator: action.operator?.id,
       }))
     case 'undo':
@@ -310,13 +330,17 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
     }
     case 'dispatch_command': {
       const { commandName, input } = request.payload
-      engine.dispatch(withPlayheadDefaults(engine, parseCommand({ ...input, type: commandName })))
+      engine.dispatch(withPlayheadDefaults(engine, parseCommand(await prepareAddAssetCommand({ ...input, type: commandName }))))
       return null
     }
+    case 'import_media':
+      return await importGrantedMedia(engine, request.payload.files)
     case 'run_action': {
       const { actionId, input } = request.payload
       const action = getEditorAction(actionId)
       if (!action) throw new Error(`Unknown editor action "${actionId}".`)
+      if (action.humanOnly) throw new Error(action.humanOnly)
+      if (!actionAcceptsInput(action, input)) throw new Error(`Editor action "${actionId}" does not accept input.`)
       if (!isActionEnabled(action, context)) {
         throw new Error(`Editor action "${actionId}" is disabled.`)
       }
