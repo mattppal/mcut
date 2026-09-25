@@ -1,5 +1,12 @@
 # @mcut/desktop-ipc
 
+## 0.1.0-alpha.8
+
+### Patch Changes
+
+- Updated dependencies [[`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f), [`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f)]:
+  - @mcut/timeline@0.1.0-alpha.6
+
 ## 0.1.0-alpha.7
 
 ### Patch Changes

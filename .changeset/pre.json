@@ -34,6 +34,7 @@
     "desktop-update-state",
     "duplicate-element-ids",
     "edge-trim-safe-integer",
+    "expo-easing",
     "export-audio-encoder-delay",
     "export-job",
     "layout-summary-pixels",
@@ -81,6 +82,7 @@
     "webgpu-player-default",
     "whisper-load-watchdog",
     "whisper-model-load-retry",
-    "whisper-progress-unclamped"
+    "whisper-progress-unclamped",
+    "zoom-regions"
   ]
 }
