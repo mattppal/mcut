@@ -1,5 +1,23 @@
 # @mcut/media
 
+## 0.1.0-alpha.21
+
+### Patch Changes
+
+- Updated dependencies [[`fa6f581`](https://github.com/mattppal/mcut/commit/fa6f581da9ce078b05916c46bfa5159e61b341a5)]:
+  - @mcut/timeline@0.1.0-alpha.13
+  - @mcut/compositor@0.1.0-alpha.13
+
+## 0.1.0-alpha.20
+
+### Patch Changes
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - Preview feeds and export audio play a multicam through the same media clip path as a video clip. A multicam plays at its own speed, a reversed multicam is silent in preview like a reversed video, and a multicam on a hidden and muted track is skipped. Audio-only sources feed as audio. Export audio honors the source offset, trim, and reverse of every media clip.
+
+- Updated dependencies [[`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b)]:
+  - @mcut/timeline@0.1.0-alpha.12
+  - @mcut/compositor@0.1.0-alpha.12
+
 ## 0.1.0-alpha.19
 
 ### Patch Changes

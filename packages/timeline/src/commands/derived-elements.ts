@@ -185,11 +185,16 @@ export const createMulticam = defineCommand({
     const host = placed.find((source) => source.element.type === 'video')
     if (!host) throw new CommandError('invalid-payload', 'a multicam needs at least one video source')
 
-    const startMs = Math.min(...placed.map(({ element }) => element.startMs))
-    const endMs = Math.max(...placed.map(({ element }) => element.startMs + element.durationMs))
-    const alignedMs = (element: VideoElement | AudioElement) => Math.max(0, element.trimStartMs - (element.startMs - startMs))
-    const trimStartMs = Math.min(...placed.map(({ element }) => alignedMs(element)))
-    const sources = placed.map(({ element, key }) => ({ key, assetId: element.assetId, offsetMs: alignedMs(element) - trimStartMs }))
+    const startMs = Math.max(...placed.map(({ element }) => element.startMs))
+    const endMs = Math.min(...placed.map(({ element }) => element.startMs + element.durationMs))
+    const anchorMs = placed.map(({ element }) => element.trimStartMs - element.startMs)
+    const earliestAnchorMs = Math.min(...anchorMs)
+    const trimStartMs = startMs + earliestAnchorMs
+    const sources = placed.map(({ element, key }, index) => ({
+      key,
+      assetId: element.assetId,
+      offsetMs: (anchorMs[index] ?? earliestAnchorMs) - earliestAnchorMs,
+    }))
 
     const layouts = project.layouts.length > 0 ? project.layouts : createDefaultLayouts(project)
     const [opening] = layouts

@@ -29,9 +29,8 @@ export function projectWithRecordings(): { project: Project; trackId: `t-${strin
       type: 'video',
       id: 'e-cam',
       assetId: 'a-cam',
-      startMs: 2000,
-      durationMs: 28_000,
-      trimStartMs: 500,
+      startMs: 0,
+      durationMs: 30_000,
     },
   })
   return { project, trackId }

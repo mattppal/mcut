@@ -1,5 +1,29 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.23
+
+### Patch Changes
+
+- Updated dependencies [[`fa6f581`](https://github.com/mattppal/mcut/commit/fa6f581da9ce078b05916c46bfa5159e61b341a5)]:
+  - @mcut/timeline@0.1.0-alpha.13
+  - @mcut/editor@0.1.0-alpha.13
+  - @mcut/transcription@0.1.0-alpha.14
+
+## 0.1.0-alpha.22
+
+### Minor Changes
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - `saveLayout` merges each slot by source into the saved slot. An omitted field keeps its value, `null` clears a frame style field, and `rect` is required only for a source new to the layout, so re-saving a slot with a new rect keeps its corner radius and shadow. An overlay slot new to a layout that sets none of `cornerRadius`, `stroke`, and `shadow` gets the picture-in-picture look, a 0.12 corner radius and a soft shadow sized to the slot. The `saveLayout` and `resizeLayoutSlot` tool results list each style change field by field and warn when an overlay loses its corner radius or its shadow.
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - Add the `resizeLayoutSlot` command. It resizes one layout slot around an anchor by aspect, pixel size, or scale, so the slot keeps its place instead of jumping to another corner. The MCP tool result shows each slot before and after the resize, as it does for `saveLayout`.
+
+### Patch Changes
+
+- Updated dependencies [[`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b)]:
+  - @mcut/timeline@0.1.0-alpha.12
+  - @mcut/editor@0.1.0-alpha.12
+  - @mcut/transcription@0.1.0-alpha.13
+
 ## 0.1.0-alpha.21
 
 ### Patch Changes
