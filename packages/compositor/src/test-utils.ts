@@ -1,5 +1,3 @@
-import type { Canvas2D } from './types'
-
 export interface RecordedCall {
   method: string
   args: unknown[]
@@ -95,5 +93,3 @@ export class FakeContext2D {
     return this.calls.filter((c) => c.method === method)
   }
 }
-
-export const asCanvas = (fake: FakeContext2D): Canvas2D => fake as unknown as Canvas2D
