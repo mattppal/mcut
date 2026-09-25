@@ -178,7 +178,7 @@ export function AnimationsPanel({ className }: { className?: string }) {
   const apply = (preset: AnimationPreset) => {
     if (!element) return
     try {
-      applyStudioAnimationPreset(engine, element, preset, engine.playback.state.currentTimeMs)
+      applyStudioAnimationPreset(engine, element, preset)
       toast.success(`${prettyName(preset)} applied — keyframes are editable in the inspector`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not apply the preset')

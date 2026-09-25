@@ -1,3 +1,4 @@
+import { withPlayheadDefaults } from '@mcut/editor'
 import type { AnimationPreset, EditorEngine, TimelineElement, ZoomPreset } from '@mcut/timeline'
 
 const PUNCH_ZOOM_DURATION_MS = 240
@@ -18,12 +19,13 @@ const PUNCH_ZOOM_PRESET: ZoomPreset = {
   },
 }
 
-export function applyStudioAnimationPreset(engine: EditorEngine, element: TimelineElement, preset: AnimationPreset, timelineMs: number = element.startMs) {
+export function applyStudioAnimationPreset(engine: EditorEngine, element: TimelineElement, preset: AnimationPreset) {
   if (preset !== 'punch-zoom') {
-    engine.dispatch({ type: 'applyAnimationPreset', elementId: element.id, preset })
+    engine.dispatch(withPlayheadDefaults(engine, { type: 'applyAnimationPreset', elementId: element.id, preset }))
     return
   }
 
+  const timelineMs = engine.playback.state.currentTimeMs
   const atMs = Math.round(Math.max(0, Math.min(timelineMs - element.startMs, element.durationMs - PUNCH_ZOOM_DURATION_MS)))
   engine.dispatch({
     type: 'applyZoomPreset',

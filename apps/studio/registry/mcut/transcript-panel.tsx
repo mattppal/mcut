@@ -453,7 +453,7 @@ function TranscriptRow({
                   {m.word.text}
                 </button>
                 {isSelected && i > 0 && (
-                  <span className="absolute -top-6 left-0 z-10 flex gap-0.5 rounded-md border bg-popover p-0.5 shadow-sm">
+                  <span className="absolute -top-6 left-0 z-10 flex gap-0.5 rounded-md border bg-popover p-0.5 ">
                     <Button variant="ghost" size="icon-xs" title="Split caption before this word" onClick={() => splitAt(i)}>
                       <ScissorsIcon />
                     </Button>
