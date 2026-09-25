@@ -174,12 +174,12 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   run_operator: 'Run a user-level editor operator by id. Use list_operators first when you need the available ids and input schemas.',
   list_actions:
     'List browser editor actions available in the live editor, including menu/palette/hotkey actions. ' +
-    'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence, effects.fade-open-close, ' +
-    'and file.export-video, which renders and saves the video.',
+    'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close. ' +
+    'To render the finished video, use export_video instead.',
   run_action:
     'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette. ' +
     'Prefer high-level actions over hand-authored command sequences when available. ' +
-    'To export or render the finished video, run file.export-video with input {"format":"mp4"} or {"format":"webm"}.',
+    'To export or render the finished video, call export_video, then get_export until it is done.',
   undo: 'Undo the most recent edit.',
   redo: 'Redo the most recently undone edit.',
   export_video:
