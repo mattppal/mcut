@@ -105,7 +105,21 @@ For clip-to-clip transitions, use `setTransition` only on the left clip of an
 exact butt cut. Built-ins: `dissolve`, `fade-black`, `fade-white`, `slide-left`,
 `slide-right`, `wipe-left`, `wipe-right`.
 
-<<<<<<< HEAD
+### Export a video
+
+Export runs as a job on the live bridge. Studio renders the timeline and the
+bridge writes the file, so no download or save dialog opens.
+
+1. `export_video` with `{ "format": "mp4" }`, or with no input so Studio picks
+   mp4 when it can encode H.264 and webm otherwise. Pass an absolute
+   `outputPath` when the user names a file.
+2. `get_export` with `{ "jobId": "...", "waitMs": 20000 }` until `state` is
+   `done`. Each answer carries the percent and `etaMs`.
+3. Report `outputPath` and `bytes` from the `done` answer.
+
+`export-busy` means an export is already running. Wait for it with `get_export`
+or stop it with `cancel_export`.
+
 ### Punch-ins and detail zooms
 
 Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
@@ -125,22 +139,6 @@ On a multicam, set `source` to the screen key so the camera overlay stays put.
 Place a detail zoom over the words that discuss the region, found with
 `search_transcript`. When asked to tone zooms down, lower `scale` rather than
 removing zooms or turning off motion blur.
-=======
-### Export a video
-
-Export runs as a job on the live bridge. Studio renders the timeline and the
-bridge writes the file, so no download or save dialog opens.
-
-1. `export_video` with `{ "format": "mp4" }`, or with no input so Studio picks
-   mp4 when it can encode H.264 and webm otherwise. Pass an absolute
-   `outputPath` when the user names a file.
-2. `get_export` with `{ "jobId": "...", "waitMs": 20000 }` until `state` is
-   `done`. Each answer carries the percent and `etaMs`.
-3. Report `outputPath` and `bytes` from the `done` answer.
-
-`export-busy` means an export is already running. Wait for it with `get_export`
-or stop it with `cancel_export`.
->>>>>>> origin/main
 
 ## Timing rules
 
