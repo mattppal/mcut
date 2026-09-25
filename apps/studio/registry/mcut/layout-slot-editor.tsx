@@ -2,7 +2,7 @@
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useEditor, useEditorState, useWindowEvent } from '@mcut/react'
-import type { Crop, EditorEngine, Layout, LayoutSlot } from '@mcut/timeline'
+import type { CommandOfType, Crop, EditorEngine, Layout, LayoutSlot } from '@mcut/timeline'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useEditorUI } from './editor-ui'
@@ -34,7 +34,9 @@ export function roundRect(rect: LayoutSlot['rect']): LayoutSlot['rect'] {
   }
 }
 
-export function saveLayoutSlot(engine: EditorEngine, layout: Layout, index: number, patch: Partial<LayoutSlot>, options?: { history?: boolean }): void {
+export type SlotEdit = Omit<CommandOfType<'saveLayout'>['layout']['slots'][number], 'source'>
+
+export function saveLayoutSlot(engine: EditorEngine, layout: Layout, index: number, patch: SlotEdit, options?: { history?: boolean }): void {
   try {
     engine.dispatch(
       {
@@ -127,7 +129,7 @@ function SlotBox({
     moved: boolean
   } | null>(null)
 
-  const save = (patch: Partial<LayoutSlot>) => saveLayoutSlot(engine, layout, index, patch)
+  const save = (patch: SlotEdit) => saveLayoutSlot(engine, layout, index, patch)
 
   const begin = (mode: 'move' | 'resize' | 'crop', event: ReactPointerEvent<HTMLElement>, handle: HandleId | null = null) => {
     event.stopPropagation()

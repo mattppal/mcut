@@ -1,22 +1,63 @@
 import { z } from 'zod'
 import { CommandError } from '../errors'
 import { defaultSlotAnchor } from '../layout-summary'
-import { layoutSchema, resizeSlotRect, slotResizeSchema } from '../layouts'
+import { layoutSchema, layoutSlotSchema, resizeSlotRect, slotResizeSchema, type Layout, type LayoutSlot } from '../layouts'
+import { frameStyleSchema, type FrameStyle } from '../style'
 import { defineCommand, mustGetLayout } from './shared'
+
+const slotShape = layoutSlotSchema.shape
+const styleShape = frameStyleSchema.shape
+
+const slotPatchSchema = z.object({
+  source: slotShape.source,
+  rect: slotShape.rect.optional(),
+  fit: slotShape.fit.unwrap().optional(),
+  crop: styleShape.crop.nullable(),
+  cornerRadius: styleShape.cornerRadius.nullable(),
+  stroke: styleShape.stroke.nullable(),
+  shadow: styleShape.shadow.nullable(),
+})
+
+type SlotPatch = z.output<typeof slotPatchSchema>
+
+const STYLE_FIELDS = frameStyleSchema.keyof().options
+
+function patchField<K extends keyof FrameStyle>(style: FrameStyle, key: K, value: FrameStyle[K] | null): void {
+  if (value === null) delete style[key]
+  else if (value !== undefined) style[key] = value
+}
+
+function mergeSlot(old: LayoutSlot | undefined, patch: SlotPatch, layoutName: string): LayoutSlot {
+  const rect = patch.rect ?? old?.rect
+  if (rect === undefined) throw new CommandError('invalid-payload', `slot "${patch.source}" is new to layout "${layoutName}", so it needs a rect`)
+  const slot: LayoutSlot = { ...old, source: patch.source, rect, fit: patch.fit ?? old?.fit ?? 'cover' }
+  for (const key of STYLE_FIELDS) patchField(slot, key, patch[key])
+  return slot
+}
 
 export const saveLayout = defineCommand({
   type: 'saveLayout',
   description:
     'Add or replace a multicam layout in the project (slots position sources ' +
     'on the canvas in normalized 0..1 rects; first slot paints bottom). A slot takes the same frame style ' +
-    'as a video clip (crop, cornerRadius, stroke, shadow); its crop picks the source region that is fitted into the rect.',
-  payloadSchema: z.object({ layout: layoutSchema }),
-  reduce: (project, payload) => {
-    const exists = project.layouts.some((l) => l.id === payload.layout.id)
-    return {
-      ...project,
-      layouts: exists ? project.layouts.map((l) => (l.id === payload.layout.id ? payload.layout : l)) : [...project.layouts, payload.layout],
+    'as a video clip (crop, cornerRadius, stroke, shadow); its crop picks the source region that is fitted into the rect. ' +
+    'Each slot merges by source into the saved slot, so an omitted field keeps its value, null clears a frame style field, ' +
+    'and rect is required only for a source new to the layout. A saved slot whose source is not in the list is removed.',
+  payloadSchema: z.object({ layout: layoutSchema.extend({ slots: z.array(slotPatchSchema).min(1) }) }),
+  reduce: (project, { layout: patch }) => {
+    const prev = project.layouts.find((l) => l.id === patch.id)
+    const layout: Layout = {
+      id: patch.id,
+      name: patch.name,
+      slots: patch.slots.map((slot) =>
+        mergeSlot(
+          prev?.slots.find((s) => s.source === slot.source),
+          slot,
+          patch.name,
+        ),
+      ),
     }
+    return { ...project, layouts: prev ? project.layouts.map((l) => (l === prev ? layout : l)) : [...project.layouts, layout] }
   },
 })
 

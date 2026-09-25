@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useEditorUI } from './editor-ui'
-import { roundRect, safeAreaRect, saveLayoutSlot } from './layout-slot-editor'
+import { roundRect, safeAreaRect, saveLayoutSlot, type SlotEdit } from './layout-slot-editor'
 import { ChoiceRow, FieldRow, NumberField, Section } from './inspector-fields'
 import { FrameFields, type FrameTarget } from './frame-section'
 import { findTargetMulticam, multicamSourceSize, panSlotWindow, slotCoverWindow } from './multicam-ui'
@@ -40,7 +40,7 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
   const sourceSize = slot ? multicamSourceSize(project, target?.element, slot.source) : null
   const view = slot && sourceSize ? slotCoverWindow(slot, { width: slot.rect.w * W, height: slot.rect.h * H }, sourceSize) : null
 
-  const save = (patch: Partial<LayoutSlot>, options?: { history?: boolean }) => {
+  const save = (patch: SlotEdit, options?: { history?: boolean }) => {
     if (index !== null) saveLayoutSlot(engine, layout, index, patch, options)
   }
   const saveRect = (rect: LayoutSlot['rect'], options?: { history?: boolean }) => save({ rect: roundRect(rect) }, options)
@@ -164,24 +164,24 @@ export function LayoutSlotInspector({ layout, className }: { layout: Layout; cla
                 })}
                 onApply={(values) => {
                   const preset = readStylePreset(values)
-                  const patch: Partial<LayoutSlot> = {}
+                  const patch: SlotEdit = {}
                   if (preset.fit) patch.fit = preset.fit
                   if (preset.cornerRadius !== undefined) patch.cornerRadius = preset.cornerRadius
-                  if (preset.stroke !== undefined) patch.stroke = preset.stroke ?? undefined
-                  if (preset.shadow !== undefined) patch.shadow = preset.shadow ?? undefined
+                  if (preset.stroke !== undefined) patch.stroke = preset.stroke
+                  if (preset.shadow !== undefined) patch.shadow = preset.shadow
                   save(patch)
                 }}
               />
             }
           >
             <ChoiceRow label="Fit" value={slot.fit} options={['cover', 'contain'] as const} onCommit={(fit) => save({ fit })} />
-            <RadiusRow value={slot.cornerRadius ?? 0} onCommit={(cornerRadius) => save({ cornerRadius: cornerRadius || undefined })} />
-            <StrokeFields value={slot.stroke} onCommit={(stroke) => save({ stroke })} />
-            <ShadowFields value={slot.shadow} onCommit={(shadow) => save({ shadow })} />
+            <RadiusRow value={slot.cornerRadius ?? 0} onCommit={(cornerRadius) => save({ cornerRadius: cornerRadius || null })} />
+            <StrokeFields value={slot.stroke} onCommit={(stroke) => save({ stroke: stroke ?? null })} />
+            <ShadowFields value={slot.shadow} onCommit={(shadow) => save({ shadow: shadow ?? null })} />
           </Section>
 
           {slot.fit === 'cover' && view && (
-            <Section title="Crop" onReset={() => save({ crop: undefined })}>
+            <Section title="Crop" onReset={() => save({ crop: null })}>
               <NumberField
                 label="Focus X"
                 value={Math.round(focusOf(view.x, view.w) * 100)}
