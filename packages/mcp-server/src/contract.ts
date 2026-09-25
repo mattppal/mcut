@@ -7,6 +7,7 @@ import { PICTURE_TOOL_DESCRIPTIONS, PICTURE_TOOL_INPUTS } from './picture-tools'
 import { commandBatchSchema } from './transact-shape'
 
 export * from './export-protocol'
+import { applySilenceCutsDescription, audioActivityDescription } from './audio-activity-target'
 export { pickAudioActivitySource } from './audio-activity-target'
 export { applyTransact, transactSubRequestSchema, type TransactSubRequest } from './transact-shape'
 
@@ -231,11 +232,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'timeMs is the timeline position in milliseconds. maxWidth caps the PNG width and keeps the project aspect ratio. ' +
     'To find when something is on screen, call find_scene_changes and get_contact_sheet instead of stepping get_frame through time.',
   ...PICTURE_TOOL_DESCRIPTIONS,
-  get_audio_activity:
-    'Live bridge only: analyze a clip with source audio and return compact sound and silence windows in audio-asset time. ' +
-    'A multicam uses its audio source. One with none fails until setMulticamAudio. The fallback is the first clip with source audio. ' +
-    'Use this only through the connected browser for audio-aware inspection; do not fall back to ffmpeg. ' +
-    'For spoken-word silence removal, prefer ensure_transcript followed by the live editor action transcript.remove-silence.',
+  get_audio_activity: audioActivityDescription,
   get_transcript:
     'Read the current transcript derived from caption elements. This never starts transcription. ' +
     'If no transcript exists and speech context is needed, call ensure_transcript in live bridge mode. ' +
@@ -265,11 +262,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Pass a timed transcript from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
     'Never invent a transcript when transcription fails. ' +
     'The result warns when the transcript matches no transcript in the project.',
-  apply_silence_cuts:
-    'Cut transcript silence out of one clip with source audio (splits, ripple deletes, and edge trims) ' +
-    'as one undoable edit. A multicam is cut on its audio source, before volume, fades, and mute. ' +
-    'One with no audio source fails until setMulticamAudio. ' +
-    'Returns the removed silence windows in audio-asset time and the updated project summary.',
+  apply_silence_cuts: applySilenceCutsDescription,
   lint_project:
     'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
     'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',

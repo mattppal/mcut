@@ -1,5 +1,17 @@
 import { getElementLocation, resolveElementAudioSource, type ElementAudioSource, type ElementId, type Project } from '@mcut/timeline'
 
+export const audioActivityDescription =
+  'Live bridge only: analyze a clip with source audio and return compact sound and silence windows in audio-asset time. ' +
+  'A multicam uses its audio source. One with none fails until setMulticamAudio. The fallback is the first clip with source audio. ' +
+  'Use this only through the connected browser for audio-aware inspection; do not fall back to ffmpeg. ' +
+  'For spoken-word silence removal, prefer ensure_transcript followed by the live editor action transcript.remove-silence.'
+
+export const applySilenceCutsDescription =
+  'Cut transcript silence out of one clip with source audio (splits, ripple deletes, and edge trims) ' +
+  'as one undoable edit. A multicam is cut on its audio source, before volume, fades, and mute. ' +
+  'One with no audio source fails until setMulticamAudio. ' +
+  'Returns the removed silence windows in audio-asset time and the updated project summary.'
+
 export function pickAudioActivitySource(project: Project, selectedElementIds: readonly ElementId[], elementId?: ElementId): ElementAudioSource {
   if (elementId) {
     const source = resolveElementAudioSource(project, elementId)
