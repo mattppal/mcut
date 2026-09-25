@@ -22,8 +22,8 @@ export const EMBED_OMISSIONS = [
   {
     id: 'transcription-key-settings',
     reason:
-      'The AssemblyAI key lives in the desktop main process behind safeStorage and IPC. The site has no secret store, so the captions panel has no key field.',
-    selector: '[data-slot="transcription-key-field"]',
+      'The AssemblyAI key lives in a SQLite database in the desktop main process, encrypted with safeStorage and reached over IPC. The site has no secret store, so it has no Settings dialog and the captions panel has no pointer to one.',
+    selector: '[data-mcut-settings-trigger], [data-slot="transcription-key-status"]',
   },
   {
     id: 'window-chrome',

@@ -292,14 +292,19 @@ const captionsAssemblyAi: Driver = async (ctx) => {
   const { view } = ctx
   await watchToasts(view)
   await openRailTab(view, 'captions')
-  const field = view.locator('[data-slot="transcription-key-field"]')
-  check((await field.count()) === 1, `the AssemblyAI key field is present on the ${ctx.surface} surface`)
+  check((await view.getByLabel('AssemblyAI API key').count()) === 0, `the captions panel has no AssemblyAI key input on the ${ctx.surface} surface`)
   if ((await onDeviceSwitch(view).count()) > 0) await setOnDevice(view, false)
+  const status = view.locator('[data-slot="transcription-key-status"]')
+  await status.getByRole('button', { name: 'Open Settings' }).click()
+  const field = view.locator('[data-slot="transcription-key-field"]')
+  await field.waitFor({ state: 'visible', timeout: 5_000 })
   const key = ctx.assemblyAiKey ?? `smoke-invalid-${Date.now()}`
   await field.getByLabel('AssemblyAI API key').fill(key)
   await field.getByRole('button', { name: 'Save' }).click()
   await view.getByText('AssemblyAI key saved').waitFor({ state: 'visible', timeout: 10_000 })
   await field.getByText('Configured', { exact: true }).waitFor({ state: 'visible', timeout: 5_000 })
+  await view.getByRole('dialog').getByRole('button', { name: 'Close' }).click()
+  await status.waitFor({ state: 'hidden', timeout: 5_000 })
   await selectSpeechClip(ctx)
   const run = await runAutoCaption(view, REMOTE_WAIT_MS)
   ctx.log(`toasts: ${quote(run.toasts)}`)
@@ -318,10 +323,13 @@ const captionsAssemblyAi: Driver = async (ctx) => {
           run.error === undefined && run.captions.length > 0,
           `${run.captions.length} caption(s) ${quote(run.captions)} from AssemblyAI after ${run.ms} ms${run.error === undefined ? '' : `, toast "${run.error}"`}`,
         )
+  await view.locator('[data-mcut-settings-trigger]').click()
   await field.getByRole('button', { name: 'Remove' }).click()
   await view.getByText('AssemblyAI key removed').waitFor({ state: 'visible', timeout: 10_000 })
   await field.getByText('Configured', { exact: true }).waitFor({ state: 'hidden', timeout: 5_000 })
-  return pass(`"AssemblyAI key saved" and Configured after Save, ${outcome}, "AssemblyAI key removed" and no Configured after Remove`)
+  await view.getByRole('dialog').getByRole('button', { name: 'Close' }).click()
+  await status.waitFor({ state: 'visible', timeout: 5_000 })
+  return pass(`"AssemblyAI key saved" and Configured in Settings after Save, ${outcome}, "AssemblyAI key removed" and the captions panel points to Settings again after Remove`)
 }
 
 async function downloadSubtitles(ctx: SurfaceContext, format: 'SRT' | 'VTT'): Promise<string> {

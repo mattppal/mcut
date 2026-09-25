@@ -83,10 +83,10 @@ export const FEATURE_TABLE: readonly Feature[] = [
   feature('captions-on-device-cached', 'Auto-caption again from the cached model with no upstream request', 'full'),
   feature(
     'captions-assemblyai',
-    'Save an AssemblyAI key and caption through the cloud provider',
+    'Save an AssemblyAI key in Settings and caption through the cloud provider',
     'full',
     desktopOnly(
-      'The AssemblyAI key lives in the desktop main process behind safeStorage. The site has no secret store, so the captions panel has no key field.',
+      'The AssemblyAI key lives in a SQLite database in the desktop main process, encrypted with safeStorage. The site has no secret store, so it has no Settings dialog.',
     ),
   ),
   feature('captions-export', 'Download the captions as SRT and VTT', 'full'),
