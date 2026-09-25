@@ -7,7 +7,7 @@ import { WebSocket } from 'ws'
 import { z } from 'zod'
 import { listServerToolDefinitions } from './contract'
 import { LiveMcutBridge, createHttpBridgeTarget } from './live-bridge'
-import { createMcutMcpServer, createMcutMcpServerForTarget } from './server'
+import { createMcutMcpServer, createMcutMcpServerForTarget, type McutMcpTarget } from './server'
 
 async function connect(engine: EditorEngine, onChange?: () => void) {
   const server = createMcutMcpServer({ engine, onChange })
@@ -15,6 +15,34 @@ async function connect(engine: EditorEngine, onChange?: () => void) {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)])
   return client
+}
+
+async function connectTarget(target: McutMcpTarget) {
+  const server = createMcutMcpServerForTarget({ target })
+  const client = new Client({ name: 'test', version: '0.0.0' })
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)])
+  return client
+}
+
+function frameTarget(frame: unknown): McutMcpTarget {
+  const unused = async (): Promise<unknown> => {
+    throw new Error('unused')
+  }
+  return {
+    getSummary: async () => 'unused',
+    getProject: () => ({}),
+    listActions: () => [],
+    listOperators: () => [],
+    runAction: unused,
+    undo: async () => false,
+    redo: async () => false,
+    runOperator: unused,
+    dispatchCommand: unused,
+    applyCommands: unused,
+    transact: unused,
+    getFrame: async () => frame,
+  }
 }
 
 function contentText(result: Awaited<ReturnType<Client['callTool']>>): string {
@@ -69,6 +97,7 @@ describe('createMcutMcpServer', () => {
     expect(names).toContain('get_transcript')
     expect(names).toContain('search_transcript')
     expect(names).toContain('ensure_transcript')
+    expect(names).toContain('get_frame')
     expect(names).toContain('center_person')
     expect(names).toContain('get_audio_activity')
     expect(names).toContain('apply_captions')
@@ -415,6 +444,9 @@ describe('createMcutMcpServer', () => {
     const activityText = (activity.content as Array<{ type: string; text: string }>)[0]!.text
     expect(activityText).toContain('requires a live browser bridge')
 
+    const frame = await client.callTool({ name: 'get_frame', arguments: { timeMs: 0 } })
+    expect(frame.isError).toBe(true)
+    expect(contentText(frame)).toBe('get_frame requires the live bridge connected to Studio.')
     const centered = await client.callTool({ name: 'center_person', arguments: {} })
     expect(centered.isError).toBe(true)
     expect(contentText(centered)).toBe('center_person requires a live browser bridge connected to an editor tab.')
@@ -814,5 +846,29 @@ describe('createMcutMcpServer', () => {
 
     expect(result).toBe('closed')
     bridge.close()
+  })
+
+  test('get_frame returns the target PNG as image content', async () => {
+    const data = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const client = await connectTarget(
+      frameTarget({
+        mimeType: 'image/png',
+        data,
+        width: 8,
+        height: 4,
+        timeMs: 1000,
+        elementId: 'e-video',
+        visibleElementIds: ['e-video'],
+      }),
+    )
+    const result = await client.callTool({ name: 'get_frame', arguments: { timeMs: 1000 } })
+    expect(result.isError).toBeFalsy()
+    expect(result.content).toEqual([
+      { type: 'image', data, mimeType: 'image/png' },
+      {
+        type: 'text',
+        text: '{"timeMs":1000,"width":8,"height":4,"elementId":"e-video","visibleElementIds":["e-video"]}',
+      },
+    ])
   })
 })

@@ -16,6 +16,11 @@ edits:
     checks: [head overlay narrower]
     capability: exists
     note: A vague revision. The slot rect of the active layout is the control, via saveLayout or setAngleLayout.
+  - id: 02c-center-person
+    ask: Keep my head centered in the overlay when I move around.
+    checks: [head overlay follows the person]
+    capability: exists
+    note: center_person on the live bridge finds the face in the camera source on this device and writes a reframe track on that source. The slot rect keeps the aspect.
   - id: 03-retakes
     ask: Find the retakes and remove them, keeping the good take. At each join, cut to the head-only shot so it reads as one continuous take.
     checks: [duration shorter by 2s, duration shorter by at most 60s, angle cuts 2]

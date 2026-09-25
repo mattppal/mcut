@@ -43,6 +43,7 @@ import {
   type McpServerStaticToolCall,
   type TransactSubRequest,
 } from './contract'
+import { frameContent, frameGrabSchema } from './frame-content'
 import { runEngineTransact, translateTransactCalls } from './transact'
 
 export interface McutMcpTarget {
@@ -54,6 +55,7 @@ export interface McutMcpTarget {
   ensureTranscript?(input: unknown): unknown | Promise<unknown>
   centerPerson?(input: unknown): unknown | Promise<unknown>
   getAudioActivity?(input: unknown): unknown | Promise<unknown>
+  getFrame?(input: unknown): unknown | Promise<unknown>
   listActions(): unknown | Promise<unknown>
   listOperators(): unknown | Promise<unknown>
   runAction(actionId: string, input: unknown): unknown | Promise<unknown>
@@ -93,7 +95,7 @@ const targetProject = async (target: McutMcpTarget): Promise<Project> => parsePr
 
 const savedLayoutArgs = z.object({ layout: z.object({ id: z.string() }) })
 
-type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure>
+type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure> | ReturnType<typeof frameContent>
 
 const withResult = (lead: string, result: unknown) => (result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`)
 
@@ -144,6 +146,9 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
     },
     getAudioActivity: async () => {
       throw new Error('get_audio_activity requires a live browser bridge connected to an editor tab.')
+    },
+    getFrame: async () => {
+      throw new Error('get_frame requires the live bridge connected to Studio.')
     },
     listActions: () => [],
     listOperators: () =>
@@ -238,6 +243,12 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'get_audio_activity':
       if (!target.getAudioActivity) return failure('get_audio_activity is not available on this target.')
       return text(JSON.stringify(await target.getAudioActivity(call.arguments), null, 2))
+    case 'get_frame': {
+      if (!target.getFrame) return failure('get_frame requires the live bridge connected to Studio.')
+      const parsed = frameGrabSchema.safeParse(await target.getFrame(call.arguments))
+      if (!parsed.success) return failure(`get_frame: ${z.prettifyError(parsed.error)}`)
+      return frameContent(parsed.data)
+    }
     case 'lint_project':
       return text(JSON.stringify(lintProject(await targetProject(target)), null, 2))
     case 'list_zooms':
