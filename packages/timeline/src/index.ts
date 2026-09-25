@@ -80,6 +80,7 @@ export {
   type ZoomRegionRef,
 } from './zoom-regions'
 export { zoomCommandSchema } from './commands/zooms'
+export { centeredFocus, getReframeCenter } from './reframe'
 export { captureZoomPreset, expandZoomPreset, ZOOM_PRESETS, ZOOMABLE_PROPERTIES, zoomPresetSchema, type ZoomPreset } from './zoom-presets'
 
 export {
