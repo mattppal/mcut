@@ -131,7 +131,7 @@ function amountAt(phase: Phase): number {
   return phase.kind === 'in' ? eased : 1 - eased
 }
 
-function anchorOf(center: number, visibleAtHold: number): number {
+export function anchorOf(center: number, visibleAtHold: number): number {
   if (visibleAtHold >= 1) return 0.5
   const start = Math.min(1 - visibleAtHold, Math.max(0, center - visibleAtHold / 2))
   return start / (1 - visibleAtHold)

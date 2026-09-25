@@ -116,6 +116,7 @@ async function main(): Promise<void> {
   const fixtures: Fixtures = {
     clip: path.join(FIXTURE_DIR, 'fixture-vp9.mkv'),
     speech: path.join(FIXTURE_DIR, 'fixture-speech.mkv'),
+    face: path.join(FIXTURE_DIR, 'fixture-face.mkv'),
     image: path.join(FIXTURE_DIR, 'fixture.png'),
   }
   const log = (line: string) => console.log(`     ${line}`)

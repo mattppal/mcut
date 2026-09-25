@@ -1,5 +1,23 @@
 # @mcut/react
 
+## 0.1.0-alpha.14
+
+### Patch Changes
+
+- [#187](https://github.com/mattppal/mcut/pull/187) [`2ade70e`](https://github.com/mattppal/mcut/commit/2ade70e1316317492c4be49c2b19ea7f9f989008) Thanks [@mattppal](https://github.com/mattppal)! - A paused `PlayerCanvas` paints once and then skips the render until the project, playhead, size, selection, fonts, or a media frame changes, so a motion-blurred frame no longer redraws on every animation frame. `PreviewMediaPool` exposes `frameVersion`, which moves when a seek starts or lands, a video loads, a decoded frame arrives, or an image loads. `extractAudioToWav` takes an `AbortSignal` and cancels the conversion when it fires.
+
+- Updated dependencies [[`2ade70e`](https://github.com/mattppal/mcut/commit/2ade70e1316317492c4be49c2b19ea7f9f989008)]:
+  - @mcut/media@0.1.0-alpha.13
+
+## 0.1.0-alpha.13
+
+### Patch Changes
+
+- Updated dependencies [[`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928), [`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928)]:
+  - @mcut/timeline@0.1.0-alpha.10
+  - @mcut/compositor@0.1.0-alpha.10
+  - @mcut/media@0.1.0-alpha.12
+
 ## 0.1.0-alpha.12
 
 ### Patch Changes

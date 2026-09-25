@@ -144,7 +144,11 @@ The on-device caption drivers download the Whisper model over the real network
 when `huggingface.co` answers. When it does not, set `MCUT_WHISPER_MIRROR` to a
 directory holding `onnx-community/<model>/...` and the harness serves it on
 127.0.0.1 and routes the Hub and jsDelivr requests there. Without either the
-row reports `blocked`. `ASSEMBLYAI_API_KEY` turns the AssemblyAI row into a
+row reports `blocked`. The Center person driver fetches the YuNet face model
+from the same host on a fresh profile and fails if the download toast shows no
+progress. A mirror serves it from
+`opencv/face_detection_yunet/face_detection_yunet_2023mar.onnx` in the same
+directory. `ASSEMBLYAI_API_KEY` turns the AssemblyAI row into a
 real cloud transcription. `MCUT_CHROME_PATH` points the embed at Google Chrome
 for MP4 export.
 

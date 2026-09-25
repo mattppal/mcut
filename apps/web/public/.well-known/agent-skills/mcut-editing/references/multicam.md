@@ -48,6 +48,13 @@ Rects are 0-1 of the project frame. The first slot paints bottom. `focus` anchor
 crop when `fit` is `"cover"` (point it at the speaker's face for tight crops).
 `removeLayout` refuses while any angle cut uses it.
 
+When the speaker drifts inside a head overlay, call `center_person` on the live bridge
+instead of hand-tuning `focus`. It finds the face on device and writes one reframe track
+on the `camera` source, the default, as one undo step. While the track exists it replaces
+`focus` in every slot that shows that source. Each slot rect keeps its size and aspect,
+and only the framing inside it follows the face. `setReframe` with a null `track` stops
+the follow and brings `focus` back.
+
 ## Switching rhythm (the editorial part)
 
 - Cut on speaker changes and beats of the screen content, never mid-word.
