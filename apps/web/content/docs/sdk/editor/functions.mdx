@@ -359,7 +359,15 @@ Cuts the silences between transcript words out of one clip playing at 1x, applyi
 function applyCommands(engine: EditorEngine, commands: readonly BuiltinCommand[]): void
 ```
 
-Dispatches the commands in order inside one transaction, so the batch becomes a single undo entry.
+Dispatches the commands in order inside one transaction, so the batch becomes a single undo entry. Each command passes through `withPlayheadDefaults` first.
+
+### withPlayheadDefaults
+
+```ts
+function withPlayheadDefaults(engine: EditorEngine, command: BuiltinCommand): BuiltinCommand
+```
+
+Returns an `applyAnimationPreset` command without `atMs` with `atMs` set to the playhead's element-local time when the playhead is on the clip. An out preset needs the playhead past the clip start. Any other command, or a playhead off the clip, comes back unchanged, so the preset falls back to the clip edge.
 
 ### summarizeEngine
 

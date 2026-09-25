@@ -45,10 +45,16 @@ token `mcut-local-dev`.
 ## Bridge MCP adapter
 
 ```sh
-bunx -p @mcut/mcp-server mcut-bridge mcp --port 44737
+MCUT_BRIDGE_TOKEN=<token> bunx -p @mcut/mcp-server mcut-bridge mcp --port 44737
 ```
 
 This exposes a running bridge, in Studio or standalone, as an MCP stdio server.
+
+The bridge rejects `/rpc` calls without its token, so every command below except
+`start`, `status`, and `url` reads the token from `--token` or
+`MCUT_BRIDGE_TOKEN`. The token keeps other accounts on the same machine out,
+because the port is open to every local user and the token file is readable
+only by its owner.
 
 ## Utility commands
 

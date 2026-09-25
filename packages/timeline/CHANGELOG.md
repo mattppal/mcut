@@ -1,5 +1,23 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.5
+
+### Patch Changes
+
+- [#156](https://github.com/mattppal/mcut/pull/156) [`53b78d7`](https://github.com/mattppal/mcut/commit/53b78d7fdaaeed29df8d1654702d073eacf75e65) Thanks [@mattppal](https://github.com/mattppal)! - `run_action` and `list_actions` name `file.export-video` for export. `apply_captions` warns when its transcript matches no captions in the project, so invented transcripts are visible, and it now fails without touching existing captions when the transcript yields no captions. `applyAnimationPreset` points to `effects.fade-open-close` for a fade in and out as one undo step.
+
+## 0.1.0-alpha.4
+
+### Minor Changes
+
+- [#155](https://github.com/mattppal/mcut/pull/155) [`b6f0765`](https://github.com/mattppal/mcut/commit/b6f07651f745e393b59e5db6dbc4e67f370939b3) Thanks [@mattppal](https://github.com/mattppal)! - The project summary lists each layout by role (picture-in-picture, full-frame, split) with every slot's pixel size and aspect. A `saveLayout` tool result shows each slot before and after with width and height change, and warns when a full-frame layout's only slot stops covering the frame.
+
+## 0.1.0-alpha.3
+
+### Minor Changes
+
+- [#159](https://github.com/mattppal/mcut/pull/159) [`9b17ac7`](https://github.com/mattppal/mcut/commit/9b17ac71a1314a9197d350ae110783537b13243a) Thanks [@mattppal](https://github.com/mattppal)! - `applyAnimationPreset` takes an element-local `atMs`. In and emphasis presets start there, out presets end there, clamped to fit the clip. `withPlayheadDefaults` fills `atMs` from the playhead when the playhead is on the clip, and the MCP server and `applyCommands` use it.
+
 ## 0.1.0-alpha.2
 
 ### Patch Changes

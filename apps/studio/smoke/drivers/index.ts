@@ -5,10 +5,12 @@ import { CORE_DRIVERS } from './core.ts'
 import { EDIT_DRIVERS } from './edit.ts'
 import { MODE_DRIVERS } from './modes.ts'
 import { PROJECT_DRIVERS } from './project.ts'
+import { TIMELINE_DRIVERS } from './timeline.ts'
 
 export const DRIVERS: Record<FeatureId, Driver | null> = {
   ...CORE_DRIVERS,
   ...EDIT_DRIVERS,
+  ...TIMELINE_DRIVERS,
   ...CAPTION_DRIVERS,
   ...MODE_DRIVERS,
   ...PROJECT_DRIVERS,

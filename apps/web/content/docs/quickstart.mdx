@@ -53,7 +53,7 @@ Copy MCP URL from the MCP menu. The URL is
 For a stdio only client, expose the running app's bridge as a stdio server:
 
 ```sh
-bunx -p @mcut/mcp-server mcut-bridge mcp --port 44737
+MCUT_BRIDGE_TOKEN=<token> bunx -p @mcut/mcp-server mcut-bridge mcp --port 44737
 ```
 
 Developers who run the editor as a browser tab start the bridge themselves with

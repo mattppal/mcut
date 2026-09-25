@@ -28,7 +28,8 @@ import { EmbedShell } from './embed-shell'
 import { useProjectFontLoader } from './font-library'
 import { LEFT_TABS, LeftPanel } from './left-panel'
 import { LiveMcpBridge } from './live-mcp-bridge'
-import { PreviewArea, TrackSorter } from './preview-area'
+import { EditorDnd } from './editor-dnd'
+import { PreviewArea } from './preview-area'
 import { PropertiesPanel } from './properties-panel'
 import { host } from './studio-host'
 import { TimelinePanel } from './timeline-panel'
@@ -104,7 +105,7 @@ function ChromeRail({ tab, collapsed, onSelect }: { tab: LeftTab; collapsed: boo
                 aria-pressed={tab === id && !collapsed}
                 className={cn(
                   'flex size-10 items-center justify-center rounded-lg transition-colors',
-                  tab === id && !collapsed ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+                  tab === id && !collapsed ? 'bg-card text-foreground' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
                 )}
                 onClick={() => onSelect(id)}
               />
@@ -179,7 +180,7 @@ function FullWorkspace({ transcribe, leftPanelRef, omitted }: WorkspaceProps) {
       <div className="flex min-h-0 flex-1">
         <ChromeRail tab={tab} collapsed={leftCollapsed} onSelect={onRailSelect} />
         {panelsReady ? (
-          <TrackSorter>
+          <EditorDnd>
             <ResizablePanelGroup key={`vertical-${layoutResetToken}`} orientation="vertical" className="min-h-0 flex-1 pr-2 pb-2" {...verticalLayout}>
               <ResizablePanel id="workspace" defaultSize="62%" minSize="30%">
                 <ResizablePanelGroup key={`horizontal-${layoutResetToken}`} orientation="horizontal" {...horizontalLayout}>
@@ -214,7 +215,7 @@ function FullWorkspace({ transcribe, leftPanelRef, omitted }: WorkspaceProps) {
                 </PanelCard>
               </ResizablePanel>
             </ResizablePanelGroup>
-          </TrackSorter>
+          </EditorDnd>
         ) : (
           <div className="min-h-0 flex-1 pr-2 pb-2">
             <PanelCard className="flex items-center justify-center text-xs text-muted-foreground">

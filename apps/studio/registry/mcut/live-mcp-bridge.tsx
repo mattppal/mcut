@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { OperatorError, applyCommands, listOperators, parseOperatorId, runOperator, summarizeEngine, type OperatorId } from '@mcut/editor'
+import { OperatorError, applyCommands, listOperators, parseOperatorId, runOperator, summarizeEngine, withPlayheadDefaults, type OperatorId } from '@mcut/editor'
 import { analyzeAudioActivity, type AudioActivity, type AudioActivityOptions, type AudioActivityWindow } from '@mcut/media'
 import { useEditor, useWebSocket } from '@mcut/react'
 import {
@@ -292,7 +292,7 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
     }
     case 'dispatch_command': {
       const { commandName, input } = request.payload
-      engine.dispatch(parseCommand({ ...input, type: commandName }))
+      engine.dispatch(withPlayheadDefaults(engine, parseCommand({ ...input, type: commandName })))
       return null
     }
     case 'run_action': {
