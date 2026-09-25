@@ -140,7 +140,9 @@ test('multicam inspector settings are scoped to multicam mode', async ({ page, e
 
   await page.getByRole('button', { name: 'Edit', exact: true }).click()
   await expect(page.getByText(/Roles decide which layout slot/)).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Motion', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Frame', exact: true })).toBeVisible()
+  await expect(page.getByRole('spinbutton', { name: 'Width', exact: true }), 'a multicam frames the whole canvas').toHaveValue('1920')
+  await expect(page.getByRole('spinbutton', { name: 'Height', exact: true })).toHaveValue('1080')
   await expect(page.locator("[title^='Arm keyframes']")).not.toHaveCount(0)
 })
 
