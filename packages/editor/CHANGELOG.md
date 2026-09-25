@@ -1,5 +1,30 @@
 # @mcut/editor
 
+## 0.1.0-alpha.5
+
+### Patch Changes
+
+- Updated dependencies [[`53b78d7`](https://github.com/mattppal/mcut/commit/53b78d7fdaaeed29df8d1654702d073eacf75e65)]:
+  - @mcut/timeline@0.1.0-alpha.5
+
+## 0.1.0-alpha.4
+
+### Patch Changes
+
+- Updated dependencies [[`b6f0765`](https://github.com/mattppal/mcut/commit/b6f07651f745e393b59e5db6dbc4e67f370939b3)]:
+  - @mcut/timeline@0.1.0-alpha.4
+
+## 0.1.0-alpha.3
+
+### Minor Changes
+
+- [#159](https://github.com/mattppal/mcut/pull/159) [`9b17ac7`](https://github.com/mattppal/mcut/commit/9b17ac71a1314a9197d350ae110783537b13243a) Thanks [@mattppal](https://github.com/mattppal)! - `applyAnimationPreset` takes an element-local `atMs`. In and emphasis presets start there, out presets end there, clamped to fit the clip. `withPlayheadDefaults` fills `atMs` from the playhead when the playhead is on the clip, and the MCP server and `applyCommands` use it.
+
+### Patch Changes
+
+- Updated dependencies [[`9b17ac7`](https://github.com/mattppal/mcut/commit/9b17ac71a1314a9197d350ae110783537b13243a)]:
+  - @mcut/timeline@0.1.0-alpha.3
+
 ## 0.1.0-alpha.2
 
 ### Patch Changes

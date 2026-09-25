@@ -6,7 +6,9 @@ description: The live bridge inside mcut Studio, and the standalone bridge proce
 The live bridge keeps the open editor as the source of truth while agents or
 scripts edit through MCP-style tools. It listens on localhost for a WebSocket
 from the editor at `/mcut-mcp`, Streamable HTTP MCP at `/mcp`, and a local RPC
-endpoint for the CLI commands below.
+endpoint for the CLI commands below. The editor uploads each finished
+`export_video` render to `/exports/<jobId>`, and the bridge writes the file to
+disk.
 
 ## The bridge in Studio
 
@@ -45,10 +47,16 @@ token `mcut-local-dev`.
 ## Bridge MCP adapter
 
 ```sh
-bunx -p @mcut/mcp-server mcut-bridge mcp --port 44737
+MCUT_BRIDGE_TOKEN=<token> bunx -p @mcut/mcp-server mcut-bridge mcp --port 44737
 ```
 
 This exposes a running bridge, in Studio or standalone, as an MCP stdio server.
+
+The bridge rejects `/rpc` calls without its token, so every command below except
+`start`, `status`, and `url` reads the token from `--token` or
+`MCUT_BRIDGE_TOKEN`. The token keeps other accounts on the same machine out,
+because the port is open to every local user and the token file is readable
+only by its owner.
 
 ## Utility commands
 

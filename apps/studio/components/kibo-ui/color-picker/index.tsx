@@ -232,7 +232,7 @@ export const ColorPickerHue = ({
     >
       <SliderPrimitive.Control className="flex h-4 w-full items-center">
         <SliderPrimitive.Track className="relative my-0.5 h-3 w-full grow rounded-full bg-[linear-gradient(90deg,#FF0000,#FFFF00,#00FF00,#00FFFF,#0000FF,#FF00FF,#FF0000)]" />
-        <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
+        <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
       </SliderPrimitive.Control>
     </SliderPrimitive.Root>
   );
@@ -260,7 +260,7 @@ export const ColorPickerAlpha = ({
         <SliderPrimitive.Track className="relative my-0.5 h-3 w-full grow rounded-full bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==')] bg-center bg-repeat-x dark:bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAALklEQVR4nGP8+vWrCAMewM3N/QafPBM+SWLAqAGDwQBGQgoIpZOB98KoAVQwAADxzQcSVIRCfQAAAABJRU5ErkJggg==')]">
           <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent to-black/50 dark:to-white/50" />
         </SliderPrimitive.Track>
-        <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
+        <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
       </SliderPrimitive.Control>
     </SliderPrimitive.Root>
   );
@@ -367,7 +367,7 @@ export const ColorPickerFormat = ({
     return (
       <div
         className={cn(
-          "-space-x-px relative flex w-full items-center rounded-md shadow-sm",
+          "-space-x-px relative flex w-full items-center rounded-md",
           className
         )}
         {...props}
@@ -392,7 +392,7 @@ export const ColorPickerFormat = ({
     return (
       <div
         className={cn(
-          "-space-x-px flex items-center rounded-md shadow-sm",
+          "-space-x-px flex items-center rounded-md",
           className
         )}
         {...props}
@@ -422,7 +422,7 @@ export const ColorPickerFormat = ({
       .map((value) => Math.round(value));
 
     return (
-      <div className={cn("w-full rounded-md shadow-sm", className)} {...props}>
+      <div className={cn("w-full rounded-md", className)} {...props}>
         <Input
           className="h-8 w-full bg-secondary px-2 text-xs shadow-none"
           readOnly
@@ -443,7 +443,7 @@ export const ColorPickerFormat = ({
     return (
       <div
         className={cn(
-          "-space-x-px flex items-center rounded-md shadow-sm",
+          "-space-x-px flex items-center rounded-md",
           className
         )}
         {...props}

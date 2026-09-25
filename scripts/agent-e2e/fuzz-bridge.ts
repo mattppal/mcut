@@ -26,7 +26,7 @@ const DEFAULT_SEQUENCES = 20
 const DEFAULT_LENGTH = 20
 const EXIT_FAILED = 1
 
-const SLOW_TOOLS = new Set(['ensure_transcript'])
+const SLOW_TOOLS = new Set(['ensure_transcript', 'export_video'])
 
 interface Options {
   seeds: number[]
@@ -84,7 +84,7 @@ async function fuzz(server: McpFuzzServer, options: Options): Promise<number> {
   const tools: FuzzTool[] = (await server.listTools()).filter((tool) => !SLOW_TOOLS.has(tool.name))
   const known = options.known ? knownFailures : []
   log(
-    `${options.seeds.length} sequences of ${options.length} steps over ${tools.length} tools (${[...SLOW_TOOLS].join(', ')} left out, transcription can take minutes)`,
+    `${options.seeds.length} sequences of ${options.length} steps over ${tools.length} tools (${[...SLOW_TOOLS].join(', ')} left out, transcription and export can take minutes)`,
   )
   const totals = emptyTallies()
   const startedAt = Date.now()

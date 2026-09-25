@@ -2,6 +2,11 @@ import { z } from 'zod'
 import { operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
 import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
+import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
+import { commandBatchSchema } from './transact-shape'
+
+export * from './export-protocol'
+export { applyTransact, transactSubRequestSchema, type TransactSubRequest } from './transact-shape'
 
 export interface McpToolDefinition {
   name: string
@@ -57,8 +62,12 @@ export const MCP_AGENT_TOOL_NAMES = [
   'run_operator',
   'list_actions',
   'run_action',
+  'transact',
   'undo',
   'redo',
+  'export_video',
+  'get_export',
+  'cancel_export',
 ] as const
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
@@ -103,13 +112,19 @@ export const MCP_TOOL_INPUTS = {
   }),
   list_commands: EMPTY_INPUT,
   apply_commands: z.strictObject({
-    commands: z
+    commands: commandBatchSchema,
+  }),
+  transact: z.strictObject({
+    calls: z
       .array(
-        z.looseObject({
-          type: z.string().describe('Timeline command type, e.g. splitElement, trimElement, addElement.'),
+        z.strictObject({
+          name: z.string(),
+          arguments: z.record(z.string(), z.unknown()).optional(),
         }),
       )
-      .min(1),
+      .min(1)
+      .max(100)
+      .describe('Tool calls to apply as one undo step. Each name is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.'),
   }),
   apply_captions: applyCaptionsInputSchema,
   apply_silence_cuts: applySilenceCutsInputSchema,
@@ -123,6 +138,9 @@ export const MCP_TOOL_INPUTS = {
   run_action: z.strictObject({ actionId: z.string(), input: TOOL_INPUT }),
   undo: EMPTY_INPUT,
   redo: EMPTY_INPUT,
+  export_video: exportVideoInputSchema,
+  get_export: getExportInputSchema,
+  cancel_export: cancelExportInputSchema,
 } satisfies Record<McpAgentToolName, z.ZodType>
 
 const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
@@ -153,7 +171,10 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   apply_captions:
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
     'Pass elementId to caption only the source span one video/audio clip plays, at its timeline position. ' +
-    'styleId picks a caption style preset. Returns the updated project summary.',
+    'styleId picks a caption style preset. Returns the updated project summary. ' +
+    'Pass a timed transcript from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
+    'Never invent a transcript when transcription fails. ' +
+    'The result warns when the transcript matches no transcript in the project.',
   apply_silence_cuts:
     'Cut transcript silence out of one video/audio element (splits, ripple deletes, and edge trims) ' +
     'as one undoable edit. Returns the removed silence windows in source-media time and the updated project summary.',
@@ -173,12 +194,27 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   run_operator: 'Run a user-level editor operator by id. Use list_operators first when you need the available ids and input schemas.',
   list_actions:
     'List browser editor actions available in the live editor, including menu/palette/hotkey actions. ' +
-    'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close.',
+    'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close. ' +
+    'To render the finished video, use export_video instead.',
   run_action:
     'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette. ' +
-    'Prefer high-level actions over hand-authored command sequences when available.',
-  undo: 'Undo the most recent edit.',
+    'Prefer high-level actions over hand-authored command sequences when available. ' +
+    'To export or render the finished video, call export_video, then get_export until it is done.',
+  transact:
+    'Apply 1 to 100 tool calls as one undo step. If any call fails, nothing stays applied. ' +
+    'Wrap one intent in one transact, for example a fade in and a fade out, so undo removes the whole intent. ' +
+    'Each call is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.',
+  undo: 'Undo the most recent edit. One undo step is one tool call or one whole transact.',
   redo: 'Redo the most recently undone edit.',
+  export_video:
+    'Live bridge only: render the whole timeline to a video file in Studio and write it to disk through the bridge. No dialog opens. ' +
+    'Returns at once with a jobId while Studio renders in the background, which takes minutes for a long timeline. ' +
+    'Then call get_export { jobId, waitMs: 20000 } until state is done, which reports the file path and byte size. One export runs at a time.',
+  get_export:
+    'Report an export job from export_video: state (rendering, writing, done, failed, or cancelled), percent, elapsedMs, ' +
+    'an etaMs estimate while rendering, outputPath, and bytes once done. waitMs long-polls until the job ends or the wait runs out, ' +
+    'so call it with waitMs 20000 until state is done.',
+  cancel_export: 'Cancel the running export from export_video. Studio stops rendering and nothing is written.',
 }
 
 const toolDefinition = (name: McpAgentToolName): McpToolDefinition => ({
@@ -212,8 +248,12 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('list_operators'),
   staticToolCall('list_actions'),
   staticToolCall('run_action'),
+  staticToolCall('transact'),
   staticToolCall('undo'),
   staticToolCall('redo'),
+  staticToolCall('export_video'),
+  staticToolCall('get_export'),
+  staticToolCall('cancel_export'),
 ])
 
 export type McpServerStaticToolCall = z.infer<typeof MCP_SERVER_STATIC_TOOL_CALL_SCHEMA>

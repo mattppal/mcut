@@ -24,7 +24,7 @@ function allowedOrigins(options: LaunchOptions): string[] {
 
 function bridgeHostOptions(options: LaunchOptions): BridgeHostOptions {
   const studioOrigin = options.devUrl?.origin ?? STUDIO_ORIGIN
-  return { editorUrl: `${studioOrigin}/editor`, allowedOrigins: allowedOrigins(options) }
+  return { editorUrl: `${studioOrigin}/editor`, allowedOrigins: allowedOrigins(options), exportDir: app.getPath('downloads') }
 }
 
 async function hostBridge(config: BridgeConfig, options: BridgeHostOptions): Promise<{ host: BridgeHost; title: string }> {
@@ -66,7 +66,7 @@ async function main(): Promise<void> {
   const options = parseLaunchOptions({ argv: process.argv, env: process.env })
   await app.whenReady()
   reportSafeStorageBackend()
-  const settings = openSettings(path.join(app.getPath('userData'), 'settings.json'))
+  const settings = openSettings(app.getPath('userData'))
   serveStudio({ transcribe: (request) => handleTranscribeRequest(request, settings) })
   hardenSession(allowedOrigins(options))
   routeDownloadsToSaveDialog()

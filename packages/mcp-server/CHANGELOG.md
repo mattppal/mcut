@@ -1,5 +1,72 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.10
+
+### Minor Changes
+
+- [#167](https://github.com/mattppal/mcut/pull/167) [`7b3a0c7`](https://github.com/mattppal/mcut/commit/7b3a0c71334f6bdc7981de5d1cda1323bbdcc25e) Thanks [@mattppal](https://github.com/mattppal)! - Add a `transact` tool that applies several tool calls as one undo step. If any call fails, the project and the undo stack stay as they were.
+
+## 0.1.0-alpha.9
+
+### Minor Changes
+
+- [#166](https://github.com/mattppal/mcut/pull/166) [`814105a`](https://github.com/mattppal/mcut/commit/814105a74a3159f57d18865e885ef72681ae1032) Thanks [@mattppal](https://github.com/mattppal)! - Export runs as a job on the live bridge. `export_video` starts a render in Studio and returns a `jobId` at once, `get_export` reports the state, percent, and an ETA and long-polls with `waitMs` until the file is written, and `cancel_export` stops the render. The bridge writes the file itself, to `outputPath` or to `LiveBridgeOptions.exportDir` (default `~/Downloads`), so no download or save dialog opens. A second `export_video` while one runs fails with `export-busy`.
+
+## 0.1.0-alpha.8
+
+### Patch Changes
+
+- [#170](https://github.com/mattppal/mcut/pull/170) [`7de9d8d`](https://github.com/mattppal/mcut/commit/7de9d8de87bf0446cb1ffa78a0b3f7885053bb15) Thanks [@mattppal](https://github.com/mattppal)! - The live bridge answers an unexpected HTTP handler error with 500 and refuses a WebSocket upgrade whose check throws, instead of crashing. `LiveBridgeOptions.onError` receives the error and defaults to stderr.
+
+## 0.1.0-alpha.7
+
+### Patch Changes
+
+- [#164](https://github.com/mattppal/mcut/pull/164) [`1cc9630`](https://github.com/mattppal/mcut/commit/1cc963001005ace3da7b856cd300dc6b2794f0e3) Thanks [@mattppal](https://github.com/mattppal)! - The live bridge answers a request with a malformed URL or Host header with 400 instead of crashing.
+
+## 0.1.0-alpha.6
+
+### Minor Changes
+
+- [#156](https://github.com/mattppal/mcut/pull/156) [`53b78d7`](https://github.com/mattppal/mcut/commit/53b78d7fdaaeed29df8d1654702d073eacf75e65) Thanks [@mattppal](https://github.com/mattppal)! - `run_action` and `list_actions` name `file.export-video` for export. `apply_captions` warns when its transcript matches no captions in the project, so invented transcripts are visible, and it now fails without touching existing captions when the transcript yields no captions. `applyAnimationPreset` points to `effects.fade-open-close` for a fade in and out as one undo step.
+
+### Patch Changes
+
+- Updated dependencies [[`53b78d7`](https://github.com/mattppal/mcut/commit/53b78d7fdaaeed29df8d1654702d073eacf75e65)]:
+  - @mcut/timeline@0.1.0-alpha.5
+  - @mcut/editor@0.1.0-alpha.5
+  - @mcut/transcription@0.1.0-alpha.5
+
+## 0.1.0-alpha.5
+
+### Minor Changes
+
+- [#155](https://github.com/mattppal/mcut/pull/155) [`b6f0765`](https://github.com/mattppal/mcut/commit/b6f07651f745e393b59e5db6dbc4e67f370939b3) Thanks [@mattppal](https://github.com/mattppal)! - The project summary lists each layout by role (picture-in-picture, full-frame, split) with every slot's pixel size and aspect. A `saveLayout` tool result shows each slot before and after with width and height change, and warns when a full-frame layout's only slot stops covering the frame.
+
+### Patch Changes
+
+- Updated dependencies [[`b6f0765`](https://github.com/mattppal/mcut/commit/b6f07651f745e393b59e5db6dbc4e67f370939b3)]:
+  - @mcut/timeline@0.1.0-alpha.4
+  - @mcut/editor@0.1.0-alpha.4
+  - @mcut/transcription@0.1.0-alpha.4
+
+## 0.1.0-alpha.4
+
+### Minor Changes
+
+- [#151](https://github.com/mattppal/mcut/pull/151) [`fa25629`](https://github.com/mattppal/mcut/commit/fa256296c4f284c58f289fc448564fc9c2fe2b88) Thanks [@mattppal](https://github.com/mattppal)! - Add a `mcp-server` bin so `npx -y @mcut/mcp-server` and `bunx @mcut/mcp-server project.mcut.json` start the stdio server. The bridge `/rpc` endpoint now requires the bridge token, and `mcut-bridge` reads it from `--token` or `MCUT_BRIDGE_TOKEN`.
+
+## 0.1.0-alpha.3
+
+### Patch Changes
+
+- [#159](https://github.com/mattppal/mcut/pull/159) [`9b17ac7`](https://github.com/mattppal/mcut/commit/9b17ac71a1314a9197d350ae110783537b13243a) Thanks [@mattppal](https://github.com/mattppal)! - `applyAnimationPreset` takes an element-local `atMs`. In and emphasis presets start there, out presets end there, clamped to fit the clip. `withPlayheadDefaults` fills `atMs` from the playhead when the playhead is on the clip, and the MCP server and `applyCommands` use it.
+
+- Updated dependencies [[`9b17ac7`](https://github.com/mattppal/mcut/commit/9b17ac71a1314a9197d350ae110783537b13243a)]:
+  - @mcut/timeline@0.1.0-alpha.3
+  - @mcut/editor@0.1.0-alpha.3
+  - @mcut/transcription@0.1.0-alpha.3
+
 ## 0.1.0-alpha.2
 
 ### Patch Changes

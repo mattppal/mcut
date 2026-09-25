@@ -30,9 +30,32 @@ project, per the [Cursor MCP docs](https://cursor.com/docs/context/mcp).
 }
 ```
 
-The same URL works for any client that speaks Streamable HTTP MCP. For a stdio
-only client, run `bunx -p @mcut/mcp-server mcut-bridge mcp --port 44737` as the
-server command. It forwards to the running app.
+The same URL works for any client that speaks Streamable HTTP MCP.
+
+## Add a stdio server
+
+A client that only speaks stdio runs the `mcut-bridge mcp` adapter, which
+forwards every tool call to the running app. The adapter needs the same token,
+the `token` value from Copy MCP URL.
+
+```json
+{
+  "mcpServers": {
+    "mcut": {
+      "command": "bunx",
+      "args": ["-p", "@mcut/mcp-server", "mcut-bridge", "mcp", "--port", "44737"],
+      "env": { "MCUT_BRIDGE_TOKEN": "<token from the app>" }
+    }
+  }
+}
+```
+
+## Approve the server in cursor-agent
+
+The Cursor CLI, `cursor-agent`, lists a server from a project `.cursor/mcp.json`
+as `not loaded (needs approval)` until you approve it. Run
+`cursor-agent mcp enable mcut` once, or pass `--approve-mcps` to a run.
+`cursor-agent mcp list` shows `mcut: ready` when the server loads.
 
 ## The fixed port
 
@@ -66,5 +89,7 @@ Every tool in the [MCP server reference](/docs/reference/mcp-server) is
 available, including the live bridge only tools. `ensure_transcript` runs
 transcription in the app, `run_action` reaches the editor actions such as
 `transcript.remove-silence`, and `get_summary` reads the project that is open
-in the window. The [agent instructions](/docs/agent-instructions) page is the
-prompt-side companion to this setup.
+in the window. `export_video` renders the timeline and writes the video to your
+Downloads folder without a save dialog. The
+[agent instructions](/docs/agent-instructions) page is the prompt-side
+companion to this setup.

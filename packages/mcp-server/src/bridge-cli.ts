@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { DEFAULT_BRIDGE_PORT, LiveMcutBridge, createHttpBridgeTarget, parseLiveBridgePort } from './live-bridge'
+import { DEFAULT_BRIDGE_PORT, LiveMcutBridge, bridgeRpcUrl, createHttpBridgeTarget, parseLiveBridgePort } from './live-bridge'
 import { createMcutMcpServerForTarget } from './server'
 
 interface ParsedArgs {
@@ -31,7 +31,9 @@ function usage(): string {
     "  mcut-bridge operator <operatorId> [--json '{...}'] [--port 44737]",
     '  mcut-bridge undo [--port 44737]',
     '  mcut-bridge redo [--port 44737]',
-    '  mcut-bridge mcp [--port 44737]',
+    '  mcut-bridge mcp [--port 44737] [--token <token>]',
+    '',
+    'Every command except start, status, and url needs the bridge token, from --token or MCUT_BRIDGE_TOKEN.',
   ].join('\n')
 }
 
@@ -44,7 +46,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   const command = argv[0] ?? 'help'
   const rest: string[] = []
   let port = parseLiveBridgePort(process.env.MCUT_BRIDGE_PORT) ?? DEFAULT_BRIDGE_PORT
-  let token: string | undefined
+  let token = process.env.MCUT_BRIDGE_TOKEN || undefined
   let json: unknown = {}
   let editorUrl = 'http://localhost:3000/editor'
   const allowedOrigins: string[] = []
@@ -71,8 +73,8 @@ function parseArgs(argv: string[]): ParsedArgs {
   return { command, rest, port, token, json, editorUrl, allowedOrigins }
 }
 
-async function rpc(port: number, type: string, payload: unknown = {}): Promise<unknown> {
-  const response = await fetch(`http://127.0.0.1:${port}/rpc`, {
+async function rpc(args: ParsedArgs, type: string, payload: unknown = {}): Promise<unknown> {
+  const response = await fetch(bridgeRpcUrl(args.port, args.token), {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -151,56 +153,56 @@ async function main(): Promise<void> {
       process.stdout.write(`${editorUrl(args.editorUrl, args.port, args.token)}\n`)
       return
     case 'get-summary':
-      print(await rpc(args.port, 'get_summary'))
+      print(await rpc(args, 'get_summary'))
       return
     case 'get-project':
-      print(await rpc(args.port, 'get_project'))
+      print(await rpc(args, 'get_project'))
       return
     case 'get-media-context':
-      print(await rpc(args.port, 'get_media_context'))
+      print(await rpc(args, 'get_media_context'))
       return
     case 'get-transcript':
-      print(await rpc(args.port, 'get_transcript', args.json))
+      print(await rpc(args, 'get_transcript', args.json))
       return
     case 'search-transcript': {
       const query = args.rest.join(' ').trim()
       if (!query) throw new Error('search-transcript requires a query.')
-      print(await rpc(args.port, 'search_transcript', { query }))
+      print(await rpc(args, 'search_transcript', { query }))
       return
     }
     case 'ensure-transcript':
-      print(await rpc(args.port, 'ensure_transcript', args.json))
+      print(await rpc(args, 'ensure_transcript', args.json))
       return
     case 'list-actions':
-      print(await rpc(args.port, 'list_actions'))
+      print(await rpc(args, 'list_actions'))
       return
     case 'action': {
       const actionId = args.rest[0]
       if (!actionId) throw new Error('action requires an action id.')
-      print(await rpc(args.port, 'run_action', { actionId, input: args.json }))
+      print(await rpc(args, 'run_action', { actionId, input: args.json }))
       return
     }
     case 'dispatch': {
       const commandName = args.rest[0]
       if (!commandName) throw new Error('dispatch requires a command name.')
-      print(await rpc(args.port, 'dispatch_command', { commandName, input: args.json }))
+      print(await rpc(args, 'dispatch_command', { commandName, input: args.json }))
       return
     }
     case 'operator': {
       const operatorId = args.rest[0]
       if (!operatorId) throw new Error('operator requires an operator id.')
-      print(await rpc(args.port, 'run_operator', { operatorId, input: args.json }))
+      print(await rpc(args, 'run_operator', { operatorId, input: args.json }))
       return
     }
     case 'undo':
-      print(await rpc(args.port, 'undo'))
+      print(await rpc(args, 'undo'))
       return
     case 'redo':
-      print(await rpc(args.port, 'redo'))
+      print(await rpc(args, 'redo'))
       return
     case 'mcp': {
       const server = createMcutMcpServerForTarget({
-        target: createHttpBridgeTarget(args.port),
+        target: createHttpBridgeTarget(args.port, args.token),
         name: 'mcut-bridge',
       })
       await server.connect(new StdioServerTransport())

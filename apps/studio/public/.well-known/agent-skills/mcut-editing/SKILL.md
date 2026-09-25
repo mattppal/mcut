@@ -29,7 +29,38 @@ Minimum loop:
 4. If transcript is missing, `ensure_transcript`
 5. `list_actions`
 6. Prefer `run_action` high-level actions over raw commands
-7. Re-read the returned summary and context and verify timing
+7. Wrap one intent in one `transact` so undo removes the whole intent
+8. Re-read the returned summary and context and verify timing
+
+## One intent, one undo step
+
+One tool call is one undo step. `transact` runs a list of calls as that one
+step. If any call fails, the project stays as it was and the undo stack does
+not grow.
+
+A fade in and a fade out are one intent. Send them together.
+
+```json
+{
+  "name": "transact",
+  "arguments": {
+    "calls": [
+      {
+        "name": "applyAnimationPreset",
+        "arguments": { "elementId": "e-video", "preset": "fade-in" }
+      },
+      {
+        "name": "applyAnimationPreset",
+        "arguments": { "elementId": "e-video", "preset": "fade-out" }
+      }
+    ]
+  }
+}
+```
+
+`undo` then removes both presets. Two separate `applyAnimationPreset` calls
+undo one preset at a time. Each call is a timeline command, an `operator_*`
+tool, `run_operator`, `run_action`, or `apply_commands`.
 
 ## Required workflows
 
@@ -74,6 +105,7 @@ For clip-to-clip transitions, use `setTransition` only on the left clip of an
 exact butt cut. Built-ins: `dissolve`, `fade-black`, `fade-white`, `slide-left`,
 `slide-right`, `wipe-left`, `wipe-right`.
 
+<<<<<<< HEAD
 ### Punch-ins and detail zooms
 
 Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
@@ -93,6 +125,22 @@ On a multicam, set `source` to the screen key so the camera overlay stays put.
 Place a detail zoom over the words that discuss the region, found with
 `search_transcript`. When asked to tone zooms down, lower `scale` rather than
 removing zooms or turning off motion blur.
+=======
+### Export a video
+
+Export runs as a job on the live bridge. Studio renders the timeline and the
+bridge writes the file, so no download or save dialog opens.
+
+1. `export_video` with `{ "format": "mp4" }`, or with no input so Studio picks
+   mp4 when it can encode H.264 and webm otherwise. Pass an absolute
+   `outputPath` when the user names a file.
+2. `get_export` with `{ "jobId": "...", "waitMs": 20000 }` until `state` is
+   `done`. Each answer carries the percent and `etaMs`.
+3. Report `outputPath` and `bytes` from the `done` answer.
+
+`export-busy` means an export is already running. Wait for it with `get_export`
+or stop it with `cancel_export`.
+>>>>>>> origin/main
 
 ## Timing rules
 
@@ -109,7 +157,8 @@ removing zooms or turning off motion blur.
 ## When to use raw commands
 
 Use `apply_commands` or raw command tools only when there is no high-level
-action or operator for the intent. Batch related commands in one transaction.
+action or operator for the intent. Put every call that belongs to one intent
+inside one `transact`.
 
 Common raw-command cases:
 
@@ -129,4 +178,4 @@ Load only when needed:
 - `references/captions.md` for transcript and caption shaping.
 - `references/multicam.md` for multicam edits.
 - `references/platforms.md` for delivery formats and safe areas.
-- `references/export.md` for browser export.
+- `references/export.md` for containers, codecs, bitrates, and export outside Studio.
