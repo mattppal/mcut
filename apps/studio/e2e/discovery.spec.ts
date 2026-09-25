@@ -24,6 +24,7 @@ const AGENT_TOOL_NAMES = [
   'transact',
   'undo',
   'redo',
+  'import_media',
 ]
 
 const FULL_TOOL_COUNT = 121

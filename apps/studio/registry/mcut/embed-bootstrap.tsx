@@ -33,8 +33,11 @@ async function fetchClipFile(clip: string): Promise<File> {
 
 async function bootstrapEmbed(engine: EditorEngine, options: EmbedOptions): Promise<{ elementId: ElementId; project: Project }> {
   const [file] = await Promise.all([fetchClipFile(options.clip), preloadMediabunny()])
-  const [asset] = await importMediaFiles(engine, [file])
-  if (!asset) throw new Error('Could not import the clip')
+  const [imported] = await importMediaFiles(engine, [file])
+  if (imported === undefined || !imported.ok) {
+    throw new Error(imported !== undefined && !imported.ok ? imported.error : 'Could not import the clip')
+  }
+  const asset = imported.asset
   if (asset.width !== undefined && asset.height !== undefined) {
     engine.dispatch({ type: 'updateProject', width: asset.width, height: asset.height }, { history: false })
   }
