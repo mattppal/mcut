@@ -29,7 +29,38 @@ Minimum loop:
 4. If transcript is missing, `ensure_transcript`
 5. `list_actions`
 6. Prefer `run_action` high-level actions over raw commands
-7. Re-read the returned summary and context and verify timing
+7. Wrap one intent in one `transact` so undo removes the whole intent
+8. Re-read the returned summary and context and verify timing
+
+## One intent, one undo step
+
+One tool call is one undo step. `transact` runs a list of calls as that one
+step. If any call fails, the project stays as it was and the undo stack does
+not grow.
+
+A fade in and a fade out are one intent. Send them together.
+
+```json
+{
+  "name": "transact",
+  "arguments": {
+    "calls": [
+      {
+        "name": "applyAnimationPreset",
+        "arguments": { "elementId": "e-video", "preset": "fade-in" }
+      },
+      {
+        "name": "applyAnimationPreset",
+        "arguments": { "elementId": "e-video", "preset": "fade-out" }
+      }
+    ]
+  }
+}
+```
+
+`undo` then removes both presets. Two separate `applyAnimationPreset` calls
+undo one preset at a time. Each call is a timeline command, an `operator_*`
+tool, `run_operator`, `run_action`, or `apply_commands`.
 
 ## Required workflows
 
@@ -104,7 +135,8 @@ or stop it with `cancel_export`.
 ## When to use raw commands
 
 Use `apply_commands` or raw command tools only when there is no high-level
-action or operator for the intent. Batch related commands in one transaction.
+action or operator for the intent. Put every call that belongs to one intent
+inside one `transact`.
 
 Common raw-command cases:
 
