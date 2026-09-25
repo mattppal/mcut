@@ -193,6 +193,10 @@ async function getExportSupport(format: ContainerFormatId = 'mp4'): Promise<{
 
 Resolves with whether the browser can encode video and audio for the given container format.
 
+### renderProjectStill
+
+Renders one timeline frame to a PNG blob. A `timeMs` past the project end throws, and the error names the project duration. `soloElementId` draws only that element, including a multicam composite, and throws when that element is not on screen. `width` caps the PNG width and keeps the project aspect ratio. Omit it to render at the project size. The result carries the PNG blob, the pixel size, and the ids of the elements drawn.
+
 ### listContainerFormats
 
 ```ts
