@@ -370,6 +370,11 @@
           "target": "components/mcut/properties-multicam.tsx"
         },
         {
+          "path": "registry/mcut/properties-voice.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/properties-voice.tsx"
+        },
+        {
           "path": "registry/mcut/properties-text.tsx",
           "type": "registry:component",
           "target": "components/mcut/properties-text.tsx"
@@ -1205,7 +1210,8 @@
         "@mcut/media",
         "color",
         "sonner",
-        "zod"
+        "zod",
+        "@mcut/voice"
       ],
       "registryDependencies": [
         "button",
@@ -1294,6 +1300,11 @@
           "target": "components/mcut/properties-multicam.tsx"
         },
         {
+          "path": "registry/mcut/properties-voice.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/properties-voice.tsx"
+        },
+        {
           "path": "registry/mcut/properties-text.tsx",
           "type": "registry:component",
           "target": "components/mcut/properties-text.tsx"
@@ -1342,6 +1353,16 @@
           "path": "registry/mcut/multicam-ui.ts",
           "type": "registry:lib",
           "target": "components/mcut/multicam-ui.ts"
+        },
+        {
+          "path": "registry/mcut/voice-cleanup.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/voice-cleanup.tsx"
+        },
+        {
+          "path": "registry/mcut/voice-stems.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/voice-stems.ts"
         }
       ],
       "cssVars": {
