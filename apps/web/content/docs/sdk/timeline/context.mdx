@@ -106,7 +106,7 @@ interface ProjectMediaElementContext {
       key: string
       assetId: string
       assetName?: string
-      trimStartMs: number
+      offsetMs: number
     }>
   }
   effects?: string[]
@@ -118,7 +118,7 @@ interface ProjectMediaElementContext {
 }
 ```
 
-One element in context form, its placement, selection and active state, and the asset, source, text, caption, multicam, effect, blend, and transition details that apply to its type.
+One element in context form, its placement, selection and active state, and the asset, source, text, caption, multicam, effect, blend, and transition details that apply to its type. Every media clip, a multicam included, reports its source window in `source`. A multicam adds its source offsets and `angleCount`, the number of angle spans its window plays.
 
 ### ProjectMediaTrackContext
 

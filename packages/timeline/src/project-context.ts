@@ -3,6 +3,7 @@ import { getProjectDurationMs } from './selectors'
 import { assertNever } from './errors'
 import { getElementAssetIds, isMediaClip, type MediaClip } from './media-clip'
 import type { AssetRef, CaptionElement, Marker, MulticamElement, Project, TimelineElement, Track } from './model'
+import { getVisibleAngleCuts } from './multicam'
 import type { PlaybackState } from './engine'
 
 export interface ProjectCaptionRef {
@@ -353,7 +354,7 @@ function addSourceContext(target: ProjectMediaElementContext, clip: MediaClip): 
 function addMulticamContext(target: ProjectMediaElementContext, project: Project, element: MulticamElement): void {
   target.multicam = {
     ...(element.audioSource ? { audioSource: element.audioSource } : {}),
-    angleCount: element.angles.length,
+    angleCount: getVisibleAngleCuts(element).length,
     sources: element.sources.map((source) => {
       const assetName = project.assets[source.assetId]?.name
       return { key: source.key, assetId: source.assetId, ...(assetName ? { assetName } : {}), offsetMs: source.offsetMs }
