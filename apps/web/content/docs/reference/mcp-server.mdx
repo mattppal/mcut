@@ -27,9 +27,9 @@ creates the file when missing and writes it after successful edits.
 
 ## Static tools
 
-The published server registers twenty-one static tools. The live bridge handles
+The published server registers twenty-two static tools. The live bridge handles
 three more in the editor, `list_commands`, `apply_commands`, and
-`run_operator`, which together with the twenty-one form the twenty-four-tool agent
+`run_operator`, which together with the twenty-two form the twenty-five-tool agent
 profile. Studio serves the profiles inside the desktop app, with a catalog at
 `app://studio/tools`, at `app://studio/tools.json` and
 `app://studio/tools.agent.json`. The full profile
@@ -53,6 +53,7 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `lint_project` | Cross-entity problems `parseProject` cannot reject, each with a severity and code. |
 | `list_zooms` | Every zoom region with its element, timing, target, easing, and motion blur. |
 | `edit_zooms` | Add, update, or remove zoom regions as one undoable edit. |
+| `center_person` | Live bridge only. Find the face on device and keep the person in frame as one undoable edit, on a video crop or a multicam camera source. A video crop at the project aspect also scales the clip to fill the frame, and `fill` overrides that. |
 | `list_presets` | Platform delivery presets with dimensions, fps, and safe areas. |
 | `list_operators` | List available UI-level editor operators. |
 | `run_operator` | Live bridge only. Run an operator by id. |

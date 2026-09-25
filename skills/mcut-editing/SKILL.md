@@ -15,9 +15,10 @@ JSON surgery when an mcut MCP tool or action exists.
 
 **MCP server** access is the normal agent path.
 
-For real media, transcription, silence removal, audio activity, in-editor
-export, importing local files, or current editor state, use the live bridge, not the file-only stdio
-server. mcut Studio hosts the bridge at `http://127.0.0.1:44737/mcp` with the
+For real media, transcription, silence removal, audio activity, face tracking,
+in-editor export, importing local files, or current editor state, use the live
+bridge, not the file-only stdio server. mcut Studio hosts the bridge at
+`http://127.0.0.1:44737/mcp` with the
 token from the app's MCP menu. Developers running the editor as a browser tab
 start the same bridge with `mcut-bridge start`.
 
@@ -28,7 +29,7 @@ Minimum loop:
 3. If speech matters, `get_transcript` with `includeWords: true`
 4. If transcript is missing, `ensure_transcript`
 5. `list_actions`
-6. Prefer `run_action` high-level actions over raw commands
+6. Prefer `run_action` high-level actions and task tools such as `edit_zooms` and `center_person` over raw commands
 7. When one user request needs more than one edit call, send them all in one
    `transact`, so "undo that" removes the whole request. "Make it square and
    fill the frame" is one request, not five calls
@@ -160,6 +161,29 @@ On a multicam, set `source` to the screen key so the camera overlay stays put.
 Place a detail zoom over the words that discuss the region, found with
 `search_transcript`. When asked to tone zooms down, lower `scale` rather than
 removing zooms or turning off motion blur.
+
+### Keep a person in frame
+
+`center_person` finds the face on device and applies one undoable reframe. It
+waits for the analysis, and the first run also downloads the face model.
+
+```json
+{
+  "elementId": "e-...",
+  "aspect": 0.5625,
+  "smoothing": 0.5
+}
+```
+
+On a video it crops to `aspect`, 9:16 by default, and the crop follows the face.
+When that aspect is within 1% of the project aspect, it also scales the clip to
+fill the frame and centers it in the same undo step. At another aspect the clip
+keeps its size, as a picture in picture camera should. Pass `fill` true or false
+to override. It never resizes the project, so for a vertical cut run
+`updateProject` first, as in `references/platforms.md`. On a head overlay multicam
+it follows the `camera` source by default and ignores `aspect` and `fill`. Raise
+`smoothing` toward 1 for a steadier frame. Do not hand-author reframe keys or crop
+with ffmpeg.
 
 ## Timing rules
 

@@ -17,6 +17,7 @@ export interface Download {
 export interface Fixtures {
   clip: string
   speech: string
+  face: string
   image: string
 }
 

@@ -52,6 +52,7 @@ export interface McutMcpTarget {
   getTranscript?(options?: ProjectTranscriptOptions): unknown | Promise<unknown>
   searchTranscript?(query: string): unknown | Promise<unknown>
   ensureTranscript?(input: unknown): unknown | Promise<unknown>
+  centerPerson?(input: unknown): unknown | Promise<unknown>
   getAudioActivity?(input: unknown): unknown | Promise<unknown>
   listActions(): unknown | Promise<unknown>
   listOperators(): unknown | Promise<unknown>
@@ -137,6 +138,9 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
     searchTranscript: (query) => searchProjectTranscript(engine.project, query),
     ensureTranscript: async () => {
       throw new Error('ensure_transcript requires a live browser bridge connected to an editor tab.')
+    },
+    centerPerson: async () => {
+      throw new Error('center_person requires a live browser bridge connected to an editor tab.')
     },
     getAudioActivity: async () => {
       throw new Error('get_audio_activity requires a live browser bridge connected to an editor tab.')
@@ -240,6 +244,11 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'edit_zooms':
       await target.applyCommands(call.arguments.edits)
       return text(`OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}`)
+    case 'center_person': {
+      if (!target.centerPerson) return failure('center_person is not available on this target.')
+      const result = await target.centerPerson(call.arguments)
+      return text(`${withResult('OK: person centered.', result)}\n\n${await target.getSummary()}`)
+    }
     case 'list_presets':
       return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
     case 'apply_captions': {
