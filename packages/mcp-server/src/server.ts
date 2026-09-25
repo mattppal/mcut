@@ -17,6 +17,7 @@ import {
   CommandError,
   EditorEngine,
   ProjectFormatError,
+  describeLayoutChange,
   getProjectCaptions,
   getProjectMediaContext,
   getProjectTranscript,
@@ -71,6 +72,8 @@ const text = (value: string) => ({ content: [{ type: 'text' as const, text: valu
 const failure = (value: string) => ({ ...text(value), isError: true })
 
 const targetProject = async (target: McutMcpTarget): Promise<Project> => parseProject(await target.getProject())
+
+const savedLayoutArgs = z.object({ layout: z.object({ id: z.string() }) })
 
 type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure>
 
@@ -244,8 +247,11 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
         const result = await target.runOperator(operatorId, args ?? {})
         return text(`${withResult(`OK: operator ${operatorId} applied.`, result)}\n\n${await target.getSummary()}`)
       }
+      const layoutId = name === 'saveLayout' ? savedLayoutArgs.safeParse(args).data?.layout.id : undefined
+      const before = layoutId ? await targetProject(target) : null
       await target.dispatchCommand(name, args ?? {})
-      return text(`OK: ${name} applied.\n\n${await target.getSummary()}`)
+      const change = before && layoutId ? describeLayoutChange(before, await targetProject(target), layoutId) : []
+      return text([`OK: ${name} applied.`, ...change, '', await target.getSummary()].join('\n'))
     } catch (error) {
       if (error instanceof CommandError || error instanceof ProjectFormatError || error instanceof OperatorError) {
         return failure(`${error.name} (${error.code}): ${error.message}`)
