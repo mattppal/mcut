@@ -31,6 +31,7 @@
     "desktop-update-state",
     "duplicate-element-ids",
     "edge-trim-safe-integer",
+    "layout-summary-pixels",
     "lazy-mediabunny",
     "live-bridge-app-origin",
     "live-bridge-not-connected-message",
@@ -72,6 +73,7 @@
     "u8-react-playback",
     "u9-boundary-parse",
     "webgpu-player-default",
+    "whisper-load-watchdog",
     "whisper-model-load-retry",
     "whisper-progress-unclamped"
   ]

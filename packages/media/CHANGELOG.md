@@ -1,5 +1,13 @@
 # @mcut/media
 
+## 0.1.0-alpha.5
+
+### Patch Changes
+
+- Updated dependencies [[`b6f0765`](https://github.com/mattppal/mcut/commit/b6f07651f745e393b59e5db6dbc4e67f370939b3)]:
+  - @mcut/timeline@0.1.0-alpha.4
+  - @mcut/compositor@0.1.0-alpha.4
+
 ## 0.1.0-alpha.4
 
 ### Patch Changes
