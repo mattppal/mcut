@@ -213,6 +213,22 @@ describe('EditorEngine', () => {
     expect(engine.canUndo()).toBe(false)
     expect(engine.project.name).toBe('fresh')
   })
+
+  test('loadProject during an open transaction keeps the old project out of history', () => {
+    const { engine, trackId } = engineWithText()
+    engine.beginTransaction()
+    engine.dispatch({
+      type: 'addElement',
+      trackId,
+      element: { id: 'e-1', type: 'text', startMs: 0, durationMs: 1000, text: 'one' },
+    })
+    engine.loadProject(createProject({ name: 'fresh' }))
+    engine.endTransaction()
+    expect(engine.canUndo()).toBe(false)
+    expect(engine.undo()).toBe(false)
+    expect(engine.project.name).toBe('fresh')
+  })
+
   test('transport setters clamp', () => {
     const { engine } = engineWithText()
     engine.seek(-100)
