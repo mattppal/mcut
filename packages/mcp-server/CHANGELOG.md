@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.9
+
+### Minor Changes
+
+- [#166](https://github.com/mattppal/mcut/pull/166) [`814105a`](https://github.com/mattppal/mcut/commit/814105a74a3159f57d18865e885ef72681ae1032) Thanks [@mattppal](https://github.com/mattppal)! - Export runs as a job on the live bridge. `export_video` starts a render in Studio and returns a `jobId` at once, `get_export` reports the state, percent, and an ETA and long-polls with `waitMs` until the file is written, and `cancel_export` stops the render. The bridge writes the file itself, to `outputPath` or to `LiveBridgeOptions.exportDir` (default `~/Downloads`), so no download or save dialog opens. A second `export_video` while one runs fails with `export-busy`.
+
 ## 0.1.0-alpha.8
 
 ### Patch Changes
