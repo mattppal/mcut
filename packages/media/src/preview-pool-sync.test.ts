@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test'
 import { PreviewMediaPool, type ActiveMediaItem } from './preview-pool'
-import type { AssetId, AssetRef } from '@mcut/timeline'
+import type { AssetRef } from '@mcut/timeline'
 
 const created: FakeMedia[] = []
 
@@ -46,7 +46,7 @@ afterAll(() => {
 })
 
 test('a cleaned copy keeps a simultaneous dry copy of the same asset audible', () => {
-  const asset: AssetRef = { id: 'a-shared' as AssetId, kind: 'audio', src: 'blob:dry' }
+  const asset: AssetRef = { id: 'a-shared', kind: 'audio', src: 'blob:dry' }
   const pool = new PreviewMediaPool(() => asset)
   const base: ActiveMediaItem = {
     assetId: asset.id,
