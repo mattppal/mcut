@@ -321,6 +321,8 @@ export class LiveMcutBridge {
       centerPerson: (input) => this.request('center_person', input ?? {}),
       getAudioActivity: (input) => this.request('get_audio_activity', input ?? {}),
       getFrame: (input) => this.request('get_frame', input ?? {}),
+      findSceneChanges: (input) => this.request('find_scene_changes', input ?? {}),
+      getContactSheet: (input) => this.request('get_contact_sheet', input ?? {}),
       listActions: () => this.request('list_actions'),
       listOperators: () => this.request('list_operators'),
       undo: async () => Boolean(await this.request('undo')),
@@ -338,7 +340,8 @@ export class LiveMcutBridge {
   }
 
   private timeoutFor(type: string): number {
-    if (type === 'ensure_transcript' || type === 'center_person') return this.transcriptionTimeoutMs
+    if (type === 'ensure_transcript' || type === 'center_person' || type === 'find_scene_changes' || type === 'get_contact_sheet')
+      return this.transcriptionTimeoutMs
     if (type === 'import_media') return this.importTimeoutMs
     return this.requestTimeoutMs
   }
@@ -581,6 +584,8 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT, token?: strin
     centerPerson: (input) => rpc('center_person', input ?? {}),
     getAudioActivity: (input) => rpc('get_audio_activity', input ?? {}),
     getFrame: (input) => rpc('get_frame', input ?? {}),
+    findSceneChanges: (input) => rpc('find_scene_changes', input ?? {}),
+    getContactSheet: (input) => rpc('get_contact_sheet', input ?? {}),
     listActions: () => rpc('list_actions'),
     listOperators: () => rpc('list_operators'),
     undo: async () => Boolean(await rpc('undo')),
