@@ -68,6 +68,7 @@ describe('createMcutMcpServer', () => {
     expect(names).toContain('get_transcript')
     expect(names).toContain('search_transcript')
     expect(names).toContain('ensure_transcript')
+    expect(names).toContain('ensure_voice_stems')
     expect(names).toContain('get_audio_activity')
     expect(names).toContain('apply_captions')
     expect(names).toContain('apply_silence_cuts')
@@ -207,6 +208,13 @@ describe('createMcutMcpServer', () => {
         text: 'ensure_transcript: ✖ invalid element id (expected "e-..." prefix)\n  → at arguments.elementId',
       },
     ])
+
+    const badVoiceId = await client.callTool({
+      name: 'ensure_voice_stems',
+      arguments: { elementIds: ['e-video', 'clip-1'] },
+    })
+    expect(badVoiceId.isError).toBe(true)
+    expect(contentText(badVoiceId)).toBe('ensure_voice_stems: ✖ invalid element id (expected "e-..." prefix)\n  → at arguments.elementIds[1]')
   })
 
   test('reports media context, transcript, search results, and file-backed transcription limits', async () => {
@@ -292,6 +300,10 @@ describe('createMcutMcpServer', () => {
     expect(ensured.isError).toBe(true)
     const ensuredText = (ensured.content as Array<{ type: string; text: string }>)[0]!.text
     expect(ensuredText).toContain('requires a live browser bridge')
+
+    const voiced = await client.callTool({ name: 'ensure_voice_stems', arguments: {} })
+    expect(voiced.isError).toBe(true)
+    expect(contentText(voiced)).toBe('ensure_voice_stems requires a live browser bridge connected to an editor tab.')
 
     const activity = await client.callTool({ name: 'get_audio_activity', arguments: {} })
     expect(activity.isError).toBe(true)
@@ -385,6 +397,19 @@ describe('createMcutMcpServer', () => {
         )
         return
       }
+      if (message.type === 'ensure_voice_stems') {
+        socket.send(
+          JSON.stringify({
+            id: message.id,
+            ok: true,
+            result: {
+              received: message.payload,
+              elements: [{ id: 'e-video', assetId: 'a-video', status: 'ready', processingMs: 1200 }],
+            },
+          }),
+        )
+        return
+      }
       if (message.type === 'get_audio_activity') {
         socket.send(
           JSON.stringify({
@@ -460,6 +485,16 @@ describe('createMcutMcpServer', () => {
     expect(ensured.isError).toBeFalsy()
     const ensuredContent = ensured.content as Array<{ type: string; text: string }>
     expect(ensuredContent[0]!.text).toContain('Transcript: true')
+
+    const voiced = await client.callTool({
+      name: 'ensure_voice_stems',
+      arguments: { elementIds: ['e-video'], wait: false },
+    })
+    expect(voiced.isError).toBeFalsy()
+    expect(JSON.parse(contentText(voiced))).toEqual({
+      received: { elementIds: ['e-video'], wait: false },
+      elements: [{ id: 'e-video', assetId: 'a-video', status: 'ready', processingMs: 1200 }],
+    })
 
     const activity = await client.callTool({
       name: 'get_audio_activity',

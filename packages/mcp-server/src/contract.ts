@@ -45,6 +45,7 @@ export const MCP_AGENT_TOOL_NAMES = [
   'get_transcript',
   'search_transcript',
   'ensure_transcript',
+  'ensure_voice_stems',
   'list_commands',
   'apply_commands',
   'apply_captions',
@@ -99,6 +100,10 @@ export const MCP_TOOL_INPUTS = {
     replace: z.boolean().describe('When true, replace captions overlapping the target clip. Defaults to false.').optional(),
     language: z.string().trim().describe('Optional language hint for Whisper.').optional(),
   }),
+  ensure_voice_stems: z.strictObject({
+    elementIds: z.array(elementIdSchema).describe('Clips to report on. Defaults to every clip with Clean up voice on.').optional(),
+    wait: z.boolean().describe('Wait until every stem is ready or failed. Defaults to true.').optional(),
+  }),
   list_commands: EMPTY_INPUT,
   apply_commands: z.strictObject({
     commands: z
@@ -144,6 +149,10 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
     'Required before transcript-based silence removal when captions are missing.',
+  ensure_voice_stems:
+    'Live bridge only: clean the voice of clips that have Clean up voice on, with DeepFilterNet3 in the connected browser, ' +
+    'and report each clip stem as ready, processing, or failed. Turn it on first with updateElement ({ voice: { enabled: true, amount: 1 } }) ' +
+    'or the audio.cleanVoice operator. Playback and export use the original audio until the stem is ready, so call this before export or before judging the audio.',
   list_commands: 'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
   apply_commands: 'Apply one or more serializable timeline commands in one undoable transaction, then return an updated project summary.',
   apply_captions:
@@ -191,6 +200,7 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('get_transcript'),
   staticToolCall('search_transcript'),
   staticToolCall('ensure_transcript'),
+  staticToolCall('ensure_voice_stems'),
   staticToolCall('get_audio_activity'),
   staticToolCall('apply_captions'),
   staticToolCall('apply_silence_cuts'),

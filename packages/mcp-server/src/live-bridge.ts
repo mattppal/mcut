@@ -6,6 +6,8 @@ import { createMcutMcpServerForTarget, type McutMcpTarget } from './server'
 
 export const DEFAULT_BRIDGE_PORT = 44737
 
+const ON_DEVICE_REQUESTS = new Set(['ensure_transcript', 'ensure_voice_stems'])
+
 export interface LiveBridgeOptions {
   token?: string | null
   editorUrl?: string
@@ -235,7 +237,7 @@ export class LiveMcutBridge {
   }
 
   async request(type: string, payload: unknown = {}): Promise<unknown> {
-    const timeoutMs = type === 'ensure_transcript' ? this.transcriptionTimeoutMs : this.requestTimeoutMs
+    const timeoutMs = ON_DEVICE_REQUESTS.has(type) ? this.transcriptionTimeoutMs : this.requestTimeoutMs
     const socket = await this.waitForSocket(Math.min(timeoutMs, this.reconnectGraceMs))
     const id = String(this.nextId++)
     const body = JSON.stringify({ id, type, payload })
@@ -262,6 +264,7 @@ export class LiveMcutBridge {
       getTranscript: (options) => this.request('get_transcript', options ?? {}),
       searchTranscript: (query) => this.request('search_transcript', { query }),
       ensureTranscript: (input) => this.request('ensure_transcript', input ?? {}),
+      ensureVoiceStems: (input) => this.request('ensure_voice_stems', input ?? {}),
       getAudioActivity: (input) => this.request('get_audio_activity', input ?? {}),
       listActions: () => this.request('list_actions'),
       listOperators: () => this.request('list_operators'),
@@ -464,6 +467,7 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT): McutMcpTarge
     getTranscript: (options) => rpc('get_transcript', options ?? {}),
     searchTranscript: (query) => rpc('search_transcript', { query }),
     ensureTranscript: (input) => rpc('ensure_transcript', input ?? {}),
+    ensureVoiceStems: (input) => rpc('ensure_voice_stems', input ?? {}),
     getAudioActivity: (input) => rpc('get_audio_activity', input ?? {}),
     listActions: () => rpc('list_actions'),
     listOperators: () => rpc('list_operators'),

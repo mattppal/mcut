@@ -53,7 +53,7 @@ describe('MCP tool manifest', () => {
     expect(body.profile).toBe('agent')
     expect(tools).toEqual(listMcpToolDefinitions('agent'))
     expect(tools).toEqual(JSON.parse(JSON.stringify(MCP_AGENT_TOOL_DEFINITIONS)))
-    expect(tools.length, '16 server static tools + 3 bridge-only tools (list_commands, apply_commands, run_operator)').toBe(19)
+    expect(tools.length, '17 server static tools + 3 bridge-only tools (list_commands, apply_commands, run_operator)').toBe(20)
     expect(toolNames.size).toBe(tools.length)
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true)
     for (const command of listCommands()) expect(toolNames.has(command.type)).toBe(false)
@@ -77,7 +77,7 @@ describe('MCP tool manifest', () => {
 
     expect(body.profile).toBe('full')
     expect(tools).toEqual(listMcpToolDefinitions('full'))
-    expect(tools.length, '19 agent tools + 43 editor operators + 59 timeline commands').toBe(121)
+    expect(tools.length, '20 agent tools + 43 editor operators + 59 timeline commands').toBe(122)
     expect(toolNames.size).toBe(tools.length)
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true)
     for (const id of operatorIds) expect(toolNames.has(liveMcpOperatorToolName(id))).toBe(true)
@@ -359,6 +359,7 @@ describe('Studio action/operator MCP surface', () => {
       'get_transcript',
       'search_transcript',
       'ensure_transcript',
+      'ensure_voice_stems',
       'list_commands',
       'apply_commands',
       'apply_captions',
