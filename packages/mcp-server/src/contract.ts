@@ -69,6 +69,7 @@ export const MCP_AGENT_TOOL_NAMES = [
   'export_video',
   'get_export',
   'cancel_export',
+  'import_media',
 ] as const
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
@@ -151,7 +152,46 @@ export const MCP_TOOL_INPUTS = {
   export_video: exportVideoInputSchema,
   get_export: getExportInputSchema,
   cancel_export: cancelExportInputSchema,
+  import_media: z.strictObject({
+    paths: z.array(z.string().min(1)).min(1).max(50).describe('Absolute paths of local media files. Studio probes each file and registers an asset.'),
+  }),
 } satisfies Record<McpAgentToolName, z.ZodType>
+
+const importMediaBridgeFileSchema = z.strictObject({
+  url: z.url(),
+  name: z.string().min(1),
+  mimeType: z.string().min(1),
+  size: z.int().nonnegative(),
+  path: z.string().min(1),
+})
+
+export const importMediaBridgePayloadSchema = z.strictObject({
+  files: z.array(importMediaBridgeFileSchema).min(1).max(50),
+})
+
+const importedMediaFileSchema = z.strictObject({
+  path: z.string(),
+  assetId: z.string(),
+  name: z.string(),
+  kind: z.enum(['video', 'audio', 'image']),
+  durationMs: z.int().nonnegative().optional(),
+  width: z.int().positive().optional(),
+  height: z.int().positive().optional(),
+})
+
+const mediaImportFailureSchema = z.strictObject({
+  path: z.string(),
+  error: z.string(),
+})
+
+export const mediaImportReportSchema = z.strictObject({
+  imported: z.array(importedMediaFileSchema),
+  failed: z.array(mediaImportFailureSchema),
+})
+
+export type MediaImportReport = z.infer<typeof mediaImportReportSchema>
+
+export type ImportMediaBridgeFile = z.infer<typeof importMediaBridgeFileSchema>
 
 const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   get_summary:
@@ -214,10 +254,12 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Several calls for one user request go in one transact.',
   list_actions:
     'List browser editor actions available in the live editor, including menu/palette/hotkey actions. ' +
+    'Actions with humanOnly open a dialog for a person and run_action rejects them. ' +
     'Use this in live bridge mode when you need exact UI parity or high-level agent actions such as transcript.remove-silence and effects.fade-open-close. ' +
     'To render the finished video, use export_video instead.',
   run_action:
     'Run a browser editor action by id in the live editor. These are the same actions used by menus, hotkeys, and the command palette. ' +
+    'Actions with humanOnly open a dialog for a person and are rejected. Actions without an input schema reject a non-empty input. ' +
     'Prefer high-level actions over hand-authored command sequences when available. ' +
     'Several calls for one user request go in one transact. ' +
     'To export or render the finished video, call export_video, then get_export until it is done.',
@@ -236,6 +278,10 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'an etaMs estimate while rendering, outputPath, and bytes once done. waitMs long-polls until the job ends or the wait runs out, ' +
     'so call it with waitMs 20000 until state is done.',
   cancel_export: 'Cancel the running export from export_video. Studio stops rendering and nothing is written.',
+  import_media:
+    'Live bridge only. Import local media files into the connected Studio project by absolute path. ' +
+    'The bridge checks each path, then Studio probes the file, registers the asset, and stores the bytes. ' +
+    'The result lists imported assets and per-file failures. Place an imported asset with addElement or an operator.',
 }
 
 const toolDefinition = (name: McpAgentToolName): McpToolDefinition => ({
@@ -276,6 +322,7 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('export_video'),
   staticToolCall('get_export'),
   staticToolCall('cancel_export'),
+  staticToolCall('import_media'),
 ])
 
 export type McpServerStaticToolCall = z.infer<typeof MCP_SERVER_STATIC_TOOL_CALL_SCHEMA>
