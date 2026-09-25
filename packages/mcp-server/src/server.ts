@@ -21,6 +21,7 @@ import {
   getProjectCaptions,
   getProjectMediaContext,
   getProjectTranscript,
+  listZoomRegions,
   parseCommand,
   parseProject,
   type BuiltinCommand,
@@ -201,6 +202,11 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       return text(JSON.stringify(await target.getAudioActivity(call.arguments), null, 2))
     case 'lint_project':
       return text(JSON.stringify(lintProject(await targetProject(target)), null, 2))
+    case 'list_zooms':
+      return text(JSON.stringify(listZoomRegions(await targetProject(target)), null, 2))
+    case 'edit_zooms':
+      await target.applyCommands(call.arguments.edits)
+      return text(`OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}`)
     case 'list_presets':
       return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
     case 'apply_captions': {

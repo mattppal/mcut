@@ -124,6 +124,26 @@ bridge writes the file, so no download or save dialog opens.
 `export-busy` means an export is already running. Wait for it with `get_export`
 or stop it with `cancel_export`.
 
+### Punch-ins and detail zooms
+
+Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
+`edit_zooms` adds, updates, or removes any number of them as one undoable edit.
+
+```json
+{
+  "edits": [
+    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "subtlePunchIn", "source": "screen", "atMs": 0 } },
+    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "detailZoom", "source": "screen", "atMs": 42000, "holdMs": 4000, "focus": { "x": 0.75, "y": 0.3 } } }
+  ]
+}
+```
+
+Keep zooms subtle (1.1x to 1.5x), keep `easeOutExpo`, and keep `motionBlur` on.
+On a multicam, set `source` to the screen key so the camera overlay stays put.
+Place a detail zoom over the words that discuss the region, found with
+`search_transcript`. When asked to tone zooms down, lower `scale` rather than
+removing zooms or turning off motion blur.
+
 ## Timing rules
 
 - All project times are integer milliseconds.

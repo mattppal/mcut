@@ -1,4 +1,4 @@
-import { resolveAnimatedElement, toCompositeOperation, type MotionBlur, type Project, type TimelineElement, type Track } from '@mcut/timeline'
+import { getZoomShutterMs, resolveAnimatedElement, toCompositeOperation, type MotionBlur, type Project, type TimelineElement, type Track } from '@mcut/timeline'
 import { Canvas2DBackend, createElementContext, type RenderBackend } from './backend'
 import type { Canvas2D, ElementRenderer, RenderFrameOptions } from './types'
 
@@ -31,18 +31,35 @@ function isMovingBetween(element: TimelineElement, t0: number, t1: number): bool
   return Math.abs(to.scaleX - from.scaleX) >= MIN_SCALE_DELTA || Math.abs(to.scaleY - from.scaleY) >= MIN_SCALE_DELTA
 }
 
-let cachedScratch: OffscreenCanvasRenderingContext2D | null = null
+function transformShutterMs(element: TimelineElement, timeMs: number, frameMs: number): number {
+  const blur = getMotionBlur(element)
+  if (!blur?.enabled || !hasTransformMotion(element)) return 0
+  const windowMs = frameMs * (blur.shutterAngle / 360)
+  if (!(windowMs > 0)) return 0
+  const start = timeMs - windowMs / 2
+  return isMovingBetween(element, start, start + windowMs) ? windowMs : 0
+}
 
-function acquireScratch(width: number, height: number, options: RenderFrameOptions): Canvas2D | null {
+type ScratchRole = 'sample' | 'accumulate'
+
+const cachedScratch = new Map<ScratchRole, OffscreenCanvasRenderingContext2D>()
+
+type ScratchSettings = CanvasRenderingContext2DSettings & { colorType: 'unorm8' | 'float16' }
+
+const SCRATCH_SETTINGS: Record<ScratchRole, ScratchSettings> = {
+  sample: { colorType: 'unorm8' },
+  accumulate: { colorType: 'float16' },
+}
+
+function acquireScratch(role: ScratchRole, width: number, height: number, options: RenderFrameOptions): Canvas2D | null {
   if (options.createScratchContext) return options.createScratchContext(width, height)
   if (typeof OffscreenCanvas === 'undefined') return null
-  const cachedCanvas = cachedScratch?.canvas
-  if (!cachedScratch || cachedCanvas?.width !== width || cachedCanvas?.height !== height) {
-    const ctx = new OffscreenCanvas(width, height).getContext('2d')
-    if (!ctx) return null
-    cachedScratch = ctx
-  }
-  return cachedScratch
+  const cached = cachedScratch.get(role)
+  if (cached && cached.canvas.width === width && cached.canvas.height === height) return cached
+  const ctx = new OffscreenCanvas(width, height).getContext('2d', SCRATCH_SETTINGS[role])
+  if (!ctx) return null
+  cachedScratch.set(role, ctx)
+  return ctx
 }
 
 export function renderElementWithMotionBlur(
@@ -54,34 +71,36 @@ export function renderElementWithMotionBlur(
   options: RenderFrameOptions,
   renderer: ElementRenderer,
 ): boolean {
-  const blur = getMotionBlur(element)
-  if (!blur?.enabled) return false
-  if (!hasTransformMotion(element)) return false
-  const windowMs = (1000 / project.fps) * (blur.shutterAngle / 360)
+  const frameMs = 1000 / project.fps
+  const transformWindowMs = transformShutterMs(element, timeMs, frameMs)
+  const windowMs = Math.max(transformWindowMs, getZoomShutterMs(element, timeMs, frameMs))
   if (!(windowMs > 0)) return false
   const start = timeMs - windowMs / 2
-  if (!isMovingBetween(element, start, start + windowMs)) return false
-  const scratch = acquireScratch(project.width, project.height, options)
-  if (!scratch) return false
+  const sample = acquireScratch('sample', project.width, project.height, options)
+  const accumulate = acquireScratch('accumulate', project.width, project.height, options)
+  if (!sample || !accumulate) return false
 
   const samples = Math.max(2, Math.min(64, Math.round(options.motionBlurSamples ?? DEFAULT_SAMPLES)))
-  scratch.clearRect(0, 0, project.width, project.height)
-  scratch.save()
-  scratch.globalCompositeOperation = 'lighter'
-  scratch.globalAlpha = 1 / samples
-  const subBackend = new Canvas2DBackend(scratch, project.width, project.height)
+  accumulate.clearRect(0, 0, project.width, project.height)
+  const subBackend = new Canvas2DBackend(sample, project.width, project.height)
   for (let i = 0; i < samples; i++) {
-    const resolved = resolveAnimatedElement(element, start + windowMs * ((i + 0.5) / samples))
+    const sampleMs = start + windowMs * ((i + 0.5) / samples)
+    const resolved = resolveAnimatedElement(element, transformWindowMs > 0 ? sampleMs : timeMs)
     const sub = 'blendMode' in resolved && resolved.blendMode ? { ...resolved, blendMode: undefined } : resolved
-    renderer(sub, createElementContext(subBackend, project, track, timeMs, options.source))
+    sample.clearRect(0, 0, project.width, project.height)
+    renderer(sub, createElementContext(subBackend, project, track, timeMs, options.source, sampleMs))
+    accumulate.save()
+    accumulate.globalCompositeOperation = 'lighter'
+    accumulate.globalAlpha = 1 / samples
+    accumulate.drawImage(sample.canvas, 0, 0)
+    accumulate.restore()
   }
-  scratch.restore()
 
   const ctx = backend.acquireRaster()
   ctx.save()
   const blendMode = 'blendMode' in element ? element.blendMode : undefined
   if (blendMode) ctx.globalCompositeOperation = toCompositeOperation(blendMode)
-  ctx.drawImage(scratch.canvas, 0, 0)
+  ctx.drawImage(accumulate.canvas, 0, 0)
   ctx.restore()
   return true
 }

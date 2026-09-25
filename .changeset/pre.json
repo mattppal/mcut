@@ -34,6 +34,7 @@
     "desktop-update-state",
     "duplicate-element-ids",
     "edge-trim-safe-integer",
+    "export-audio-encoder-delay",
     "export-job",
     "layout-summary-pixels",
     "lazy-mediabunny",
