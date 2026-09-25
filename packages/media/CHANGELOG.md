@@ -1,5 +1,11 @@
 # @mcut/media
 
+## 0.1.0-alpha.14
+
+### Patch Changes
+
+- [#171](https://github.com/mattppal/mcut/pull/171) [`fed2a9e`](https://github.com/mattppal/mcut/commit/fed2a9e931caf36072346453da30835824944580) Thanks [@mattppal](https://github.com/mattppal)! - Long exports no longer spend minutes mixing audio.
+
 ## 0.1.0-alpha.13
 
 ### Patch Changes
