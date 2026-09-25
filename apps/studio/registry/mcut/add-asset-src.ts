@@ -1,3 +1,4 @@
+import { CommandError } from '@mcut/timeline'
 import { probeImage, probeMedia } from '@mcut/media'
 import { z } from 'zod'
 
@@ -93,7 +94,7 @@ async function probeAssetSource(src: string, kind: AssetKind | undefined): Promi
       ...(probe.mimeType !== undefined ? { mimeType: probe.mimeType } : {}),
     }
   } catch (error) {
-    throw new Error(`addAsset could not load ${src}. ${reason(error)}`)
+    throw new CommandError('asset-unloadable', `addAsset could not load ${src}. ${reason(error)}`, { cause: error })
   }
 }
 
@@ -122,7 +123,7 @@ export async function prepareAddAssetCommand(command: unknown): Promise<unknown>
   if (!parsed.success || parsed.data.type !== 'addAsset') return command
   const src = parsed.data.asset.src
   if (isFileUrl(src)) {
-    throw new Error(`addAsset cannot load ${src}. Studio cannot read file URLs. Import local files with import_media { paths }.`)
+    throw new CommandError('asset-unloadable', `addAsset cannot load ${src}. Studio cannot read file URLs. Import local files with import_media { paths }.`)
   }
   const probe = await probeAssetSource(src, parsed.data.asset.kind)
   return { ...parsed.data, asset: fillAsset(parsed.data.asset, probe) }
