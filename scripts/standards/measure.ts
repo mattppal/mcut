@@ -319,8 +319,18 @@ function toJson(measurement: Measurement) {
   }
 }
 
+function mergeBaseOf(ref: string): string {
+  const first = tryRun(['git', 'merge-base', 'HEAD', ref], { cwd: repoRoot })
+  if (first.success) return first.stdout.trim()
+  const shallow = run(['git', 'rev-parse', '--is-shallow-repository'], { cwd: repoRoot }).trim() === 'true'
+  if (!shallow) throw new Error(`HEAD and ${ref} share no history`)
+  console.log(`No merge base of HEAD and ${ref} in a shallow clone, fetching full history`)
+  run(['git', 'fetch', '--unshallow', '--quiet', '--no-tags', 'origin'], { cwd: repoRoot })
+  return run(['git', 'merge-base', 'HEAD', ref], { cwd: repoRoot }).trim()
+}
+
 async function measureMergeBase(ref: string): Promise<Measurement> {
-  const mergeBase = run(['git', 'merge-base', 'HEAD', ref], { cwd: repoRoot }).trim()
+  const mergeBase = mergeBaseOf(ref)
   console.log(`Comparing HEAD with merge base ${mergeBase.slice(0, 12)} of HEAD and ${ref}`)
   const tempRoot = await mkdtemp(join(tmpdir(), 'mcut-standards-'))
   const baseTree = join(tempRoot, 'base')
