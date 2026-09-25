@@ -5,6 +5,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
+    "mcp-server": "./dist/cli.js",
     "mcut-bridge": "./dist/bridge-cli.js",
     "mcut-mcp": "./dist/cli.js",
     "mcut-mcp-live": "./dist/live-cli.js"

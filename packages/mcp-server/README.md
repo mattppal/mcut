@@ -60,5 +60,5 @@ bunx -p @mcut/mcp-server mcut-mcp-live --editor-url http://localhost:3000/editor
 For a compatibility stdio adapter attached to an already running bridge:
 
 ```sh
-bunx -p @mcut/mcp-server mcut-bridge mcp
+MCUT_BRIDGE_TOKEN=<token> bunx -p @mcut/mcp-server mcut-bridge mcp
 ```

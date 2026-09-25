@@ -544,7 +544,7 @@ describe('createMcutMcpServer', () => {
   test('daemon HTTP target forwards MCP tools to the live browser tab', async () => {
     const bridge = new LiveMcutBridge({ token: 'daemon-token', requestTimeoutMs: 1000 })
     const port = await bridge.listen(0)
-    const server = createMcutMcpServerForTarget({ target: createHttpBridgeTarget(port) })
+    const server = createMcutMcpServerForTarget({ target: createHttpBridgeTarget(port, 'daemon-token') })
     const client = new Client({ name: 'test', version: '0.0.0' })
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)])
