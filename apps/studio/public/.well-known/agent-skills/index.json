@@ -13,7 +13,7 @@
       "type": "skill-md",
       "description": "Edit videos with mcut via the MCP server, live browser bridge, CLI, or headless scripts. Use when asked to transcribe, caption, remove silence, tighten speech, cut/trim/splice, add fades/transitions, animate, reformat, multicam-edit, or export an mcut project.",
       "url": "/.well-known/agent-skills/mcut-editing/SKILL.md",
-      "digest": "sha256:4c41b2c457e4e6b3c7c64822874dc032f08e51f17f25a428837a2b1ee00d708c"
+      "digest": "sha256:a697e67e80850dc0cacb53d7c13a0221923fb0366ccf8b0582219306014c93c7"
     }
   ]
 }

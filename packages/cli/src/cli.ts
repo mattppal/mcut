@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
 import {
   CommandError,
@@ -13,6 +13,7 @@ import {
   type BuiltinCommand,
 } from '@mcut/timeline'
 import { applyCommands } from '@mcut/editor'
+import { VOICE_SAMPLE_RATE, cleanVoice, decodeWav, encodeWav, mixVoice } from '@mcut/voice/node'
 import { z } from 'zod'
 import { buildCaptionsCommand, captionsCommandOptionsSchema } from './captions'
 import { readProjectFile, readTranscriptFile, writeProjectFile } from './io'
@@ -31,6 +32,7 @@ Usage:
                 [--max-chars <n>] [--replace] [--dry-run]
   mcut silence-cuts <file> --transcript <t.json> --element <id>
                 [--min-gap <ms>] [--padding <ms>] [--keep-ends] [--dry-run]
+  mcut clean-voice <in.wav> -o <out.wav> [--amount <0..1>]
   mcut commands [--json] [--name <command>]
   mcut presets [--json]
 
@@ -41,6 +43,7 @@ Commands:
   apply          Dispatch a JSON command batch (object or array) as one undo step, then save.
   captions       Add captions from a transcript JSON ({ words: [{ text, startMs, endMs }] }).
   silence-cuts   Cut transcript silence out of one element (splits + ripple deletes + edge trims).
+  clean-voice    Remove background noise from speech in a 48 kHz WAV; --amount below 1 mixes the original back in.
   commands       List every editing command; --name prints one command's JSON schema.
   presets        List platform presets (dimensions, fps, safe areas).
 `
@@ -208,6 +211,27 @@ async function cmdSilenceCuts(argv: string[]): Promise<void> {
   console.log(summarizeProject(plan.project))
 }
 
+async function cmdCleanVoice(argv: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({
+    args: argv,
+    allowPositionals: true,
+    options: { output: { type: 'string', short: 'o' }, amount: { type: 'string', default: '1' } },
+  })
+  const input = positionals[0] ?? fail('clean-voice needs an input WAV file')
+  const output = values.output ?? fail('clean-voice needs -o <out.wav>')
+  const amount = z.coerce.number().min(0).max(1).safeParse(values.amount)
+  if (!amount.success) fail(`--amount must be a number from 0 to 1, got ${values.amount}`)
+  const { samples, sampleRate } = decodeWav(await readFile(input))
+  if (sampleRate !== VOICE_SAMPLE_RATE) {
+    fail(
+      `${input} is ${sampleRate} Hz audio and clean-voice needs ${VOICE_SAMPLE_RATE} Hz, so resample it first, for example with ffmpeg -i ${input} -ar ${VOICE_SAMPLE_RATE} resampled.wav`,
+    )
+  }
+  const cleaned = await cleanVoice(samples)
+  await writeFile(output, encodeWav(mixVoice(samples, cleaned, amount.data), VOICE_SAMPLE_RATE))
+  process.stdout.write(`Cleaned ${(samples.length / VOICE_SAMPLE_RATE).toFixed(1)} s of audio from ${input} into ${output}\n`)
+}
+
 async function cmdCommands(argv: string[]): Promise<void> {
   const { values } = parseArgs({
     args: argv,
@@ -253,6 +277,8 @@ async function main(): Promise<void> {
       return cmdCaptions(rest)
     case 'silence-cuts':
       return cmdSilenceCuts(rest)
+    case 'clean-voice':
+      return cmdCleanVoice(rest)
     case 'commands':
       return cmdCommands(rest)
     case 'presets':

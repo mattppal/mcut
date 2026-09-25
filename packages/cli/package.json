@@ -42,6 +42,7 @@
     "@mcut/editor": "workspace:*",
     "@mcut/timeline": "workspace:*",
     "@mcut/transcription": "workspace:*",
+    "@mcut/voice": "workspace:*",
     "zod": "4.4.3"
   },
   "author": "Matt Palmer",

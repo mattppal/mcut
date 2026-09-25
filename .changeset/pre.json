@@ -29,6 +29,7 @@
     "bridge-catch-all",
     "bridge-malformed-host",
     "caption-word-order",
+    "deflake-use-web-socket-test",
     "desktop-ipc",
     "desktop-platform-field",
     "desktop-update-state",

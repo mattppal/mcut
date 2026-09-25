@@ -7,6 +7,7 @@
     "apps/web/.source",
     "dist",
     "node_modules",
+    "packages/voice/wasm",
     "skills/mcut-editing/references"
   ],
   "categories": {
