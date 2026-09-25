@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { reversedChunkSpans } from './export-audio-composite'
+import { decoderLeadStart, reversedChunkSpans } from './export-audio-composite'
 
 describe('reversedChunkSpans', () => {
   test('plays the source from the end in bounded pieces', () => {
@@ -32,5 +32,13 @@ describe('reversedChunkSpans', () => {
   test('rejects a non-positive chunk or total', () => {
     expect(reversedChunkSpans(10, 0)).toEqual([])
     expect(reversedChunkSpans(0, 10)).toEqual([])
+  })
+})
+
+describe('decoderLeadStart', () => {
+  test('starts two AAC packets before a mid-file decode and stays put at the file start', () => {
+    expect(decoderLeadStart(10, 2048, 48_000)).toBe(10 - 2048 / 48_000)
+    expect(decoderLeadStart(0, 2048, 48_000)).toBe(0)
+    expect(decoderLeadStart(0.01, 2048, 48_000)).toBe(0)
   })
 })
