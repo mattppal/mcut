@@ -79,6 +79,14 @@ type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure>
 
 const withResult = (lead: string, result: unknown) => (result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`)
 
+const spokenWords = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s']/gu, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(' ')
+
 function searchProjectTranscript(project: Project, query: string): unknown {
   const captionRefs = getProjectCaptions(project)
   const captions = captionRefs.map((ref) => ref.caption)
@@ -185,9 +193,27 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
     case 'apply_captions': {
       const { transcript, ...options } = call.arguments
-      const command = buildCaptionsCommand(await targetProject(target), transcript, options)
+      const project = await targetProject(target)
+      const command = buildCaptionsCommand(project, transcript, options)
+      if (command.captions.length === 0) {
+        return failure(
+          'No captions were applied. The transcript has no timed words or segments, or with elementId none fall inside the source span that clip plays. ' +
+            'Pass words or segments with startMs and endMs in source-media time.',
+        )
+      }
+      const incoming = spokenWords(transcript.words.length > 0 ? transcript.words.map((w) => w.text).join(' ') : transcript.text)
+      const transcribed = spokenWords(
+        getProjectCaptions(project)
+          .map(({ caption }) => caption.text)
+          .join(' '),
+      )
       await target.applyCommands([command])
-      return text(`OK: ${command.captions.length} caption(s) applied.\n\n${await target.getSummary()}`)
+      const origin =
+        incoming.length > 0 && ` ${transcribed} `.includes(` ${incoming} `)
+          ? 'The transcript matches captions already in the project.'
+          : 'Warning: this transcript does not match any transcript in the project, so ensure_transcript did not produce it. ' +
+            'If it did not come from a transcription provider either, undo and run ensure_transcript.'
+      return text(`OK: ${command.captions.length} caption(s) applied. ${origin}\n\n${await target.getSummary()}`)
     }
     case 'apply_silence_cuts': {
       const { elementId, transcript, ...options } = call.arguments
