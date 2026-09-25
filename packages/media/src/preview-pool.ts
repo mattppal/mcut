@@ -174,8 +174,17 @@ export class PreviewMediaPool implements FrameSource {
   private audioSources: ReadonlyMap<ElementId, string> | undefined
   private disposed = false
   private playing = false
+  private frameChanges = 0
 
   constructor(private resolveAsset: (assetId: AssetId) => AssetRef | undefined) {}
+
+  get frameVersion(): number {
+    return this.frameChanges
+  }
+
+  private readonly markFrameChanged = (): void => {
+    this.frameChanges++
+  }
 
   setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
     this.audioSources = sources
@@ -339,6 +348,7 @@ export class PreviewMediaPool implements FrameSource {
     }
     pooled.seekStartedAt = performance.now()
     pooled.el.currentTime = Math.max(0, targetSeconds)
+    this.markFrameChanged()
   }
 
   private settleSeek(pooled: PooledMedia): void {
@@ -419,6 +429,7 @@ export class PreviewMediaPool implements FrameSource {
     if (element instanceof HTMLVideoElement) {
       element.playsInline = true
       element.muted = true
+      for (const type of ['loadeddata', 'seeked', 'emptied', 'error']) element.addEventListener(type, this.markFrameChanged)
     }
     const pooled: PooledMedia = {
       el: element,
@@ -488,6 +499,7 @@ export class PreviewMediaPool implements FrameSource {
         if (frame) {
           current.frames.set(key, frame)
           this.trimDecodedVideoFrames(current, key)
+          this.markFrameChanged()
         }
       })
       .catch(() => {})
@@ -543,9 +555,11 @@ export class PreviewMediaPool implements FrameSource {
           return
         }
         this.images.set(assetId, bitmap)
+        this.markFrameChanged()
       })
       .catch(() => {
         this.images.set(assetId, 'error')
+        this.markFrameChanged()
       })
   }
 }

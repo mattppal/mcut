@@ -94,6 +94,14 @@ anchor? }`. The slot stays anchored, to its corner for an overlay and to its cen
 for a full-frame or panel slot, so it does not jump across the frame. Every cut to
 that layout changes.
 
+When the speaker drifts inside a head overlay, call `center_person` on the live bridge
+instead of hand-tuning the slot `crop`. It finds the face on device and writes one reframe
+track on the `camera` source, the default, as one undo step. While the track exists, every
+slot that shows that source slides its crop onto the face, and a slot without a crop slides
+the part of the frame its fit shows. Each slot rect keeps its size and aspect and each crop
+keeps its size, so only the framing inside the slot follows the face. `setReframe` with a
+null `track` stops the follow and puts each crop back where the layout saved it.
+
 ## Switching rhythm (the editorial part)
 
 - Cut on speaker changes and beats of the screen content, never mid-word.

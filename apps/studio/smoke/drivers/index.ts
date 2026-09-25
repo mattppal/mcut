@@ -5,6 +5,7 @@ import { CORE_DRIVERS } from './core.ts'
 import { EDIT_DRIVERS } from './edit.ts'
 import { MODE_DRIVERS } from './modes.ts'
 import { PROJECT_DRIVERS } from './project.ts'
+import { REFRAME_DRIVERS } from './reframe.ts'
 import { TIMELINE_DRIVERS } from './timeline.ts'
 
 export const DRIVERS: Record<FeatureId, Driver | null> = {
@@ -13,5 +14,6 @@ export const DRIVERS: Record<FeatureId, Driver | null> = {
   ...TIMELINE_DRIVERS,
   ...CAPTION_DRIVERS,
   ...MODE_DRIVERS,
+  ...REFRAME_DRIVERS,
   ...PROJECT_DRIVERS,
 }

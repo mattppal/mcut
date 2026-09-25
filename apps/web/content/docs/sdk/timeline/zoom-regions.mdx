@@ -49,6 +49,7 @@ instant. `scale` multiplies the fit scale. `focus` is the anchor point from 0 to
 `VisibleFraction` is `{ x, y }`, the share of a slot's cropped source each axis
 shows at scale 1 after the slot's fit. A cover slot shows less than 1 on the
 axis it cuts, and a contain slot shows more than 1 on the axis it letterboxes.
+`getSlotView` and `centeredFocus` take it.
 
 ## Schemas
 
@@ -97,7 +98,7 @@ Explicit fields override the preset. A `rect` sets both focus and scale.
 
 ### getSlotView
 
-`getSlotView(element, slot, timelineMs, visible)` returns the `ContentView` of one multicam layout slot. It is the one place a renderer reads a slot's framing. `visible` is the `VisibleFraction` of the slot, which differs from 1 when the slot's shape differs from its crop, and it defaults to the full frame. Outside a zoom it returns the center at scale 1, so the slot's crop alone sets its framing.
+`getSlotView(element, slot, timelineMs, visible, rest)` returns the `ContentView` of one multicam layout slot. It is the one place a renderer reads a slot's framing. `visible` is the `VisibleFraction` of the slot, which differs from 1 when the slot's shape differs from its crop, and it defaults to the full frame. `rest` is the focus outside a zoom, where a zoom starts and ends, and it defaults to the center. The compositor passes the reframed focus from `centeredFocus` for a source with a reframe track. With neither a zoom nor a track, the view is the center at scale 1, so the slot's crop alone sets its framing.
 
 ### getClipView
 

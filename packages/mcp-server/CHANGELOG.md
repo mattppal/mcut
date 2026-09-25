@@ -1,5 +1,37 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.16
+
+### Minor Changes
+
+- [#180](https://github.com/mattppal/mcut/pull/180) [`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928) Thanks [@mattppal](https://github.com/mattppal)! - Add the `center_person` MCP tool. In a live bridge session it finds the face on device in the connected editor and keeps the person in frame as one undoable edit, on a video crop or on one multicam source, which defaults to `camera`. On a video whose crop matches the project aspect within 1%, it also scales the clip to fill the frame, and the optional `fill` input forces or disables that. It returns the target, the sample and key counts, the source range the keys cover, and whether it filled the frame. The live bridge waits for it as long as for `ensure_transcript`, and a headless server rejects it with a message that a live bridge is required. `McutMcpTarget` gains an optional `centerPerson` method.
+
+### Patch Changes
+
+- Updated dependencies [[`de6ad86`](https://github.com/mattppal/mcut/commit/de6ad86850e763a48f50e4800329e66ba5551928)]:
+  - @mcut/timeline@0.1.0-alpha.10
+  - @mcut/editor@0.1.0-alpha.10
+  - @mcut/transcription@0.1.0-alpha.11
+
+## 0.1.0-alpha.15
+
+### Minor Changes
+
+- [#169](https://github.com/mattppal/mcut/pull/169) [`888fa37`](https://github.com/mattppal/mcut/commit/888fa379f17f4607a25ef8f73ff75f09e41d7c05) Thanks [@mattppal](https://github.com/mattppal)! - Import local media into a live Studio project with the `import_media` tool.
+
+### Patch Changes
+
+- [#179](https://github.com/mattppal/mcut/pull/179) [`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2) Thanks [@mattppal](https://github.com/mattppal)! - `transact` rejects `edit.undo` and `edit.redo` before any call runs, whether they come as `operator_edit_undo`, `operator_edit_redo`, `run_operator`, or `run_action`. They used to run inside the transaction, so one transact could undo an earlier edit and still report one undo step. A failed call whose message already ends in a period no longer reports a double period.
+
+  `McutMcpTarget.transact` is optional, like the other members a custom target may leave out. A target without it keeps compiling, and the `transact` tool fails on it with `transact is not available on this target.`
+
+  The server now sends MCP instructions, and the `transact`, `undo`, `run_operator`, `run_action`, and `apply_commands` descriptions tell agents to send every edit call for one user request in one `transact`, so "undo that" removes the whole request.
+
+- Updated dependencies [[`9f1ebce`](https://github.com/mattppal/mcut/commit/9f1ebce07c0d449e6818951fabb61668b27852e2)]:
+  - @mcut/timeline@0.1.0-alpha.9
+  - @mcut/editor@0.1.0-alpha.9
+  - @mcut/transcription@0.1.0-alpha.10
+
 ## 0.1.0-alpha.14
 
 ### Patch Changes

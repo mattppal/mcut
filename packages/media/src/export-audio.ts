@@ -156,6 +156,13 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
       }
 
       const plan = segment.timeMap ? buildRemapPlan(segment.timeMap, segment.durationMs) : null
+      if (!plan) {
+        const composite = await decodeCompositeRange(sink, trimS, segment.sourceSpanMs / 1000, 'all', signal)
+        if (composite) {
+          scheduleComposite(offline, gain, segment, composite.channels, composite.sampleRate)
+          continue
+        }
+      }
 
       for await (const { buffer, timestamp } of sink.buffers(trimS, trimS + segment.sourceSpanMs / 1000)) {
         signal?.throwIfAborted()
@@ -193,47 +200,62 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
 const MAX_STRETCH_SOURCE_FRAMES = 32_000_000
 
 interface CompositeAudio {
+  channels: Float32Array[]
+  sampleRate: number
+}
+
+interface StereoComposite {
   left: Float32Array
   right: Float32Array
   sampleRate: number
 }
 
-async function decodeCompositeRange(sink: AudioBufferSink, startS: number, spanS: number, signal?: AbortSignal): Promise<CompositeAudio | null> {
+function stereoOf(composite: CompositeAudio): StereoComposite {
+  const [left = new Float32Array(0), second] = composite.channels
+  return { left, right: second ?? left.slice(), sampleRate: composite.sampleRate }
+}
+
+type CompositeChannels = 'all' | 'stereo'
+
+async function decodeCompositeRange(
+  sink: AudioBufferSink,
+  startS: number,
+  spanS: number,
+  keep: CompositeChannels,
+  signal?: AbortSignal,
+): Promise<CompositeAudio | null> {
   let composite: CompositeAudio | null = null
   for await (const { buffer, timestamp } of sink.buffers(startS, startS + spanS)) {
     signal?.throwIfAborted()
     if (!composite) {
       const sampleRate = buffer.sampleRate
       const frames = Math.ceil(spanS * sampleRate)
-      if (frames > MAX_STRETCH_SOURCE_FRAMES) return null
+      const sourceChannels = Math.max(1, buffer.numberOfChannels)
+      const channelCount = keep === 'all' ? sourceChannels : Math.min(2, sourceChannels)
+      const frameBudget = keep === 'all' ? (MAX_STRETCH_SOURCE_FRAMES * 2) / channelCount : MAX_STRETCH_SOURCE_FRAMES
+      if (frames > frameBudget) return null
       composite = {
-        left: new Float32Array(frames),
-        right: new Float32Array(frames),
+        channels: Array.from({ length: channelCount }, () => new Float32Array(frames)),
         sampleRate,
       }
     }
-    const offset = Math.max(0, Math.round((timestamp - startS) * composite.sampleRate))
-    if (offset >= composite.left.length) continue
-    const left = buffer.getChannelData(0)
-    const right = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left
-    const count = Math.min(left.length, composite.left.length - offset)
-    composite.left.set(count === left.length ? left : left.subarray(0, count), offset)
-    composite.right.set(count === right.length ? right : right.subarray(0, count), offset)
+    const origin = Math.round((timestamp - startS) * composite.sampleRate)
+    const skip = Math.max(0, -origin)
+    const offset = Math.max(0, origin)
+    const frames = composite.channels[0]?.length ?? 0
+    if (offset >= frames || skip >= buffer.length) continue
+    const count = Math.min(buffer.length - skip, frames - offset)
+    for (const [channel, target] of composite.channels.entries()) {
+      if (channel >= buffer.numberOfChannels) break
+      target.set(buffer.getChannelData(channel).subarray(skip, skip + count), offset)
+    }
   }
   return composite
 }
 
-function scheduleComposite(
-  offline: OfflineAudioContext,
-  gain: GainNode,
-  segment: AudibleSegment,
-  left: Float32Array,
-  right: Float32Array,
-  sampleRate: number,
-): void {
-  const out = offline.createBuffer(2, left.length, sampleRate)
-  out.getChannelData(0).set(left)
-  out.getChannelData(1).set(right)
+function scheduleComposite(offline: OfflineAudioContext, gain: GainNode, segment: AudibleSegment, channels: readonly Float32Array[], sampleRate: number): void {
+  const out = offline.createBuffer(channels.length, channels[0]?.length ?? 0, sampleRate)
+  for (const [channel, data] of channels.entries()) out.getChannelData(channel).set(data)
   const node = offline.createBufferSource()
   node.buffer = out
   node.connect(gain)
@@ -250,13 +272,13 @@ async function scheduleStretchedSegment(
 ): Promise<boolean> {
   try {
     const startS = (segment.trimStartMs + constant.sourceStartOffsetMs) / 1000
-    const composite = await decodeCompositeRange(sink, startS, constant.sourceSpanMs / 1000, signal)
+    const composite = await decodeCompositeRange(sink, startS, constant.sourceSpanMs / 1000, 'stereo', signal)
     if (!composite) return false
 
-    const stretched = await stretchStereo(composite, constant.rate)
+    const stretched = await stretchStereo(stereoOf(composite), constant.rate)
     if (stretched.left.length === 0) return false
 
-    scheduleComposite(offline, gain, segment, stretched.left, stretched.right, composite.sampleRate)
+    scheduleComposite(offline, gain, segment, [stretched.left, stretched.right], composite.sampleRate)
     return true
   } catch (error) {
     if (signal?.aborted) throw error
@@ -272,8 +294,9 @@ async function scheduleReversedSegment(
   signal?: AbortSignal,
 ): Promise<boolean> {
   try {
-    const composite = await decodeCompositeRange(sink, segment.trimStartMs / 1000, segment.sourceSpanMs / 1000, signal)
-    if (!composite) return false
+    const decoded = await decodeCompositeRange(sink, segment.trimStartMs / 1000, segment.sourceSpanMs / 1000, 'stereo', signal)
+    if (!decoded) return false
+    const composite = stereoOf(decoded)
     composite.left.reverse()
     composite.right.reverse()
 
@@ -285,7 +308,7 @@ async function scheduleReversedSegment(
       left = stretched.left
       right = stretched.right
     }
-    scheduleComposite(offline, gain, segment, left, right, composite.sampleRate)
+    scheduleComposite(offline, gain, segment, [left, right], composite.sampleRate)
     return true
   } catch (error) {
     if (signal?.aborted) throw error
