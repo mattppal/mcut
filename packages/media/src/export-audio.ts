@@ -172,6 +172,13 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
       }
 
       const plan = segment.timeMap ? buildRemapPlan(segment.timeMap, segment.durationMs) : null
+      if (!plan) {
+        const composite = await decodeCompositeRange(sink, trimS, segment.sourceSpanMs / 1000, signal)
+        if (composite) {
+          scheduleComposite(offline, gain, segment, composite.left, composite.right, composite.sampleRate)
+          continue
+        }
+      }
 
       for await (const { buffer, timestamp } of sink.buffers(trimS, trimS + segment.sourceSpanMs / 1000)) {
         signal?.throwIfAborted()
@@ -228,13 +235,16 @@ async function decodeCompositeRange(sink: AudioBufferSink, startS: number, spanS
         sampleRate,
       }
     }
-    const offset = Math.max(0, Math.round((timestamp - startS) * composite.sampleRate))
+    const origin = Math.round((timestamp - startS) * composite.sampleRate)
+    const skip = Math.max(0, -origin)
+    const offset = Math.max(0, origin)
     if (offset >= composite.left.length) continue
     const left = buffer.getChannelData(0)
     const right = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left
-    const count = Math.min(left.length, composite.left.length - offset)
-    composite.left.set(count === left.length ? left : left.subarray(0, count), offset)
-    composite.right.set(count === right.length ? right : right.subarray(0, count), offset)
+    if (skip >= left.length) continue
+    const count = Math.min(left.length - skip, composite.left.length - offset)
+    composite.left.set(left.subarray(skip, skip + count), offset)
+    composite.right.set(right.subarray(skip, skip + count), offset)
   }
   return composite
 }
