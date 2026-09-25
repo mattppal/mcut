@@ -156,7 +156,7 @@ Splits a caption immediately before the given word into two captions, or returns
 
 ### findRetakes
 
-`findRetakes(words, options)` returns `RetakeCandidate[]`, the spans a speaker abandoned and started again. It splits words into phrases at pauses of `pauseMs` or sentence punctuation. A phrase is a retake when a run of at least `minMatchWords` of its opening words, skipping fillers such as "um" and reading "gotta" as "got to", is spoken again within `maxLookaheadMs`. The restart may drift by up to two opening words when it begins a new phrase, as in "Every morning" restarted as "Each morning". Each candidate runs from the abandoned phrase start to the kept take start, so cutting it keeps the last take. Chained attempts merge into one candidate. Candidates come in timeline order, so cut them last to first.
+`findRetakes(words, options)` returns `RetakeCandidate[]`, the spans a speaker abandoned and started again. It splits words into phrases at pauses of `pauseMs` or sentence punctuation. A phrase is a retake when a run of at least `minMatchWords` of its opening words, skipping fillers such as "um" and reading "gotta" as "got to", is spoken again within `maxLookaheadMs`. The restart may drift by up to two opening words when it begins a new phrase, as in "Every morning" restarted as "Each morning". Each candidate runs from the abandoned phrase start to the kept take start, so cutting it keeps the last take. Chained attempts merge into one candidate. Candidates come last to first, so cutting them in the returned order never shifts a range still to cut.
 
 ### retakeOptionsSchema
 

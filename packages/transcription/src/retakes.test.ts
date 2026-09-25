@@ -73,4 +73,17 @@ describe('findRetakes', () => {
     const words = [...spoken('I gotta shout out the team who built this', 0), ...spoken('I got to shout out the team who built this for me.', 4000)]
     expect(findRetakes(words).map((c) => [c.startMs, c.endMs])).toEqual([[0, 4000]])
   })
+
+  test('candidates come last to first so cutting them in order never shifts a later range', () => {
+    const words = [
+      ...spoken('Every morning there is a page on my desk.', 0),
+      ...spoken('every morning there is a page on my printer.', 5000),
+      ...spoken('Now the neat thing is that it can print.', 40_000),
+      ...spoken('now the neat thing is that it can run commands.', 45_000),
+    ]
+    expect(findRetakes(words).map((c) => [c.startMs, c.endMs])).toEqual([
+      [40_000, 45_000],
+      [0, 5000],
+    ])
+  })
 })

@@ -60,9 +60,9 @@ no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 
 After `ensure_transcript`, call `find_retakes`. Each candidate is a timeline
 range from the abandoned take to the start of the kept take. Read
-`abandonedText` and skip any candidate that is a deliberate repetition. Cut the
-kept ranges last to first, because each ripple delete shifts every later range.
-Cut each with a split at both ends and a ripple delete, on the clip and on the
+`abandonedText` and skip any candidate that is a deliberate repetition.
+Candidates come last to first, so cut them in the returned order. Cut each with
+a split at both ends and a ripple delete, on the clip and on the
 caption track together, or rerun `ensure_transcript` with `replace` set to true after
 the cuts. Pass a lower `minMatchWords` only when a short restart was missed,
 and check each extra candidate, since lower values match spoken lists.

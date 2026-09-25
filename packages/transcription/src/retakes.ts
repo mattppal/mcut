@@ -111,5 +111,5 @@ export function findRetakes(words: readonly TimedWord[], options: RetakeOptions 
     })
     coveredUntil = restart.index
   }
-  return candidates
+  return candidates.reverse()
 }
