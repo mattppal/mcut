@@ -1,5 +1,11 @@
 # @mcut/transcription
 
+## 0.1.0-alpha.8
+
+### Minor Changes
+
+- [#160](https://github.com/mattppal/mcut/pull/160) [`d8d259b`](https://github.com/mattppal/mcut/commit/d8d259b1b390ff12eb0bacb5bfaa4449fe6ce3a2) Thanks [@mattppal](https://github.com/mattppal)! - Add `findRetakes` over word-timed transcripts and the `find_retakes` MCP tool, which returns candidate ranges that keep the last take, last to first. With `elementId` it also returns that clip's transcript in source time, ready to re-caption the clip after the cuts.
+
 ## 0.1.0-alpha.7
 
 ### Patch Changes
