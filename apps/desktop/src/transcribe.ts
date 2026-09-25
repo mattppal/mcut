@@ -31,9 +31,9 @@ function readTranscriptionKey(settings: DesktopSettings): string | Response {
     const key = settings.transcriptionKey()
     if (key !== null) return key
   } catch (error) {
-    return Response.json({ error: `The stored AssemblyAI key could not be read, enter it again. ${failureMessage(error)}` }, { status: 401 })
+    return Response.json({ error: `The stored AssemblyAI key could not be read, enter it again in Settings. ${failureMessage(error)}` }, { status: 401 })
   }
-  return Response.json({ error: 'Transcription is not configured. Add an AssemblyAI API key in the Captions panel.' }, { status: 401 })
+  return Response.json({ error: 'Transcription is not configured. Add an AssemblyAI API key in Settings.' }, { status: 401 })
 }
 
 export async function handleTranscribeRequest(request: Request, settings: DesktopSettings): Promise<Response> {
