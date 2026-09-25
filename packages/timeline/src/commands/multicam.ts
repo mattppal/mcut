@@ -98,8 +98,7 @@ export const removeAngleCut = defineCommand({
 export const setAngleLayout = defineCommand({
   type: 'setAngleLayout',
   description:
-    'Change which layout a multicam span uses without cutting (the paused "correct this take" action). ' +
-    "`atMs` is the span's cut time on the source clock.",
+    'Change which layout a multicam span uses without cutting (the paused "correct this take" action). ' + "`atMs` is the span's cut time on the source clock.",
   payloadSchema: z.object({
     elementId: elementIdSchema,
     atMs: z.number().int().nonnegative(),

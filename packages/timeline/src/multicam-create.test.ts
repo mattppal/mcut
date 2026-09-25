@@ -71,7 +71,10 @@ describe('createMulticam from placed clips', () => {
   test('cuts the multicam short to the shortest source', () => {
     const project = applyCommand(recordings({ camDurationMs: 20_000 }), {
       type: 'createMulticam',
-      sources: [{ elementId: 'e-screen', key: 'screen' }, { elementId: 'e-cam', key: 'camera' }],
+      sources: [
+        { elementId: 'e-screen', key: 'screen' },
+        { elementId: 'e-cam', key: 'camera' },
+      ],
       multicamId: 'e-mc',
     })
     expect(element(project, 'e-mc')).toMatchObject({ startMs: 0, durationMs: 20_000, audioSource: 'camera' })
@@ -81,7 +84,14 @@ describe('createMulticam from placed clips', () => {
     const project = recordings()
     const create = (payload: object) => thrownBy(() => applyCommand(project, { type: 'createMulticam', ...payload }))
     expect(create({ sources: [{ elementId: 'e-mic' }] })).toMatchObject({ code: 'invalid-payload' })
-    expect(create({ sources: [{ elementId: 'e-screen', key: 'cam' }, { elementId: 'e-cam', key: 'cam' }] })).toMatchObject({ code: 'invalid-payload' })
+    expect(
+      create({
+        sources: [
+          { elementId: 'e-screen', key: 'cam' },
+          { elementId: 'e-cam', key: 'cam' },
+        ],
+      }),
+    ).toMatchObject({ code: 'invalid-payload' })
     expect(create({ sources: [{ elementId: 'e-screen' }], audioSource: 'mic' })).toMatchObject({ code: 'unknown-source' })
     const sped = applyCommand(project, { type: 'setElementSpeed', elementId: 'e-cam', speed: 2 })
     expect(thrownBy(() => applyCommand(sped, { type: 'createMulticam', sources: [{ elementId: 'e-cam' }] }))).toMatchObject({ code: 'invalid-payload' })
