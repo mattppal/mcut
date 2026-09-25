@@ -28,7 +28,9 @@ The tested sequence is the vertical-reframe recipe. The shape:
    1920/1080 ≈ 1.78). Apply via `updateElement` patch on `transform`.
 3. Reframe toward the subject. Transforms are center-origin, so nudge `transform.x`
    (or animate `position.x` keyframes to follow the action). At 1.78× on 9:16 you
-   have about ±420px of horizontal slack.
+   have about ±420px of horizontal slack. On the live bridge, run `center_person`
+   with `aspect` 0.5625 instead and leave `transform.x` at center. The 9:16 crop
+   follows the face, and the step 2 scale still covers the frame exactly.
 4. Restyle text. Use bigger fonts because the frame is narrower, move captions to `middle`,
    and keep everything inside safe areas.
 5. Re-check duration norms. Cut a 10-min YouTube edit to 60s or less for Shorts.
