@@ -33,6 +33,7 @@ import { PropertiesPanel } from './properties-panel'
 import { host } from './studio-host'
 import { TimelinePanel } from './timeline-panel'
 import { UpdateDialog } from './update-dialog'
+import { VoiceStemSync } from './voice-cleanup'
 
 function isTypingTarget(target: EventTarget | null): target is HTMLElement {
   if (!(target instanceof HTMLElement)) return false
@@ -236,6 +237,7 @@ function Shell({ omitted, children }: { omitted: ReadonlySet<EmbedOmission>; chi
       <CommandPalette />
       <CurveEditorHost />
       <ProjectFontLoader />
+      <VoiceStemSync />
       {children}
       <Toaster position="bottom-right" />
       {host.updates === null ? null : <UpdateDialog updates={host.updates} />}
