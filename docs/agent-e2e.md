@@ -136,14 +136,14 @@ grok -p "Register apps/studio/e2e/fixtures/fixture-vp9.mkv as a video asset and 
 
 ## CI
 
-`.github/workflows/agent-e2e.yml` runs every Monday at 07:00 UTC and on `workflow_dispatch` with optional `target`, `model`, and `tasks` inputs. Pull requests that touch `scripts/agent-e2e/**`, `apps/studio/**`, `apps/desktop/**`, `packages/desktop-ipc/**`, `packages/mcp-server/**`, `packages/timeline/**`, or the workflow run the two dry run jobs.
+`.github/workflows/agent-e2e.yml` runs every Monday at 07:00 UTC and on `workflow_dispatch` with optional `target`, `model`, and `tasks` inputs. Pull requests that touch `scripts/agent-e2e/**`, `apps/studio/**`, `apps/desktop/**`, `packages/desktop-ipc/**`, `packages/mcp-server/**`, `packages/timeline/**`, or the workflow run the two dry run jobs once they leave draft. A newer push to the same pull request cancels the run in progress.
 
 The bridge jobs build the desktop app with `bunx turbo run build --filter=mcut-desktop...`, install `xvfb` and the Electron runtime libraries with `apt-get`, set `kernel.apparmor_restrict_unprivileged_userns=0` so the Chromium sandbox can start on the Ubuntu 24.04 runner (https://github.com/microsoft/playwright/issues/34251), and run the harness under `xvfb-run --auto-servernum`. Electron's `cli.js` downloads the Electron binary on first launch, so the job needs network but no extra install step.
 
 | Job | Runs on | Needs the key | Does |
 | --- | --- | --- | --- |
-| `dry-run` | pull requests, schedule, dispatch | no | typechecks and tests the harness, replays the scripted tasks through the stdio server |
-| `bridge-dry-run` | pull requests, schedule, dispatch | no | builds the desktop app, installs Xvfb and Grok Build, replays the scripted tasks including the WebM export through the Electron app, checks that grok discovers the bridge config and completes the MCP handshake, fuzzes the bridge for 20 seeds |
+| `dry-run` | ready pull requests, schedule, dispatch | no | typechecks and tests the harness, replays the scripted tasks through the stdio server |
+| `bridge-dry-run` | ready pull requests, schedule, dispatch | no | builds the desktop app, installs Xvfb and Grok Build, replays the scripted tasks including the WebM export through the Electron app, checks that grok discovers the bridge config and completes the MCP handshake, fuzzes the bridge for 20 seeds |
 | `live` | schedule, dispatch | yes | the xai driver against the `target` input, stdio by default |
 | `bridge-live` | schedule, dispatch | yes | installs Grok Build and lets it run every bridge task against the Electron app over the live bridge |
 

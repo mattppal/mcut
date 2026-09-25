@@ -1,5 +1,33 @@
 # @mcut/media
 
+## 0.1.0-alpha.16
+
+### Patch Changes
+
+- [#192](https://github.com/mattppal/mcut/pull/192) [`5f65e81`](https://github.com/mattppal/mcut/commit/5f65e81bc45b09fe8b24b53a384aee1922717263) Thanks [@mattppal](https://github.com/mattppal)! - A decoded-preview clip (MKV, WebM) placed in the first 3 seconds after load starts decoding at once instead of waiting for a retry that a paused preview never triggered, and a failed decode start moves `frameVersion` once its retry window passes, so a paused preview no longer stays black.
+
+## 0.1.0-alpha.15
+
+### Minor Changes
+
+- [#168](https://github.com/mattppal/mcut/pull/168) [`670b34b`](https://github.com/mattppal/mcut/commit/670b34b4279a1e3f344674cf8aa2673fdd86c455) Thanks [@mattppal](https://github.com/mattppal)! - Render one project frame to a PNG with `renderProjectStill`, and expose it to agents as the `get_frame` MCP tool on the live Studio bridge.
+
+  `McutMcpTarget.getFrame` is optional, like the other live-only members, so a custom target without it still compiles. `get_frame` on such a target fails with `get_frame requires the live bridge connected to Studio.`
+
+### Patch Changes
+
+- [#168](https://github.com/mattppal/mcut/pull/168) [`670b34b`](https://github.com/mattppal/mcut/commit/670b34b4279a1e3f344674cf8aa2673fdd86c455) Thanks [@mattppal](https://github.com/mattppal)! - `renderProjectStill` renders the last frame for a `timeMs` at the project end. It returned a black frame with no visible elements.
+
+- [#168](https://github.com/mattppal/mcut/pull/168) [`670b34b`](https://github.com/mattppal/mcut/commit/670b34b4279a1e3f344674cf8aa2673fdd86c455) Thanks [@mattppal](https://github.com/mattppal)! - `renderProjectStill` draws nothing for a video at times before the video's first timestamp, as export and the Studio preview do. It threw that the asset had no video frame.
+
+- [#168](https://github.com/mattppal/mcut/pull/168) [`670b34b`](https://github.com/mattppal/mcut/commit/670b34b4279a1e3f344674cf8aa2673fdd86c455) Thanks [@mattppal](https://github.com/mattppal)! - `renderProjectStill` copies each decoded video frame to RGBA before it draws it, in browsers whose `VideoFrame.copyTo` accepts a `format`. Repeated `get_frame` calls no longer grow the Studio renderer's shared memory and open file descriptors.
+
+## 0.1.0-alpha.14
+
+### Patch Changes
+
+- [#171](https://github.com/mattppal/mcut/pull/171) [`fed2a9e`](https://github.com/mattppal/mcut/commit/fed2a9e931caf36072346453da30835824944580) Thanks [@mattppal](https://github.com/mattppal)! - Long exports no longer spend minutes mixing audio.
+
 ## 0.1.0-alpha.13
 
 ### Patch Changes
