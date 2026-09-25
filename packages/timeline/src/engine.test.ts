@@ -109,6 +109,26 @@ describe('EditorEngine', () => {
     expect(getTrack(engine.project, trackId)?.elements[0]).toMatchObject({ startMs: 0, text: 'one' })
   })
 
+  test('a nested transact that throws drops the selection it declared', () => {
+    const { engine, trackId } = engineWithText()
+    engine.dispatch({ type: 'addElement', trackId, element: { type: 'text', id: 'e-a', text: 'a', startMs: 0, durationMs: 1000 } })
+    engine.dispatch({ type: 'addElement', trackId, element: { type: 'text', id: 'e-b', text: 'b', startMs: 2000, durationMs: 1000 } })
+    engine.select(['e-a'])
+    engine.transact(() => {
+      engine.dispatch({ type: 'trimElement', elementId: 'e-a', durationMs: 500 })
+      expect(() =>
+        engine.transact(() => {
+          engine.dispatch({ type: 'moveElement', elementId: 'e-a', startMs: 100 }, { selection: ['e-a'] })
+          engine.dispatch({ type: 'removeElement', elementId: 'e-missing' })
+        }),
+      ).toThrow('no element "e-missing"')
+    })
+    engine.select(['e-b'])
+    engine.undo()
+    expect(getTrack(engine.project, trackId)?.elements[0]).toMatchObject({ startMs: 0, durationMs: 1000 })
+    expect(engine.selection.elementIds).toEqual(['e-b'])
+  })
+
   test('cancelTransaction restores the base project without history', () => {
     const { engine, trackId } = engineWithText()
     engine.dispatch({
