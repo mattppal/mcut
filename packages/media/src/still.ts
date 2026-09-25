@@ -2,11 +2,13 @@ import type { FrameSource } from '@mcut/compositor'
 import type { Input, VideoSample, VideoSampleSink } from 'mediabunny'
 import {
   assertNever,
+  frameToMs,
   getElementLocation,
   getFrameRequests,
   getProjectDurationMs,
   getRenderableElements,
   isElementActiveAt,
+  msToFrame,
   type AssetId,
   type ElementId,
   type Project,
@@ -30,6 +32,10 @@ const frameKey = (assetId: string, sourceTimeMs: number): string => `${assetId}@
 
 function secondsText(ms: number): string {
   return String(Math.round(ms) / 1000)
+}
+
+function lastFrameMs(project: Project, durationMs: number): number {
+  return frameToMs(Math.max(0, msToFrame(durationMs, project.fps) - 1), project.fps)
 }
 
 function isAssetId(value: string): value is AssetId {
@@ -195,8 +201,9 @@ export async function renderProjectStill(project: Project, timeMs: number, optio
   const maxWidth = options.width
   if (maxWidth !== undefined && (!Number.isFinite(maxWidth) || maxWidth <= 0)) throw new Error('width must be a positive number.')
 
-  const visible = visibleElements(project, timeMs)
-  const shown = options.soloElementId ? [requireSolo(project, timeMs, options.soloElementId, visible)] : visible
+  const frameMs = timeMs < durationMs ? timeMs : lastFrameMs(project, durationMs)
+  const visible = visibleElements(project, frameMs)
+  const shown = options.soloElementId ? [requireSolo(project, frameMs, options.soloElementId, visible)] : visible
   const size = outputSize(project.width, project.height, maxWidth)
   const canvas = new OffscreenCanvas(size.width, size.height)
   const ctx = canvas.getContext('2d', { alpha: false })
@@ -206,14 +213,14 @@ export async function renderProjectStill(project: Project, timeMs: number, optio
   try {
     await source.prepare(
       shown.filter((element) => pictureKind(element) === 'frame'),
-      timeMs,
+      frameMs,
     )
     const { renderFrame } = await import('@mcut/compositor')
     ctx.setTransform(size.scale, 0, 0, size.scale, 0, 0)
     const skipElementIds = options.soloElementId
-      ? new Set(getRenderableElements(project, timeMs).flatMap((item) => (item.element.id === options.soloElementId ? [] : [item.element.id])))
+      ? new Set(getRenderableElements(project, frameMs).flatMap((item) => (item.element.id === options.soloElementId ? [] : [item.element.id])))
       : undefined
-    renderFrame(ctx, project, timeMs, {
+    renderFrame(ctx, project, frameMs, {
       source,
       ...(skipElementIds ? { skipElementIds } : {}),
     })
