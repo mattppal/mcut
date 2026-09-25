@@ -39,7 +39,7 @@ const metricDefinitions: Record<MetricId, string> = {
   switchStmt: 'switch statements',
   longFile: 'files over 400 lines',
   longDash: 'em or en dash characters in code and prose',
-  colonConnector: 'prose lines with a mid-sentence colon connector, heuristic `^[^#\\-*|>`].*\\w: [a-z]`',
+  colonConnector: 'prose lines outside code fences with a mid-sentence colon connector, heuristic `^[^#\\-*|>`].*\\w: [a-z]`',
   optionalProps: 'optional fields `x?:` in type bodies',
   emptyCatch: '`catch` blocks whose body is empty or only `return null`/`return undefined`',
 }
@@ -145,9 +145,12 @@ export function measureFile(rel: string, text: string): Counts {
   add(counts, 'loc', lines.length)
   const bucket = bucketOf(rel)
   if (bucket === 'prose') {
+    let fenced = false
     for (const raw of lines) {
+      const line = raw.trim()
       add(counts, 'longDash', dashes(raw))
-      if (/^[^#\-*|>`].*\w: [a-z]/.test(raw.trim())) add(counts, 'colonConnector', 1)
+      if (line.startsWith('```')) fenced = !fenced
+      if (!fenced && /^[^#\-*|>`].*\w: [a-z]/.test(line)) add(counts, 'colonConnector', 1)
     }
     return counts
   }
