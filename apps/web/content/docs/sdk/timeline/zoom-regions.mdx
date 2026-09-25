@@ -12,7 +12,7 @@ while the camera overlay stays put.
 Regions on one target never overlap. The zoom commands keep the region they add
 or change inside the element. A split copies a region that crosses the cut into
 both halves, so the picture on each side stays the same, and a trim can leave a
-region running past an edge, which simply plays cut off. Growing a clip from
+region running past an edge, where it plays cut off. Growing a clip from
 its start shifts the regions with the content.
 
 ```ts
@@ -49,7 +49,7 @@ instant. `scale` multiplies the fit scale. `focus` is the anchor point from 0 to
 | `source` | string, optional | Multicam source key whose slots zoom. Absent on clips |
 | `atMs` | integer ms | Element-local start of the zoom-in, negative on the right half of a split through a zoom |
 | `inMs`, `holdMs`, `outMs` | integer ms | Ramp in, hold, ramp out |
-| `focus` | `{ x, y }` from 0 to 1 | Target center in source frame coordinates |
+| `focus` | `{ x, y }` from 0 to 1 | Target center, across the cropped frame of a clip or across the source frame of a multicam slot |
 | `scale` | 1 to 8 | Scale at the hold |
 | `easing` | `Easing` | Applied to both ramps |
 | `motionBlur` | 0 to 1 | Shutter as a fraction of one frame while the zoom moves. 0 turns it off |

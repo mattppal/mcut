@@ -353,7 +353,7 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
         }
 
         const fitScale = slot.fit === 'cover' ? Math.max(rw / fw, rh / fh) : Math.min(rw / fw, rh / fh)
-        const view = getSlotView(element, slot, context.viewTimeMs, { x: Math.min(1, rw / (fitScale * fw)), y: Math.min(1, rh / (fitScale * fh)) })
+        const view = getSlotView(element, slot, context.viewTimeMs, { x: rw / (fitScale * fw), y: rh / (fitScale * fh) })
         const scale = fitScale * view.scale
         const sw = Math.min(fw, rw / scale)
         const sh = Math.min(fh, rh / scale)
