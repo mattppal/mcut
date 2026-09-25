@@ -16,7 +16,7 @@ JSON surgery when an mcut MCP tool or action exists.
 **MCP server** access is the normal agent path.
 
 For real media, transcription, silence removal, audio activity, frame grabs,
-in-editor export, or current editor state, use the live bridge, not the file-only stdio
+in-editor export, importing local files, or current editor state, use the live bridge, not the file-only stdio
 server. mcut Studio hosts the bridge at `http://127.0.0.1:44737/mcp` with the
 token from the app's MCP menu. Developers running the editor as a browser tab
 start the same bridge with `mcut-bridge start`.
@@ -61,6 +61,10 @@ A fade in and a fade out are one intent. Send them together.
 `undo` then removes both presets. Two separate `applyAnimationPreset` calls
 undo one preset at a time. Each call is a timeline command, an `operator_*`
 tool, `run_operator`, `run_action`, or `apply_commands`.
+
+Import local recordings with `import_media` and absolute paths. `file.import`
+opens a dialog for a person and imports nothing. `addAsset` cannot load a
+`file:` URL.
 
 ## Required workflows
 
@@ -148,7 +152,7 @@ inside one `transact`.
 
 Common raw-command cases:
 
-- add or register media assets
+- import local files with `import_media`, then place the returned asset ids
 - place clips on tracks
 - exact trims and splits when the times are already known
 - `setTransition` for adjacent clip transitions

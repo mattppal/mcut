@@ -40,6 +40,7 @@ function frameTarget(frame: unknown): McutMcpTarget {
     dispatchCommand: unused,
     applyCommands: unused,
     transact: unused,
+    importMedia: unused,
     getFrame: async () => frame,
   }
 }
