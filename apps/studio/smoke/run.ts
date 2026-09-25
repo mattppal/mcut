@@ -3,7 +3,7 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { describe, summarize, type Fixtures, type Outcome, type Report, type Row, type SurfaceContext } from './context.ts'
 import { DRIVERS } from './drivers/index.ts'
-import { featuresForTier, SURFACES, TIERS, type Feature, type Surface, type Tier } from './features.ts'
+import { featuresForTier, SURFACES, TIERS, type Feature, type FeatureId, type Surface, type Tier } from './features.ts'
 import { openEmbed } from './surfaces/embed.ts'
 import { openElectron } from './surfaces/electron.ts'
 import type { OpenSurface } from './surfaces/handle.ts'
@@ -12,7 +12,8 @@ import { probeWhisperNetwork } from './whisper.ts'
 const repoRoot = path.resolve(import.meta.dirname, '..', '..', '..')
 const FIXTURE_DIR = path.join(repoRoot, 'apps/studio/e2e/fixtures')
 const FEATURE_TIMEOUT_MS = 180_000
-const WHISPER_TIMEOUT_MS = 900_000
+const ON_DEVICE_TIMEOUT_MS = 900_000
+const ON_DEVICE_FEATURES: ReadonlySet<FeatureId> = new Set(['captions-on-device', 'clean-voice'])
 const USAGE =
   'usage: node apps/studio/smoke/run.ts --surface <embed|electron-dev|installed> [--tier fast|full] [--out <dir>] [--electron <binary>] [--only <feature,...>]'
 
@@ -39,7 +40,7 @@ function openerFor(surface: Surface): OpenSurface {
 }
 
 function timeoutFor(feature: Feature): number {
-  return feature.id === 'captions-on-device' ? WHISPER_TIMEOUT_MS : FEATURE_TIMEOUT_MS
+  return ON_DEVICE_FEATURES.has(feature.id) ? ON_DEVICE_TIMEOUT_MS : FEATURE_TIMEOUT_MS
 }
 
 async function settle(ctx: SurfaceContext): Promise<void> {

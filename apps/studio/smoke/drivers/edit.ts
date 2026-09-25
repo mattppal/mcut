@@ -8,6 +8,7 @@ const VIDEO_CLIP = '[data-mcut-clip=video]'
 const TEXT_CLIP = '[data-mcut-clip=text]'
 const KEYFRAME_MARKER = "button[title*='Keyframe']"
 const DIAMOND = "[title^='Arm keyframes'], [title='Add keyframe at playhead'], [title='Remove keyframe at playhead']"
+const VOICE_WAIT_MS = 840_000
 
 const round = (value: number) => Math.round(value)
 const lanes = (view: View) => view.locator('[data-mcut-lane]')
@@ -197,6 +198,37 @@ const effects: Driver = async ({ view }) => {
   return pass(`Blur ${before} px became ${after} px in the inspector, preview canvas signature ${signatureBefore} became ${signatureAfter}`)
 }
 
+const cleanVoice: Driver = async ({ view }) => {
+  const target = await widestClip(view, VIDEO_CLIP)
+  const name = await view.locator(VIDEO_CLIP).nth(target).getAttribute('title')
+  await selectClip(view, VIDEO_CLIP, target)
+  const toggle = view.getByRole('switch', { name: 'Clean up voice' })
+  await openSection(view, 'Audio', toggle)
+  const before = await toggle.getAttribute('aria-checked')
+  check(before === 'false', `"Clean up voice" switch reads aria-checked ${before} before the click`)
+  const stem = view.locator('[data-mcut-voice-stem]')
+  const progress = view.getByText(/^Cleaning voice… \d+%$/)
+  let peak = -1
+  const started = Date.now()
+  await toggle.click()
+  const state = await poll(
+    async () => {
+      const [value, lines] = await Promise.all([stem.getAttribute('data-mcut-voice-stem'), progress.allTextContents()])
+      for (const line of lines) peak = Math.max(peak, Number(/(\d+)%$/.exec(line)?.[1] ?? peak))
+      return value
+    },
+    (value) => value === 'ready' || value === 'failed',
+    VOICE_WAIT_MS,
+  )
+  const ms = Date.now() - started
+  const failure = (await view.getByText(/^Voice cleanup failed\./).allTextContents())[0]
+  check(state === 'ready', `stem for "${name}" reads "${state}" ${ms} ms after the click${failure ? `, "${failure}"` : ''}`)
+  const amount = (await stem.getByText(/^\d+%$/).allTextContents())[0]
+  check(amount === '100%', `Amount reads ${amount} after turning Clean up voice on`)
+  const seen = peak >= 0 ? `progress line seen up to ${peak}%` : 'finished before a progress line rendered'
+  return pass(`Clean up voice on for "${name}", Amount ${amount}, stem ready ${ms} ms after the click, ${seen}`)
+}
+
 const transitions: Driver = async ({ view }) => {
   const before = await clips(view).count()
   const target = await widestClip(view, VIDEO_CLIP)
@@ -294,6 +326,7 @@ export const EDIT_DRIVERS = {
   'text-title': textTitle,
   'text-inline-edit': textInlineEdit,
   effects,
+  'clean-voice': cleanVoice,
   transitions,
   keyframes,
   'animation-presets': animationPresets,
