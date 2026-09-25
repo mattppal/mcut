@@ -34,6 +34,9 @@
     "desktop-update-state",
     "duplicate-element-ids",
     "edge-trim-safe-integer",
+    "expo-easing",
+    "export-audio-encoder-delay",
+    "export-job",
     "layout-summary-pixels",
     "lazy-mediabunny",
     "live-bridge-app-origin",
@@ -54,12 +57,14 @@
     "r6-format",
     "react-use-latest",
     "react-use-media-query",
+    "retire-zoom-presets",
     "reversed-split-integer-trim",
     "screen-cam-crop-preset",
     "secure-bridge-daemon",
     "sequential-video-collage",
     "strict-transform",
     "thumbnail-track-per-layer",
+    "transact-tool",
     "transcription-assemblyai-signal",
     "u10-close-types",
     "u11-split-commands",
@@ -78,6 +83,8 @@
     "webgpu-player-default",
     "whisper-load-watchdog",
     "whisper-model-load-retry",
-    "whisper-progress-unclamped"
+    "whisper-progress-unclamped",
+    "zoom-region-gestures",
+    "zoom-regions"
   ]
 }

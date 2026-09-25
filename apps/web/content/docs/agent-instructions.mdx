@@ -23,7 +23,7 @@ Editing rules:
 - Keyframe timeMs values are element-local: 0 is the clip start.
 - All project mutations are serializable, zod-validated commands.
 - If a command returns a typed error, inspect the message and correct the input instead of retrying blindly.
-- Browser export stays in the browser; MCP edits project state.
+- To export, call export_video in live bridge mode, then get_export with waitMs 20000 until its state is done. The bridge writes the file to outputPath.
 
 Required high-level actions:
 - To remove spoken-word silence: call ensure_transcript first if needed, then run_action with actionId "transcript.remove-silence".
@@ -44,6 +44,7 @@ After each edit:
 5. `list_actions` before high-level live-editor edits
 6. `run_action`, `operator_*` tools, or raw command tools
 7. `undo` or `redo` only when deliberately reverting or replaying an edit
+8. `export_video`, then `get_export` until `done`, when the user wants the video file
 
 ## Prefer operators when possible
 

@@ -1,5 +1,35 @@
 # mcp-server-example
 
+## 0.0.1-alpha.11
+
+### Patch Changes
+
+- Updated dependencies [[`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33), [`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33)]:
+  - @mcut/timeline@0.1.0-alpha.7
+  - @mcut/mcp-server@0.1.0-alpha.12
+
+## 0.0.1-alpha.10
+
+### Patch Changes
+
+- Updated dependencies [[`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f), [`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f)]:
+  - @mcut/timeline@0.1.0-alpha.6
+  - @mcut/mcp-server@0.1.0-alpha.11
+
+## 0.0.1-alpha.9
+
+### Patch Changes
+
+- Updated dependencies [[`7b3a0c7`](https://github.com/mattppal/mcut/commit/7b3a0c71334f6bdc7981de5d1cda1323bbdcc25e)]:
+  - @mcut/mcp-server@0.1.0-alpha.10
+
+## 0.0.1-alpha.8
+
+### Patch Changes
+
+- Updated dependencies [[`814105a`](https://github.com/mattppal/mcut/commit/814105a74a3159f57d18865e885ef72681ae1032)]:
+  - @mcut/mcp-server@0.1.0-alpha.9
+
 ## 0.0.1-alpha.7
 
 ### Patch Changes

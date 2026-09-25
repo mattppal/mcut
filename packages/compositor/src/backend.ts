@@ -97,12 +97,14 @@ export function createElementContext(
   track: Track,
   timeMs: number,
   source: FrameSource | undefined,
+  viewTimeMs: number = timeMs,
 ): ElementRenderContext {
   return {
     backend,
     project,
     track,
     timeMs,
+    viewTimeMs,
     source,
     get ctx() {
       return backend.acquireRaster()

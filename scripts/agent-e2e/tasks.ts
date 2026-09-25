@@ -1,5 +1,8 @@
+import { statSync } from 'node:fs'
 import type { BuiltinCommand, Project } from '@mcut/timeline'
+import { z } from 'zod'
 import { resolveFixture, type Fixture } from './fixtures'
+import { parseJsonObject } from './json'
 import type { ScriptedCall } from './model'
 import {
   buttCutsFromZero,
@@ -26,7 +29,7 @@ const FADE_MS = 400
 const TITLE = 'Hello mcut'
 const FADE_ACTION = 'effects.fade-open-close'
 const SILENCE_ACTION = 'transcript.remove-silence'
-const EXPORT_ACTION = 'file.export-video'
+const EXPORT_WAIT_MS = 25_000
 
 export type MediaSrc = (fixture: Fixture) => string
 
@@ -96,18 +99,26 @@ const round4 = (value: number): number => Math.round(value * 10_000) / 10_000
 const ranAction = (transcript: readonly ToolCall[], actionId: string): boolean =>
   transcript.some((call) => call.name === 'run_action' && !call.isError && call.args.actionId === actionId)
 
-const RESULT_BLOCK = /Result:\n([\s\S]*?)\n\n/
+const doneExportSchema = z.object({ state: z.literal('done'), format: z.string(), outputPath: z.string(), bytes: z.number() })
 
-function exportResult(transcript: readonly ToolCall[]): { format?: unknown; bytes?: unknown; mimeType?: unknown } {
-  const run = transcript.find((call) => call.name === 'run_action' && !call.isError && call.args.actionId === EXPORT_ACTION)
-  const block = run === undefined ? null : RESULT_BLOCK.exec(run.result)
-  if (block === null) return {}
-  try {
-    const parsed: unknown = JSON.parse(block[1] ?? '')
-    return typeof parsed === 'object' && parsed !== null ? parsed : {}
-  } catch {
-    return {}
-  }
+function finishedExport(transcript: readonly ToolCall[]): z.infer<typeof doneExportSchema> | null {
+  const read = transcript.findLast((call) => call.name === 'get_export' && !call.isError)
+  const json = read === undefined ? null : parseJsonObject(read.result)
+  if (json === null || !json.ok) return null
+  const done = doneExportSchema.safeParse(json.value)
+  return done.success ? done.data : null
+}
+
+const exportChecks = (transcript: readonly ToolCall[]) => {
+  const written = finishedExport(transcript)
+  const sizeOnDisk = written === null ? undefined : statSync(written.outputPath, { throwIfNoEntry: false })?.size
+  return [
+    ['export_video started a job', transcript.some((call) => call.name === 'export_video' && !call.isError)],
+    ['get_export reports the job done', written !== null],
+    ['the export is a webm file', written?.format === 'webm' && written.outputPath.endsWith('.webm')],
+    ['the export wrote bytes', written !== null && written.bytes > 0],
+    ['the file on disk has the reported size', written !== null && sizeOnDisk === written.bytes],
+  ] satisfies Check[]
 }
 
 const fadeChecks = (project: Project) => {
@@ -341,25 +352,20 @@ export function createTasks(srcOf: MediaSrc): E2ETask[] {
     },
     {
       id: 'bridge-export-webm',
-      title: 'Import the fixture and export a WebM through the editor action',
+      title: 'Import the fixture and export a WebM file through the bridge',
       prompt:
-        `${importPrompt} Then render the timeline to a WebM file by running the live editor action ` +
-        `${EXPORT_ACTION} through the run_action tool with input {"format": "webm"}, and report the ` +
-        'byte size it returns.',
+        `${importPrompt} Then render the timeline to a WebM file with the export_video tool and input {"format": "webm"}, ` +
+        `call get_export with waitMs ${EXPORT_WAIT_MS} until its state is done, and report the file path and byte size.`,
       target: 'bridge',
       fixtures,
       setup: [],
-      scripted: [...importClip.map(call), { name: 'run_action', args: { actionId: EXPORT_ACTION, input: { format: 'webm' } } }],
-      score: (project, transcript) => {
-        const result = exportResult(transcript)
-        return verdictOf([
-          ...placedChecks(project, src),
-          [`the ${EXPORT_ACTION} action ran through run_action`, ranAction(transcript, EXPORT_ACTION)],
-          ['the export reports a webm container', result.format === 'webm'],
-          ['the export reports a webm mime type', typeof result.mimeType === 'string' && result.mimeType.startsWith('video/webm')],
-          ['the export produced bytes', typeof result.bytes === 'number' && result.bytes > 0],
-        ])
-      },
+      scripted: [
+        ...importClip.map(call),
+        { name: 'export_video', args: { format: 'webm' } },
+        { name: 'get_export', args: { waitMs: EXPORT_WAIT_MS } },
+        { name: 'get_export', args: { waitMs: EXPORT_WAIT_MS } },
+      ],
+      score: (project, transcript) => verdictOf([...placedChecks(project, src), ...exportChecks(transcript)]),
     },
   ]
 }

@@ -21,6 +21,7 @@ import {
   getProjectCaptions,
   getProjectMediaContext,
   getProjectTranscript,
+  listZoomRegions,
   parseCommand,
   parseProject,
   type BuiltinCommand,
@@ -35,7 +36,9 @@ import {
   listServerToolDefinitions,
   operatorToolName,
   type McpServerStaticToolCall,
+  type TransactSubRequest,
 } from './contract'
+import { runEngineTransact, translateTransactCalls } from './transact'
 
 export interface McutMcpTarget {
   getSummary(): string | Promise<string>
@@ -54,6 +57,10 @@ export interface McutMcpTarget {
   runOperator(operatorId: OperatorId, input: unknown): unknown | Promise<unknown>
   dispatchCommand(commandName: string, input: unknown): unknown | Promise<unknown>
   applyCommands(commands: BuiltinCommand[]): unknown | Promise<unknown>
+  exportVideo?(input: unknown): unknown | Promise<unknown>
+  getExport?(input: unknown): unknown | Promise<unknown>
+  cancelExport?(input: unknown): unknown | Promise<unknown>
+  transact(requests: readonly TransactSubRequest[]): unknown | Promise<unknown>
 }
 
 export interface McutMcpServerOptions {
@@ -165,6 +172,7 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
       applyCommands(engine, commands)
       await onChange()
     },
+    transact: (requests) => runEngineTransact(engine, requests, onChange),
   }
 }
 
@@ -196,6 +204,11 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       return text(JSON.stringify(await target.getAudioActivity(call.arguments), null, 2))
     case 'lint_project':
       return text(JSON.stringify(lintProject(await targetProject(target)), null, 2))
+    case 'list_zooms':
+      return text(JSON.stringify(listZoomRegions(await targetProject(target)), null, 2))
+    case 'edit_zooms':
+      await target.applyCommands(call.arguments.edits)
+      return text(`OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}`)
     case 'list_presets':
       return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
     case 'apply_captions': {
@@ -239,12 +252,31 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const result = await target.runAction(actionId, input)
       return text(`${withResult(`OK: action ${actionId} applied.`, result)}\n\n${await target.getSummary()}`)
     }
+    case 'transact': {
+      const requests = translateTransactCalls(call.arguments.calls)
+      const results = await target.transact(requests)
+      const lead = `OK: ${requests.length} calls applied as one undo step.`
+      return text(`${withResult(lead, results)}\n\n${await target.getSummary()}`)
+    }
     case 'undo':
       if (!(await target.undo())) return failure('Nothing to undo.')
       return text(`Undone.\n\n${await target.getSummary()}`)
     case 'redo':
       if (!(await target.redo())) return failure('Nothing to redo.')
       return text(`Redone.\n\n${await target.getSummary()}`)
+    case 'export_video': {
+      if (!target.exportVideo) return failure('export_video requires the live bridge connected to Studio.')
+      const started = await target.exportVideo(call.arguments)
+      return text(
+        withResult('OK: export started. Studio renders it in the background. Call get_export { jobId, waitMs: 20000 } until its state is done.', started),
+      )
+    }
+    case 'get_export':
+      if (!target.getExport) return failure('get_export requires the live bridge connected to Studio.')
+      return text(JSON.stringify(await target.getExport(call.arguments), null, 2))
+    case 'cancel_export':
+      if (!target.cancelExport) return failure('cancel_export requires the live bridge connected to Studio.')
+      return text(withResult('OK: export cancelled.', await target.cancelExport(call.arguments)))
   }
 }
 
