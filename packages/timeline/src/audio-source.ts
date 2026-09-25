@@ -72,9 +72,9 @@ export function resolveElementAudioSource(project: Project, elementId: ElementId
 export function getVoiceSource(project: Project, element: TimelineElement): { assetId: AssetId; amount: number } | null {
   const voice = elementVoice(element)
   if (!voice || !voice.enabled || voice.amount <= 0) return null
-  const assetId = voiceAssetId(element)
-  if (!assetId || !project.assets[assetId]) return null
-  return { assetId, amount: voice.amount }
+  const source = resolveElementAudioSource(project, element.id)
+  if (!source) return null
+  return { assetId: source.assetId, amount: voice.amount }
 }
 
 function elementVoice(element: TimelineElement): Voice | undefined {
@@ -87,22 +87,6 @@ function elementVoice(element: TimelineElement): Voice | undefined {
     case 'text':
     case 'caption':
       return undefined
-    default:
-      return assertNever(element)
-  }
-}
-
-function voiceAssetId(element: TimelineElement): AssetId | null {
-  switch (element.type) {
-    case 'video':
-    case 'audio':
-      return element.assetId
-    case 'multicam':
-      return getMulticamAudioSource(element)?.assetId ?? null
-    case 'image':
-    case 'text':
-    case 'caption':
-      return null
     default:
       return assertNever(element)
   }
