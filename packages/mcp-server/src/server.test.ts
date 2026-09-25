@@ -39,6 +39,7 @@ function frameTarget(frame: unknown): McutMcpTarget {
     runOperator: unused,
     dispatchCommand: unused,
     applyCommands: unused,
+    transact: unused,
     getFrame: async () => frame,
   }
 }
