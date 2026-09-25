@@ -81,6 +81,7 @@
     "u7-studio-effects",
     "u8-react-playback",
     "u9-boundary-parse",
+    "voice-cleanup",
     "webgpu-player-default",
     "whisper-load-watchdog",
     "whisper-model-load-retry",
