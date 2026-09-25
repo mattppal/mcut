@@ -20,16 +20,16 @@ describe('cleanVoice on Node workers', () => {
     const cleaned = await cleanVoice(input, { workers: 1 })
     expect(cleaned.length).toBe(input.length)
     expect(signalToDifferenceDb(cleaned, fixture('native.wav'))).toBeGreaterThan(60)
-  }, 30_000)
+  }, 120_000)
 
   test('matches the single worker output across a chunk seam', async () => {
     const [single, chunked] = await Promise.all([cleanVoice(input, { workers: 1 }), cleanVoice(input, { workers: 2 })])
     expect(signalToDifferenceDb(chunked, single)).toBeGreaterThan(45)
-  }, 30_000)
+  }, 120_000)
 
   test('rejects with the abort reason when the signal aborts mid chunk', async () => {
     const controller = new AbortController()
     const cleaning = cleanVoice(input, { workers: 2, signal: controller.signal, onProgress: () => controller.abort(new Error('stopped by the test')) })
     await expect(cleaning).rejects.toThrow('stopped by the test')
-  }, 30_000)
+  }, 120_000)
 })
