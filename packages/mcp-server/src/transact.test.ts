@@ -55,4 +55,36 @@ describe('transact', () => {
     expect(engine.project.tracks[0]?.elements[0]).toMatchObject({ text: 'Original' })
     expect(engine.canUndo()).toBe(false)
   })
+
+  test('transact rejects undo and redo before it changes the project or the history', async () => {
+    const engine = new EditorEngine({ project: textProject() })
+    const client = await connect(engine)
+    engine.dispatch({ type: 'updateElement', elementId: 'e-text', patch: { text: 'First' } })
+    engine.dispatch({ type: 'updateElement', elementId: 'e-text', patch: { text: 'Second' } })
+    engine.undo()
+    const before = snapshot(engine)
+
+    const historyCalls = [
+      { call: { name: 'operator_edit_undo' }, id: 'edit.undo' },
+      { call: { name: 'operator_edit_redo' }, id: 'edit.redo' },
+      { call: { name: 'run_operator', arguments: { operatorId: 'edit.undo' } }, id: 'edit.undo' },
+      { call: { name: 'run_action', arguments: { actionId: 'edit.redo' } }, id: 'edit.redo' },
+    ]
+    for (const { call, id } of historyCalls) {
+      const rejected = await client.callTool({ name: 'transact', arguments: { calls: [fadeIn, call] } })
+      expect(rejected.isError).toBe(true)
+      expect(contentText(rejected)).toBe(
+        `transact cannot run "${id}". One transact is one undo step, so it cannot contain undo or redo. Call the undo or redo tool on its own.`,
+      )
+      expect(snapshot(engine)).toEqual(before)
+    }
+
+    expect(engine.project.tracks[0]?.elements[0]).toMatchObject({ text: 'First' })
+    expect(engine.redo()).toBe(true)
+    expect(engine.project.tracks[0]?.elements[0]).toMatchObject({ text: 'Second' })
+    expect(engine.undo()).toBe(true)
+    expect(engine.undo()).toBe(true)
+    expect(engine.project.tracks[0]?.elements[0]).toMatchObject({ text: 'Original' })
+    expect(engine.canUndo()).toBe(false)
+  })
 })
