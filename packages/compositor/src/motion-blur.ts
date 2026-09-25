@@ -44,7 +44,6 @@ type ScratchRole = 'sample' | 'accumulate'
 
 const cachedScratch = new Map<ScratchRole, OffscreenCanvasRenderingContext2D>()
 
-// The canvas colorType setting is in the HTML standard but not yet in TypeScript's DOM types, see https://html.spec.whatwg.org/multipage/canvas.html#dom-canvasrenderingcontext2dsettings-colortype
 type ScratchSettings = CanvasRenderingContext2DSettings & { colorType: 'unorm8' | 'float16' }
 
 const SCRATCH_SETTINGS: Record<ScratchRole, ScratchSettings> = {
