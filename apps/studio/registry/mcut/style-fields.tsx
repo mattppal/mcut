@@ -72,6 +72,7 @@ export function ShadowFields({
     <>
       <FieldRow label="Shadow">
         <Switch
+          aria-label="Shadow"
           checked={value !== undefined}
           onCheckedChange={(on) => onCommit(on ? { ...DEFAULT_SHADOW } : undefined)}
         />
