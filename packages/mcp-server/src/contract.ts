@@ -3,10 +3,9 @@ import { operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinitio
 import { elementIdSchema, listToolDefinitions } from '@mcut/timeline'
 import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
-
-export * from './export-protocol'
 import { commandBatchSchema } from './transact-shape'
 
+export * from './export-protocol'
 export { applyTransact, transactSubRequestSchema, type TransactSubRequest } from './transact-shape'
 
 export interface McpToolDefinition {
