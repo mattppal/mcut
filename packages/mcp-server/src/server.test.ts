@@ -163,6 +163,101 @@ describe('createMcutMcpServer', () => {
     expect(engine.project.tracks.some((track) => track.name === 'B-roll')).toBe(false)
   })
 
+  test('transact applies two animation presets as one undo step', async () => {
+    const engine = new EditorEngine({ project: talkProject() })
+    let persisted = 0
+    const client = await connect(engine, () => {
+      persisted++
+    })
+    const before = JSON.parse(JSON.stringify(engine.toJSON()))
+
+    const applied = await client.callTool({
+      name: 'transact',
+      arguments: {
+        calls: [
+          { name: 'applyAnimationPreset', arguments: { elementId: 'e-video', preset: 'fade-in' } },
+          { name: 'applyAnimationPreset', arguments: { elementId: 'e-video', preset: 'fade-out' } },
+        ],
+      },
+    })
+    expect(applied.isError).toBeFalsy()
+    expect(contentText(applied).startsWith('OK: 2 calls applied as one undo step.\n\nResult:\n[\n  null,\n  null\n]')).toBe(true)
+    expect(persisted).toBe(1)
+    const clip = engine.project.tracks[0]?.elements[0]
+    if (clip === undefined || clip.type !== 'video') throw new Error('fixture lost the video clip')
+    expect(clip.keyframes).toEqual({
+      opacity: [
+        { timeMs: 0, value: 0, easing: { cubicBezier: [0.33, 1, 0.68, 1] } },
+        { timeMs: 300, value: 1 },
+        { timeMs: 9750, value: 1, easing: { cubicBezier: [0.32, 0, 0.67, 0] } },
+        { timeMs: 10000, value: 0 },
+      ],
+    })
+    expect(engine.canUndo()).toBe(true)
+    expect(engine.canRedo()).toBe(false)
+
+    const undone = await client.callTool({ name: 'undo', arguments: {} })
+    expect(undone.isError).toBeFalsy()
+    expect(contentText(undone).startsWith('Undone.')).toBe(true)
+    expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
+    expect(engine.canUndo()).toBe(false)
+    expect(engine.canRedo()).toBe(true)
+  })
+
+  test('a failing transact call leaves the project and the undo stack unchanged', async () => {
+    const engine = new EditorEngine({ project: talkProject() })
+    let persisted = 0
+    const client = await connect(engine, () => {
+      persisted++
+    })
+    const before = JSON.parse(JSON.stringify(engine.toJSON()))
+
+    const failed = await client.callTool({
+      name: 'transact',
+      arguments: {
+        calls: [
+          { name: 'applyAnimationPreset', arguments: { elementId: 'e-video', preset: 'fade-in' } },
+          { name: 'applyAnimationPreset', arguments: { elementId: 'e-missing', preset: 'fade-out' } },
+        ],
+      },
+    })
+    expect(failed.isError).toBe(true)
+    expect(contentText(failed)).toBe('transact call 2 (applyAnimationPreset) failed: no element "e-missing". No changes were applied.')
+    expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
+    expect(engine.canUndo()).toBe(false)
+    expect(engine.canRedo()).toBe(false)
+    expect(persisted).toBe(0)
+
+    const undone = await client.callTool({ name: 'undo', arguments: {} })
+    expect(undone.isError).toBe(true)
+    expect(contentText(undone)).toBe('Nothing to undo.')
+    expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
+  })
+
+  test('transact rejects a disallowed tool before it changes the project', async () => {
+    const engine = new EditorEngine({ project: talkProject() })
+    let persisted = 0
+    const client = await connect(engine, () => {
+      persisted++
+    })
+    const before = JSON.parse(JSON.stringify(engine.toJSON()))
+
+    const rejected = await client.callTool({
+      name: 'transact',
+      arguments: {
+        calls: [{ name: 'applyAnimationPreset', arguments: { elementId: 'e-video', preset: 'fade-in' } }, { name: 'undo' }],
+      },
+    })
+    expect(rejected.isError).toBe(true)
+    expect(contentText(rejected)).toBe(
+      'transact cannot run "undo". Allowed tools are timeline commands (list_commands), operator_* tools, run_operator, run_action, and apply_commands.',
+    )
+    expect(JSON.parse(JSON.stringify(engine.toJSON()))).toEqual(before)
+    expect(engine.canUndo()).toBe(false)
+    expect(engine.canRedo()).toBe(false)
+    expect(persisted).toBe(0)
+  })
+
   test('invalid payloads come back as tool errors, not crashes', async () => {
     const client = await connect(new EditorEngine())
     const result = await client.callTool({
