@@ -107,7 +107,7 @@ function outputSize(projectWidth: number, projectHeight: number, maxWidth: numbe
 }
 
 class StillFrameSource implements FrameSource {
-  private readonly inputs = new Map<AssetId, { input: Input; sink: VideoSampleSink; firstTimestamp: number }>()
+  private readonly inputs = new Map<AssetId, { input: Input; sink: VideoSampleSink }>()
   private readonly images = new Map<AssetId, ImageBitmap>()
   private readonly bitmaps: ImageBitmap[] = []
   private readonly frames = new Map<string, CanvasImageSource>()
@@ -153,9 +153,9 @@ class StillFrameSource implements FrameSource {
     this.frames.set(key, bitmap)
   }
 
-  private async ensureVideo(assetId: AssetId): Promise<{ sink: VideoSampleSink; firstTimestamp: number }> {
+  private async ensureSink(assetId: AssetId): Promise<VideoSampleSink> {
     const existing = this.inputs.get(assetId)
-    if (existing) return existing
+    if (existing) return existing.sink
     const asset = this.project.assets[assetId]
     if (!asset) throw new Error(`Asset ${assetId} is not in the project.`)
     const input = await inputFor(asset.src)
@@ -164,10 +164,10 @@ class StillFrameSource implements FrameSource {
       const track = await input.getPrimaryVideoTrack()
       if (!track) throw new Error(`Asset ${assetId} has no video track.`)
       const { VideoSampleSink } = await import('mediabunny')
-      const video = { input, sink: new VideoSampleSink(track), firstTimestamp: await track.getFirstTimestamp() }
-      this.inputs.set(assetId, video)
+      const sink = new VideoSampleSink(track)
+      this.inputs.set(assetId, { input, sink })
       stored = true
-      return video
+      return sink
     } finally {
       if (!stored) input.dispose()
     }
@@ -176,9 +176,9 @@ class StillFrameSource implements FrameSource {
   private async ensureVideoFrame(assetId: AssetId, sourceTimeMs: number): Promise<void> {
     const key = frameKey(assetId, sourceTimeMs)
     if (this.frames.has(key)) return
-    const { sink, firstTimestamp } = await this.ensureVideo(assetId)
-    const sample = await sink.getSample(Math.max(0, firstTimestamp, sourceTimeMs / 1000))
-    if (!sample) throw new Error(`Asset ${assetId} has no video frame at ${sourceTimeMs} ms.`)
+    const sink = await this.ensureSink(assetId)
+    const sample = await sink.getSample(Math.max(0, sourceTimeMs / 1000))
+    if (!sample) return
     try {
       const bitmap = await sampleBitmap(sample)
       this.bitmaps.push(bitmap)
