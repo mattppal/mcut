@@ -16,6 +16,22 @@ describe('parseBridgeFrame', () => {
     })
   })
 
+  test('an ensure_voice_stems frame keeps its clip ids and names a bad one by index', () => {
+    expect(parseBridgeFrame('{"id":"6","type":"ensure_voice_stems","payload":{"elementIds":["e-talk"],"wait":false}}')).toEqual({
+      ok: true,
+      request: { id: '6', type: 'ensure_voice_stems', payload: { elementIds: ['e-talk'], wait: false } },
+    })
+    expect(parseBridgeFrame('{"id":"7","type":"ensure_voice_stems","payload":{"elementIds":["e-talk","talk"]}}')).toEqual({
+      ok: false,
+      id: '7',
+      error: {
+        name: 'BridgeRequestError',
+        code: 'invalid-request',
+        message: '✖ invalid element id (expected "e-..." prefix)\n  → at payload.elementIds[1]',
+      },
+    })
+  })
+
   test('a frame missing a required field is rejected with the field named and the id kept', () => {
     expect(parseBridgeFrame('{"id":"2","type":"search_transcript","payload":{}}')).toEqual({
       ok: false,

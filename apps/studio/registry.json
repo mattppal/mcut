@@ -250,6 +250,11 @@
           "target": "components/mcut/live-mcp-transcript.ts"
         },
         {
+          "path": "registry/mcut/live-mcp-voice-stems.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/live-mcp-voice-stems.ts"
+        },
+        {
           "path": "registry/mcut/editor-actions.ts",
           "type": "registry:lib",
           "target": "components/mcut/editor-actions.ts"

@@ -29,6 +29,7 @@ import { parseBridgeFrame, type BridgeRequest } from './bridge-request'
 import { editorClipboard } from './editor-clipboard'
 import { useEditorUI } from './editor-ui'
 import { ensureTranscriptForBridge } from './live-mcp-transcript'
+import { ensureVoiceStemsForBridge } from './live-mcp-voice-stems'
 import { clamp } from './math'
 import { MCP_AGENT_TOOL_NAMES, MCP_TOOL_INPUTS, operatorToolName } from '@mcut/mcp-server/contract'
 
@@ -251,6 +252,8 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
       return searchProjectTranscript(engine.project, request.payload.query)
     case 'ensure_transcript':
       return await ensureTranscriptForBridge(engine, request.payload)
+    case 'ensure_voice_stems':
+      return await ensureVoiceStemsForBridge(engine, request.payload)
     case 'get_audio_activity':
       return await handleGetAudioActivity(engine, request.payload)
     case 'list_commands':
