@@ -18,7 +18,11 @@ import {
   ProjectFormatError,
   getProjectCaptions,
   getProjectMediaContext,
+  getElement,
   getProjectTranscript,
+  getSourceTimeMs,
+  type ElementId,
+  type ProjectTranscriptWordContext,
   listZoomRegions,
   parseCommand,
   parseProject,
@@ -153,6 +157,21 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
   }
 }
 
+function toClipSourceWords(project: Project, elementId: ElementId, words: readonly ProjectTranscriptWordContext[]): ProjectTranscriptWordContext[] {
+  const clip = getElement(project, elementId)
+  if (clip?.type !== 'video' && clip?.type !== 'audio')
+    throw new CommandError('invalid-payload', `find_retakes elementId must name a video or audio clip, got "${elementId}"`)
+  if (clip.reversed) throw new CommandError('invalid-payload', `clip "${elementId}" plays reversed, so its captions have no forward source time`)
+  const endMs = clip.startMs + clip.durationMs
+  return words
+    .filter((word) => word.startMs >= clip.startMs && word.startMs < endMs)
+    .map((word) => ({
+      text: word.text,
+      startMs: Math.round(getSourceTimeMs(clip, word.startMs - clip.startMs)),
+      endMs: Math.round(getSourceTimeMs(clip, Math.min(word.endMs, endMs) - clip.startMs)),
+    }))
+}
+
 async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCall): Promise<ToolResult> {
   switch (call.name) {
     case 'get_summary':
@@ -169,11 +188,14 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       if (!target.searchTranscript) return failure('search_transcript is not available on this target.')
       return text(JSON.stringify(await target.searchTranscript(call.arguments.query), null, 2))
     case 'find_retakes': {
-      const transcript = getProjectTranscript(await targetProject(target), { includeWords: true })
+      const project = await targetProject(target)
+      const transcript = getProjectTranscript(project, { includeWords: true })
       const words = transcript.captions.flatMap((caption) => caption.words ?? [])
       if (words.length === 0) return failure('find_retakes needs a word-timed transcript. Call ensure_transcript first.')
-      const candidates = findRetakes(words, call.arguments)
-      return text(JSON.stringify({ wordCount: words.length, candidates }, null, 2))
+      const { elementId, ...options } = call.arguments
+      const candidates = findRetakes(words, options)
+      if (elementId === undefined) return text(JSON.stringify({ wordCount: words.length, candidates }, null, 2))
+      return text(JSON.stringify({ wordCount: words.length, candidates, transcript: { words: toClipSourceWords(project, elementId, words) } }, null, 2))
     }
     case 'ensure_transcript': {
       if (!target.ensureTranscript) return failure('ensure_transcript is not available on this target.')
