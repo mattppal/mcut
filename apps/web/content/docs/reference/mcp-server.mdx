@@ -82,6 +82,13 @@ One export runs at a time. A second `export_video` fails with `export-busy`
 until the first finishes or `cancel_export` stops it. The bridge keeps the last
 ten jobs.
 
+If the Studio tab that owns the job disconnects while the export is starting or
+rendering, the job fails with `Studio disconnected during export.` A tab that
+was replaced can close without failing the export that belongs to the new tab.
+`cancel_export` while the bridge is still writing the file removes that file
+and leaves the job cancelled. After the file is in place the job is done, and
+`cancel_export` answers that the export is already done.
+
 ## Generated operator tools
 
 Every operator in the `@mcut/editor` operator table becomes an MCP tool named:

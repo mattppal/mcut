@@ -25,6 +25,7 @@ interface PendingRequest {
   resolve: (value: unknown) => void
   reject: (error: Error) => void
   timer: ReturnType<typeof setTimeout>
+  socket: WebSocket
 }
 
 interface SocketWaiter {
@@ -163,6 +164,7 @@ export class LiveMcutBridge {
       allowOrigin: (origin) => isAllowedOrigin(origin, allowedOrigins),
       address: () => this.server.address(),
       request: (type, payload) => this.request(type, payload),
+      socket: () => this.socket,
     })
   }
 
@@ -270,7 +272,7 @@ export class LiveMcutBridge {
         this.pending.delete(id)
         reject(new LiveBridgeError('request-timeout', `Timed out waiting for browser response to ${type}.`))
       }, timeoutMs)
-      this.pending.set(id, { resolve, reject, timer })
+      this.pending.set(id, { resolve, reject, timer, socket })
       socket.send(body, (error) => {
         if (!error) return
         clearTimeout(timer)
@@ -311,16 +313,18 @@ export class LiveMcutBridge {
 
     socket.on('message', (raw) => this.receive(raw.toString()))
     socket.on('close', () => {
-      if (this.socket === socket) {
+      const current = this.socket === socket
+      if (current) {
         this.socket = null
         this.tabInfo = null
       }
       for (const [id, pending] of this.pending) {
+        if (pending.socket !== socket) continue
         clearTimeout(pending.timer)
+        this.pending.delete(id)
         pending.reject(new LiveBridgeError('browser-disconnected', `Browser disconnected before response ${id}.`))
       }
-      this.pending.clear()
-      this.exports.disconnect()
+      this.exports.disconnect(socket, current)
     })
   }
 
