@@ -1,5 +1,22 @@
 # @mcut/compositor
 
+## 0.1.0-alpha.12
+
+### Minor Changes
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - A layout slot takes the frame style of a video clip, with `crop`, `cornerRadius`, `stroke`, and `shadow`. The slot `focus` and the boolean `shadow` are removed, and the v1 to v2 migration turns `shadow: true` into the shadow it drew. The compositor draws video clips and layout slots through one framed media path, and a multicam's own crop and corner radius frame its composite.
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - A reframe track on a multicam source slides the crop of every slot that shows the source onto the subject, so a tight face crop follows the face. Once the crop meets the frame edge, the part the slot's fit shows keeps moving toward the subject inside the crop. `getSlotView` takes a `rest` focus, the view outside a zoom and where a zoom starts, and the compositor passes the reframed focus there.
+
+### Patch Changes
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - Multicam angle transitions blend on the source clock, so a trimmed, slipped, or sped-up multicam blends at its cuts. A layout slot that names an audio-only source draws nothing.
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - A multicam slot zoom frames inside the slot's crop. The slot's cover or contain fit is measured over its crop, the zoom scales that fit, and the target lands inside the crop window, so a zoom never shows source the crop cuts away. Outside a zoom, `getSlotView` returns the center at scale 1, because the slot's crop now sets its framing. Zoom `focus` and `rect` are 0 to 1 across the cropped frame of the clip or slot. `VisibleFraction`, the type of the `visible` argument of `getSlotView`, is exported.
+
+- Updated dependencies [[`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b)]:
+  - @mcut/timeline@0.1.0-alpha.12
+
 ## 0.1.0-alpha.11
 
 ### Minor Changes
