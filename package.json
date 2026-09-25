@@ -25,6 +25,8 @@
     "fuzz:media": "bun run fixtures && bun run --filter @mcut/media fuzz:media",
     "fuzz:media:e2e": "bun run fixtures && bun run --filter mcut-studio fuzz:media",
     "fuzz:mcp:bridge": "bun scripts/agent-e2e/fuzz-bridge.ts",
+    "eval:edits": "bun scripts/agent-e2e/edit-eval.ts",
+    "eval:standins": "bun scripts/agent-e2e/talking-head-standins.ts",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "bun run release:check && bun run release:publish",

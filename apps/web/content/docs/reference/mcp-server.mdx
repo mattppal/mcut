@@ -27,9 +27,9 @@ creates the file when missing and writes it after successful edits.
 
 ## Static tools
 
-The published server registers twenty-two static tools. The live bridge handles
+The published server registers twenty-three static tools. The live bridge handles
 three more in the editor, `list_commands`, `apply_commands`, and
-`run_operator`, which together with the twenty-two form the twenty-five-tool agent
+`run_operator`, which together with the twenty-three form the twenty-six-tool agent
 profile. Studio serves the profiles inside the desktop app, with a catalog at
 `app://studio/tools`, at `app://studio/tools.json` and
 `app://studio/tools.agent.json`. The full profile
@@ -41,6 +41,7 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `get_summary` | Compact project summary. Read this before editing. |
 | `get_project` | Full serializable project JSON. |
 | `get_media_context` | Project, playback, selection, asset, track, element, marker, and transcript metadata. |
+| `get_frame` | Live bridge only. PNG of one timeline frame. Call it before placing a zoom or a crop. |
 | `get_audio_activity` | Live bridge only. Sound and silence windows for one video or audio clip in source time. |
 | `get_transcript` | Caption-derived transcript. Never starts transcription. |
 | `search_transcript` | Find spoken words or phrases with timeline times. |
@@ -87,6 +88,13 @@ system temp folder when `~/Downloads` is missing.
 One export runs at a time. A second `export_video` fails with `export-busy`
 until the first finishes or `cancel_export` stops it. The bridge keeps the last
 ten jobs.
+
+If the Studio tab that owns the job disconnects while the export is starting or
+rendering, the job fails with `Studio disconnected during export.` A tab that
+was replaced can close without failing the export that belongs to the new tab.
+`cancel_export` while the bridge is still writing the file removes that file
+and leaves the job cancelled. After the file is in place the job is done, and
+`cancel_export` answers that the export is already done.
 
 ## Generated operator tools
 

@@ -27,6 +27,7 @@ interface PendingRequest {
   resolve: (value: unknown) => void
   reject: (error: Error) => void
   timer: ReturnType<typeof setTimeout>
+  socket: WebSocket
 }
 
 interface SocketWaiter {
@@ -169,7 +170,7 @@ export class LiveMcutBridge {
       token: this.token,
       allowOrigin: (origin) => isAllowedOrigin(origin, allowedOrigins),
       address: () => this.server.address(),
-      request: (type, payload) => this.request(type, payload),
+      request: (type, payload) => this.requestSent(type, payload),
     })
   }
 
@@ -284,16 +285,21 @@ export class LiveMcutBridge {
   }
 
   async request(type: string, payload: unknown = {}): Promise<unknown> {
+    const sent = await this.requestSent(type, payload)
+    return sent.result
+  }
+
+  private async requestSent(type: string, payload: unknown): Promise<{ result: unknown; socket: WebSocket }> {
     const timeoutMs = this.timeoutFor(type)
     const socket = await this.waitForSocket(Math.min(timeoutMs, this.reconnectGraceMs))
     const id = String(this.nextId++)
     const body = JSON.stringify({ id, type, payload })
-    return await new Promise((resolve, reject) => {
+    const result = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id)
         reject(new LiveBridgeError('request-timeout', `Timed out waiting for browser response to ${type}.`))
       }, timeoutMs)
-      this.pending.set(id, { resolve, reject, timer })
+      this.pending.set(id, { resolve, reject, timer, socket })
       socket.send(body, (error) => {
         if (!error) return
         clearTimeout(timer)
@@ -301,6 +307,7 @@ export class LiveMcutBridge {
         reject(error)
       })
     })
+    return { result, socket }
   }
 
   createTarget(): McutMcpTarget {
@@ -313,6 +320,7 @@ export class LiveMcutBridge {
       ensureTranscript: (input) => this.request('ensure_transcript', input ?? {}),
       centerPerson: (input) => this.request('center_person', input ?? {}),
       getAudioActivity: (input) => this.request('get_audio_activity', input ?? {}),
+      getFrame: (input) => this.request('get_frame', input ?? {}),
       listActions: () => this.request('list_actions'),
       listOperators: () => this.request('list_operators'),
       undo: async () => Boolean(await this.request('undo')),
@@ -348,11 +356,12 @@ export class LiveMcutBridge {
         this.tabInfo = null
       }
       for (const [id, pending] of this.pending) {
+        if (pending.socket !== socket) continue
         clearTimeout(pending.timer)
+        this.pending.delete(id)
         pending.reject(new LiveBridgeError('browser-disconnected', `Browser disconnected before response ${id}.`))
       }
-      this.pending.clear()
-      this.exports.disconnect()
+      this.exports.disconnect(socket)
     })
   }
 
@@ -571,6 +580,7 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT, token?: strin
     ensureTranscript: (input) => rpc('ensure_transcript', input ?? {}),
     centerPerson: (input) => rpc('center_person', input ?? {}),
     getAudioActivity: (input) => rpc('get_audio_activity', input ?? {}),
+    getFrame: (input) => rpc('get_frame', input ?? {}),
     listActions: () => rpc('list_actions'),
     listOperators: () => rpc('list_operators'),
     undo: async () => Boolean(await rpc('undo')),
