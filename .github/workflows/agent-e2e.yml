@@ -19,6 +19,7 @@ on:
         required: false
         default: ""
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - scripts/agent-e2e/**
       - apps/studio/**
@@ -31,10 +32,13 @@ on:
 permissions:
   contents: read
 
-concurrency: agent-e2e
+concurrency:
+  group: agent-e2e-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   dry-run:
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -57,6 +61,7 @@ jobs:
           retention-days: 14
 
   bridge-dry-run:
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
