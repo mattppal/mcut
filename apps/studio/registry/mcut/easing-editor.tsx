@@ -30,6 +30,9 @@ function easingToBezier(easing: Easing | undefined): [number, number, number, nu
   if (easing === 'easeIn') return [0.42, 0, 1, 1]
   if (easing === 'easeOut') return [0, 0, 0.58, 1]
   if (easing === 'easeInOut') return [0.42, 0, 0.58, 1]
+  if (easing === 'easeInExpo') return [0.7, 0, 0.84, 0]
+  if (easing === 'easeOutExpo') return [0.16, 1, 0.3, 1]
+  if (easing === 'easeInOutExpo') return [0.87, 0, 0.13, 1]
   return easing.cubicBezier
 }
 
