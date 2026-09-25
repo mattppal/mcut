@@ -78,7 +78,9 @@ describe('MCP tool manifest', () => {
 
     expect(body.profile).toBe('full')
     expect(tools).toEqual(listMcpToolDefinitions('full'))
-    expect(tools.length, 'agent tools + editor operators + timeline commands').toBe(MCP_AGENT_TOOL_DEFINITIONS.length + operatorIds.length + listCommands().length)
+    expect(tools.length, 'agent tools + editor operators + timeline commands').toBe(
+      MCP_AGENT_TOOL_DEFINITIONS.length + operatorIds.length + listCommands().length,
+    )
     expect(toolNames.size).toBe(tools.length)
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true)
     for (const id of operatorIds) expect(toolNames.has(liveMcpOperatorToolName(id))).toBe(true)
@@ -352,7 +354,7 @@ describe('Studio action/operator MCP surface', () => {
 
   test('live bridge request vocabulary covers MCP static and dynamic browser tools', () => {
     expect(new Set(LIVE_MCP_REQUEST_TYPES).size).toBe(LIVE_MCP_REQUEST_TYPES.length)
-    expect(LIVE_MCP_STATIC_TOOL_REQUESTS).toEqual(expect.arrayContaining([
+    const requiredToolNames = new Set<string>([
       'get_summary',
       'get_project',
       'get_media_context',
@@ -379,7 +381,8 @@ describe('Studio action/operator MCP surface', () => {
       'export_video',
       'get_export',
       'cancel_export',
-    ]))
+    ])
+    expect(LIVE_MCP_STATIC_TOOL_REQUESTS).toEqual(expect.arrayContaining([...requiredToolNames]))
     expect(LIVE_MCP_DYNAMIC_TOOL_REQUESTS).toEqual(['dispatch_command'])
   })
 })
