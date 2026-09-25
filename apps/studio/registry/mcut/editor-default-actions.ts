@@ -440,6 +440,7 @@ defineAction({
   label: 'Export…',
   category: 'view',
   icon: DownloadIcon,
+  humanOnly: 'view.export opens an export dialog for a person and exports nothing over MCP. Export a file with export_video.',
   run: () => {
     document.querySelector<HTMLButtonElement>('[data-mcut-export-trigger]')?.click()
   },
@@ -620,6 +621,7 @@ defineAction({
   label: 'New project',
   category: 'file',
   icon: FileVideoIcon,
+  humanOnly: 'file.new asks a person to confirm replacing the open project and changes nothing over MCP.',
   run: ({ engine }) => {
     if (!window.confirm('Start a new project? The current project will be replaced.')) return
     engine.loadProject(createProject())
@@ -633,6 +635,7 @@ defineAction({
   category: 'file',
   shortcut: { key: 'o', meta: true },
   icon: FolderOpenIcon,
+  humanOnly: 'file.open opens a project file dialog for a person and loads nothing over MCP.',
   run: ({ engine }) => void host.openProject(engine),
 })
 
@@ -650,6 +653,7 @@ defineAction({
   label: 'Save project as…',
   category: 'file',
   icon: DownloadIcon,
+  humanOnly: 'file.save-as opens a save dialog for a person and writes nothing over MCP.',
   run: ({ engine }) => void host.saveProjectAs(engine.project),
 })
 
@@ -658,6 +662,7 @@ defineAction({
   label: 'Export OpenTimelineIO (.otio)…',
   category: 'file',
   icon: DownloadIcon,
+  humanOnly: 'file.export-otio starts a file download for a person and writes nothing over MCP.',
   enabled: ({ engine }) => engine.project.tracks.some((t) => t.elements.length > 0),
   run: ({ engine }) => {
     const blob = new Blob([toOtioJson(engine.project)], { type: 'application/json' })
@@ -676,13 +681,12 @@ defineAction({
   category: 'file',
   shortcut: { key: 'i', meta: true },
   icon: UploadIcon,
+  humanOnly: 'file.import opens a file dialog for a person and imports nothing over MCP. Import files with import_media { paths }.',
   run: ({ engine }) =>
     void pickFiles(MEDIA_FILE_ACCEPT).then(async (files) => {
       if (files.length === 0) return
-      const imported = await importMediaFiles(engine, files, (asset, file) => void saveAssetBlob(asset, file))
-      if (imported.length > 0) {
-        toast.success(`Imported ${imported.length} file${imported.length > 1 ? 's' : ''}`)
-      }
+      const imported = (await importMediaFiles(engine, files, (asset, file) => void saveAssetBlob(asset, file))).filter((result) => result.ok)
+      if (imported.length > 0) toast.success(`Imported ${imported.length} file${imported.length > 1 ? 's' : ''}`)
     }),
 })
 
@@ -723,6 +727,7 @@ defineAction({
   category: 'help',
   shortcut: { key: '?', shift: true },
   icon: KeyboardIcon,
+  humanOnly: 'help.shortcuts opens the keyboard shortcuts dialog for a person.',
   run: () => {
     document.querySelector<HTMLButtonElement>('[data-mcut-shortcuts-trigger]')?.click()
   },
