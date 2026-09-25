@@ -1,20 +1,20 @@
 import { getNativeVideoFrame } from './native-video'
 import { inputFor, type MediaSourceLike } from './probe'
+import { sampleCanvas } from './sample-bitmap'
 
 export interface ThumbnailOptions {
   width?: number
   timeMs?: number
 }
 
-async function getCanvasSinkThumbnail(src: MediaSourceLike, options: ThumbnailOptions = {}): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
+async function getDecodedThumbnail(src: MediaSourceLike, options: ThumbnailOptions = {}): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
   const input = await inputFor(src)
   try {
     const track = await input.getPrimaryVideoTrack()
     if (!track) return null
-    const { CanvasSink } = await import('mediabunny')
-    const sink = new CanvasSink(track, { width: options.width ?? 160 })
-    const wrapped = await sink.getCanvas((options.timeMs ?? 0) / 1000)
-    return wrapped?.canvas ?? null
+    const { VideoSampleSink } = await import('mediabunny')
+    const sample = await new VideoSampleSink(track).getSample((options.timeMs ?? 0) / 1000)
+    return sample ? await sampleCanvas(sample, options.width ?? 160) : null
   } finally {
     input.dispose()
   }
@@ -28,7 +28,7 @@ async function getNativeThumbnail(src: MediaSourceLike, options: ThumbnailOption
   return frame?.canvas ?? null
 }
 
-function canUseCanvasSinkFallback(src: MediaSourceLike): boolean {
+function canUseDecodeFallback(src: MediaSourceLike): boolean {
   return typeof src !== 'string' || src.startsWith('blob:')
 }
 
@@ -41,11 +41,11 @@ export async function getVideoThumbnail(src: MediaSourceLike, options: Thumbnail
     const native = await getNativeThumbnail(src, options)
     if (native) return native
   } catch (error) {
-    if (!canUseCanvasSinkFallback(src)) return decodeUnavailable(error)
+    if (!canUseDecodeFallback(src)) return decodeUnavailable(error)
   }
-  if (!canUseCanvasSinkFallback(src)) return null
+  if (!canUseDecodeFallback(src)) return null
   try {
-    return await getCanvasSinkThumbnail(src, options)
+    return await getDecodedThumbnail(src, options)
   } catch (error) {
     return decodeUnavailable(error)
   }
