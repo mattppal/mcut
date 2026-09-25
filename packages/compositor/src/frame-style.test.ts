@@ -185,6 +185,26 @@ describe('frame style rendering', () => {
     expect(drawAt({ x: 0, y: 0 })).toEqual([[320, 0, 160, 90, -960, -540, 1920, 1080]])
   })
 
+  test('a reframe track slides a slot crop onto the subject, and the fitted part keeps following once the crop meets the frame edge', () => {
+    const cropped = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
+    const project = applyCommand(cropped, {
+      type: 'setReframe',
+      elementId: 'e-mc',
+      source: 'camera',
+      track: [
+        { sourceMs: 0, x: 0.375, y: 0.5 },
+        { sourceMs: 4000, x: 0.375, y: 0.1 },
+      ],
+    })
+    const sourceRectsAt = (timeMs: number) => {
+      const ctx = new FakeContext2D()
+      renderFrame(asCtx(ctx), project, timeMs, { source: new FakeSource() })
+      return ctx.callsTo('drawImage').map((c) => c.args.slice(1, 5))
+    }
+    expect(sourceRectsAt(0)).toEqual([[80, 90, 320, 180]])
+    expect(sourceRectsAt(4000)).toEqual([[80, 0, 320, 180]])
+  })
+
   test('a multicam draws its own crop and corner radius around the composite', () => {
     const project = projectWithMulticam({ width: 1920, height: 1080 }, {}, { cornerRadius: 0.1, crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } })
     const ctx = new FakeContext2D()
