@@ -218,13 +218,19 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
   const idleTrimHandleClassName = trimHandlesAlwaysVisible ? 'bg-overlay-foreground/40' : 'group-hover:bg-overlay-foreground/40'
 
   return (
-    <ContextMenu>
+    <ContextMenu
+      onOpenChange={(open, details) => {
+        if (open && clipDrag.dragging) details.cancel()
+      }}
+    >
       <ContextMenuTrigger
         render={
           <div
             data-mcut-clip={element.type}
+            data-mcut-element-id={element.id}
             className={cn(
               'group absolute top-1 bottom-1 left-0 flex cursor-grab touch-none items-center overflow-hidden rounded-lg text-xs font-medium shadow-sm select-none active:cursor-grabbing',
+              'data-dragging:z-40 data-dragging:cursor-grabbing data-dragging:shadow-lg data-dragging:shadow-black/40 data-drop-invalid:opacity-60 data-drop-invalid:ring-2 data-drop-invalid:ring-destructive',
               getElementUI(element.type).clipClassName,
               selected ? 'ring-2 ring-overlay-foreground' : 'ring-1 ring-overlay-foreground/10 hover:ring-overlay-foreground/30',
             )}
