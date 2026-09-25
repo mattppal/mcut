@@ -38,7 +38,7 @@ export async function exportProject(project: Project, options: ExportProjectOpti
   // OfflineAudioContext is exposed on Window only per https://webaudio.github.io/web-audio-api/#OfflineAudioContext so the mix renders before the worker starts
   if (support.audio) {
     onProgress?.({ phase: 'audio', progress: 0 })
-    mixedAudio = await mixProjectAudio(project, durationMs, signal)
+    mixedAudio = await mixProjectAudio(project, durationMs, signal, options.audioSources)
     onProgress?.({ phase: 'audio', progress: 0.1 })
   }
 

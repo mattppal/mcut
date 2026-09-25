@@ -90,24 +90,19 @@ export const RECIPES: Recipe[] = [
     intent: '"zoom in at 4 seconds" or "punch in for emphasis"',
     template: 'talking-head',
     notes:
-      'A pair of keyframes per axis. The first keyframe arms the property (stopwatch on) and its ' +
-      '`easing` shapes the curve toward the second. 1.0 to 1.12 over 400ms with `easeOut` reads as ' +
-      'a deliberate camera move. The zoom holds after the last keyframe. Times are element-local ' +
-      '(0 is clip start), so the move survives the clip being dragged. To punch back out later, add ' +
-      'another pair returning to 1.0.',
-    commands: [
-      { type: 'setKeyframe', elementId: 'e-camera', property: 'scale.x', timeMs: 4000, value: 1, easing: 'easeOut' },
-      { type: 'setKeyframe', elementId: 'e-camera', property: 'scale.x', timeMs: 4400, value: 1.12 },
-      { type: 'setKeyframe', elementId: 'e-camera', property: 'scale.y', timeMs: 4000, value: 1, easing: 'easeOut' },
-      { type: 'setKeyframe', elementId: 'e-camera', property: 'scale.y', timeMs: 4400, value: 1.12 },
-    ],
+      'One zoom region, not scale keyframes. It zooms in over inMs, holds, and zooms back out, with ' +
+      'easeOutExpo and motion blur on by default. The subtlePunchIn preset is 1.15x. Times are ' +
+      'element-local (0 is clip start), so the zoom survives the clip being dragged. `list_zooms` ' +
+      'shows every zoom, and `edit_zooms` revises them as one undo step. On a multicam, set `source` to ' +
+      'the screen key so the camera overlay stays put.',
+    commands: [{ type: 'addZoomRegion', elementId: 'e-camera', zoom: { id: 'z-punch', preset: 'subtlePunchIn', atMs: 4000 } }],
     verify: (project) => {
       const camera = element(project, 'e-camera')
-      assert('keyframes' in camera && camera.keyframes, 'camera should have keyframes')
-      const scaleX = camera.keyframes['scale.x']
-      assert(scaleX?.length === 2, 'scale.x should hold two keyframes')
-      assert(scaleX![1]!.value === 1.12, 'punch lands at 1.12x')
-      assert(scaleX![0]!.easing === 'easeOut', 'first keyframe eases toward the second')
+      assert(camera.type === 'video', 'camera should stay a video clip')
+      const zoom = camera.zooms?.find((z) => z.id === 'z-punch')
+      assert(zoom?.scale === 1.15, 'punch lands at 1.15x')
+      assert(zoom.easing === 'easeOutExpo' && zoom.motionBlur > 0, 'punch eases with expo and keeps motion blur')
+      assert(zoom.atMs === 4000 && zoom.inMs + zoom.holdMs + zoom.outMs === 3000, 'punch starts at 4s and returns within 3s')
     },
   },
   {

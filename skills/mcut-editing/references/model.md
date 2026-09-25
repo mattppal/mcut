@@ -37,7 +37,7 @@ generated. Pass explicit ids when later commands must reference the element.
 
 1. **Timeline time.** `startMs`, `splitElement.atMs`, project duration.
 2. **Element-local time.** keyframe `timeMs`, angle-cut `atMs`, timeMap input,
-   `applyZoomPreset.atMs`. Zero is the clip's first visible frame. Moving a clip
+   zoom region `atMs`. Zero is the clip's first visible frame. Moving a clip
    moves its animation with it. Splitting redistributes keyframes per side.
 3. **Source time.** `trimStartMs` is the in-point into the asset. Transcripts and
    `setMulticamSourceTrim` speak source time.

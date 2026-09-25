@@ -1,5 +1,38 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.13
+
+### Minor Changes
+
+- [#160](https://github.com/mattppal/mcut/pull/160) [`d8d259b`](https://github.com/mattppal/mcut/commit/d8d259b1b390ff12eb0bacb5bfaa4449fe6ce3a2) Thanks [@mattppal](https://github.com/mattppal)! - Add `findRetakes` over word-timed transcripts and the `find_retakes` MCP tool, which returns candidate ranges that keep the last take, last to first. With `elementId` it also returns that clip's transcript in source time, ready to re-caption the clip after the cuts.
+
+### Patch Changes
+
+- Updated dependencies [[`d8d259b`](https://github.com/mattppal/mcut/commit/d8d259b1b390ff12eb0bacb5bfaa4449fe6ce3a2)]:
+  - @mcut/transcription@0.1.0-alpha.8
+
+## 0.1.0-alpha.12
+
+### Patch Changes
+
+- Updated dependencies [[`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33), [`ebca791`](https://github.com/mattppal/mcut/commit/ebca791dc3e228b0d825dce42e4e8599b4ad8c33)]:
+  - @mcut/timeline@0.1.0-alpha.7
+  - @mcut/editor@0.1.0-alpha.7
+  - @mcut/transcription@0.1.0-alpha.7
+
+## 0.1.0-alpha.11
+
+### Minor Changes
+
+- [#154](https://github.com/mattppal/mcut/pull/154) [`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f) Thanks [@mattppal](https://github.com/mattppal)! - Add zoom regions, one punch-in object with in, hold, and out timing, a target, easing, and motion blur, on a clip or on one multicam source. Adds the `addZoomRegion`, `updateZoomRegion`, and `removeZoomRegion` commands, `getSlotView` and `getClipView`, compositor rendering with motion blur while a zoom moves, and the `list_zooms` and `edit_zooms` MCP tools.
+
+### Patch Changes
+
+- Updated dependencies [[`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f), [`a9c52b1`](https://github.com/mattppal/mcut/commit/a9c52b10f4e445b6e34bc4b3dc8424b4bda8d99f)]:
+  - @mcut/timeline@0.1.0-alpha.6
+  - @mcut/editor@0.1.0-alpha.6
+  - @mcut/transcription@0.1.0-alpha.6
+
 ## 0.1.0-alpha.10
 
 ### Minor Changes
