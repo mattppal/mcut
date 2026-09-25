@@ -37,28 +37,66 @@ const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.str
 
 const outcome = (pass: boolean, yes: string, no: string): Outcome => ({ pass, detail: pass ? yes : no })
 
+const EXPO_EASINGS = new Set(['easeInExpo', 'easeOutExpo', 'easeInOutExpo'])
+
+interface Zoom {
+  label: string
+  source: string | undefined
+  startMs: number
+  ratio: number
+  holdMs: number
+  returns: boolean
+  expo: boolean
+  blur: boolean
+}
+
 const scaleKeys = (element: TimelineElement): Keyframe[] => [...(element.keyframes?.['scale.x'] ?? [])].sort((a, b) => a.timeMs - b.timeMs)
 
-const zoomed = (project: Project): TimelineElement[] => elements(project).filter((element) => scaleKeys(element).length >= 2)
-
-const describeKeys = (keys: Keyframe[]): string => keys.map((key) => `${key.timeMs}ms:${key.value.toFixed(2)}`).join(' ')
-
 function isExpo(key: Keyframe): boolean {
-  if (key.easing === undefined || typeof key.easing === 'string') return false
+  if (key.easing === undefined) return false
+  if (typeof key.easing === 'string') return EXPO_EASINGS.has(key.easing)
   const [x1, y1, x2, y2] = key.easing.cubicBezier
   return (x1 >= 0.6 && y1 <= 0.1) || (x1 <= 0.2 && y1 >= 0.9) || (x2 <= 0.2 && y2 >= 0.9) || (x2 >= 0.7 && y2 <= 0.1)
 }
 
-function zoomShape(keys: Keyframe[]): { base: number; peak: number; holdMs: number; returns: boolean; riseAtMs: number } {
+function keyframeZoom(element: TimelineElement, keys: Keyframe[]): Zoom {
   const base = keys[0]?.value ?? 1
   const peak = Math.max(...keys.map((key) => key.value))
   const atPeak = keys.filter((key) => key.value >= peak * 0.98)
-  const holdMs = (atPeak.at(-1)?.timeMs ?? 0) - (atPeak[0]?.timeMs ?? 0)
   const last = keys.at(-1)
-  const returns = last !== undefined && last.timeMs > (atPeak.at(-1)?.timeMs ?? 0) && Math.abs(last.value - base) / base < 0.02
   const riseAtMs = keys.find((key, index) => (keys[index + 1]?.value ?? key.value) > key.value)?.timeMs ?? Number.POSITIVE_INFINITY
-  return { base, peak, holdMs, returns, riseAtMs }
+  return {
+    label: `${element.id} keyframes ${keys.map((key) => `${key.timeMs}ms:${key.value.toFixed(2)}`).join(' ')}`,
+    source: undefined,
+    startMs: element.startMs + riseAtMs,
+    ratio: peak / base,
+    holdMs: (atPeak.at(-1)?.timeMs ?? 0) - (atPeak[0]?.timeMs ?? 0),
+    returns: last !== undefined && last.timeMs > (atPeak.at(-1)?.timeMs ?? 0) && Math.abs(last.value - base) / base < 0.02,
+    expo: keys.some(isExpo),
+    blur: 'motionBlur' in element && element.motionBlur?.enabled === true,
+  }
 }
+
+function zooms(project: Project): Zoom[] {
+  return elements(project).flatMap((element): Zoom[] => {
+    const keys = scaleKeys(element)
+    const fromKeys = keys.length >= 2 && keys.some((key) => key.value !== keys[0]?.value) ? [keyframeZoom(element, keys)] : []
+    const regions = 'zooms' in element ? (element.zooms ?? []) : []
+    const fromRegions = regions.map((region): Zoom => ({
+      label: `${element.id}${region.source === undefined ? '' : `/${region.source}`} region ${region.id} at ${region.atMs}ms ${region.scale}x`,
+      source: region.source,
+      startMs: element.startMs + region.atMs,
+      ratio: region.scale,
+      holdMs: region.holdMs,
+      returns: region.outMs > 0,
+      expo: typeof region.easing === 'string' ? EXPO_EASINGS.has(region.easing) : isExpo({ timeMs: 0, value: 1, easing: region.easing }),
+      blur: region.motionBlur > 0,
+    }))
+    return [...fromKeys, ...fromRegions]
+  })
+}
+
+const labels = (list: Zoom[]): string => list.map((zoom) => zoom.label).join('; ')
 
 function multicamOf(project: Project): MulticamElement | undefined {
   return ofType(project, 'multicam')[0]
@@ -209,10 +247,9 @@ const RULES: [RegExp, Test][] = [
   [
     /^zoom at most (\d+(?:\.\d+)?)x$/,
     ({ after }, match) => {
-      const peaks = zoomed(after).map((element) => ({ id: element.id, ratio: zoomShape(scaleKeys(element)).peak / zoomShape(scaleKeys(element)).base }))
-      const worst = Math.max(0, ...peaks.map((peak) => peak.ratio))
-      const detail = peaks.map((peak) => `${peak.id} ${peak.ratio.toFixed(2)}x`).join(', ') || 'no zoom'
-      return outcome(peaks.length > 0 && worst <= Number(match[1]), detail, detail)
+      const found = zooms(after)
+      const detail = found.map((zoom) => `${zoom.label} (${zoom.ratio.toFixed(2)}x)`).join('; ') || 'no zoom'
+      return outcome(found.length > 0 && found.every((zoom) => zoom.ratio <= Number(match[1])), detail, detail)
     },
   ],
   [
@@ -227,46 +264,50 @@ const RULES: [RegExp, Test][] = [
   [
     /^opening zoom$/,
     ({ after }) => {
-      const hits = zoomed(after).filter((element) => {
-        const shape = zoomShape(scaleKeys(element))
-        return element.startMs + shape.riseAtMs < OPENING_WINDOW_MS && shape.peak > shape.base
-      })
-      return outcome(hits.length > 0, `zoom on ${hits.map((element) => `${element.id} ${describeKeys(scaleKeys(element))}`).join(', ')}`, 'no scale keyframes rising in the first 2 s')
+      const hits = zooms(after).filter((zoom) => zoom.startMs < OPENING_WINDOW_MS && zoom.ratio > 1)
+      return outcome(hits.length > 0, `zoom ${labels(hits)}`, 'no zoom starting in the first 2 s')
     },
   ],
   [
     /^zoom in hold out$/,
     ({ after }) => {
-      const hits = zoomed(after).filter((element) => {
-        const shape = zoomShape(scaleKeys(element))
-        return shape.peak > shape.base && shape.holdMs >= HOLD_MIN_MS && shape.returns
-      })
-      const keyed = zoomed(after).map((element) => `${element.id} ${describeKeys(scaleKeys(element))}`)
-      return outcome(hits.length > 0, `in, hold, out on ${hits.map((element) => element.id).join(', ')}`, keyed.length > 0 ? `scale keys without a hold and return. ${keyed.join('; ')}` : 'no scale keyframes')
+      const found = zooms(after)
+      const hits = found.filter((zoom) => zoom.ratio > 1 && zoom.holdMs >= HOLD_MIN_MS && zoom.returns)
+      return outcome(hits.length > 0, `in, hold, out on ${labels(hits)}`, found.length > 0 ? `no zoom holds and returns. ${labels(found)}` : 'no zoom')
     },
   ],
   [
     /^subtle zoom$/,
     ({ after }) => {
-      const peaks = zoomed(after).map((element) => zoomShape(scaleKeys(element))).map((shape) => shape.peak / shape.base)
-      const worst = Math.max(0, ...peaks)
-      return outcome(peaks.length > 0 && worst <= SUBTLE_ZOOM_MAX, `largest zoom ${worst.toFixed(2)}x`, peaks.length === 0 ? 'no zoom' : `largest zoom ${worst.toFixed(2)}x`)
+      const found = zooms(after)
+      const worst = Math.max(0, ...found.map((zoom) => zoom.ratio))
+      return outcome(found.length > 0 && worst <= SUBTLE_ZOOM_MAX, `largest zoom ${worst.toFixed(2)}x`, found.length === 0 ? 'no zoom' : `largest zoom ${worst.toFixed(2)}x`)
     },
   ],
   [
     /^exponential easing$/,
     ({ after }) => {
-      const keys = zoomed(after).flatMap(scaleKeys)
-      const expo = keys.filter(isExpo)
-      return outcome(expo.length > 0, `${expo.length} expo cubic-bezier keys`, keys.length === 0 ? 'no zoom keys' : `easings ${JSON.stringify([...new Set(keys.map((key) => JSON.stringify(key.easing ?? 'linear')))])}`)
+      const found = zooms(after)
+      const expo = found.filter((zoom) => zoom.expo)
+      return outcome(found.length > 0 && expo.length === found.length, `${expo.length} of ${found.length} zooms use expo easing`, found.length === 0 ? 'no zoom' : `${expo.length} of ${found.length} zooms use expo easing`)
     },
   ],
   [
     /^motion blur$/,
     ({ after }) => {
-      const targets = zoomed(after)
-      const blurred = targets.filter((element) => 'motionBlur' in element && element.motionBlur?.enabled === true)
-      return outcome(targets.length > 0 && blurred.length === targets.length, `motion blur on ${blurred.map((element) => element.id).join(', ')}`, targets.length === 0 ? 'no zoomed element' : `${blurred.length} of ${targets.length} zoomed elements have motion blur`)
+      const found = zooms(after)
+      const blurred = found.filter((zoom) => zoom.blur)
+      return outcome(found.length > 0 && blurred.length === found.length, `motion blur on ${blurred.length} of ${found.length} zooms`, found.length === 0 ? 'no zoom' : `motion blur on ${blurred.length} of ${found.length} zooms`)
+    },
+  ],
+  [
+    /^zoom on screen source$/,
+    ({ after }) => {
+      const multicam = multicamOf(after)
+      const screenKeys = new Set(multicam?.sources.filter((source) => /screen|tscc/i.test(`${source.key} ${after.assets[source.assetId]?.name ?? ''}`)).map((source) => source.key) ?? [])
+      const found = zooms(after).filter((zoom) => zoom.ratio > 1)
+      const onScreen = found.filter((zoom) => zoom.source !== undefined && screenKeys.has(zoom.source))
+      return outcome(found.length > 0 && onScreen.length === found.length, `every zoom targets the screen source. ${labels(onScreen)}`, found.length === 0 ? 'no zoom' : `${found.length - onScreen.length} zoom(s) scale the whole composite or the camera. ${labels(found)}`)
     },
   ],
   [
