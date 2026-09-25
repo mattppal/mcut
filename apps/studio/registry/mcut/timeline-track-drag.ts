@@ -62,7 +62,7 @@ export class TrackDragController {
     window.addEventListener('pointerup', this.onPointerUp, { signal })
     window.addEventListener('pointercancel', this.onPointerCancel, { signal })
     window.addEventListener('keydown', this.onKeyDown, { signal, capture: true })
-    window.addEventListener('blur', () => this.finish(false), { signal })
+    window.addEventListener('blur', () => this.finish(false, false), { signal })
   }
 
   nudge(trackId: TrackId, rows: -1 | 1): void {
@@ -125,14 +125,14 @@ export class TrackDragController {
   }
 
   private onPointerCancel = (event: PointerEvent) => {
-    if (this.gesture?.pointerId === event.pointerId) this.finish(false)
+    if (this.gesture?.pointerId === event.pointerId) this.finish(false, false)
   }
 
   private onKeyDown = (event: KeyboardEvent) => {
     if (event.key !== 'Escape' || !this.gesture) return
     event.preventDefault()
     event.stopPropagation()
-    this.finish(false)
+    this.finish(false, false)
   }
 
   private activate(gesture: TrackGesture): void {
@@ -188,7 +188,7 @@ export class TrackDragController {
     }
   }
 
-  private finish(commit: boolean): void {
+  private finish(commit: boolean, animate = true): void {
     const gesture = this.gesture
     if (!gesture) return
     if (gesture.active && this.frame !== null) this.update()
@@ -199,19 +199,20 @@ export class TrackDragController {
     const dragged = gesture.rows[gesture.fromRow]
     for (const node of gesture.rows) {
       if (node === dragged) continue
-      if (moved) node.style.transition = ''
+      if (moved || !animate) node.style.transition = ''
       node.style.translate = ''
     }
     if (dragged) {
       dragged.style.translate = ''
       dragged.removeAttribute('data-dragging')
     }
-    if (!moved) {
+    if (!moved && animate) {
       this.transitionReset = setTimeout(() => {
         this.transitionReset = null
         for (const node of gesture.rows) node.style.transition = ''
       }, ROW_SHIFT_MS)
     }
+    if (!animate) return
     requestAnimationFrame(() => {
       if (!dragged) return
       const landedRow = moved ? gesture.targetRow : gesture.fromRow
