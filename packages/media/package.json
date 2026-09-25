@@ -37,7 +37,8 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@mcut/editor": "workspace:*"
+    "@mcut/editor": "workspace:*",
+    "onnxruntime-web": "1.31.0-dev.20260914-8d85527a0"
   },
   "publishConfig": {
     "access": "public",
