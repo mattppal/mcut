@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync } from 'node:fs'
+import { statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
 import {
@@ -83,7 +83,9 @@ async function cmdNew(argv: string[]): Promise<void> {
   if (!preset) {
     fail(`unknown preset "${values.preset}" (known: ${PLATFORM_PRESETS.map((p) => p.id).join(', ')})`)
   }
-  if (existsSync(file) && !values.force) fail(`${file} already exists (use --force to overwrite)`)
+  const existing = statSync(file, { throwIfNoEntry: false })
+  if (existing?.isDirectory()) fail(`${file} is a directory`)
+  if (existing && !values.force) fail(`${file} already exists (use --force to overwrite)`)
   const project = createProject({
     name: values.name ?? 'Untitled',
     width: preset.width,
