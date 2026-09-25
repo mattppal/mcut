@@ -163,7 +163,8 @@ export const applyAnimationPreset = defineCommand({
     '`atMs` is element-local and places the preset, clamped to fit the clip: in and emphasis ' +
     'presets start there, out presets end there. Without it, in presets start at the clip start, ' +
     'out presets end at the clip end, and emphasis spans the clip. The MCP server and Studio ' +
-    'fill `atMs` from the playhead when the playhead is on the clip.',
+    'fill `atMs` from the playhead when the playhead is on the clip. ' +
+    'To fade a clip in and out as one undo step, run the live editor action effects.fade-open-close instead of two presets.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     preset: animationPresetSchema,

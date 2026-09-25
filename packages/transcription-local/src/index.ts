@@ -58,9 +58,12 @@ export interface CreateLocalWhisperProviderOptions {
   dtype?: WhisperDtype
   ortWasmPaths?: { mjs: string; wasm: string }
   onProgress?: (progress: LocalWhisperProgress) => void
-  createWorker?: () => Worker
+  createWorker?: () => Pick<Worker, 'postMessage' | 'terminate' | 'addEventListener' | 'removeEventListener'>
+  modelLoadTimeoutMs?: number
   id?: string
 }
+
+const DEFAULT_MODEL_LOAD_TIMEOUT_MS = 60_000
 
 export function createLocalWhisperProvider(options: CreateLocalWhisperProviderOptions = {}): TranscriptionProvider {
   const model =
@@ -68,17 +71,29 @@ export function createLocalWhisperProvider(options: CreateLocalWhisperProviderOp
   const device = options.device ?? 'webgpu'
   const dtype = options.dtype ?? 'q8'
 
-  let reusedWorker: Worker | null = null
+  const modelLoadTimeoutMs = options.modelLoadTimeoutMs ?? DEFAULT_MODEL_LOAD_TIMEOUT_MS
+
+  interface PendingRequest {
+    reject: (error: unknown) => void
+  }
+
+  let reusedWorker: { worker: ReturnType<NonNullable<CreateLocalWhisperProviderOptions['createWorker']>>; pending: Set<PendingRequest> } | null = null
   let requestId = 0
 
-  const ensureWorker = (): Worker => {
-    reusedWorker ??= options.createWorker ? options.createWorker() : new Worker(new URL('./whisper-worker.js', import.meta.url), { type: 'module' })
+  const ensureWorker = () => {
+    reusedWorker ??= {
+      worker: options.createWorker ? options.createWorker() : new Worker(new URL('./whisper-worker.js', import.meta.url), { type: 'module' }),
+      pending: new Set(),
+    }
     return reusedWorker
   }
 
-  const terminateWorkerOnAbort = (target: Worker): void => {
-    target.terminate()
-    reusedWorker = null
+  const retireWorker = (target: NonNullable<typeof reusedWorker>, error: unknown): void => {
+    if (reusedWorker === target) reusedWorker = null
+    target.worker.terminate()
+    const waiters = [...target.pending]
+    target.pending.clear()
+    for (const waiter of waiters) waiter.reject(error)
   }
 
   return {
@@ -90,38 +105,66 @@ export function createLocalWhisperProvider(options: CreateLocalWhisperProviderOp
       signal?.throwIfAborted()
 
       const target = ensureWorker()
+      const worker = target.worker
       const id = requestId++
       return new Promise<TranscriptResult>((resolve, reject) => {
+        let modelLoaded = false
+        let loadTimer: ReturnType<typeof setTimeout> | undefined
         const cleanup = () => {
-          target.removeEventListener('message', onMessage)
-          target.removeEventListener('error', onError)
+          clearTimeout(loadTimer)
+          target.pending.delete(entry)
+          worker.removeEventListener('message', onMessage)
+          worker.removeEventListener('error', onError)
           signal?.removeEventListener('abort', onAbort)
         }
+        const entry: PendingRequest = {
+          reject: (error) => {
+            cleanup()
+            reject(error)
+          },
+        }
+        const armLoadTimer = () => {
+          clearTimeout(loadTimer)
+          loadTimer = setTimeout(() => {
+            retireWorker(
+              target,
+              new Error(
+                `Timed out loading the Whisper model ${model} (no progress for ${Math.round(modelLoadTimeoutMs / 1000)}s). Check the connection and try again.`,
+              ),
+            )
+          }, modelLoadTimeoutMs)
+        }
         const onAbort = () => {
-          cleanup()
-          terminateWorkerOnAbort(target)
-          reject(signal?.reason ?? new DOMException('Transcription aborted', 'AbortError'))
+          retireWorker(target, signal?.reason ?? new DOMException('Transcription aborted', 'AbortError'))
         }
         const onError = (event: ErrorEvent) => {
-          cleanup()
-          reusedWorker = null
-          reject(event.error instanceof Error ? event.error : new Error(event.message || 'Whisper worker crashed'))
+          retireWorker(target, event.error instanceof Error ? event.error : new Error(event.message || 'Whisper worker crashed'))
         }
         const onMessage = (event: MessageEvent<WhisperWorkerResponse>) => {
           const message = event.data
+          if (message.type === 'progress' && message.id === id && message.phase === 'transcribe') {
+            modelLoaded = true
+            clearTimeout(loadTimer)
+          }
+          if (message.type === 'progress' && !modelLoaded) armLoadTimer()
           if (message.type === 'progress' && message.id === id) {
             options.onProgress?.({ phase: message.phase, progress: message.progress })
           } else if (message.type === 'result' && message.id === id) {
             cleanup()
             resolve(message.result)
           } else if (message.type === 'error' && message.id === id) {
-            cleanup()
-            reject(new Error(message.message))
+            if (modelLoaded) {
+              entry.reject(new Error(message.message))
+            } else {
+              retireWorker(target, new Error(message.message))
+            }
           }
         }
+        target.pending.add(entry)
         signal?.addEventListener('abort', onAbort, { once: true })
-        target.addEventListener('message', onMessage)
-        target.addEventListener('error', onError)
+        worker.addEventListener('message', onMessage)
+        worker.addEventListener('error', onError)
+        armLoadTimer()
         const request: WhisperWorkerRequest = {
           type: 'transcribe',
           id,
@@ -129,7 +172,7 @@ export function createLocalWhisperProvider(options: CreateLocalWhisperProviderOp
           audio,
           ...(transcribeOptions?.language ? { language: transcribeOptions.language } : {}),
         }
-        target.postMessage(request, [audio.buffer])
+        worker.postMessage(request, [audio.buffer])
       })
     },
   }

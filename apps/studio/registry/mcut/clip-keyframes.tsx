@@ -222,12 +222,12 @@ export function KeyframeMarkers({ element, pxPerMs }: { element: TimelineElement
           onPointerUp={(event) => finishPointer(event)}
           onPointerCancel={(event) => finishPointer(event, true)}
         >
-          <span className="size-1.5 rotate-45 border border-overlay/60 bg-overlay-foreground shadow-sm" />
+          <span className="size-1.5 rotate-45 border border-overlay/60 bg-overlay-foreground " />
         </button>
       ))}
       {dragBadge && (
         <span
-          className="pointer-events-none absolute bottom-4 z-40 flex -translate-x-1/2 items-center gap-1 rounded-sm bg-overlay/80 px-1.5 py-0.5 font-mono text-2xs text-overlay-foreground shadow-sm"
+          className="pointer-events-none absolute bottom-4 z-40 flex -translate-x-1/2 items-center gap-1 rounded-sm bg-overlay/80 px-1.5 py-0.5 font-mono text-2xs text-overlay-foreground "
           style={{ left: dragBadge.timeMs * pxPerMs }}
         >
           {formatTimecode(element.startMs + dragBadge.timeMs)}

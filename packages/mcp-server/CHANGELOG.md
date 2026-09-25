@@ -1,5 +1,24 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.5
+
+### Minor Changes
+
+- [#155](https://github.com/mattppal/mcut/pull/155) [`b6f0765`](https://github.com/mattppal/mcut/commit/b6f07651f745e393b59e5db6dbc4e67f370939b3) Thanks [@mattppal](https://github.com/mattppal)! - The project summary lists each layout by role (picture-in-picture, full-frame, split) with every slot's pixel size and aspect. A `saveLayout` tool result shows each slot before and after with width and height change, and warns when a full-frame layout's only slot stops covering the frame.
+
+### Patch Changes
+
+- Updated dependencies [[`b6f0765`](https://github.com/mattppal/mcut/commit/b6f07651f745e393b59e5db6dbc4e67f370939b3)]:
+  - @mcut/timeline@0.1.0-alpha.4
+  - @mcut/editor@0.1.0-alpha.4
+  - @mcut/transcription@0.1.0-alpha.4
+
+## 0.1.0-alpha.4
+
+### Minor Changes
+
+- [#151](https://github.com/mattppal/mcut/pull/151) [`fa25629`](https://github.com/mattppal/mcut/commit/fa256296c4f284c58f289fc448564fc9c2fe2b88) Thanks [@mattppal](https://github.com/mattppal)! - Add a `mcp-server` bin so `npx -y @mcut/mcp-server` and `bunx @mcut/mcp-server project.mcut.json` start the stdio server. The bridge `/rpc` endpoint now requires the bridge token, and `mcut-bridge` reads it from `--token` or `MCUT_BRIDGE_TOKEN`.
+
 ## 0.1.0-alpha.3
 
 ### Patch Changes
