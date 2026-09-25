@@ -94,13 +94,13 @@ The registry lives in `scripts/agent-e2e/tasks.ts`. Every task is an `E2ETask` w
 | `fade-open-close` | any | clip placed | opacity keyframes 0 at start, 1 by 400 ms, 1 until 400 ms before the end, 0 at the end |
 | `bridge-fade-action` | bridge | clip placed | `effects.fade-open-close` ran through `run_action`, then the fade checks |
 | `bridge-remove-silence-action` | bridge | clip placed plus word timed captions | `transcript.remove-silence` ran through `run_action`, then the silence checks |
-| `bridge-export-webm` | bridge | empty project | asset registered with the served src, one untrimmed clip at 0, `file.export-video` ran through `run_action` with `{"format": "webm"}` and returned `format` `webm`, a `video/webm` mime type, and a byte count above 0 |
+| `bridge-export-webm` | bridge | empty project | asset registered with the served src, one untrimmed clip at 0, `export_video` started a job with `{"format": "webm"}`, and the last `get_export` reports state `done` with a `.webm` path, a byte count above 0, and a file on disk of that size |
 
-Tasks with `target: 'bridge'` call `run_action`, which only the live bridge serves, so the stdio target skips them. `file.export-video` is an agent only action in `apps/studio/registry/mcut/editor-default-actions.ts` (kept out of the palette) that renders the timeline with `exportProject` from `@mcut/media` inside the tab, triggers the browser download, and returns format, mime type, byte size, duration, and render time so a headless client can check the export without touching the download.
+Tasks with `target: 'bridge'` call `run_action`, `export_video`, or `get_export`, which only the live bridge serves, so the stdio target skips them. `export_video` renders the timeline with `exportProject` from `@mcut/media` inside the tab and returns a job id at once. Studio uploads the finished file to the bridge, which writes it to the desktop app's Downloads folder with no save dialog. The scripted solution calls `get_export` with `waitMs` twice so a slow runner still sees the job finish.
 
 Fixtures resolve by manifest id from `fixtures/media/manifest.json` when that file exists and fall back to the committed `apps/studio/e2e/fixtures/fixture-vp9.mkv` (640x360, 30 fps, 2008 ms). `createTasks(srcOf)` builds the registry for one `MediaSrc`, and `TASKS` is the repo relative build the stdio target and the tests use. Prompts and scorers are derived from the resolved fixture, so the tasks keep working when the manifest lands.
 
-`scripts/agent-e2e/tasks.test.ts` runs every headless scripted sequence through an in memory MCP server and asserts it passes its own scorer, that the headless server rejects the bridge tasks' `run_action` calls, that an agent which edits nothing fails every scorer, and that scripted calls only name tools the server advertises. Add a task inside `createTasks` with a scripted solution and the test keeps it honest.
+`scripts/agent-e2e/tasks.test.ts` runs every headless scripted sequence through an in memory MCP server and asserts it passes its own scorer, that the headless server rejects the bridge tasks' live-only calls, that an agent which edits nothing fails every scorer, and that scripted calls only name tools the server advertises. Add a task inside `createTasks` with a scripted solution and the test keeps it honest.
 
 ## Grok Build from the repo root
 
@@ -132,7 +132,7 @@ grok -p "Register apps/studio/e2e/fixtures/fixture-vp9.mkv as a video asset and 
 
 ## Fuzzing the bridge
 
-`bun run fuzz:mcp:bridge` (`scripts/agent-e2e/fuzz-bridge.ts`) opens the same Electron session, connects the MCP fuzz client from `packages/mcp-server/src/fuzz` over Streamable HTTP, and runs 20 random sequences of 20 tool calls against the app, resetting the project between seeds and checking the project invariants from `packages/timeline/src/fuzz`. `ensure_transcript` is left out because transcription can take minutes. A violated invariant is minimized and printed with the `MCUT_FUZZ_SEED=<n>` line that reproduces it. `--seeds`, `--length`, and `--seed`, or `MCUT_FUZZ_SEQUENCES`, `MCUT_FUZZ_LENGTH`, and `MCUT_FUZZ_SEED`, resize the window.
+`bun run fuzz:mcp:bridge` (`scripts/agent-e2e/fuzz-bridge.ts`) opens the same Electron session, connects the MCP fuzz client from `packages/mcp-server/src/fuzz` over Streamable HTTP, and runs 20 random sequences of 20 tool calls against the app, resetting the project between seeds and checking the project invariants from `packages/timeline/src/fuzz`. `ensure_transcript` and `export_video` are left out because transcription and export can take minutes. A violated invariant is minimized and printed with the `MCUT_FUZZ_SEED=<n>` line that reproduces it. `--seeds`, `--length`, and `--seed`, or `MCUT_FUZZ_SEQUENCES`, `MCUT_FUZZ_LENGTH`, and `MCUT_FUZZ_SEED`, resize the window.
 
 ## CI
 
