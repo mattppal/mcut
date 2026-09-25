@@ -239,6 +239,16 @@
           "target": "components/mcut/get-frame.ts"
         },
         {
+          "path": "registry/mcut/add-asset-src.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/add-asset-src.ts"
+        },
+        {
+          "path": "registry/mcut/import-granted-media.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/import-granted-media.ts"
+        },
+        {
           "path": "registry/mcut/bridge-request.ts",
           "type": "registry:lib",
           "target": "components/mcut/bridge-request.ts"
@@ -439,9 +449,24 @@
           "target": "components/mcut/local-transcription.ts"
         },
         {
+          "path": "registry/mcut/ort-wasm.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/ort-wasm.ts"
+        },
+        {
           "path": "registry/mcut/agent-edit-actions.ts",
           "type": "registry:lib",
           "target": "components/mcut/agent-edit-actions.ts"
+        },
+        {
+          "path": "registry/mcut/center-person.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/center-person.ts"
+        },
+        {
+          "path": "registry/mcut/center-person-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/center-person-dialog.tsx"
         },
         {
           "path": "registry/mcut/aspect-presets.ts",
@@ -674,7 +699,7 @@
         "zod",
         "sonner"
       ],
-      "registryDependencies": ["button", "context-menu", "input", "slider"],
+      "registryDependencies": ["button", "context-menu", "dialog", "input", "slider"],
       "files": [
         {
           "path": "registry/mcut/timeline-panel.tsx",
@@ -800,6 +825,21 @@
           "path": "registry/mcut/clip-zooms.tsx",
           "type": "registry:component",
           "target": "components/mcut/clip-zooms.tsx"
+        },
+        {
+          "path": "registry/mcut/center-person-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/mcut/center-person-dialog.tsx"
+        },
+        {
+          "path": "registry/mcut/action-registry.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/action-registry.ts"
+        },
+        {
+          "path": "registry/mcut/editor-clipboard.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/editor-clipboard.ts"
         }
       ],
       "cssVars": {
@@ -972,6 +1012,16 @@
           "path": "registry/mcut/agent-edit-actions.ts",
           "type": "registry:lib",
           "target": "components/mcut/agent-edit-actions.ts"
+        },
+        {
+          "path": "registry/mcut/center-person.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/center-person.ts"
+        },
+        {
+          "path": "registry/mcut/ort-wasm.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/ort-wasm.ts"
         },
         {
           "path": "registry/mcut/aspect-presets.ts",
@@ -1465,6 +1515,11 @@
           "path": "registry/mcut/local-transcription.ts",
           "type": "registry:lib",
           "target": "components/mcut/local-transcription.ts"
+        },
+        {
+          "path": "registry/mcut/ort-wasm.ts",
+          "type": "registry:lib",
+          "target": "components/mcut/ort-wasm.ts"
         },
         {
           "path": "registry/mcut/studio-host.ts",

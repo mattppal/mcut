@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { WebSocket, WebSocketServer, type VerifyClientCallbackSync } from 'ws'
 import { LiveBridgeError } from './bridge-error'
 import { EXPORTS_PATH, ExportJobs } from './export-jobs'
+import { MediaGrantStore, runImportMedia, serveMediaGrant } from './media-grants'
 import { createMcutMcpServerForTarget, type McutMcpTarget } from './server'
 
 export { LiveBridgeError } from './bridge-error'
@@ -16,6 +17,7 @@ export interface LiveBridgeOptions {
   allowedOrigins?: string[]
   requestTimeoutMs?: number
   transcriptionTimeoutMs?: number
+  importTimeoutMs?: number
   reconnectGraceMs?: number
   onError?: (error: unknown) => void
   exportDir?: string
@@ -25,6 +27,7 @@ interface PendingRequest {
   resolve: (value: unknown) => void
   reject: (error: Error) => void
   timer: ReturnType<typeof setTimeout>
+  socket: WebSocket
 }
 
 interface SocketWaiter {
@@ -120,7 +123,10 @@ export class LiveMcutBridge {
   readonly editorUrl: string | null
   readonly requestTimeoutMs: number
   readonly transcriptionTimeoutMs: number
+  readonly importTimeoutMs: number
   readonly reconnectGraceMs: number
+  private readonly allowedOrigins: readonly string[]
+  private readonly mediaGrants = new MediaGrantStore()
 
   private readonly onError: (error: unknown) => void
   private readonly server = createServer((req, res) => {
@@ -139,10 +145,12 @@ export class LiveMcutBridge {
     this.editorUrl = options.editorUrl ?? null
     this.requestTimeoutMs = options.requestTimeoutMs ?? 30_000
     this.transcriptionTimeoutMs = options.transcriptionTimeoutMs ?? 10 * 60_000
+    this.importTimeoutMs = options.importTimeoutMs ?? 5 * 60_000
     this.reconnectGraceMs = options.reconnectGraceMs ?? 5_000
     this.onError =
       options.onError ?? ((error) => process.stderr.write(`mcut bridge error: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`))
-    const allowedOrigins = options.allowedOrigins ?? []
+    this.allowedOrigins = options.allowedOrigins ?? []
+    const allowedOrigins = this.allowedOrigins
     const verifyClient: VerifyClientCallbackSync = ({ origin, req }) => {
       try {
         return (this.token === null || tokenFrom(req) === this.token) && isAllowedOrigin(origin, allowedOrigins)
@@ -162,7 +170,7 @@ export class LiveMcutBridge {
       token: this.token,
       allowOrigin: (origin) => isAllowedOrigin(origin, allowedOrigins),
       address: () => this.server.address(),
-      request: (type, payload) => this.request(type, payload),
+      request: (type, payload) => this.requestSent(type, payload),
     })
   }
 
@@ -255,22 +263,43 @@ export class LiveMcutBridge {
         return await this.exports.get(payload)
       case 'cancel_export':
         return await this.exports.cancel(payload)
+      case 'import_media':
+        return await this.importMedia(payload)
       default:
         return await this.request(type, payload)
     }
   }
 
+  async importMedia(payload: unknown): Promise<unknown> {
+    const address = this.server.address()
+    if (!address || typeof address === 'string') {
+      throw new LiveBridgeError('invalid-listener', 'The live bridge is not listening.')
+    }
+    return await runImportMedia({
+      payload,
+      port: address.port,
+      token: this.token,
+      store: this.mediaGrants,
+      request: (type, body) => this.request(type, body),
+    })
+  }
+
   async request(type: string, payload: unknown = {}): Promise<unknown> {
-    const timeoutMs = type === 'ensure_transcript' ? this.transcriptionTimeoutMs : this.requestTimeoutMs
+    const sent = await this.requestSent(type, payload)
+    return sent.result
+  }
+
+  private async requestSent(type: string, payload: unknown): Promise<{ result: unknown; socket: WebSocket }> {
+    const timeoutMs = this.timeoutFor(type)
     const socket = await this.waitForSocket(Math.min(timeoutMs, this.reconnectGraceMs))
     const id = String(this.nextId++)
     const body = JSON.stringify({ id, type, payload })
-    return await new Promise((resolve, reject) => {
+    const result = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id)
         reject(new LiveBridgeError('request-timeout', `Timed out waiting for browser response to ${type}.`))
       }, timeoutMs)
-      this.pending.set(id, { resolve, reject, timer })
+      this.pending.set(id, { resolve, reject, timer, socket })
       socket.send(body, (error) => {
         if (!error) return
         clearTimeout(timer)
@@ -278,6 +307,7 @@ export class LiveMcutBridge {
         reject(error)
       })
     })
+    return { result, socket }
   }
 
   createTarget(): McutMcpTarget {
@@ -288,6 +318,7 @@ export class LiveMcutBridge {
       getTranscript: (options) => this.request('get_transcript', options ?? {}),
       searchTranscript: (query) => this.request('search_transcript', { query }),
       ensureTranscript: (input) => this.request('ensure_transcript', input ?? {}),
+      centerPerson: (input) => this.request('center_person', input ?? {}),
       getAudioActivity: (input) => this.request('get_audio_activity', input ?? {}),
       getFrame: (input) => this.request('get_frame', input ?? {}),
       listActions: () => this.request('list_actions'),
@@ -302,7 +333,14 @@ export class LiveMcutBridge {
       getExport: (input) => this.exports.get(input),
       cancelExport: (input) => this.exports.cancel(input),
       transact: (requests) => this.request('transact', { requests }),
+      importMedia: (paths) => this.importMedia({ paths }),
     }
+  }
+
+  private timeoutFor(type: string): number {
+    if (type === 'ensure_transcript' || type === 'center_person') return this.transcriptionTimeoutMs
+    if (type === 'import_media') return this.importTimeoutMs
+    return this.requestTimeoutMs
   }
 
   private attach(socket: WebSocket): void {
@@ -318,11 +356,12 @@ export class LiveMcutBridge {
         this.tabInfo = null
       }
       for (const [id, pending] of this.pending) {
+        if (pending.socket !== socket) continue
         clearTimeout(pending.timer)
+        this.pending.delete(id)
         pending.reject(new LiveBridgeError('browser-disconnected', `Browser disconnected before response ${id}.`))
       }
-      this.pending.clear()
-      this.exports.disconnect()
+      this.exports.disconnect(socket)
     })
   }
 
@@ -413,6 +452,16 @@ export class LiveMcutBridge {
 
     if (url.pathname === '/mcp') {
       await this.handleMcp(req, res)
+      return
+    }
+    if (url.pathname.startsWith('/media/')) {
+      const origin = req.headers.origin
+      await serveMediaGrant(req, res, {
+        url,
+        store: this.mediaGrants,
+        bridgeToken: this.token,
+        originAllowed: isAllowedOrigin(typeof origin === 'string' ? origin : undefined, this.allowedOrigins),
+      })
       return
     }
 
@@ -529,6 +578,7 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT, token?: strin
     getTranscript: (options) => rpc('get_transcript', options ?? {}),
     searchTranscript: (query) => rpc('search_transcript', { query }),
     ensureTranscript: (input) => rpc('ensure_transcript', input ?? {}),
+    centerPerson: (input) => rpc('center_person', input ?? {}),
     getAudioActivity: (input) => rpc('get_audio_activity', input ?? {}),
     getFrame: (input) => rpc('get_frame', input ?? {}),
     listActions: () => rpc('list_actions'),
@@ -543,5 +593,6 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT, token?: strin
     getExport: (input) => rpc('get_export', input ?? {}),
     cancelExport: (input) => rpc('cancel_export', input ?? {}),
     transact: (requests) => rpc('transact', { requests }),
+    importMedia: (paths) => rpc('import_media', { paths }),
   }
 }

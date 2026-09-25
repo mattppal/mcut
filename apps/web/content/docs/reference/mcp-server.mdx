@@ -27,9 +27,9 @@ creates the file when missing and writes it after successful edits.
 
 ## Static tools
 
-The published server registers twenty-one static tools. The live bridge handles
+The published server registers twenty-three static tools. The live bridge handles
 three more in the editor, `list_commands`, `apply_commands`, and
-`run_operator`, which together with the twenty-one form the twenty-four-tool agent
+`run_operator`, which together with the twenty-three form the twenty-six-tool agent
 profile. Studio serves the profiles inside the desktop app, with a catalog at
 `app://studio/tools`, at `app://studio/tools.json` and
 `app://studio/tools.agent.json`. The full profile
@@ -54,11 +54,13 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `lint_project` | Cross-entity problems `parseProject` cannot reject, each with a severity and code. |
 | `list_zooms` | Every zoom region with its element, timing, target, easing, and motion blur. |
 | `edit_zooms` | Add, update, or remove zoom regions as one undoable edit. |
+| `center_person` | Live bridge only. Find the face on device and keep the person in frame as one undoable edit, on a video crop or a multicam camera source. A video crop at the project aspect also scales the clip to fill the frame, and `fill` overrides that. |
 | `list_presets` | Platform delivery presets with dimensions, fps, and safe areas. |
 | `list_operators` | List available UI-level editor operators. |
 | `run_operator` | Live bridge only. Run an operator by id. |
 | `list_actions` | Live bridge only. List editor actions. |
-| `run_action` | Live bridge only. Run an editor action by id. |
+| `run_action` | Live bridge only. Run an editor action by id. Human-only actions are rejected. |
+| `import_media` | Live bridge only. Import local media by absolute path. Studio probes each file, registers the asset, and stores the bytes. |
 | `transact` | Apply 1 to 100 command, operator, `run_operator`, `run_action`, or `apply_commands` calls as one undo step. A failed call leaves the project and the undo stack unchanged. Undo and redo are rejected before any call runs. |
 | `undo` | Undo the most recent edit. One undo step is one tool call or one whole `transact`. |
 | `redo` | Redo the most recently undone edit. |
@@ -86,6 +88,13 @@ system temp folder when `~/Downloads` is missing.
 One export runs at a time. A second `export_video` fails with `export-busy`
 until the first finishes or `cancel_export` stops it. The bridge keeps the last
 ten jobs.
+
+If the Studio tab that owns the job disconnects while the export is starting or
+rendering, the job fails with `Studio disconnected during export.` A tab that
+was replaced can close without failing the export that belongs to the new tab.
+`cancel_export` while the bridge is still writing the file removes that file
+and leaves the job cancelled. After the file is in place the job is done, and
+`cancel_export` answers that the export is already done.
 
 ## Generated operator tools
 
@@ -120,3 +129,19 @@ becomes the MCP input schema.
 
 Use command tools for exact project mutations when you already know the target
 ids and payload.
+
+## Import local media
+
+`import_media` takes `paths`, from 1 to 50 absolute file paths. The bridge
+checks that each path exists, is a non-empty regular file, and has a known
+media extension. Studio fetches each accepted file from a one-call bridge URL,
+then probes it, registers the asset, and stores the bytes the same way the
+Import button does. The result lists imported assets and per-file failures.
+When nothing imports, the tool result is an error. Place an imported asset
+with `addElement` or an operator.
+
+`list_actions` marks dialog and save actions with `humanOnly`. `run_action`
+rejects those actions and rejects a non-empty `input` on an action that has
+no input schema. `addAsset` rejects a `file:` URL and probes every other
+source before the command is applied. Missing metadata is filled from that
+probe.

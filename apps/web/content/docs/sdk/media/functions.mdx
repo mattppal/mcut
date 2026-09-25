@@ -368,3 +368,13 @@ async function findSyncOffsetMs(
 ```
 
 Returns how many milliseconds after recording `a` started recording `b` started, with a confidence score, or `null` when either has no audio.
+
+### createLocalFaceDetector
+
+`createLocalFaceDetector(options)` returns a detector whose `detect(src, { sampleRateHz, signal })` reads a video in a module worker, 5 times a second by default, and resolves to one `FaceSample` per sample time. The first run downloads the YuNet model from `huggingface.co` into Cache Storage. Calls run one at a time, and an aborted `signal` rejects its call and stops the worker.
+
+| Option | Meaning |
+| --- | --- |
+| `ortWasmPaths` | `{ mjs, wasm }` URLs of the onnxruntime files, loaded instead of the jsDelivr copies |
+| `onProgress` | Called with `{ phase, progress }`, where `phase` is `model` during the download and `detect` while frames are read, and `progress` runs from 0 to 1 |
+| `createWorker` | Replaces the worker the detector starts |

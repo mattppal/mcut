@@ -39,6 +39,7 @@ import {
   MCP_SERVER_STATIC_TOOL_CALL_SCHEMA,
   isMcpServerStaticToolName,
   listServerToolDefinitions,
+  mediaImportReportSchema,
   operatorToolName,
   type McpServerStaticToolCall,
   type TransactSubRequest,
@@ -52,8 +53,9 @@ export interface McutMcpTarget {
   getTranscript?(options?: ProjectTranscriptOptions): unknown | Promise<unknown>
   searchTranscript?(query: string): unknown | Promise<unknown>
   ensureTranscript?(input: unknown): unknown | Promise<unknown>
+  centerPerson?(input: unknown): unknown | Promise<unknown>
   getAudioActivity?(input: unknown): unknown | Promise<unknown>
-  getFrame(input: unknown): unknown | Promise<unknown>
+  getFrame?(input: unknown): unknown | Promise<unknown>
   listActions(): unknown | Promise<unknown>
   listOperators(): unknown | Promise<unknown>
   runAction(actionId: string, input: unknown): unknown | Promise<unknown>
@@ -66,6 +68,7 @@ export interface McutMcpTarget {
   getExport?(input: unknown): unknown | Promise<unknown>
   cancelExport?(input: unknown): unknown | Promise<unknown>
   transact?(requests: readonly TransactSubRequest[]): unknown | Promise<unknown>
+  importMedia?(paths: readonly string[]): unknown | Promise<unknown>
 }
 
 export interface McutMcpServerOptions {
@@ -166,6 +169,9 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
     ensureTranscript: async () => {
       throw new Error('ensure_transcript requires a live browser bridge connected to an editor tab.')
     },
+    centerPerson: async () => {
+      throw new Error('center_person requires a live browser bridge connected to an editor tab.')
+    },
     getAudioActivity: async () => {
       throw new Error('get_audio_activity requires a live browser bridge connected to an editor tab.')
     },
@@ -210,6 +216,9 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
       await onChange()
     },
     transact: (requests) => runEngineTransact(engine, requests, onChange),
+    importMedia: async () => {
+      throw new Error('import_media requires the live bridge connected to Studio.')
+    },
   }
 }
 
@@ -262,6 +271,7 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       if (!target.getAudioActivity) return failure('get_audio_activity is not available on this target.')
       return text(JSON.stringify(await target.getAudioActivity(call.arguments), null, 2))
     case 'get_frame': {
+      if (!target.getFrame) return failure('get_frame requires the live bridge connected to Studio.')
       const parsed = frameGrabSchema.safeParse(await target.getFrame(call.arguments))
       if (!parsed.success) return failure(`get_frame: ${z.prettifyError(parsed.error)}`)
       return frameContent(parsed.data)
@@ -273,6 +283,11 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'edit_zooms':
       await target.applyCommands(call.arguments.edits)
       return text(`OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}`)
+    case 'center_person': {
+      if (!target.centerPerson) return failure('center_person is not available on this target.')
+      const result = await target.centerPerson(call.arguments)
+      return text(`${withResult('OK: person centered.', result)}\n\n${await target.getSummary()}`)
+    }
     case 'list_presets':
       return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
     case 'apply_captions': {
@@ -342,6 +357,14 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'cancel_export':
       if (!target.cancelExport) return failure('cancel_export requires the live bridge connected to Studio.')
       return text(withResult('OK: export cancelled.', await target.cancelExport(call.arguments)))
+    case 'import_media': {
+      if (!target.importMedia) return failure('import_media requires the live bridge connected to Studio.')
+      const report = mediaImportReportSchema.parse(await target.importMedia(call.arguments.paths))
+      const count = report.imported.length
+      const lead = count === 0 ? 'Imported nothing.' : `Imported ${count} ${count === 1 ? 'file' : 'files'}. Place each asset with addElement or an operator.`
+      const body = `${lead}\n\n${JSON.stringify(report, null, 2)}`
+      return count === 0 ? failure(body) : text(body)
+    }
   }
 }
 

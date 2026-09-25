@@ -78,11 +78,13 @@ export {
   zoomRegionEndMs,
   zoomRegionSchema,
   type ContentView,
+  type VisibleFraction,
   type ZoomableElement,
   type ZoomRegion,
   type ZoomRegionRef,
 } from './zoom-regions'
 export { zoomCommandSchema } from './commands/zooms'
+export { centeredFocus, getReframeCenter } from './reframe'
 
 export {
   EFFECT_PARAMS,

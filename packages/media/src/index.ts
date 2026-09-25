@@ -62,3 +62,6 @@ export { ScrubFrameCache } from './scrub-cache'
 export { constantSpeedOf, stretchStereo, type ConstantSpeed, type StereoData } from './time-stretch'
 
 export { crossCorrelateEnvelopes, extractEnvelope, findSyncOffsetMs, type AudioSyncOptions, type SyncResult } from './audio-sync'
+
+export { createLocalFaceDetector } from './face-detector'
+export type { FaceSample } from './face-detector-protocol'
