@@ -118,7 +118,11 @@ describe('zoom regions on a clip', () => {
 
 describe('zoom regions on a multicam slot', () => {
   test('the screen slot zooms while the camera slot keeps its framing', () => {
-    let project = applyCommand(projectWithScreenAndCam(), { type: 'createMulticam', sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }], multicamId: 'e-mc' })
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
     project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0, holdMs: 1000, focus: { x: 0.2, y: 0.3 } } })
     const layout = project.layouts.find((l) => l.name === 'Screen + Cam')
     const screenSlot = layout?.slots.find((s) => s.source === 'screen')
@@ -132,7 +136,11 @@ describe('zoom regions on a multicam slot', () => {
   })
 
   test('the target center lands in the middle of a slot narrower than the video', () => {
-    let project = applyCommand(projectWithScreenAndCam(), { type: 'createMulticam', sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }], multicamId: 'e-mc' })
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
     project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0, scale: 1.5, focus: { x: 0.43, y: 0.5 } } })
     const slot = project.layouts.find((l) => l.name === 'Screen + Cam 3:4')?.slots.find((s) => s.source === 'screen')
     if (!slot) throw new Error('3:4 layout lost its screen slot')
@@ -143,7 +151,11 @@ describe('zoom regions on a multicam slot', () => {
   })
 
   test('renaming a source key carries its zooms along', () => {
-    let project = applyCommand(projectWithScreenAndCam(), { type: 'createMulticam', sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }], multicamId: 'e-mc' })
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
     project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0 } })
     project = applyCommand(project, { type: 'setMulticamSourceKey', elementId: 'e-mc', sourceKey: 'screen', newKey: 'display' })
     expect(listZoomRegions(project).map((z) => z.source)).toEqual(['display'])
