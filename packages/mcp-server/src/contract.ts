@@ -165,7 +165,11 @@ export const MCP_TOOL_INPUTS = {
   get_export: getExportInputSchema,
   cancel_export: cancelExportInputSchema,
   import_media: z.strictObject({
-    paths: z.array(z.string().min(1)).min(1).max(50).describe('Absolute paths of local media files. Studio probes each file and registers an asset.'),
+    paths: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(50)
+      .describe('Absolute paths of local media files. A leading ~/ expands to the home folder. Studio probes each file and registers an asset.'),
   }),
 } satisfies Record<McpAgentToolName, z.ZodType>
 

@@ -1,5 +1,17 @@
 # @mcut/media
 
+## 0.1.0-alpha.17
+
+### Patch Changes
+
+- [#190](https://github.com/mattppal/mcut/pull/190) [`0792372`](https://github.com/mattppal/mcut/commit/0792372e344836d0a7ae62b87039eec934bfccda) Thanks [@mattppal](https://github.com/mattppal)! - Export, the decoded preview for video without native playback, thumbnails, and filmstrips copy each decoded video frame to RGBA before they draw it, in browsers whose `VideoFrame.copyTo` accepts a `format`. A long export or MKV playback no longer leaves hundreds of megabytes of shared memory and about 80 open file descriptors in the Studio renderer. Export also reuses one RGBA buffer across frames, which made a 6 minute 1080p export about 12% faster in the desktop app.
+
+## 0.1.0-alpha.16
+
+### Patch Changes
+
+- [#192](https://github.com/mattppal/mcut/pull/192) [`5f65e81`](https://github.com/mattppal/mcut/commit/5f65e81bc45b09fe8b24b53a384aee1922717263) Thanks [@mattppal](https://github.com/mattppal)! - A decoded-preview clip (MKV, WebM) placed in the first 3 seconds after load starts decoding at once instead of waiting for a retry that a paused preview never triggered, and a failed decode start moves `frameVersion` once its retry window passes, so a paused preview no longer stays black.
+
 ## 0.1.0-alpha.15
 
 ### Minor Changes

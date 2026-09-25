@@ -1,5 +1,5 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, test } from 'bun:test'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -82,7 +82,19 @@ describe('import_media', () => {
       expect(rejected.text.startsWith('Imported nothing.')).toBe(true)
       expect(rejected.report).toEqual({
         imported: [],
-        failed: [{ path: 'clips/relative.mp4', error: 'import_media requires an absolute path, got "clips/relative.mp4".' }],
+        failed: [
+          {
+            path: 'clips/relative.mp4',
+            error: `import_media requires an absolute path or one starting with ~/, got "clips/relative.mp4". Home is ${homedir()}.`,
+          },
+        ],
+      })
+
+      const homeName = `mcut-missing-${path.basename(root)}.mp4`
+      const tilde = toolReport(await client.callTool({ name: 'import_media', arguments: { paths: [`~/${homeName}`] } }))
+      expect(tilde.report).toEqual({
+        imported: [],
+        failed: [{ path: `~/${homeName}`, error: `import_media could not find "${path.join(homedir(), homeName)}". Home is ${homedir()}.` }],
       })
 
       const socket = new WebSocket(`ws://127.0.0.1:${port}/mcut-mcp?token=import-token`, {
@@ -150,9 +162,12 @@ describe('import_media', () => {
       expect(imported.report).toEqual({
         imported: [{ path: clipPath, assetId: 'a-clip', name: 'clip.webm', kind: 'video', durationMs: 1200, width: 320, height: 180 }],
         failed: [
-          { path: missing, error: `import_media could not find "${missing}".` },
+          { path: missing, error: `import_media could not find "${missing}". Home is ${homedir()}.` },
           { path: folder, error: `import_media cannot import "${folder}" because it is a directory.` },
-          { path: 'clips/relative.mp4', error: 'import_media requires an absolute path, got "clips/relative.mp4".' },
+          {
+            path: 'clips/relative.mp4',
+            error: `import_media requires an absolute path or one starting with ~/, got "clips/relative.mp4". Home is ${homedir()}.`,
+          },
           { path: emptyPath, error: `import_media cannot import "${emptyPath}" because it is empty.` },
           { path: notesPath, error: `import_media does not recognize the extension of "${notesPath}".` },
         ],
