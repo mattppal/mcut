@@ -191,8 +191,15 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const { transcript, ...options } = call.arguments
       const project = await targetProject(target)
       const command = buildCaptionsCommand(project, transcript, options)
+      if (command.captions.length === 0) {
+        return failure('The transcript has no timed words or segments, so no captions were applied. Pass words or segments with startMs and endMs.')
+      }
       const incoming = spokenWords(transcript.words.length > 0 ? transcript.words.map((w) => w.text).join(' ') : transcript.text)
-      const transcribed = spokenWords(getProjectCaptions(project).map(({ caption }) => caption.text).join(' '))
+      const transcribed = spokenWords(
+        getProjectCaptions(project)
+          .map(({ caption }) => caption.text)
+          .join(' '),
+      )
       await target.applyCommands([command])
       const origin =
         incoming.length > 0 && ` ${transcribed} `.includes(` ${incoming} `)

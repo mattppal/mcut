@@ -150,7 +150,8 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
     'Pass elementId to caption only the source span one video/audio clip plays, at its timeline position. ' +
     'styleId picks a caption style preset. Returns the updated project summary. ' +
-    'Pass a transcript from ensure_transcript, get_transcript, or a transcription provider. Never invent one when transcription fails. ' +
+    'Pass a timed transcript from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
+    'Never invent a transcript when transcription fails. ' +
     'The result warns when the transcript matches no transcript in the project.',
   apply_silence_cuts:
     'Cut transcript silence out of one video/audio element (splits, ripple deletes, and edge trims) ' +
