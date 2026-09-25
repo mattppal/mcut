@@ -159,7 +159,8 @@ export const applyAnimationPreset = defineCommand({
     'In: fade-in, slide-in, pop-in, scale-in, zoom-in, whip-in, blur-in. ' +
     'Out: fade-out, slide-out, pop-out, zoom-out, whip-out, blur-out. ' +
     'Emphasis (whole clip): ken-burns, punch-zoom, pulse, breathe, float, sway, shake. ' +
-    'Fast presets (whip-in/out, punch-zoom) also enable per-element motion blur.',
+    'Fast presets (whip-in/out, punch-zoom) also enable per-element motion blur. ' +
+    'To fade a clip in and out as one undo step, run the live editor action effects.fade-open-close instead of two presets.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     preset: animationPresetSchema,
