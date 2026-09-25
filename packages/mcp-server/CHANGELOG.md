@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.10
+
+### Minor Changes
+
+- [#167](https://github.com/mattppal/mcut/pull/167) [`7b3a0c7`](https://github.com/mattppal/mcut/commit/7b3a0c71334f6bdc7981de5d1cda1323bbdcc25e) Thanks [@mattppal](https://github.com/mattppal)! - Add a `transact` tool that applies several tool calls as one undo step. If any call fails, the project and the undo stack stay as they were.
+
 ## 0.1.0-alpha.9
 
 ### Minor Changes
