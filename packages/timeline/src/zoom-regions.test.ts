@@ -160,4 +160,21 @@ describe('zoom regions on a multicam slot', () => {
     project = applyCommand(project, { type: 'setMulticamSourceKey', elementId: 'e-mc', sourceKey: 'screen', newKey: 'display' })
     expect(listZoomRegions(project).map((z) => z.source)).toEqual(['display'])
   })
+
+  test('swapping two source keys keeps each zoom on its own footage', () => {
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
+    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { id: 'z-screen', source: 'screen', atMs: 0 } })
+    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { id: 'z-cam', source: 'camera', atMs: 5000 } })
+    project = applyCommand(project, { type: 'setMulticamSourceKey', elementId: 'e-mc', sourceKey: 'screen', newKey: 'camera' })
+    const sources = multicam(project).sources
+    const footage = listZoomRegions(project).map((z) => [z.id, z.source, sources.find((s) => s.key === z.source)?.assetId])
+    expect(footage).toEqual([
+      ['z-screen', 'camera', 'a-screen'],
+      ['z-cam', 'screen', 'a-cam'],
+    ])
+  })
 })

@@ -137,6 +137,22 @@ describe('frame style rendering', () => {
     expect(ctx.callsTo('drawImage').map((c) => c.args.slice(1))).toEqual([[320, 90, 320, 180, -960, -540, 1920, 1080]])
   })
 
+  test('a slot zoom frames its target inside the slot crop, out to the crop edges', () => {
+    const drawAt = (focus: { x: number; y: number }) => {
+      const cropped = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
+      const project = applyCommand(cropped, {
+        type: 'addZoomRegion',
+        elementId: 'e-mc',
+        zoom: { source: 'camera', atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus },
+      })
+      const ctx = new FakeContext2D()
+      renderFrame(asCtx(ctx), project, 1500, { source: new FakeSource() })
+      return ctx.callsTo('drawImage').map((c) => c.args.slice(1))
+    }
+    expect(drawAt({ x: 1, y: 1 })).toEqual([[480, 270, 160, 90, -960, -540, 1920, 1080]])
+    expect(drawAt({ x: 0, y: 0 })).toEqual([[320, 0, 160, 90, -960, -540, 1920, 1080]])
+  })
+
   test('a multicam draws its own crop and corner radius around the composite', () => {
     const project = projectWithMulticam({ width: 1920, height: 1080 }, {}, { cornerRadius: 0.1, crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } })
     const ctx = new FakeContext2D()
