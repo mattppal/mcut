@@ -63,6 +63,7 @@
     "native-video-thumbnails",
     "nested-cancel-transaction",
     "operator-error-codes",
+    "paused-preview-idle",
     "r6-format",
     "react-use-latest",
     "react-use-media-query",
