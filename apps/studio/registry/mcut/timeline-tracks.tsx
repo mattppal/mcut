@@ -252,10 +252,7 @@ const Lane = memo(function Lane({ track, pxPerMs, contentWidth }: { track: Track
 
 export const TrackRow = memo(function TrackRow({ track, pxPerMs, contentWidth }: { track: Track; pxPerMs: number; contentWidth: number }) {
   return (
-    <div
-      data-mcut-track-row={track.id}
-      className="relative flex data-dragging:z-40 data-settling:z-40 data-settling:bg-card data-dragging:bg-card"
-    >
+    <div data-mcut-track-row={track.id} className="relative flex data-dragging:z-40 data-settling:z-40 data-settling:bg-card data-dragging:bg-card">
       <TrackHeader track={track} />
       <Lane track={track} pxPerMs={pxPerMs} contentWidth={contentWidth} />
     </div>
