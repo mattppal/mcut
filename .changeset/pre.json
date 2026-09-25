@@ -37,6 +37,7 @@
     "expo-easing",
     "export-audio-encoder-delay",
     "export-job",
+    "find-retakes",
     "layout-summary-pixels",
     "lazy-mediabunny",
     "live-bridge-app-origin",
