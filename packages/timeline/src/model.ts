@@ -118,6 +118,13 @@ const fadeShape = {
   fadeOutMs: z.number().int().nonnegative().optional(),
 }
 
+export const voiceSchema = z.object({
+  enabled: z.boolean(),
+  amount: z.number().min(0).max(1),
+})
+
+export type Voice = z.infer<typeof voiceSchema>
+
 const videoShape = {
   assetId: assetIdSchema,
   trimStartMs: z.number().int().nonnegative().default(0),
@@ -127,6 +134,7 @@ const videoShape = {
   opacity: z.number().min(0).max(1).default(1),
   volume: z.number().min(0).max(2).default(1),
   muted: z.boolean().default(false),
+  voice: voiceSchema.optional(),
   ...fadeShape,
   ...visualShape,
   ...frameStyleShape,
@@ -139,6 +147,7 @@ const audioShape = {
   reversed: z.boolean().optional(),
   volume: z.number().min(0).max(2).default(1),
   muted: z.boolean().default(false),
+  voice: voiceSchema.optional(),
   ...fadeShape,
 }
 
@@ -181,6 +190,7 @@ const multicamShape = {
   opacity: z.number().min(0).max(1).default(1),
   volume: z.number().min(0).max(2).default(1),
   muted: z.boolean().default(false),
+  voice: voiceSchema.optional(),
   ...fadeShape,
   ...visualShape,
 }
