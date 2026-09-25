@@ -384,7 +384,7 @@ Cuts the silences between transcript words out of one clip playing at 1x, applyi
 function applyCommands(engine: EditorEngine, commands: readonly BuiltinCommand[]): void
 ```
 
-Dispatches the commands in order inside one transaction, so the batch becomes a single undo entry. Each command passes through `withPlayheadDefaults` first.
+Dispatches the commands in order inside one transaction, so the batch becomes a single undo entry. If a command throws, none of the batch applies and the error propagates. Each command passes through `withPlayheadDefaults` first.
 
 ### withPlayheadDefaults
 
