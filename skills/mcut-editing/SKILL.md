@@ -29,7 +29,9 @@ Minimum loop:
 4. If transcript is missing, `ensure_transcript`
 5. `list_actions`
 6. Prefer `run_action` high-level actions and task tools such as `edit_zooms` and `center_person` over raw commands
-7. Wrap one intent in one `transact` so undo removes the whole intent
+7. When one user request needs more than one edit call, send them all in one
+   `transact`, so "undo that" removes the whole request. "Make it square and
+   fill the frame" is one request, not five calls
 8. Re-read the returned summary and context and verify timing
 
 ## One intent, one undo step

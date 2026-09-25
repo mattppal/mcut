@@ -166,10 +166,14 @@ Registers the WASM AAC encoder once when the runtime cannot encode AAC natively,
 ### getActiveMediaItems
 
 ```ts
-function getActiveMediaItems(project: Project, timeMs: number): ActiveMediaItem[]
+function getActiveMediaItems(
+  project: Project,
+  timeMs: number,
+  audioSources?: ReadonlyMap<ElementId, string>,
+): ActiveMediaItem[]
 ```
 
-Returns the video and audio items the preview pool keeps live at `timeMs`, with their source time, rate, volume, and reversal.
+Returns the video and audio items the preview pool keeps live at `timeMs`, with their source time, rate, volume, and reversal. When `audioSources` maps an element id to a URL, each item for that element carries it as `audioSrc`.
 
 ### exportProject
 

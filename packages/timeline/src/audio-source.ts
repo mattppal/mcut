@@ -1,6 +1,7 @@
+import { assertNever } from './errors'
 import type { AssetId, ElementId } from './id'
 import { getMulticamAudioSource } from './multicam'
-import type { AssetRef, Project } from './model'
+import type { AssetRef, Project, TimelineElement, Voice } from './model'
 import { getElementLocation } from './selectors'
 import { getSourceSpanMs, type TimeMap } from './speed'
 
@@ -66,4 +67,27 @@ export function resolveElementAudioSource(project: Project, elementId: ElementId
   }
 
   return null
+}
+
+export function getVoiceSource(project: Project, element: TimelineElement): { assetId: AssetId; amount: number } | null {
+  const voice = elementVoice(element)
+  if (!voice || !voice.enabled || voice.amount <= 0) return null
+  const source = resolveElementAudioSource(project, element.id)
+  if (!source) return null
+  return { assetId: source.assetId, amount: voice.amount }
+}
+
+function elementVoice(element: TimelineElement): Voice | undefined {
+  switch (element.type) {
+    case 'video':
+    case 'audio':
+    case 'multicam':
+      return element.voice
+    case 'image':
+    case 'text':
+    case 'caption':
+      return undefined
+    default:
+      return assertNever(element)
+  }
 }

@@ -17,7 +17,7 @@ export {
 
 export { getEffectiveVolume, getFadeGain, hasFades, type FadeableElement } from './audio'
 
-export { resolveElementAudioSource, type ElementAudioSource, type ElementAudioSourceType } from './audio-source'
+export { getVoiceSource, resolveElementAudioSource, type ElementAudioSource, type ElementAudioSourceType } from './audio-source'
 
 export { migrateProject, ProjectFormatError, PROJECT_VERSION } from './migrations'
 
@@ -175,6 +175,7 @@ export {
   trackSchema,
   transformSchema,
   videoElementSchema,
+  voiceSchema,
   type AssetKind,
   type AssetRef,
   type AudioElement,
@@ -200,6 +201,7 @@ export {
   type Track,
   type Transform,
   type VideoElement,
+  type Voice,
 } from './model'
 
 export {
