@@ -6,6 +6,7 @@
     "timeline-content",
     "react-editor",
     "render-and-export",
-    "captions"
+    "captions",
+    "clean-up-voice"
   ]
 }
