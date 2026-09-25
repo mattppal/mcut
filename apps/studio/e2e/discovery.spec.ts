@@ -9,6 +9,7 @@ const AGENT_TOOL_NAMES = [
   'get_audio_activity',
   'get_transcript',
   'search_transcript',
+  'find_retakes',
   'ensure_transcript',
   'list_commands',
   'apply_commands',
@@ -26,7 +27,7 @@ const AGENT_TOOL_NAMES = [
   'redo',
 ]
 
-const FULL_TOOL_COUNT = 125
+const FULL_TOOL_COUNT = 126
 const STUDIO_ORIGIN = 'app://studio'
 
 const toolCatalogSchema = z.object({

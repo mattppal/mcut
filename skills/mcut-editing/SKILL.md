@@ -56,6 +56,14 @@ Minimum loop:
 This action uses word-timed captions and timeline commands. If it says there is
 no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 
+### Remove retakes
+
+After `ensure_transcript`, call `find_retakes`. Each candidate is a timeline
+range from the abandoned take to the start of the kept take. Read
+`abandonedText` and skip any candidate that is a deliberate repetition, then cut
+each range with a split at both ends and a ripple delete. Pass a lower
+`minMatchWords` only when a short restart was missed.
+
 ### Fade from black or fade to black
 
 Use the built-in preset action instead of hand-authoring opacity keyframes:

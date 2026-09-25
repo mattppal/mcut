@@ -358,6 +358,7 @@ describe('Studio action/operator MCP surface', () => {
       'get_audio_activity',
       'get_transcript',
       'search_transcript',
+      'find_retakes',
       'ensure_transcript',
       'list_commands',
       'apply_commands',

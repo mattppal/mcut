@@ -26,7 +26,7 @@ import {
   type Project,
   type ProjectTranscriptOptions,
 } from '@mcut/timeline'
-import { buildCaptionsCommand, searchCaptions } from '@mcut/transcription'
+import { buildCaptionsCommand, findRetakes, searchCaptions } from '@mcut/transcription'
 import { z } from 'zod'
 import {
   MCP_SERVER_STATIC_TOOL_CALL_SCHEMA,
@@ -168,6 +168,13 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'search_transcript':
       if (!target.searchTranscript) return failure('search_transcript is not available on this target.')
       return text(JSON.stringify(await target.searchTranscript(call.arguments.query), null, 2))
+    case 'find_retakes': {
+      const transcript = getProjectTranscript(await targetProject(target), { includeWords: true })
+      const words = transcript.captions.flatMap((caption) => caption.words ?? [])
+      if (words.length === 0) return failure('find_retakes needs a word-timed transcript. Call ensure_transcript first.')
+      const candidates = findRetakes(words, call.arguments)
+      return text(JSON.stringify({ wordCount: words.length, candidates }, null, 2))
+    }
     case 'ensure_transcript': {
       if (!target.ensureTranscript) return failure('ensure_transcript is not available on this target.')
       const result = await target.ensureTranscript(call.arguments)
