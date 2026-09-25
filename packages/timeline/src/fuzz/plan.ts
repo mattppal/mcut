@@ -153,4 +153,8 @@ export function elementTemplate(rng: Rng): ArgTemplate {
   return generateArgs(jsonSchemaOf(elementInputSchema), rng, { overrides: elementOverrides })
 }
 
-export const commandOverrides: Overrides = { ...refinedShapes, element: elementTemplate }
+export const commandOverrides: Overrides = {
+  ...refinedShapes,
+  element: elementTemplate,
+  deltaMs: (rng) => (rng.chance(0.75) ? rng.int(-1000, 1000) : rng.int(-20000, 20000)),
+}
