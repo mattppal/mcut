@@ -301,12 +301,7 @@ Zod schema for a video element, the shared id and timing fields plus asset, trim
 
 ### voiceSchema
 
-```ts
-const voiceSchema = z.object({
-  enabled: z.boolean(),
-  amount: z.number().min(0).max(1),
-})
-```
+`const voiceSchema = z.object({ enabled: z.boolean(), amount: z.number().min(0).max(1) })`
 
 Zod schema for the optional voice cleanup mix on video, audio, and multicam clips. `enabled` turns the cleaned stem on, and `amount` is the wet level from 0 to 1.
 
