@@ -300,6 +300,13 @@ defineAction({
 })
 
 defineAction({
+  id: 'audio.clean-voice',
+  label: 'Clean up voice',
+  category: 'edit',
+  operator: { id: 'audio.cleanVoice' },
+})
+
+defineAction({
   id: 'effects.fade-open-close',
   label: 'Fade from/to black',
   description:

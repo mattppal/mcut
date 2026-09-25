@@ -363,6 +363,7 @@ describe('Studio action/operator MCP surface', () => {
       'search_transcript',
       'find_retakes',
       'ensure_transcript',
+      'ensure_voice_stems',
       'list_commands',
       'apply_commands',
       'apply_captions',

@@ -25,6 +25,7 @@ function usage(): string {
     '  mcut-bridge get-transcript [--json \'{"includeWords":true}\'] [--port 44737]',
     '  mcut-bridge search-transcript <query> [--port 44737]',
     '  mcut-bridge ensure-transcript [--json \'{"elementId":"e-...","replace":false}\'] [--port 44737]',
+    '  mcut-bridge ensure-voice-stems [--json \'{"elementIds":["e-..."],"wait":true}\'] [--port 44737]',
     '  mcut-bridge list-actions [--port 44737]',
     "  mcut-bridge action <actionId> [--json '{...}'] [--port 44737]",
     "  mcut-bridge dispatch <commandName> [--json '{...}'] [--port 44737]",
@@ -172,6 +173,9 @@ async function main(): Promise<void> {
     }
     case 'ensure-transcript':
       print(await rpc(args, 'ensure_transcript', args.json))
+      return
+    case 'ensure-voice-stems':
+      print(await rpc(args, 'ensure_voice_stems', args.json))
       return
     case 'list-actions':
       print(await rpc(args, 'list_actions'))

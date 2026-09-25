@@ -52,6 +52,7 @@ export interface McutMcpTarget {
   getTranscript?(options?: ProjectTranscriptOptions): unknown | Promise<unknown>
   searchTranscript?(query: string): unknown | Promise<unknown>
   ensureTranscript?(input: unknown): unknown | Promise<unknown>
+  ensureVoiceStems?(input: unknown): unknown | Promise<unknown>
   centerPerson?(input: unknown): unknown | Promise<unknown>
   getAudioActivity?(input: unknown): unknown | Promise<unknown>
   listActions(): unknown | Promise<unknown>
@@ -138,6 +139,9 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
     searchTranscript: (query) => searchProjectTranscript(engine.project, query),
     ensureTranscript: async () => {
       throw new Error('ensure_transcript requires a live browser bridge connected to an editor tab.')
+    },
+    ensureVoiceStems: async () => {
+      throw new Error('ensure_voice_stems requires a live browser bridge connected to an editor tab.')
     },
     centerPerson: async () => {
       throw new Error('center_person requires a live browser bridge connected to an editor tab.')
@@ -234,6 +238,9 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const result = await target.ensureTranscript(call.arguments)
       return text(`${withResult('OK: transcript ensured.', result)}\n\n${await target.getSummary()}`)
     }
+    case 'ensure_voice_stems':
+      if (!target.ensureVoiceStems) return failure('ensure_voice_stems is not available on this target.')
+      return text(JSON.stringify(await target.ensureVoiceStems(call.arguments), null, 2))
     case 'get_audio_activity':
       if (!target.getAudioActivity) return failure('get_audio_activity is not available on this target.')
       return text(JSON.stringify(await target.getAudioActivity(call.arguments), null, 2))

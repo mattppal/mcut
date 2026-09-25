@@ -31,6 +31,7 @@ import { RadiusRow, readStylePreset, ShadowFields, StrokeFields } from './style-
 import { EffectsSection } from './properties-effects'
 import { TransitionSection } from './properties-transition'
 import { MulticamSection } from './properties-multicam'
+import { VoiceFields } from './properties-voice'
 import { sizeHelpersForProject, TextStyleSection } from './properties-text'
 import { LayoutSlotInspector, SLOT_ASPECTS } from './properties-layout-slot'
 
@@ -659,6 +660,13 @@ export function PropertiesPanel({ className }: { className?: string }) {
             <span className="w-16 shrink-0 text-xs text-muted-foreground">Muted</span>
             <Switch checked={element.muted} onCheckedChange={(muted) => patch({ muted })} />
           </div>
+          <VoiceFields element={element} />
+        </Section>
+      )}
+
+      {element.type === 'multicam' && (
+        <Section title="Audio">
+          <VoiceFields element={element} />
         </Section>
       )}
 

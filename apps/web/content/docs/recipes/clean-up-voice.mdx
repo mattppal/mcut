@@ -1,0 +1,73 @@
+---
+title: Clean up voice
+description: Remove background noise from speech in a clip, on this device.
+---
+
+Clean up voice removes background noise from speech, such as fans, air
+conditioning, traffic, and keyboard clicks. It runs the DeepFilterNet3 model on
+this device, in the desktop app or in the browser, so the audio never leaves the
+machine. It does not remove room reverb. A voice recorded in an echoing room
+still sounds like that room after cleanup.
+
+## In Studio
+
+Select a video, audio, or multicam clip and turn on Clean up voice in the Audio
+section of the inspector. Cleaning starts right away, and the inspector shows
+`Cleaning voice… 40%` until the cleaned audio is ready. Until then, playback and
+export use the original audio. The Clean up voice command in the command
+palette turns it on or off for every selected clip in one undo step.
+
+The Amount slider blends the cleaned audio with the original. It starts at
+100%, which plays only the cleaned audio. Lower it when the voice sounds thin or
+processed. Changing the amount reuses the cleaned audio and does not clean the
+clip again.
+
+Studio keeps each cleaned file on this device, keyed by the contents of the
+source file. Turning cleanup on again for the same file, even in a later
+session, reuses it. If cleaning fails, the inspector shows the error, and
+turning the switch off and on again retries. Export waits for every clip that
+is still cleaning and retries any that failed. If a clip still fails, export
+stops and names the clip.
+
+On one CPU core, cleaning takes about a quarter to a third of the clip's length,
+depending on the machine. Studio splits each clip across up to four workers, so
+with enough cores it runs about three times faster than that.
+
+## From the command line
+
+`mcut clean-voice` cleans a 48 kHz WAV file. `--amount` below 1 mixes the
+original back in.
+
+```sh
+bunx @mcut/cli clean-voice speech.wav -o clean.wav --amount 0.8
+```
+
+Resample other audio to 48 kHz first, for example with
+`ffmpeg -i speech.m4a -ar 48000 speech.wav`.
+
+## From an agent
+
+Over the live bridge, turn cleanup on with the `updateElement` command tool or
+with `operator_audio_cleanVoice`, then call `ensure_voice_stems`. It waits until
+every clip with cleanup on has its cleaned audio, then reports each clip.
+
+```json
+{ "elementId": "e-talk", "patch": { "voice": { "enabled": true, "amount": 1 } } }
+```
+
+```json
+{ "elements": [{ "id": "e-talk", "assetId": "a-talk", "status": "ready", "processingMs": 5400 }] }
+```
+
+A clip whose cleanup failed comes back with `"status": "failed"` and an
+`error`, and calling `ensure_voice_stems` again retries it. Pass `elementIds`
+to report on some clips only, or `"wait": false` to get the current state at
+once, with a `progress` from 0 to 1 for clips still cleaning. Call it before
+you export or judge the audio, because playback and export use the original
+audio until a clip is ready.
+
+Read next:
+
+- [Voice package](/docs/packages/voice)
+- [MCP server](/docs/reference/mcp-server)
+- [CLI](/docs/reference/cli)

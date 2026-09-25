@@ -11,6 +11,7 @@ const AGENT_TOOL_NAMES = [
   'search_transcript',
   'find_retakes',
   'ensure_transcript',
+  'ensure_voice_stems',
   'list_commands',
   'apply_commands',
   'apply_captions',

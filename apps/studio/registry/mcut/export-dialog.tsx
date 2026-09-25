@@ -13,8 +13,12 @@ import { Progress } from '@/components/ui/progress'
 import { downloadBlob } from './download-blob'
 import { Spinner } from './editor-primitives'
 import { collectProjectFontExports, ensureProjectFontsLoaded } from './font-library'
+import { voiceStems } from './voice-cleanup'
 
-const PHASE_LABEL: Record<ExportProgress['phase'], string> = {
+type DialogProgress = ExportProgress | { progress: number; phase: 'voice' }
+
+const PHASE_LABEL: Record<DialogProgress['phase'], string> = {
+  voice: 'Cleaning voice',
   audio: 'Mixing audio',
   video: 'Rendering frames',
   finalize: 'Finalizing file',
@@ -26,7 +30,7 @@ export function ExportDialog() {
   const [format, setFormat] = useState<ContainerFormatId>('mp4')
   const formats = listContainerFormats()
   const formatLabel = formats.find((f) => f.id === format)?.label ?? format.toUpperCase()
-  const [progress, setProgress] = useState<ExportProgress | null>(null)
+  const [progress, setProgress] = useState<DialogProgress | null>(null)
   const durationMs = useEditorState((s) => getProjectDurationMs(s.project))
   const projectName = useEditorState((s) => s.project.name)
 
@@ -41,11 +45,16 @@ export function ExportDialog() {
     mutationFn: async (controller: AbortController) => {
       setProgress({ progress: 0, phase: 'audio' })
       engine.pause()
+      const audioSources = await voiceStems.ready(engine.project, {
+        signal: controller.signal,
+        onProgress: (voice) => setProgress({ progress: voice, phase: 'voice' }),
+      })
       await ensureProjectFontsLoaded(engine.project)
       const fonts = await collectProjectFontExports(engine.project)
       return exportProject(engine.project, {
         format,
         fonts,
+        audioSources,
         onProgress: setProgress,
         signal: controller.signal,
       })

@@ -28,6 +28,7 @@ Editing rules:
 Required high-level actions:
 - To remove spoken-word silence: call ensure_transcript first if needed, then run_action with actionId "transcript.remove-silence".
 - To open from black and close to black: run_action with actionId "effects.fade-open-close"; do not hand-author opacity keyframes.
+- To clean up a noisy voice: turn voice on with updateElement or operator_audio_cleanVoice, then call ensure_voice_stems and export only after every clip reads ready.
 
 After each edit:
 - Read the returned summary.

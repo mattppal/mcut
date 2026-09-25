@@ -17,6 +17,7 @@ export const bridgeRequestSchema = z.discriminatedUnion('type', [
   request('get_transcript', MCP_TOOL_INPUTS.get_transcript.default({})),
   request('search_transcript', MCP_TOOL_INPUTS.search_transcript),
   request('ensure_transcript', MCP_TOOL_INPUTS.ensure_transcript.default({})),
+  request('ensure_voice_stems', MCP_TOOL_INPUTS.ensure_voice_stems.default({})),
   request('center_person', MCP_TOOL_INPUTS.center_person.prefault({})),
   request('list_commands', MCP_TOOL_INPUTS.list_commands.optional()),
   request('apply_commands', MCP_TOOL_INPUTS.apply_commands),

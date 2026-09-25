@@ -1,0 +1,40 @@
+---
+title: Voice
+description: DeepFilterNet3 voice cleanup in the browser and in Node.
+---
+
+`@mcut/voice` removes background noise from speech with the DeepFilterNet3
+model compiled to WebAssembly. `cleanVoice` takes mono 48 kHz samples, splits
+them across a pool of workers, and returns cleaned samples that line up with the
+input sample for sample. `mixVoice` blends the two for an amount below full
+strength.
+
+```sh
+bun add @mcut/voice
+```
+
+```ts
+import { VOICE_SAMPLE_RATE, cleanVoice, decodeWav, encodeWav, mixVoice } from "@mcut/voice/browser"
+
+const { samples, sampleRate } = decodeWav(new Uint8Array(await file.arrayBuffer()))
+if (sampleRate !== VOICE_SAMPLE_RATE) throw new Error(`expected 48 kHz audio, got ${sampleRate} Hz`)
+const cleaned = await cleanVoice(samples, { onProgress: ({ done, total }) => console.log(`${done} of ${total}`) })
+const wav = encodeWav(mixVoice(samples, cleaned, 0.8), VOICE_SAMPLE_RATE)
+```
+
+| Import | Use it for |
+| --- | --- |
+| `@mcut/voice/browser` | `cleanVoice` on module Web Workers. It loads `df_bg.wasm` and its worker script with `new URL(..., import.meta.url)`, so the bundler has to emit both as assets, as Turbopack does. |
+| `@mcut/voice/node` | `cleanVoice` on `worker_threads`. |
+| `@mcut/voice` | The WAV helpers, `mixVoice`, and `cleanVoice` over a worker `spawn` function and a compiled module that you supply. |
+
+A page with a Content Security Policy needs `'wasm-unsafe-eval'` in
+`script-src` to compile the model and `'self'` in `worker-src` to start the
+workers.
+
+`VOICE_MODEL` names the model and its thresholds. Put it in the key of any
+cache of cleaned audio, so a model change cleans the audio again.
+
+Read next:
+
+- [Clean up voice](/docs/recipes/clean-up-voice)

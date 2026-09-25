@@ -27,9 +27,9 @@ creates the file when missing and writes it after successful edits.
 
 ## Static tools
 
-The published server registers twenty-two static tools. The live bridge handles
+The published server registers twenty-three static tools. The live bridge handles
 three more in the editor, `list_commands`, `apply_commands`, and
-`run_operator`, which together with the twenty-two form the twenty-five-tool agent
+`run_operator`, which together with the twenty-three form the twenty-six-tool agent
 profile. Studio serves the profiles inside the desktop app, with a catalog at
 `app://studio/tools`, at `app://studio/tools.json` and
 `app://studio/tools.agent.json`. The full profile
@@ -46,6 +46,7 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `search_transcript` | Find spoken words or phrases with timeline times. |
 | `find_retakes` | Retake candidates from the word-timed transcript, last to first, each a timeline range that keeps the last take. With `elementId`, also that clip's transcript in source time for `apply_captions`. |
 | `ensure_transcript` | Live bridge only. Transcribe the target clip in the editor and apply word-timed captions. |
+| `ensure_voice_stems` | Live bridge only. Clean the voice of every clip with Clean up voice on and report each clip as ready, processing, or failed. See [Clean up voice](/docs/recipes/clean-up-voice). |
 | `list_commands` | Live bridge only. Every raw timeline command schema. |
 | `apply_commands` | Live bridge only. Apply several commands in one undoable transaction. |
 | `apply_captions` | Turn a transcript into caption elements as one undoable edit. |

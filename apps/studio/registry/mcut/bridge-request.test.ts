@@ -16,6 +16,22 @@ describe('parseBridgeFrame', () => {
     })
   })
 
+  test('an ensure_voice_stems frame keeps its clip ids and names a bad one by index', () => {
+    expect(parseBridgeFrame('{"id":"6","type":"ensure_voice_stems","payload":{"elementIds":["e-talk"],"wait":false}}')).toEqual({
+      ok: true,
+      request: { id: '6', type: 'ensure_voice_stems', payload: { elementIds: ['e-talk'], wait: false } },
+    })
+    expect(parseBridgeFrame('{"id":"7","type":"ensure_voice_stems","payload":{"elementIds":["e-talk","talk"]}}')).toEqual({
+      ok: false,
+      id: '7',
+      error: {
+        name: 'BridgeRequestError',
+        code: 'invalid-request',
+        message: '✖ invalid element id (expected "e-..." prefix)\n  → at payload.elementIds[1]',
+      },
+    })
+  })
+
   test('a center_person frame without a payload gets the default aspect and smoothing', () => {
     expect(parseBridgeFrame('{"id":"6","type":"center_person"}')).toEqual({
       ok: true,

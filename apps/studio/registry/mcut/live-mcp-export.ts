@@ -4,6 +4,7 @@ import { getProjectDurationMs, type EditorEngine, type Project } from '@mcut/tim
 import { toast } from 'sonner'
 import type { ExportRequest } from './bridge-request'
 import { collectProjectFontExports, ensureProjectFontsLoaded } from './font-library'
+import { voiceStems } from './voice-cleanup'
 
 const PROGRESS_INTERVAL_MS = 500
 
@@ -54,9 +55,10 @@ async function render({ socket, project, jobId, format, filename, uploadUrl }: E
     toast.loading(`Exporting ${filename}… ${Math.round(progress * 100)}%`, { id: jobId })
   }
   try {
+    const audioSources = await voiceStems.ready(project, { signal: controller.signal })
     await ensureProjectFontsLoaded(project)
     const fonts = await collectProjectFontExports(project)
-    const { blob } = await exportProject(project, { format, fonts, onProgress, signal: controller.signal })
+    const { blob } = await exportProject(project, { format, fonts, audioSources, onProgress, signal: controller.signal })
     toast.success(`Exported to ${await upload(uploadUrl, blob, controller.signal)}`, { id: jobId })
   } catch (error) {
     const cancelled = controller.signal.aborted
