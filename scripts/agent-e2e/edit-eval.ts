@@ -208,11 +208,16 @@ async function main(argv: string[]): Promise<number> {
     wallClockMs: positive(values['wall-clock-ms'], DEFAULT_CAPS.wallClockMs * 2, '--wall-clock-ms'),
   }
   const runDir = createRunDir(`edit-eval-${values.driver}`)
-  const target = await openTarget(values.app, runDir)
-  const recorder = startMcpRecorder(target.bridgeUrl)
-  const mcp = await connectMcp(createTransport({ kind: 'bridge', url: target.bridgeUrl }))
-  const page = await connectStudioPage(target.cdpUrl)
+  const cleanups: Array<() => unknown> = []
   try {
+    const target = await openTarget(values.app, runDir)
+    cleanups.push(() => target.close())
+    const recorder = startMcpRecorder(target.bridgeUrl)
+    cleanups.push(() => recorder.stop())
+    const mcp = await connectMcp(createTransport({ kind: 'bridge', url: target.bridgeUrl }))
+    cleanups.push(() => mcp.close())
+    const page = await connectStudioPage(target.cdpUrl)
+    cleanups.push(() => page.close())
     if (spec.media.length > 0) {
       log(`importing ${spec.media.map((path) => basename(path)).join(', ')} through the media bin`)
       await page.importFiles(spec.media)
@@ -246,10 +251,7 @@ async function main(argv: string[]): Promise<number> {
     }
     return rows.every((row) => row.pass) ? 0 : EXIT_FAILED
   } finally {
-    page.close()
-    await mcp.close()
-    await recorder.stop()
-    await target.close()
+    for (const cleanup of cleanups.reverse()) await cleanup()
   }
 }
 

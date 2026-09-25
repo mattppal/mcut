@@ -1,5 +1,5 @@
 import { getProjectDurationMs, type LayoutSlot, type Project } from '@mcut/timeline'
-import { REFERENCE_LOOK, rectOffReference, sampleOverlay } from './export-frames'
+import { type OverlaySample, REFERENCE_LOOK, rectOffReference, sampleOverlay } from './export-frames'
 import { type CheckInput, type CheckResult, type CheckRule, elements, multicamOf, ofType, outcome, same, seconds, sourceAssetName } from './check-kit'
 import { ZOOM_RULES } from './zoom-checks'
 
@@ -204,7 +204,12 @@ const RULES: CheckRule[] = [
         .filter((span): span is { midMs: number; slot: LayoutSlot } => span.slot !== undefined)
         .slice(0, 3)
       if (spans.length === 0) return { pass: false, detail: 'no screen plus head span to sample' }
-      const samples = spans.map((span) => sampleOverlay(path, span.midMs, span.slot, after.width, after.height))
+      let samples: OverlaySample[]
+      try {
+        samples = spans.map((span) => sampleOverlay(path, span.midMs, span.slot, after.width, after.height))
+      } catch (error) {
+        return { pass: false, detail: error instanceof Error ? error.message : String(error) }
+      }
       const rounded = samples.filter((sample) => sample.rounded).length
       const shadowed = samples.filter((sample) => sample.shadowDelta >= REFERENCE_LOOK.shadowDelta / 2).length
       const off = Math.max(...spans.map((span) => rectOffReference(span.slot)))
@@ -249,7 +254,7 @@ const RULES: CheckRule[] = [
     /^export job done$/,
     ({ calls }) => {
       const started = calls.filter((call) => call.name === 'export_video' && !call.isError)
-      const done = calls.find((call) => call.name === 'get_export' && !call.isError && /\bdone\b/i.test(call.result))
+      const done = calls.find((call) => call.name === 'get_export' && !call.isError && /"state":\s*"done"/.test(call.result))
       const detail =
         done?.result.slice(0, 200) ??
         (started.length === 0 ? 'export_video was never called successfully' : `started ${started.length} job(s), no get_export answered done`)
