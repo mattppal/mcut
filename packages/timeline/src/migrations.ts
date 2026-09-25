@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { interpolateTrack, keyframeSchema } from './keyframes'
+import { slotShadow } from './layouts'
 
 export const PROJECT_VERSION = 2
 
@@ -41,12 +42,27 @@ function multicamOnGroupClock(element: unknown): unknown {
   }
 }
 
+function tracksOnGroupClock(doc: ProjectDoc): ProjectDoc {
+  const tracks = v1TracksSchema.safeParse(doc.tracks)
+  if (!tracks.success) return doc
+  return { ...doc, tracks: tracks.data.map((track) => ({ ...track, elements: track.elements.map(multicamOnGroupClock) })) }
+}
+
+const v1SlotSchema = z.looseObject({ rect: z.looseObject({ w: z.number(), h: z.number() }), shadow: z.boolean().default(false) })
+const v1LayoutsSchema = z.array(z.looseObject({ slots: z.array(v1SlotSchema) }))
+const v1CanvasSchema = z.object({ width: z.number(), height: z.number() })
+
+function slotsWithFrameStyle(doc: ProjectDoc): ProjectDoc {
+  const layouts = v1LayoutsSchema.safeParse(doc.layouts)
+  const canvas = v1CanvasSchema.safeParse(doc)
+  if (!layouts.success || !canvas.success) return doc
+  const slotStyle = ({ focus: _focus, shadow, ...slot }: z.infer<typeof v1SlotSchema>) =>
+    shadow ? { ...slot, shadow: slotShadow(slot.rect, canvas.data) } : slot
+  return { ...doc, layouts: layouts.data.map((layout) => ({ ...layout, slots: layout.slots.map(slotStyle) })) }
+}
+
 const MIGRATIONS: Record<number, (doc: ProjectDoc) => ProjectDoc> = {
-  1: (doc) => {
-    const tracks = v1TracksSchema.safeParse(doc.tracks)
-    if (!tracks.success) return doc
-    return { ...doc, tracks: tracks.data.map((track) => ({ ...track, elements: track.elements.map(multicamOnGroupClock) })) }
-  },
+  1: (doc) => slotsWithFrameStyle(tracksOnGroupClock(doc)),
 }
 
 export function migrateProject(data: unknown): unknown {

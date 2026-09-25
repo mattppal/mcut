@@ -161,7 +161,7 @@ describe('angle cuts', () => {
     expect(mc(merged).angles).toHaveLength(1)
   })
 
-  test('saveLayout defaults slot fit/focus (crop) when omitted', () => {
+  test('saveLayout defaults slot fit and leaves the frame style unset', () => {
     const { project } = projectWithRecordings()
     const next = applyCommand(createMc(project), {
       type: 'saveLayout',
@@ -172,8 +172,7 @@ describe('angle cuts', () => {
       },
     })
     const saved = next.layouts.find((l) => l.id === 'lay-x')!
-    expect(saved.slots[0]!.fit).toBe('cover')
-    expect(saved.slots[0]!.focus).toEqual({ x: 0.5, y: 0.5 })
+    expect(saved.slots).toEqual([{ source: 'camera', rect: { x: 0.25, y: 0.25, w: 0.5, h: 0.5 }, fit: 'cover' }])
   })
 
   test('removeLayout refuses while a cut uses it', () => {

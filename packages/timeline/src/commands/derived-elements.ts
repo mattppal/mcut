@@ -191,7 +191,7 @@ export const createMulticam = defineCommand({
     const trimStartMs = Math.min(...placed.map(({ element }) => alignedMs(element)))
     const sources = placed.map(({ element, key }) => ({ key, assetId: element.assetId, offsetMs: alignedMs(element) - trimStartMs }))
 
-    const layouts = project.layouts.length > 0 ? project.layouts : createDefaultLayouts()
+    const layouts = project.layouts.length > 0 ? project.layouts : createDefaultLayouts(project)
     const [opening] = layouts
     if (!opening) throw new CommandError('invalid-payload', 'a multicam needs at least one layout')
     const audioSource = pickAudioSource(project, sources, payload.audioSource)

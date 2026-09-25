@@ -29,7 +29,9 @@ export { curveToLut, hasUnsupportedEffects, planEffects, type ColorOp, type Effe
 
 export { transitionRenderers, type TransitionRenderContext, type TransitionRenderer } from './transition-renderers'
 
-export { elementRenderers, getImageSize, measureWith, renderElementLayer } from './renderers'
+export { getImageSize } from './framed-media'
+
+export { elementRenderers, measureWith, renderElementLayer } from './renderers'
 
 export {
   applyTextTransform,

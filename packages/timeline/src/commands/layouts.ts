@@ -6,7 +6,9 @@ import { defineCommand, mustGetLayout } from './shared'
 export const saveLayout = defineCommand({
   type: 'saveLayout',
   description:
-    'Add or replace a multicam layout in the project (slots position sources ' + 'on the canvas in normalized 0..1 rects; first slot paints bottom).',
+    'Add or replace a multicam layout in the project (slots position sources ' +
+    'on the canvas in normalized 0..1 rects; first slot paints bottom). A slot takes the same frame style ' +
+    'as a video clip (crop, cornerRadius, stroke, shadow); its crop picks the source region that is fitted into the rect.',
   payloadSchema: z.object({ layout: layoutSchema }),
   reduce: (project, payload) => {
     const exists = project.layouts.some((l) => l.id === payload.layout.id)

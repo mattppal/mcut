@@ -8,7 +8,7 @@ import { getSourceSpanMs, splitTimeMap, timeMapSchema } from './speed'
 import { blendModeSchema, effectsSchema, motionBlurSchema } from './effects'
 import { layoutSchema } from './layouts'
 import { propertyPresetSchema } from './presets'
-import { cropSchema, shadowSchema, strokeSchema } from './style'
+import { frameStyleSchema, shadowSchema, strokeSchema } from './style'
 import { textRunSchema } from './rich-text'
 import { getMediaSourceDurationMs, type MediaClip } from './media-clip'
 import { transitionSchema } from './transitions'
@@ -106,12 +106,7 @@ const timingShape = {
   groupId: groupIdSchema.optional(),
 }
 
-const frameStyleShape = {
-  cornerRadius: z.number().min(0).max(0.5).optional(),
-  stroke: strokeSchema.optional(),
-  shadow: shadowSchema.optional(),
-  crop: cropSchema.optional(),
-}
+const frameStyleShape = frameStyleSchema.shape
 
 const mediaWindowShape = {
   trimStartMs: z.number().int().nonnegative().default(0),

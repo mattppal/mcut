@@ -71,16 +71,11 @@ const layoutSlotSchema = z.object({
     h: z.number().positive().max(3),
   }),
   fit: z.enum(['cover', 'contain']).default('cover'),
-  focus: z
-    .object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) })
-    .default({ x: 0.5, y: 0.5 }),
-  cornerRadius: z.number().min(0).max(0.5).default(0),
-  shadow: z.boolean().default(false),
-  stroke: strokeSchema.optional(),
+  ...frameStyleSchema.shape,
 })
 ```
 
-Zod schema for one layout slot, the source key it shows, a rect in normalized canvas coordinates, fit mode, focus point, corner radius, shadow flag, and optional stroke.
+Zod schema for one layout slot, the source key it shows, a rect in normalized canvas coordinates, a fit mode, and the same frame style a video clip takes. The slot's crop picks the source region that is fitted into the rect, so panning a cover slot moves its crop.
 
 ### propertyPresetSchema
 
@@ -159,10 +154,10 @@ The name that marks a track as the thumbnail track, `Thumbnail`.
 ### createDefaultLayouts
 
 ```ts
-function createDefaultLayouts(): Layout[]
+function createDefaultLayouts(canvas: Pick<Project, 'width' | 'height'>): Layout[]
 ```
 
-Returns five starter layouts for a screen and camera pair with fresh ids, full screen with camera picture in picture, camera only, screen only, two 3 by 4 panels, and side by side.
+Returns five starter layouts for a screen and camera pair with fresh ids, full screen with camera picture in picture, camera only, screen only, two 3 by 4 panels, and side by side. The picture in picture shadow is sized from the canvas so it scales with the slot.
 
 ### getLayout
 

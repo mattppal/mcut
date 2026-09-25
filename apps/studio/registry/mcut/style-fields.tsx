@@ -119,7 +119,7 @@ export function ShadowFields({
 export interface StylePresetValues {
   cornerRadius?: number;
   stroke?: Stroke | null;
-  shadow?: Shadow | boolean | null;
+  shadow?: Shadow | null;
   fit?: "cover" | "contain";
 }
 
@@ -138,7 +138,7 @@ export function readStylePreset(values: Record<string, unknown>): StylePresetVal
     | boolean
     | null
     | undefined;
-  if (shadow === null || typeof shadow === "boolean") out.shadow = shadow;
+  if (shadow === null || typeof shadow === "boolean") out.shadow = shadow ? { ...DEFAULT_SHADOW } : null;
   else if (
     shadow &&
     typeof shadow.color === "string" &&

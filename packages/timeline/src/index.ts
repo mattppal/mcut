@@ -41,7 +41,7 @@ export {
   type TextRunStylePatch,
 } from './rich-text'
 
-export { cropSchema, DEFAULT_SHADOW, shadowSchema, strokeSchema, type Crop, type Shadow, type Stroke } from './style'
+export { cropSchema, DEFAULT_SHADOW, frameStyleSchema, shadowSchema, strokeSchema, type Crop, type FrameStyle, type Shadow, type Stroke } from './style'
 
 export {
   getActiveAngleIndex,

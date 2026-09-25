@@ -40,7 +40,7 @@ describe('project format versioning', () => {
   })
 })
 
-function v1Multicam(multicam: object): unknown {
+function v1Doc(fields: object): unknown {
   return {
     version: 1,
     id: 'p-v1',
@@ -52,9 +52,13 @@ function v1Multicam(multicam: object): unknown {
       'a-screen': { id: 'a-screen', kind: 'video', src: 'blob:screen', durationMs: 60_000 },
       'a-camera': { id: 'a-camera', kind: 'video', src: 'blob:camera', durationMs: 60_000 },
     },
-    tracks: [{ id: 't-1', name: 'Track 1', elements: [{ id: 'e-mc', type: 'multicam', startMs: 0, durationMs: 6000, ...multicam }] }],
+    tracks: [{ id: 't-1', name: 'Track 1', elements: [] }],
+    ...fields,
   }
 }
+
+const v1Multicam = (multicam: object): unknown =>
+  v1Doc({ tracks: [{ id: 't-1', name: 'Track 1', elements: [{ id: 'e-mc', type: 'multicam', startMs: 0, durationMs: 6000, ...multicam }] }] })
 
 describe('v1 to v2 migration', () => {
   test('moves a multicam onto its group clock through the old time map', () => {
@@ -114,6 +118,28 @@ describe('v1 to v2 migration', () => {
         { atMs: 2300, layoutId: 'l-camera' },
       ],
     })
+  })
+
+  test('turns the slot shadow flag into the shadow it drew and drops focus', () => {
+    const pip = { x: 0.7, y: 0.69, w: 0.275, h: 0.275 }
+    const project = parseProject(
+      v1Doc({
+        layouts: [
+          {
+            id: 'l-pip',
+            name: 'Screen + Cam',
+            slots: [
+              { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0, shadow: false },
+              { source: 'camera', rect: pip, fit: 'cover', focus: { x: 0.3, y: 0.5 }, cornerRadius: 0.12, shadow: true },
+            ],
+          },
+        ],
+      }),
+    )
+    expect(project.layouts[0]?.slots).toEqual([
+      { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', cornerRadius: 0 },
+      { source: 'camera', rect: pip, fit: 'cover', cornerRadius: 0.12, shadow: { color: 'rgba(0, 0, 0, 0.45)', blur: 36, offsetX: 0, offsetY: 12 } },
+    ])
   })
 })
 

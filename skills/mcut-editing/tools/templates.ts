@@ -18,26 +18,32 @@ const FIXED_ID_LAYOUTS: CommandOfType<'saveLayout'>['layout'][] = [
     id: 'lay-screen-cam',
     name: 'Screen + Cam',
     slots: [
-      { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0, shadow: false },
-      { source: 'camera', rect: { x: 0.7, y: 0.69, w: 0.275, h: 0.275 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0.12, shadow: true },
+      { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover' },
+      {
+        source: 'camera',
+        rect: { x: 0.7, y: 0.69, w: 0.275, h: 0.275 },
+        fit: 'cover',
+        cornerRadius: 0.12,
+        shadow: { color: 'rgba(0, 0, 0, 0.45)', blur: 36, offsetX: 0, offsetY: 12 },
+      },
     ],
   },
   {
     id: 'lay-camera',
     name: 'Camera',
-    slots: [{ source: 'camera', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0, shadow: false }],
+    slots: [{ source: 'camera', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover' }],
   },
   {
     id: 'lay-screen',
     name: 'Screen',
-    slots: [{ source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0, shadow: false }],
+    slots: [{ source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover' }],
   },
   {
     id: 'lay-side-by-side',
     name: 'Side by side',
     slots: [
-      { source: 'screen', rect: { x: 0.015, y: 0.235, w: 0.475, h: 0.53 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0.06, shadow: false },
-      { source: 'camera', rect: { x: 0.51, y: 0.235, w: 0.475, h: 0.53 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0.06, shadow: false },
+      { source: 'screen', rect: { x: 0.015, y: 0.235, w: 0.475, h: 0.53 }, fit: 'cover', cornerRadius: 0.06 },
+      { source: 'camera', rect: { x: 0.51, y: 0.235, w: 0.475, h: 0.53 }, fit: 'cover', cornerRadius: 0.06 },
     ],
   },
 ]

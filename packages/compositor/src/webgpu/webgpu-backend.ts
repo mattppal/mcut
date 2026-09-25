@@ -1,5 +1,5 @@
 import { applyChrome, drawImageQuad2D, type ImageQuad, type LayerChrome, type RenderBackend } from '../backend'
-import { getImageSize } from '../renderers'
+import { getImageSize } from '../framed-media'
 import type { Canvas2D } from '../types'
 import { parseCssColor } from './color'
 import { MAX_COLOR_OPS, planEffects, type EffectPass, type EffectPlan } from './effect-plan'
