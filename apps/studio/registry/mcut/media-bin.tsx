@@ -20,7 +20,7 @@ import type { EditorDragData } from './editor-dnd'
 import { useEditorUI } from './editor-ui'
 import { PanelHeader, PanelSectionLabel, Spinner } from './editor-primitives'
 import { formatDurationBadge } from './format'
-import { importMediaFiles, type OnAssetImported } from './media-import'
+import { MEDIA_FILE_ACCEPT, importMediaFiles, type OnAssetImported } from './media-import'
 
 export type { OnAssetImported } from './media-import'
 
@@ -123,6 +123,18 @@ function AssetThumb({ asset, thumb }: { asset: AssetRef; thumb?: string }) {
   )
 }
 
+const CARD_NAME_TAIL = 12
+
+function AssetCardName({ name }: { name: string }) {
+  const split = Math.max(0, name.length - CARD_NAME_TAIL)
+  return (
+    <p className="flex p-1.5 pb-1 text-2xs leading-tight">
+      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-pre">{name.slice(0, split)}</span>
+      <span className="shrink-0 whitespace-pre">{name.slice(split)}</span>
+    </p>
+  )
+}
+
 function AssetCard({
   asset,
   selected,
@@ -184,7 +196,7 @@ function AssetCard({
             <span className="absolute top-1 left-1 flex size-4 items-center justify-center rounded-full bg-primary text-2xs text-primary-foreground">✓</span>
           )}
         </div>
-        <p className="truncate p-1.5 pb-1 text-2xs leading-tight">{asset.name ?? asset.kind}</p>
+        <AssetCardName name={asset.name ?? asset.kind} />
         <div className="absolute top-1 right-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <Button size="icon-xs" title="Add at playhead" onPointerDown={(e) => e.stopPropagation()} onClick={onAdd}>
             <PlusIcon />
@@ -367,7 +379,7 @@ export function MediaBin({ className, onAssetImported }: { className?: string; o
         ref={inputRef}
         type="file"
         multiple
-        accept="video/*,audio/*,image/*,.mkv"
+        accept={MEDIA_FILE_ACCEPT}
         className="hidden"
         onChange={(e) => {
           const files = Array.from(e.target.files ?? [])

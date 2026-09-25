@@ -265,6 +265,7 @@ export {
 export { CAPTION_STYLE_PRESETS, type CaptionStylePreset } from './caption-presets'
 
 export { summarizeProject } from './summarize'
+export { describeLayoutChange } from './layout-summary'
 
 export {
   getProjectCaptions,

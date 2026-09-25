@@ -183,11 +183,12 @@ Remove all keyframes for one property (stopwatch off) or for the whole element. 
 
 ## applyAnimationPreset
 
-Apply an animation preset that EXPANDS into editable keyframes, built on pro easing curves (expo/quint settles, soft overshoot, M3 exits). In. Fade-in, slide-in, pop-in, scale-in, zoom-in, whip-in, blur-in. Out. Fade-out, slide-out, pop-out, zoom-out, whip-out, blur-out. Emphasis (whole clip): ken-burns, punch-zoom, pulse, breathe, float, sway, shake. Fast presets (whip-in/out, punch-zoom) also enable per-element motion blur. To fade a clip in and out as one undo step, run the live editor action effects.fade-open-close instead of two presets.
+Apply an animation preset that EXPANDS into editable keyframes, built on pro easing curves (expo/quint settles, soft overshoot, M3 exits). In. Fade-in, slide-in, pop-in, scale-in, zoom-in, whip-in, blur-in. Out. Fade-out, slide-out, pop-out, zoom-out, whip-out, blur-out. Emphasis (whole clip): ken-burns, punch-zoom, pulse, breathe, float, sway, shake. Fast presets (whip-in/out, punch-zoom) also enable per-element motion blur. `atMs` is element-local and places the preset, clamped to fit the clip. In and emphasis presets start there, out presets end there. Without it, in presets start at the clip start, out presets end at the clip end, and emphasis spans the clip. The MCP server and Studio fill `atMs` from the playhead when the playhead is on the clip.
 
 - `elementId` (string, required)
 - `preset` (enum, required)
 - `options` (object, optional)
+- `atMs` (integer, optional)
 
 ## addEffect
 
