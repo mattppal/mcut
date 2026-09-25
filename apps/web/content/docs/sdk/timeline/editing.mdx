@@ -143,6 +143,14 @@ function getAverageSpeed(element: { durationMs: number; timeMap?: TimeMap | unde
 
 Returns the source span divided by the output duration, or 1 without a time map.
 
+### getLocalTimeMs
+
+```ts
+function getLocalTimeMs(element: TimeMappedElement, sourceMs: number): number
+```
+
+Returns the element-local output time at which a source time plays, the inverse of `getSourceTimeMs`. It follows the time map and `reversed`, clamps to the clip, and resolves a freeze to its first local moment.
+
 ### getSourceSpanMs
 
 ```ts

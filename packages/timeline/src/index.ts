@@ -104,6 +104,7 @@ export {
 
 export {
   getAverageSpeed,
+  getLocalTimeMs,
   getSourceSpanMs,
   getSourceTimeMs,
   getSpeedAt,
