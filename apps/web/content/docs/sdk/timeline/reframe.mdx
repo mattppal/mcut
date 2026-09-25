@@ -1,0 +1,45 @@
+---
+title: "Reframe"
+description: "A source-time track that keeps a subject centered in a video crop or a multicam slot."
+---
+
+A reframe track lists subject centers keyed by `sourceMs`, the asset media time,
+with `x` and `y` from 0 to 1 across the source frame. On a video the track sits
+beside a `crop`, and the renderer slides the crop window onto each center. A
+video without a crop ignores its track. On a multicam the track sits on one
+source, and every layout slot that shows that source slides its window the same
+way, so each slot keeps its rect. The window stops at the frame edge. Keys follow
+the media, so trims, splits, slips, and speed changes keep them aligned.
+
+```ts
+engine.dispatch({
+  type: 'setReframe',
+  elementId: 'e-multicam',
+  source: 'camera',
+  track: [
+    { sourceMs: 0, x: 0.42, y: 0.4 },
+    { sourceMs: 4000, x: 0.58, y: 0.4 },
+  ],
+})
+```
+
+A null `track` removes tracking and keeps the crop. Writing the same track again
+is a no-op with no undo step. `planCenterPerson` from `@mcut/editor` builds this
+command from face samples.
+
+## Functions
+
+### getReframeCenter
+
+`getReframeCenter(element, sourceKey, timelineMs)` returns the subject center
+`{ x, y }` of a video, or of the multicam source named by `sourceKey`, at one
+timeline instant, or `null` when there is no track. It maps the instant to source
+media time, interpolates linearly between keys, and holds the first and last key
+outside them.
+
+### centeredFocus
+
+`centeredFocus(center, window)` returns the `focus` anchor that puts `center` in
+the middle of a window of size `{ w, h }`, both as fractions of the source frame.
+The anchor clamps so the window stays inside the frame, and an axis where the
+window spans the whole frame anchors at 0.5.

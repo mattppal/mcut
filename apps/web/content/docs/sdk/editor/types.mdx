@@ -212,6 +212,18 @@ interface PlatformPreset {
 
 A delivery target's canvas size, frame rate, the fractions of frame height covered by platform chrome at the top and bottom, and notes on how to use it.
 
+### CenterPersonOptions
+
+```ts
+type CenterPersonOptions = z.infer<typeof centerPersonOptionsSchema>
+```
+
+Options for `planCenterPerson` as inferred from `centerPersonOptionsSchema`, the output aspect and how calmly the framing follows the face.
+
+### FaceSample
+
+`FaceSample` is `{ sourceMs, box }`, one face reading at a source media time. `box` is the face as `{ x, y, w, h }` fractions of the source frame, or `null` when the sample found none. `detect` from `createLocalFaceDetector` in `@mcut/media` returns this shape.
+
 ## Schemas
 
 ### silenceCutOptionsSchema
@@ -241,3 +253,12 @@ const silenceCutOptionsSchema = z.object({
 ```
 
 Zod schema for `SilenceCutOptions`, which the `apply_silence_cuts` MCP tool extends for its input.
+
+### centerPersonOptionsSchema
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `aspect` | positive number, default 9/16 | Output width over height. A video crops to it, and a multicam ignores it |
+| `smoothing` | 0 to 1, default 0.5 | How calmly the framing follows the face, from 0 for a tight follow to 1 for a steady frame |
+
+Zod schema for `CenterPersonOptions`. The `center_person` MCP tool spreads its shape into its input.

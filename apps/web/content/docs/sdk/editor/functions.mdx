@@ -353,6 +353,19 @@ function planSilenceCuts(
 
 Cuts the silences between transcript words out of one clip playing at 1x, applying splits and ripple deletes last to first, and returns the commands and resulting project.
 
+### planCenterPerson
+
+```ts
+function planCenterPerson(
+  project: Project,
+  target: { elementId: ElementId; source?: string },
+  samples: ReadonlyArray<FaceSample>,
+  options: CenterPersonOptions,
+): CommandOfType<'setReframe'>
+```
+
+Turns face samples into one `setReframe` command. It smooths the face centers with a critically damped spring and a dead zone, keeps the window inside the frame, and drops keys that a straight line between their neighbors already covers. Higher `smoothing` slows the spring and widens the dead zone. On a video it also sets a centered `crop` at `options.aspect`, which needs the asset's width and height. On a multicam, `target.source` names the source to follow. Throws an `OperatorError` when no sample has a face.
+
 ### applyCommands
 
 ```ts
