@@ -21,6 +21,10 @@
       "entry": ["worker/index.ts", "source.config.ts"],
       "ignore": ["components/mdx.tsx", "lib/hugeicons.tsx"]
     },
+    "packages/voice": {
+      "entry": ["scripts/*.ts"],
+      "ignore": ["wasm/**"]
+    },
     "skills/mcut-editing": {
       "entry": ["tools/*.ts"]
     }
