@@ -363,7 +363,7 @@ function planZoomRegionDrag(
 ): ZoomRegion
 ```
 
-Returns the zoom region after a drag of `deltaMs`. Ramps stay at least 1 ms long and the hold stays at least 0 ms. Within those limits a move, start, or end drag keeps the zoom inside the element and clear of other zooms on its target, which pulls a zoom that a split or trim left running past an edge back inside. A ramp drag keeps the span, so on such a zoom `updateZoomRegion` rejects the result.
+Returns the zoom region after a drag of `deltaMs`. Ramps stay at least 1 ms long and the hold stays at least 0 ms. Within those limits a move, start, or end drag keeps the zoom inside the element and clear of other zooms on its target, which pulls a zoom that a split or trim left running past an edge back inside. When no drag of that kind can fit the zoom there, the zoom comes back unchanged. A ramp drag keeps the span, so on such a zoom `updateZoomRegion` rejects the result.
 
 ### planSilenceCuts
 

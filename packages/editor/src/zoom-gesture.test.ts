@@ -112,7 +112,7 @@ describe('planZoomRegionDrag', () => {
     ['move', 3500, 'e-clip', 'z-cut', { atMs: 1500, inMs: 700, holdMs: 1600, outMs: 700 }],
     ['start', 4900, 'e-right', 'z-cut-r', { atMs: -2400, inMs: 700, holdMs: 1600, outMs: 700 }],
     ['end', 3700, 'e-clip', 'z-cut', { atMs: 1500, inMs: 700, holdMs: 1600, outMs: 700 }],
-  ])('a %s drag that cannot fit the zoom in its piece leaves it unchanged', (mode, splitAtMs, elementId, zoomId, expected) => {
+  ])('the %s drag leaves a zoom it cannot fit in its piece unchanged', (mode, splitAtMs, elementId, zoomId, expected) => {
     const engine = engineSplitThroughZoom(splitAtMs)
     const { atMs, inMs, holdMs, outMs } = planZoomRegionDrag(zoomable(engine, elementId), zoomOf(engine, elementId, zoomId), mode, 100)
     expect({ atMs, inMs, holdMs, outMs }).toEqual(expected)
