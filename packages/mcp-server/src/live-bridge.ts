@@ -2,7 +2,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { randomBytes } from 'node:crypto'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { WebSocket, WebSocketServer, type VerifyClientCallbackSync } from 'ws'
+import { LiveBridgeError } from './bridge-error'
 import { createMcutMcpServerForTarget, type McutMcpTarget } from './server'
+
+export { LiveBridgeError } from './bridge-error'
 
 export const DEFAULT_BRIDGE_PORT = 44737
 
@@ -34,16 +37,6 @@ interface LiveBridgeMessage {
   ok?: boolean
   result?: unknown
   error?: { name?: string; code?: string; message?: string }
-}
-
-export class LiveBridgeError extends Error {
-  readonly code: string
-
-  constructor(code: string, message: string) {
-    super(message)
-    this.name = 'LiveBridgeError'
-    this.code = code
-  }
 }
 
 function parsePort(value: string | null): number | null {
