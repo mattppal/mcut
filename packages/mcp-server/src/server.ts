@@ -64,8 +64,8 @@ export interface McutMcpTarget {
   exportVideo?(input: unknown): unknown | Promise<unknown>
   getExport?(input: unknown): unknown | Promise<unknown>
   cancelExport?(input: unknown): unknown | Promise<unknown>
-  transact(requests: readonly TransactSubRequest[]): unknown | Promise<unknown>
-  importMedia(paths: readonly string[]): unknown | Promise<unknown>
+  transact?(requests: readonly TransactSubRequest[]): unknown | Promise<unknown>
+  importMedia?(paths: readonly string[]): unknown | Promise<unknown>
 }
 
 export interface McutMcpServerOptions {
@@ -80,6 +80,10 @@ export interface McutMcpServerForTargetOptions {
   name?: string
   version?: string
 }
+
+const SERVER_INSTRUCTIONS =
+  'mcut edits a video project. Read get_summary before editing. ' +
+  'When one user request needs more than one edit call, send them all in one transact so it is one undo step and "undo that" removes the whole request.'
 
 const text = (value: string) => ({ content: [{ type: 'text' as const, text: value }] })
 const failure = (value: string) => ({ ...text(value), isError: true })
@@ -280,6 +284,7 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       return text(`${withResult(`OK: action ${actionId} applied.`, result)}\n\n${await target.getSummary()}`)
     }
     case 'transact': {
+      if (!target.transact) return failure('transact is not available on this target.')
       const requests = translateTransactCalls(call.arguments.calls)
       const results = await target.transact(requests)
       const lead = `OK: ${requests.length} calls applied as one undo step.`
@@ -305,6 +310,7 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       if (!target.cancelExport) return failure('cancel_export requires the live bridge connected to Studio.')
       return text(withResult('OK: export cancelled.', await target.cancelExport(call.arguments)))
     case 'import_media': {
+      if (!target.importMedia) return failure('import_media requires the live bridge connected to Studio.')
       const report = mediaImportReportSchema.parse(await target.importMedia(call.arguments.paths))
       const count = report.imported.length
       const lead = count === 0 ? 'Imported nothing.' : `Imported ${count} ${count === 1 ? 'file' : 'files'}. Place each asset with addElement or an operator.`
@@ -327,7 +333,10 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
   const tools = listServerToolDefinitions()
   const operatorIdsByTool = new Map(operatorIds.map((id) => [operatorToolName(id), id]))
 
-  const server = new Server({ name: options.name ?? 'mcut', version: options.version ?? '0.1.0' }, { capabilities: { tools: {} } })
+  const server = new Server(
+    { name: options.name ?? 'mcut', version: options.version ?? '0.1.0' },
+    { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS },
+  )
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: tools as unknown as Tool[],

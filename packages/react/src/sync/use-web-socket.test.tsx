@@ -57,7 +57,7 @@ describe('useWebSocket', () => {
     expect(serverReceived).toEqual(['hello'])
 
     serverSockets[0]?.close()
-    await until(() => clientReceived.length === 2)
+    await until(() => clientReceived.length === 2 && serverReceived.length === 2)
     expect(clientReceived).toEqual(['welcome 1', 'welcome 2'])
     expect(serverReceived).toEqual(['hello', 'hello'])
 

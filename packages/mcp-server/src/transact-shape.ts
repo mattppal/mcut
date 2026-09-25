@@ -37,7 +37,8 @@ export type TransactSubRequest = z.infer<typeof transactSubRequestSchema>
 
 export function transactCallError(index: number, name: string, error: unknown): Error {
   const message = error instanceof z.ZodError ? z.prettifyError(error) : error instanceof Error ? error.message : String(error)
-  return new Error(`transact call ${index + 1} (${name}) failed: ${message}. No changes were applied.`)
+  const sentence = /[.!?]$/.test(message) ? message : `${message}.`
+  return new Error(`transact call ${index + 1} (${name}) failed: ${sentence} No changes were applied.`)
 }
 
 function transactCallLabel(request: TransactSubRequest): string {

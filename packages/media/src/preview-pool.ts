@@ -12,6 +12,7 @@ import {
   isElementActiveAt,
   type AssetId,
   type AssetRef,
+  type ElementId,
   type Project,
 } from '@mcut/timeline'
 
@@ -22,6 +23,7 @@ export interface ActiveMediaItem {
   rate: number
   volume: number
   reversed?: boolean
+  audioSrc?: string
 }
 
 const SAME_SOURCE_TOLERANCE_MS = 40
@@ -55,18 +57,30 @@ function mergeActiveMediaItems(current: ActiveMediaItem, next: ActiveMediaItem):
   return { ...current, kind }
 }
 
-export function coalesceActiveMediaItems(items: ActiveMediaItem[]): ActiveMediaItem[] {
-  const byAsset = new Map<AssetId, ActiveMediaItem>()
-  for (const item of items) {
-    const current = byAsset.get(item.assetId)
-    byAsset.set(item.assetId, current ? mergeActiveMediaItems(current, item) : item)
-  }
-  return [...byAsset.values()]
+function coalesceKey(item: ActiveMediaItem): string {
+  if (item.audioSrc === undefined) return item.assetId
+  return `${item.assetId}\u0000${item.audioSrc}`
 }
 
-export function getActiveMediaItems(project: Project, timeMs: number): ActiveMediaItem[] {
+function stemPoolKey(assetId: AssetId, audioSrc: string): string {
+  return `${assetId}\u0000${audioSrc}`
+}
+
+export function coalesceActiveMediaItems(items: ActiveMediaItem[]): ActiveMediaItem[] {
+  const grouped = new Map<string, ActiveMediaItem>()
+  for (const item of items) {
+    const key = coalesceKey(item)
+    const current = grouped.get(key)
+    grouped.set(key, current ? mergeActiveMediaItems(current, item) : item)
+  }
+  return [...grouped.values()]
+}
+
+export function getActiveMediaItems(project: Project, timeMs: number, audioSources?: ReadonlyMap<ElementId, string>): ActiveMediaItem[] {
   const items: ActiveMediaItem[] = []
   for (const { track, element } of getRenderableElements(project, timeMs)) {
+    const audioSrc = audioSources?.get(element.id)
+    const replacement = audioSrc ? { audioSrc } : {}
     if (element.type === 'multicam') {
       const audible = isElementActiveAt(element, timeMs)
       const speedShim = {
@@ -83,6 +97,7 @@ export function getActiveMediaItems(project: Project, timeMs: number): ActiveMed
           sourceTimeMs: getMulticamSourceTimeMs(element, source, timeMs),
           rate: getSpeedAt(speedShim, timeMs - element.startMs),
           volume: isAudio && audible && !track.muted && !element.muted ? getEffectiveVolume(element, timeMs) : 0,
+          ...(isAudio ? replacement : {}),
         })
       }
       continue
@@ -99,6 +114,7 @@ export function getActiveMediaItems(project: Project, timeMs: number): ActiveMed
       rate: getSpeedAt(element, localMs),
       volume: !audible || track.muted || element.muted || element.reversed ? 0 : getEffectiveVolume(element, timeMs),
       ...(element.reversed ? { reversed: true } : {}),
+      ...replacement,
     })
   }
   return items
@@ -150,10 +166,20 @@ export class PreviewMediaPool implements FrameSource {
   private images = new Map<AssetId, ImageBitmap | 'loading' | 'error'>()
   private scrubCaches = new Map<AssetId, ScrubFrameCache>()
   private decodedVideos = new Map<AssetId, DecodedVideoState>()
+  private stemAudio = new Map<string, PooledMedia>()
+  private audioSources: ReadonlyMap<ElementId, string> | undefined
   private disposed = false
   private playing = false
 
   constructor(private resolveAsset: (assetId: AssetId) => AssetRef | undefined) {}
+
+  setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
+    this.audioSources = sources
+  }
+
+  getAudioSources(): ReadonlyMap<ElementId, string> | undefined {
+    return this.audioSources
+  }
 
   getFrame(assetId: AssetId, sourceTimeMs: number): CanvasImageSource | null {
     const asset = this.resolveAsset(assetId)
@@ -195,66 +221,111 @@ export class PreviewMediaPool implements FrameSource {
     this.playing = options.isPlaying && options.playbackRate > 0
     const activeItems = coalesceActiveMediaItems(items)
     const activeIds = new Set(activeItems.map((item) => item.assetId))
+    const activeStemKeys = new Set<string>()
+    for (const item of activeItems) {
+      if (item.audioSrc) activeStemKeys.add(stemPoolKey(item.assetId, item.audioSrc))
+    }
 
     for (const [assetId, pooled] of this.media) {
       this.settleSeek(pooled)
       if (!activeIds.has(assetId) && !pooled.el.paused) pooled.el.pause()
     }
+    this.releaseInactiveStems(activeStemKeys)
 
+    const dryAssets = new Set(activeItems.filter((item) => !item.audioSrc).map((item) => item.assetId))
     for (const item of activeItems) {
       const pooled = this.ensureMediaElement(item.assetId, item.kind)
       if (!pooled) continue
-      const element = pooled.el
-
-      if (element.error) {
-        this.recoverMediaElement(item.assetId, pooled)
-        continue
-      }
-
-      const targetSeconds = item.sourceTimeMs / 1000
-      element.volume = Math.max(0, Math.min(1, item.volume * options.masterVolume))
-      element.muted = options.muted || item.volume <= 0
-      const frozen = item.rate <= 0.01
-      const forwardRate = Math.max(0.0625, options.playbackRate * (frozen ? 1 : item.rate))
-
-      // Negative playbackRate is unsupported per https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/playbackRate so reversed items take the seek path
-      if (options.isPlaying && options.playbackRate > 0 && !frozen && !item.reversed) {
-        const drift = targetSeconds - element.currentTime
-        let rate = forwardRate
-        if (Math.abs(drift) > MAX_CATCHUP_DRIFT_S) {
-          const lead = drift > 0 ? Math.min(MAX_SEEK_LEAD_S, pooled.seekLatencyS * forwardRate) : 0
-          this.requestSeek(pooled, targetSeconds + lead)
-        } else if (Math.abs(drift) > MIN_CATCHUP_DRIFT_S && !element.seeking) {
-          rate = forwardRate * Math.min(CATCHUP_RATE_MAX_BIAS, Math.max(CATCHUP_RATE_MIN_BIAS, 1 + drift))
-        }
-        if (element.playbackRate !== rate) element.playbackRate = rate
-        if (element.paused) {
-          // Autoplay policy may reject play() until a user gesture, see https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay
-          element.play().catch(() => {})
-        }
-      } else {
-        if (options.playbackRate > 0 && element.playbackRate !== forwardRate) {
-          element.playbackRate = forwardRate
-        }
-        if (!element.paused) element.pause()
-        const drift = Math.abs(element.currentTime - targetSeconds)
-        if (drift > PAUSED_DRIFT_TOLERANCE_S) this.requestSeek(pooled, targetSeconds)
-      }
+      if (!item.audioSrc || !dryAssets.has(item.assetId)) this.followMediaClock(pooled, item, options, pooled.src, !item.audioSrc)
+      if (!item.audioSrc) continue
+      const stem = this.ensureStemAudio(item.assetId, item.audioSrc)
+      this.followMediaClock(stem, item, options, item.audioSrc, true)
     }
   }
 
-  private recoverMediaElement(assetId: AssetId, pooled: PooledMedia): void {
+  private followMediaClock(pooled: PooledMedia, item: ActiveMediaItem, options: PreviewSyncOptions, src: string, playAudio: boolean): void {
+    const element = pooled.el
+    if (element.error) {
+      this.recoverMediaElement(pooled, src)
+      return
+    }
+
+    const targetSeconds = item.sourceTimeMs / 1000
+    element.volume = playAudio ? Math.max(0, Math.min(1, item.volume * options.masterVolume)) : 0
+    element.muted = !playAudio || options.muted || item.volume <= 0
+    const frozen = item.rate <= 0.01
+    const forwardRate = Math.max(0.0625, options.playbackRate * (frozen ? 1 : item.rate))
+
+    // Negative playbackRate is unsupported per https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/playbackRate so reversed items take the seek path
+    if (options.isPlaying && options.playbackRate > 0 && !frozen && !item.reversed) {
+      const drift = targetSeconds - element.currentTime
+      let rate = forwardRate
+      if (Math.abs(drift) > MAX_CATCHUP_DRIFT_S) {
+        const lead = drift > 0 ? Math.min(MAX_SEEK_LEAD_S, pooled.seekLatencyS * forwardRate) : 0
+        this.requestSeek(pooled, targetSeconds + lead)
+      } else if (Math.abs(drift) > MIN_CATCHUP_DRIFT_S && !element.seeking) {
+        rate = forwardRate * Math.min(CATCHUP_RATE_MAX_BIAS, Math.max(CATCHUP_RATE_MIN_BIAS, 1 + drift))
+      }
+      if (element.playbackRate !== rate) element.playbackRate = rate
+      if (element.paused) {
+        // Autoplay policy may reject play() until a user gesture, see https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay
+        element.play().catch(() => {})
+      }
+    } else {
+      if (options.playbackRate > 0 && element.playbackRate !== forwardRate) {
+        element.playbackRate = forwardRate
+      }
+      if (!element.paused) element.pause()
+      const drift = Math.abs(element.currentTime - targetSeconds)
+      if (drift > PAUSED_DRIFT_TOLERANCE_S) this.requestSeek(pooled, targetSeconds)
+    }
+  }
+
+  private recoverMediaElement(pooled: PooledMedia, src: string): void {
     const now = performance.now()
     if (now - pooled.lastRecoveryAt < RECOVERY_INTERVAL_MS) return
     pooled.lastRecoveryAt = now
-    const asset = this.resolveAsset(assetId)
-    if (!asset) return
-    if (pooled.src !== asset.src) {
-      pooled.src = asset.src
-      pooled.el.src = asset.src
+    if (pooled.src !== src) {
+      pooled.src = src
+      pooled.el.src = src
     }
     pooled.el.load()
     pooled.seekStartedAt = null
+  }
+
+  private ensureStemAudio(assetId: AssetId, audioSrc: string): PooledMedia {
+    const key = stemPoolKey(assetId, audioSrc)
+    const existing = this.stemAudio.get(key)
+    if (existing) return existing
+    const element = document.createElement('audio')
+    element.src = audioSrc
+    element.preload = 'auto'
+    element.crossOrigin = 'anonymous'
+    const pooled: PooledMedia = {
+      el: element,
+      src: audioSrc,
+      seekStartedAt: null,
+      seekLatencyS: 0,
+      lastRecoveryAt: 0,
+    }
+    this.stemAudio.set(key, pooled)
+    return pooled
+  }
+
+  private releaseInactiveStems(activeKeys: ReadonlySet<string>): void {
+    for (const [key, pooled] of this.stemAudio) {
+      this.settleSeek(pooled)
+      if (activeKeys.has(key)) continue
+      if (!pooled.el.paused) pooled.el.pause()
+      pooled.el.removeAttribute('src')
+      pooled.el.load()
+      this.stemAudio.delete(key)
+    }
+  }
+
+  private forEachPooled(visit: (pooled: PooledMedia) => void): void {
+    for (const pooled of this.media.values()) visit(pooled)
+    for (const pooled of this.stemAudio.values()) visit(pooled)
   }
 
   private requestSeek(pooled: PooledMedia, targetSeconds: number): void {
@@ -274,19 +345,20 @@ export class PreviewMediaPool implements FrameSource {
   }
 
   pauseAll(): void {
-    for (const { el } of this.media.values()) {
-      if (!el.paused) el.pause()
-    }
+    this.forEachPooled((pooled) => {
+      if (!pooled.el.paused) pooled.el.pause()
+    })
   }
 
   dispose(): void {
     this.disposed = true
-    for (const { el } of this.media.values()) {
-      el.pause()
-      el.removeAttribute('src')
-      el.load()
-    }
+    this.forEachPooled((pooled) => {
+      pooled.el.pause()
+      pooled.el.removeAttribute('src')
+      pooled.el.load()
+    })
     this.media.clear()
+    this.stemAudio.clear()
     for (const cache of this.scrubCaches.values()) cache.clear()
     this.scrubCaches.clear()
     for (const image of this.images.values()) {

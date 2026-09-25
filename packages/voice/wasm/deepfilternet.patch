@@ -1,0 +1,55 @@
+diff --git a/libDF/src/wasm.rs b/libDF/src/wasm.rs
+index 2e02095..db9d77f 100644
+--- a/libDF/src/wasm.rs
++++ b/libDF/src/wasm.rs
+@@ -11,8 +11,13 @@ pub struct DFState(crate::tract::DfTract);
+ #[wasm_bindgen]
+ impl DFState {
+     fn new(model_bytes: &[u8], channels: usize, atten_lim: f32) -> Self {
+-        let r_params = RuntimeParams::default_with_ch(channels).with_atten_lim(atten_lim);
+         let df_params = DfParams::from_bytes(model_bytes).expect("Could not load model from path");
++        Self::with_params(df_params, channels, atten_lim)
++    }
++    fn with_params(df_params: DfParams, channels: usize, atten_lim: f32) -> Self {
++        let r_params = RuntimeParams::default_with_ch(channels)
++            .with_atten_lim(atten_lim)
++            .with_thresholds(-15., 35., 35.);
+         let m =
+             DfTract::new(df_params, &r_params).expect("Could not initialize DeepFilter runtime.");
+         DFState(m)
+@@ -22,6 +27,35 @@ impl DFState {
+     }
+ }
+ 
++/// Create the compiled-in DeepFilterNet3 model with the deep-filter CLI thresholds.
++#[wasm_bindgen]
++pub unsafe fn df_create_default(atten_lim: f32) -> *mut DFState {
++    let df = DFState::with_params(DfParams::default(), 1, atten_lim);
++    Box::into_raw(df.boxed())
++}
++
++/// Samples the output lags the input by: STFT delay plus model lookahead.
++#[wasm_bindgen]
++pub unsafe fn df_get_delay(st: *mut DFState) -> usize {
++    let state = st.as_mut().expect("Invalid pointer");
++    state.0.fft_size - state.0.hop_size + state.0.lookahead * state.0.hop_size
++}
++
++/// Processes every whole frame in `input` and returns the enhanced samples.
++#[wasm_bindgen]
++pub unsafe fn df_process_frames(st: *mut DFState, input: &[f32]) -> js_sys::Float32Array {
++    let state = st.as_mut().expect("Invalid pointer");
++    let hop = state.0.hop_size;
++    let frames = input.len() / hop;
++    let mut output = vec![0f32; frames * hop];
++    for i in 0..frames {
++        let ns = ArrayView2::from_shape((1, hop), &input[i * hop..(i + 1) * hop]).unwrap();
++        let enh = ArrayViewMut2::from_shape((1, hop), &mut output[i * hop..(i + 1) * hop]).unwrap();
++        state.0.process(ns, enh).expect("Failed to process DF frame");
++    }
++    js_sys::Float32Array::from(&output[..])
++}
++
+ /// Create a DeepFilterNet Model
+ ///
+ /// Args:
