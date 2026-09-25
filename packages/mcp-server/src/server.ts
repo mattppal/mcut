@@ -196,7 +196,10 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const project = await targetProject(target)
       const command = buildCaptionsCommand(project, transcript, options)
       if (command.captions.length === 0) {
-        return failure('The transcript has no timed words or segments, so no captions were applied. Pass words or segments with startMs and endMs.')
+        return failure(
+          'No captions were applied. The transcript has no timed words or segments, or with elementId none fall inside the source span that clip plays. ' +
+            'Pass words or segments with startMs and endMs in source-media time.',
+        )
       }
       const incoming = spokenWords(transcript.words.length > 0 ? transcript.words.map((w) => w.text).join(' ') : transcript.text)
       const transcribed = spokenWords(
@@ -208,8 +211,8 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const origin =
         incoming.length > 0 && ` ${transcribed} `.includes(` ${incoming} `)
           ? 'The transcript matches captions already in the project.'
-          : 'Warning: this transcript does not match any transcript in the project, so these captions are caller-authored, not transcribed from the audio. ' +
-            'Undo and run ensure_transcript unless the transcript came from a transcription provider.'
+          : 'Warning: this transcript does not match any transcript in the project, so ensure_transcript did not produce it. ' +
+            'If it did not come from a transcription provider either, undo and run ensure_transcript.'
       return text(`OK: ${command.captions.length} caption(s) applied. ${origin}\n\n${await target.getSummary()}`)
     }
     case 'apply_silence_cuts': {
