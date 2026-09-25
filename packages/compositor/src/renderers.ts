@@ -25,6 +25,7 @@ import {
 } from '@mcut/timeline'
 import { applyChrome, type LayerChrome } from './backend'
 import { toCanvasPoint } from './geometry'
+import { reframedCrop, reframedSlot } from './reframe-views'
 import { transitionRenderers } from './transition-renderers'
 import { applyView, runningAverageAlpha, sampleViews } from './zoom-views'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
@@ -140,7 +141,7 @@ function cropSourceRect(crop: Crop | undefined, frame: CanvasImageSource): { sx:
 
 function drawMediaFrame(context: ElementRenderContext, element: VideoElement | ImageElement, frame: CanvasImageSource, dw: number, dh: number): void {
   const { width: fw, height: fh } = getImageSize(frame)
-  const base = cropSourceRect(element.crop, frame) ?? { sx: 0, sy: 0, sw: fw, sh: fh }
+  const base = cropSourceRect(reframedCrop(element, context.timeMs), frame) ?? { sx: 0, sy: 0, sw: fw, sh: fh }
   const shutterMs = getZoomShutterMs(element, undefined, context.timeMs, 1000 / context.project.fps)
   const views = sampleViews((timeMs) => getClipView(element, timeMs), context.timeMs, shutterMs)
   const chrome = chromeOf(context, element)
@@ -360,8 +361,9 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
         }
 
         const fitScale = slot.fit === 'cover' ? Math.max(rw / fw, rh / fh) : Math.min(rw / fw, rh / fh)
+        const framed = reframedSlot(element, slot, { w: rw / fitScale / fw, h: rh / fitScale / fh }, context.timeMs)
         const shutterMs = getZoomShutterMs(element, slot.source, context.timeMs, 1000 / project.fps)
-        const views = sampleViews((timeMs) => getSlotView(element, slot, timeMs), context.timeMs, shutterMs)
+        const views = sampleViews((timeMs) => getSlotView(element, framed, timeMs), context.timeMs, shutterMs)
 
         ctx.save()
         ctx.beginPath()
