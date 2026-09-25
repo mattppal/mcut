@@ -1,10 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, createProject, type Project } from '@mcut/timeline'
 import { renderFrame } from './render-frame'
-import { FakeContext2D } from './test-utils'
-import type { Canvas2D } from './types'
-
-const asCtx = (fake: FakeContext2D): Canvas2D => fake as unknown as Canvas2D
+import { asCanvas as asCtx, FakeContext2D } from './test-utils'
 
 function movingTextProject(): Project {
   let project = createProject()
