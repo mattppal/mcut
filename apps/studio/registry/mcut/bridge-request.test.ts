@@ -40,6 +40,41 @@ describe('parseBridgeFrame', () => {
     })
   })
 
+  test('a transact frame parses each sub-request in the closed union', () => {
+    expect(
+      parseBridgeFrame(
+        '{"id":"8","type":"transact","payload":{"requests":[{"type":"dispatch_command","commandName":"applyAnimationPreset","input":{"elementId":"e-video","preset":"fade-in"}},{"type":"run_operator","operatorId":"playback.toggle"}]}}',
+      ),
+    ).toEqual({
+      ok: true,
+      request: {
+        id: '8',
+        type: 'transact',
+        payload: {
+          requests: [
+            {
+              type: 'dispatch_command',
+              commandName: 'applyAnimationPreset',
+              input: { elementId: 'e-video', preset: 'fade-in' },
+            },
+            { type: 'run_operator', operatorId: 'playback.toggle', input: {} },
+          ],
+        },
+      },
+    })
+  })
+
+  test('a transact sub-request outside the closed union is rejected', () => {
+    const frame = parseBridgeFrame('{"id":"9","type":"transact","payload":{"requests":[{"type":"undo"}]}}')
+    expect(frame.ok).toBe(false)
+    if (frame.ok) return
+    expect(frame.id).toBe('9')
+    expect(frame.error.code).toBe('invalid-request')
+    expect(frame.error.message).toBe(
+      "✖ Invalid discriminator value. Expected 'dispatch_command' | 'run_operator' | 'run_action' | 'apply_commands'\n  → at payload.requests[0].type",
+    )
+  })
+
   test('an unknown request type is rejected at the type field', () => {
     const frame = parseBridgeFrame('{"id":"3","type":"nope"}')
     expect(frame.ok).toBe(false)
