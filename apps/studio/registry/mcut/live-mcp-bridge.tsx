@@ -25,9 +25,10 @@ import { searchCaptions } from '@mcut/transcription'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { formatShortcut, getEditorAction, isActionEnabled, listEditorActions, runEditorAction } from './action-registry'
-import { parseBridgeFrame, type BridgeRequest } from './bridge-request'
+import { isExportRequest, parseBridgeFrame, type BridgeRequest } from './bridge-request'
 import { editorClipboard } from './editor-clipboard'
 import { useEditorUI } from './editor-ui'
+import { handleExportRequest } from './live-mcp-export'
 import { ensureTranscriptForBridge } from './live-mcp-transcript'
 import { clamp } from './math'
 import { MCP_AGENT_TOOL_NAMES, MCP_TOOL_INPUTS, operatorToolName } from '@mcut/mcp-server/contract'
@@ -364,7 +365,7 @@ async function respondToBridgeFrame(socket: WebSocket, data: unknown, engine: Ed
   }
   const { request } = frame
   try {
-    const result = await handleLiveMcpRequest(engine, ui, request)
+    const result = isExportRequest(request) ? await handleExportRequest(socket, engine, request) : await handleLiveMcpRequest(engine, ui, request)
     socket.send(JSON.stringify({ id: request.id, ok: true, result }))
   } catch (error) {
     socket.send(JSON.stringify({ id: request.id, ok: false, error: serializeError(error) }))

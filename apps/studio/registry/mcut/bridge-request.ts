@@ -1,4 +1,4 @@
-import { MCP_TOOL_INPUTS } from '@mcut/mcp-server/contract'
+import { MCP_TOOL_INPUTS, cancelExportRequestSchema, startExportRequestSchema } from '@mcut/mcp-server/contract'
 import { z } from 'zod'
 
 const request = <Type extends string, Payload extends z.ZodType>(type: Type, payload: Payload) => z.object({ id: z.string(), type: z.literal(type), payload })
@@ -30,13 +30,26 @@ export const bridgeRequestSchema = z.discriminatedUnion('type', [
 
 export type BridgeRequest = z.infer<typeof bridgeRequestSchema>
 
+const exportRequestSchema = z.discriminatedUnion('type', [
+  request('start_export', startExportRequestSchema),
+  request('cancel_export', cancelExportRequestSchema),
+])
+
+export type ExportRequest = z.infer<typeof exportRequestSchema>
+
+const socketRequestSchema = z.discriminatedUnion('type', [...bridgeRequestSchema.options, ...exportRequestSchema.options])
+
+type SocketRequest = BridgeRequest | ExportRequest
+
+export const isExportRequest = (parsed: SocketRequest) => parsed.type === 'start_export' || parsed.type === 'cancel_export'
+
 export interface BridgeRequestError {
   name: 'BridgeRequestError'
   code: 'invalid-request'
   message: string
 }
 
-export type BridgeFrame = { ok: true; request: BridgeRequest } | { ok: false; id: string | undefined; error: BridgeRequestError }
+export type BridgeFrame = { ok: true; request: SocketRequest } | { ok: false; id: string | undefined; error: BridgeRequestError }
 
 const frameIdSchema = z.object({ id: z.string() })
 
@@ -51,7 +64,7 @@ export function parseBridgeFrame(raw: unknown): BridgeFrame {
   } catch {
     return rejection(undefined, 'Bridge frame is not valid JSON.')
   }
-  const parsed = bridgeRequestSchema.safeParse(value)
+  const parsed = socketRequestSchema.safeParse(value)
   if (parsed.success) return { ok: true, request: parsed.data }
   const envelope = frameIdSchema.safeParse(value)
   return rejection(envelope.success ? envelope.data.id : undefined, z.prettifyError(parsed.error))
