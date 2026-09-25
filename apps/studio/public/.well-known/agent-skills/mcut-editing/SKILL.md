@@ -63,7 +63,7 @@ range from the abandoned take to the start of the kept take. Read
 `abandonedText` and skip any candidate that is a deliberate repetition. Cut the
 kept ranges last to first, because each ripple delete shifts every later range.
 Cut each with a split at both ends and a ripple delete, on the clip and on the
-caption track together, or rerun `ensure_transcript` with `replace: true` after
+caption track together, or rerun `ensure_transcript` with `replace` set to true after
 the cuts. Pass a lower `minMatchWords` only when a short restart was missed,
 and check each extra candidate, since lower values match spoken lists.
 
