@@ -58,7 +58,7 @@ export interface McutMcpTarget {
   exportVideo?(input: unknown): unknown | Promise<unknown>
   getExport?(input: unknown): unknown | Promise<unknown>
   cancelExport?(input: unknown): unknown | Promise<unknown>
-  transact(requests: readonly TransactSubRequest[]): unknown | Promise<unknown>
+  transact?(requests: readonly TransactSubRequest[]): unknown | Promise<unknown>
 }
 
 export interface McutMcpServerOptions {
@@ -240,6 +240,7 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       return text(`${withResult(`OK: action ${actionId} applied.`, result)}\n\n${await target.getSummary()}`)
     }
     case 'transact': {
+      if (!target.transact) return failure('transact is not available on this target.')
       const requests = translateTransactCalls(call.arguments.calls)
       const results = await target.transact(requests)
       const lead = `OK: ${requests.length} calls applied as one undo step.`
