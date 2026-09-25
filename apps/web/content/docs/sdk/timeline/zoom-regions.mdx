@@ -9,15 +9,17 @@ element-local time. A multicam zoom names a `source` key, so every slot showing
 that source zooms and the other slots keep their framing. The screen can zoom
 while the camera overlay stays put.
 
-Regions on one target never overlap and never run past the element. Splits hand
-each region to the half it starts in. Growing a clip from its start shifts the
-regions with the content.
+Regions on one target never overlap. The zoom commands keep the region they add
+or change inside the element. A split copies a region that crosses the cut into
+both halves, so the picture on each side stays the same, and a trim can leave a
+region running past an edge, which simply plays cut off. Growing a clip from
+its start shifts the regions with the content.
 
 ```ts
 engine.dispatch({
   type: 'addZoomRegion',
   elementId: 'e-multicam',
-  zoom: { preset: 'detailZoom', source: 'screen', atMs: 12_000, rect: { x: 0.55, y: 0.1, w: 0.4, h: 0.4 } },
+  zoom: { preset: 'detailZoom', source: 'screen', atMs: 12_000, focus: { x: 0.75, y: 0.3 } },
 })
 ```
 
@@ -45,7 +47,7 @@ instant. `scale` multiplies the fit scale. `focus` is the anchor point from 0 to
 | --- | --- | --- |
 | `id` | string | Stable id, minted as `z-...` when omitted |
 | `source` | string, optional | Multicam source key whose slots zoom. Absent on clips |
-| `atMs` | integer ms | Element-local start of the zoom-in |
+| `atMs` | integer ms | Element-local start of the zoom-in, negative on the right half of a split through a zoom |
 | `inMs`, `holdMs`, `outMs` | integer ms | Ramp in, hold, ramp out |
 | `focus` | `{ x, y }` from 0 to 1 | Target center in source frame coordinates |
 | `scale` | 1 to 8 | Scale at the hold |
@@ -76,7 +78,7 @@ Explicit fields override the preset. A `rect` sets both focus and scale.
 
 ### getSlotView
 
-`getSlotView(element, slot, timelineMs)` returns the `ContentView` of one multicam layout slot. It is the one place a renderer reads a slot's framing. Outside a zoom it returns the slot's own focus at scale 1.
+`getSlotView(element, slot, timelineMs, visible)` returns the `ContentView` of one multicam layout slot. It is the one place a renderer reads a slot's framing. `visible` is the fraction of the source each axis shows at scale 1, which differs from 1 when the slot's shape differs from the video, and it defaults to the full frame. Outside a zoom it returns the slot's own focus at scale 1.
 
 ### getClipView
 
@@ -84,4 +86,4 @@ Explicit fields override the preset. A `rect` sets both focus and scale.
 
 ### getZoomShutterMs
 
-`getZoomShutterMs(element, source, timelineMs, frameMs)` returns the motion blur shutter in milliseconds while a zoom ramps, and 0 while it holds or rests. The compositor averages views sampled across this window.
+`getZoomShutterMs(element, timelineMs, frameMs)` returns the motion blur shutter in milliseconds while any zoom on the element ramps, and 0 while every zoom holds or rests. The compositor renders the element at views sampled across this window into a scratch canvas and composites the average once, the same path as keyframe motion blur.

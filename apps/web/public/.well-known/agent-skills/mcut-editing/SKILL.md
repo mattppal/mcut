@@ -83,7 +83,7 @@ Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
 {
   "edits": [
     { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "subtlePunchIn", "source": "screen", "atMs": 0 } },
-    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "detailZoom", "source": "screen", "atMs": 42000, "holdMs": 4000, "rect": { "x": 0.55, "y": 0.1, "w": 0.4, "h": 0.4 } } }
+    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "detailZoom", "source": "screen", "atMs": 42000, "holdMs": 4000, "focus": { "x": 0.75, "y": 0.3 } } }
   ]
 }
 ```
