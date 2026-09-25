@@ -105,7 +105,7 @@ describe('getElementOBB', () => {
   })
 })
 
-function screenAndCamera(element: object = {}): Project {
+function screenAndCamera(frame: Partial<Pick<MulticamElement, 'transform' | 'crop'>> = {}): Project {
   let project = createProject({ width: 1920, height: 1080 })
   project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'blob:s', durationMs: 60_000 } })
   project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000 } })
@@ -121,7 +121,7 @@ function screenAndCamera(element: object = {}): Project {
   return applyCommand(project, {
     type: 'addElement',
     trackId: 't-default',
-    element: { id: 'e-mc', type: 'multicam', startMs: 0, durationMs: 5000, sources, angles: [{ atMs: 0, layoutId: 'l-pip' }], ...element },
+    element: { id: 'e-mc', type: 'multicam', startMs: 0, durationMs: 5000, sources, angles: [{ atMs: 0, layoutId: 'l-pip' }], ...frame },
   })
 }
 
