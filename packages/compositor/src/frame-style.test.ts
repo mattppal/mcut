@@ -192,8 +192,8 @@ describe('frame style rendering', () => {
     const helpers = {
       getAssetSize: () => ({ width: 1280, height: 720 }),
     }
-    expect(getElementNaturalSize(element, helpers)).toEqual({ width: 640, height: 180 })
-    expect(getElementDisplaySize(element, helpers)).toEqual({ width: 640, height: 180 })
+    expect(getElementNaturalSize(project, element, helpers)).toEqual({ width: 640, height: 180 })
+    expect(getElementDisplaySize(project, element, helpers)).toEqual({ width: 640, height: 180 })
   })
 })
 

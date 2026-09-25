@@ -51,6 +51,7 @@ Converts a canvas pixel position to center-origin element coordinates.
 
 ```ts
 function getElementDisplaySize(
+  project: Project,
   element: TimelineElement,
   helpers: SizeHelpers = {},
 ): ElementSize | null
@@ -62,12 +63,13 @@ Returns the element's natural size multiplied by the absolute transform scale, o
 
 ```ts
 function getElementNaturalSize(
+  project: Project,
   element: TimelineElement,
   helpers: SizeHelpers = {},
 ): ElementSize | null
 ```
 
-Returns the unscaled size of a text or media element from the helpers, reduced to the crop region when one is set, or `null` for audio, caption, and multicam elements.
+Returns the unscaled size of an element, reduced to the crop region when one is set. Text and media sizes come from the helpers. A multicam is the project frame, because it composes its layout at the frame size. Audio and caption elements return `null`.
 
 ### getElementOBB
 
@@ -79,7 +81,7 @@ function getElementOBB(
 ): OBB | null
 ```
 
-Returns the element's oriented bounding box in canvas pixels, or `null` for audio, caption, and multicam elements and for media whose size is unknown.
+Returns the element's oriented bounding box in canvas pixels, or `null` for audio and caption elements and for media whose size is unknown.
 
 ### getFitScale
 

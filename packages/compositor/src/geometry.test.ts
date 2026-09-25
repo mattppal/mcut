@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { createProject } from '@mcut/timeline'
+import { applyCommand, createProject, getElement, type MulticamElement, type Project } from '@mcut/timeline'
 import {
   fromCanvasPoint,
   getElementDisplaySize,
@@ -98,9 +98,39 @@ describe('getElementOBB', () => {
       }),
     }
 
-    expect(getElementNaturalSize(element, helpers)).toEqual({ width: 300, height: 120 })
-    expect(getElementDisplaySize(element, helpers)).toEqual({ width: 600, height: 60 })
+    expect(getElementNaturalSize(project, element, helpers)).toEqual({ width: 300, height: 120 })
+    expect(getElementDisplaySize(project, element, helpers)).toEqual({ width: 600, height: 60 })
     expect(getElementOBB(project, element, helpers)).toMatchObject({ width: 600, height: 60 })
+  })
+})
+
+function screenAndCamera(): Project {
+  let project = applyCommand(createProject({ width: 1920, height: 1080 }), { type: 'addTrack', id: 't-cam' })
+  project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'blob:s', durationMs: 60_000, width: 2560, height: 1440 } })
+  project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000, width: 1920, height: 1080 } })
+  const screen = { type: 'video', id: 'e-s', assetId: 'a-screen', startMs: 0, durationMs: 10_000 }
+  project = applyCommand(project, { type: 'addElement', trackId: 't-default', element: screen })
+  project = applyCommand(project, { type: 'addElement', trackId: 't-cam', element: { ...screen, id: 'e-c', assetId: 'a-cam' } })
+  return applyCommand(project, { type: 'createMulticam', sources: [{ elementId: 'e-s' }, { elementId: 'e-c' }], multicamId: 'e-mc' })
+}
+
+function multicamIn(project: Project): MulticamElement {
+  const element = getElement(project, 'e-mc')
+  if (element?.type !== 'multicam') throw new Error('no multicam e-mc')
+  return element
+}
+
+describe('multicam geometry', () => {
+  test('a multicam is the project frame, cut by its crop, under its transform', () => {
+    const project = applyCommand(screenAndCamera(), {
+      type: 'updateElement',
+      elementId: 'e-mc',
+      patch: { transform: { x: 100, y: -50, scaleX: 0.5, scaleY: -0.5, rotation: 30 }, crop: { x: 0, y: 0, w: 0.5, h: 1 } },
+    })
+    const element = multicamIn(project)
+    expect(getElementNaturalSize(project, element)).toEqual({ width: 960, height: 1080 })
+    expect(getElementDisplaySize(project, element)).toEqual({ width: 480, height: 540 })
+    expect(getElementOBB(project, element)).toEqual({ cx: 1060, cy: 490, width: 480, height: 540, rotation: 30 })
   })
 })
 
@@ -118,7 +148,7 @@ describe('flipped elements (negative scale)', () => {
   } as const
 
   test('display size stays unsigned', () => {
-    expect(getElementDisplaySize(flipped, helpers)).toEqual({ width: 800, height: 150 })
+    expect(getElementDisplaySize(createProject(), flipped, helpers)).toEqual({ width: 800, height: 150 })
   })
 
   test('resizing by display size keeps each axis flip', () => {

@@ -97,8 +97,8 @@ export function PropertiesPanel({ className }: { className?: string }) {
   const element = selected.element
   const motionBlur = 'motionBlur' in element ? element.motionBlur : undefined
   const sizeHelpers = sizeHelpersForProject(project)
-  const naturalSize = 'transform' in element ? getElementNaturalSize(element, sizeHelpers) : null
-  const displaySize = 'transform' in element ? getElementDisplaySize(element, sizeHelpers) : null
+  const naturalSize = 'transform' in element ? getElementNaturalSize(project, element, sizeHelpers) : null
+  const displaySize = 'transform' in element ? getElementDisplaySize(project, element, sizeHelpers) : null
   const timelineNowMs = playheadMs >= 0 ? playheadMs : Math.round(engine.playback.state.currentTimeMs)
 
   const animValue = (property: AnimatableProperty, staticValue: number): number =>
