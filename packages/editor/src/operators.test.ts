@@ -57,6 +57,36 @@ describe('editor operators', () => {
     expect(element?.keyframes?.opacity?.map((keyframe) => keyframe.timeMs)).toEqual([900])
   })
 
+  test('creates a multicam from selected video clips with a selected audio clip as its audio source', async () => {
+    const engine = new EditorEngine()
+    engine.dispatch({ type: 'addTrack', id: 't-cam' })
+    engine.dispatch({ type: 'addTrack', id: 't-mic' })
+    for (const [id, kind] of [
+      ['a-screen', 'video'],
+      ['a-cam', 'video'],
+      ['a-mic', 'audio'],
+    ] as const) {
+      engine.dispatch({ type: 'addAsset', asset: { id, kind, src: `blob:${id}`, durationMs: 10_000 } })
+    }
+    const clip = { startMs: 0, durationMs: 5000 }
+    engine.dispatch({ type: 'addElement', trackId: 't-default', element: { ...clip, type: 'video', id: 'e-screen', assetId: 'a-screen' } })
+    engine.dispatch({ type: 'addElement', trackId: 't-cam', element: { ...clip, type: 'video', id: 'e-cam', assetId: 'a-cam' } })
+    engine.dispatch({ type: 'addElement', trackId: 't-mic', element: { ...clip, type: 'audio', id: 'e-mic', assetId: 'a-mic' } })
+    engine.select(['e-screen', 'e-cam', 'e-mic'])
+
+    await runOperator('multicam.createFromSelection', { engine })
+
+    const multicam = engine.project.tracks.flatMap((track) => track.elements).find((element) => element.type === 'multicam')
+    expect(multicam?.type === 'multicam' ? { sources: multicam.sources, audioSource: multicam.audioSource } : null).toEqual({
+      sources: [
+        { key: 'screen', assetId: 'a-screen', offsetMs: 0 },
+        { key: 'camera', assetId: 'a-cam', offsetMs: 0 },
+        { key: 'audio', assetId: 'a-mic', offsetMs: 0 },
+      ],
+      audioSource: 'audio',
+    })
+  })
+
   test('rejects a missing media-bin asset with a typed operator error', async () => {
     const engine = new EditorEngine()
 

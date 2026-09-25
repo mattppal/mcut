@@ -551,14 +551,16 @@ export const operators = {
 
   'multicam.createFromSelection': defineOperator({
     label: 'Create multicam from selected clips',
-    description: 'Create a multicam element from selected video clips.',
+    description: 'Create a multicam element from the selected video clips. Selected audio clips join as audio-only sources.',
     category: 'multicam',
     inputSchema: emptyInputSchema,
-    enabled: ({ engine }) =>
-      engine.selection.elementIds.some((id) => engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video'))),
+    enabled: ({ engine }) => engine.selection.elementIds.some((id) => getElement(engine.project, id)?.type === 'video'),
     run: ({ engine }) => {
-      const videoIds = engine.selection.elementIds.filter((id) => engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video')))
-      engine.dispatch({ type: 'createMulticam', elementIds: videoIds })
+      const sources = engine.selection.elementIds.filter((id) => {
+        const type = getElement(engine.project, id)?.type
+        return type === 'video' || type === 'audio'
+      })
+      engine.dispatch({ type: 'createMulticam', sources: sources.map((elementId) => ({ elementId })) })
     },
   }),
 } satisfies Record<string, OperatorDefinition>

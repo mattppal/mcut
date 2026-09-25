@@ -84,6 +84,39 @@ describe('timeline gesture planning', () => {
     expect(computeSlipRange(project, ['e-mid'])).toEqual({ minMs: -1000, maxMs: 16_000 })
   })
 
+  test('a sped-up multicam drags and slips as a window over its synced sources', () => {
+    let project = createProject()
+    project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'screen.mp4', durationMs: 20_000 } })
+    project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'cam.mp4', durationMs: 20_000 } })
+    project = applyCommand(project, {
+      type: 'addElement',
+      trackId: 't-default',
+      element: {
+        type: 'multicam',
+        id: 'e-mc',
+        startMs: 0,
+        durationMs: 4000,
+        trimStartMs: 1000,
+        sources: [
+          { key: 'screen', assetId: 'a-screen' },
+          { key: 'camera', assetId: 'a-cam', offsetMs: 2000 },
+        ],
+        angles: [{ atMs: 0, layoutId: 'l-any' }],
+      },
+    })
+    project = applyCommand(project, { type: 'setElementSpeed', elementId: 'e-mc', speed: 2 })
+
+    expect(collectClipDragBases(project, ['e-mc']).get('e-mc')).toEqual({
+      startMs: 0,
+      durationMs: 2000,
+      trimStartMs: 1000,
+      sourceDurationMs: 18_000,
+      hasTimeMap: true,
+      trackIndex: 0,
+    })
+    expect(computeSlipRange(project, ['e-mc'])).toEqual({ minMs: -1000, maxMs: 13_000 })
+  })
+
   test('plans duplicate clips onto new tracks as serializable commands', () => {
     const project = projectWithAdjacentClips()
     const plan = planDuplicateClipsToNewTracks(project, ['e-mid', 'e-left'], {

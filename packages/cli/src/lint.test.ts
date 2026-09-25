@@ -60,13 +60,14 @@ describe('lintProject', () => {
 
   test('flags multicam problems', () => {
     const engine = new EditorEngine({ project: validProject() })
-    engine.dispatch({ type: 'createMulticam', elementIds: ['e-1'], multicamId: 'e-mc' })
+    engine.dispatch({ type: 'createMulticam', sources: [{ elementId: 'e-1' }], multicamId: 'e-mc' })
     const project = engine.project
     const track = project.tracks.find((t) => t.elements.some((e) => e.id === 'e-mc'))!
     const multicam = structuredClone(track.elements.find((e) => e.id === 'e-mc')!)
     if (multicam.type !== 'multicam') throw new Error('expected multicam')
     multicam.angles = [{ atMs: 0, layoutId: 'l-nope' }]
     multicam.audioSource = 'ghost'
+    multicam.sources = multicam.sources.map((source) => ({ ...source, assetId: 'a-gone' }))
     const broken = {
       ...project,
       tracks: project.tracks.map((t) => (t.id === track.id ? { ...t, elements: t.elements.map((e) => (e.id === 'e-mc' ? multicam : e)) } : t)),
@@ -74,6 +75,7 @@ describe('lintProject', () => {
     const found = codes(broken)
     expect(found).toContain('missing-layout')
     expect(found).toContain('missing-audio-source')
+    expect(found).toContain('missing-asset')
   })
 
   test('warns on empty projects and empty tracks', () => {
