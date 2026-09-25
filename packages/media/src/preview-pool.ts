@@ -232,10 +232,11 @@ export class PreviewMediaPool implements FrameSource {
     }
     this.releaseInactiveStems(activeStemKeys)
 
+    const dryAssets = new Set(activeItems.filter((item) => !item.audioSrc).map((item) => item.assetId))
     for (const item of activeItems) {
       const pooled = this.ensureMediaElement(item.assetId, item.kind)
       if (!pooled) continue
-      this.followMediaClock(pooled, item, options, pooled.src, !item.audioSrc)
+      if (!item.audioSrc || !dryAssets.has(item.assetId)) this.followMediaClock(pooled, item, options, pooled.src, !item.audioSrc)
       if (!item.audioSrc) continue
       const stem = this.ensureStemAudio(item.assetId, item.audioSrc)
       this.followMediaClock(stem, item, options, item.audioSrc, true)
