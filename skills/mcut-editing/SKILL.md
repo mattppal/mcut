@@ -78,8 +78,8 @@ exact butt cut. Built-ins: `dissolve`, `fade-black`, `fade-white`, `slide-left`,
 
 - All project times are integer milliseconds.
 - Timeline positions are absolute.
-- Keyframes, angle cuts, time maps, and animation preset internals are
-  element-local.
+- Keyframes, time maps, and animation preset internals are element-local.
+- Multicam angle cuts are on the source clock the multicam's sources share.
 - Transcript word times from captions are timeline times. Silence cuts convert
   them back to source time for 1x clips.
 - `trimStartMs` is source-media time.

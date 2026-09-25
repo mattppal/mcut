@@ -611,7 +611,7 @@ mcut captions project.json --transcript transcript.json --element e-camera --sty
 **When the user says:** "cut to the camera when they start talking, back to the screen after"
 **Template:** `multicam-podcast`
 
-Angle cuts are element-local times naming a layout (a composition), not only a camera. Full-screen camera, screen plus PiP, and side-by-side are all layouts. The cut holds until the next one. `setMulticamAngleTransition` standardizes every cut. Null is hard cuts, the right default. Use 300ms or less when you do blend. Switch on speaker changes, never mid-word, and hold each angle at least 2s. Audio stays pinned to one source via `setMulticamAudio` so switching angles never changes the sound.
+Angle cuts sit on the source clock, the synced time every source shares (element-local time at 1x from a zero trim), and each names a layout (a composition), not only a camera. Full-screen camera, screen plus PiP, and side-by-side are all layouts. The cut holds until the next one. `setMulticamAngleTransition` standardizes every cut. Null is hard cuts, the right default. Use 300ms or less when you do blend. Switch on speaker changes, never mid-word, and hold each angle at least 2s. Audio stays pinned to one source via `setMulticamAudio` so switching angles never changes the sound.
 
 ```json
 [

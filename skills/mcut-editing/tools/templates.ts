@@ -142,7 +142,14 @@ export const TEMPLATES: TemplateDefinition[] = [
           element: { id: 'e-camera', type: 'video', startMs: 0, durationMs: 90000, assetId: 'a-camera' },
         },
         ...FIXED_ID_LAYOUTS.map((layout) => ({ type: 'saveLayout', layout }) satisfies BuiltinCommand),
-        { type: 'createMulticam', elementIds: ['e-screen', 'e-camera'], multicamId: 'e-multicam' },
+        {
+          type: 'createMulticam',
+          sources: [
+            { elementId: 'e-screen', key: 'screen' },
+            { elementId: 'e-camera', key: 'camera' },
+          ],
+          multicamId: 'e-multicam',
+        },
         { type: 'removeTrack', trackId: 't-camera' },
       ]),
   },

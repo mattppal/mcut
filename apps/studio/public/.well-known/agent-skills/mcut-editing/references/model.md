@@ -27,7 +27,7 @@ All elements share `id ("e-…")`, `type`, `startMs`, `durationMs`, optional
 | `image` | `assetId`, `transform`, `opacity`, `effects?`, `blendMode?`, `motionBlur?`, `transition?` | position.x/y, scale.x/y, rotation, opacity, blur |
 | `text` | `text`, `style`, `box?`, `transform`, `opacity`, `effects?`, `blendMode?`, `motionBlur?`, `transition?` | position.x/y, scale.x/y, rotation, opacity, blur |
 | `caption` | `text`, `words?` (karaoke timings), `style` (position top, middle, or bottom) | none |
-| `multicam` | `sources`, `angles`, `angleTransition?`, `audioSource?`, plus video-like fields | like video |
+| `multicam` | `sources` (`key`, `assetId`, `offsetMs`), `angles` (`atMs`, `layoutId`), `angleTransition?`, `audioSource?`, plus the video fields except `assetId` | like video |
 
 `addElement` fills defaults (`transform` centered at scale
 1, `opacity` 1, `volume` 1, `trimStartMs` 0). Omit `element.id` to have one
@@ -36,11 +36,13 @@ generated. Pass explicit ids when later commands must reference the element.
 ## The three clocks
 
 1. **Timeline time.** `startMs`, `splitElement.atMs`, project duration.
-2. **Element-local time.** keyframe `timeMs`, angle-cut `atMs`, timeMap input,
+2. **Element-local time.** keyframe `timeMs`, timeMap input,
    `applyZoomPreset.atMs`. Zero is the clip's first visible frame. Moving a clip
    moves its animation with it. Splitting redistributes keyframes per side.
-3. **Source time.** `trimStartMs` is the in-point into the asset. Transcripts and
-   `setMulticamSourceTrim` speak source time.
+3. **Source time.** `trimStartMs` is the in-point into the asset. Transcripts speak
+   source time. A multicam's sources share one source clock. Its `trimStartMs` and
+   angle-cut `atMs` are on that clock, and each source plays its media at its
+   `offsetMs` plus the clock time.
 
 Conversion at 1x is `timelineMs = element.startMs + (sourceMs - element.trimStartMs)`.
 A `timeMap` breaks the 1:1 relation. It maps element-local output ms to source ms
