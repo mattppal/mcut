@@ -36,10 +36,10 @@ edits:
     capability: partial
     note: No named exponential easing, a cubicBezier can approximate it.
   - id: 07-detail-zoom
-    ask: When I talk about the export button, zoom into it on the screen recording with the same easing and motion blur, hold while I talk about it, then zoom back out.
+    ask: When the Daily Brief page is on screen, zoom into it on the screen recording with the same easing and motion blur, hold while I talk about it, then zoom back out.
     checks: [zoom in hold out, subtle zoom, exponential easing, motion blur, zoom on screen source]
     capability: partial
-    note: The agent cannot see frames, so it has to guess where the export button is.
+    note: The agent cannot see frames, so it has to guess where and when the Daily Brief page shows.
   - id: 08-export
     ask: Export the video.
     checks: [export job done, exported overlay styled]
