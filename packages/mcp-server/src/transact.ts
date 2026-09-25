@@ -37,12 +37,24 @@ function rejectTransactName(name: string): Error {
   )
 }
 
+const HISTORY_OPERATORS: ReadonlySet<string> = new Set<OperatorId>(['edit.undo', 'edit.redo'])
+
+function historyOperator(request: TransactSubRequest): string | undefined {
+  if (request.type === 'run_operator' && HISTORY_OPERATORS.has(request.operatorId)) return request.operatorId
+  if (request.type === 'run_action' && HISTORY_OPERATORS.has(request.actionId)) return request.actionId
+  return undefined
+}
+
+function rejectHistoryOperator(id: string): Error {
+  return new Error(`transact cannot run "${id}". One transact is one undo step, so it cannot contain undo or redo. Call the undo or redo tool on its own.`)
+}
+
 export function translateTransactCalls(calls: readonly TransactCall[]): TransactSubRequest[] {
   const allowed = new Set(allowedTransactToolNames())
   const operatorsByTool = new Map<string, OperatorId>()
   for (const id of operatorIds) operatorsByTool.set(operatorToolName(id), id)
   const commandNames = new Set<string>(listToolDefinitions().map((tool) => tool.name))
-  return calls.map((call, index) => {
+  const requests: TransactSubRequest[] = calls.map((call, index) => {
     const args = call.arguments ?? {}
     if (!allowed.has(call.name)) throw rejectTransactName(call.name)
     if (isPassThrough(call.name)) {
@@ -57,6 +69,11 @@ export function translateTransactCalls(calls: readonly TransactCall[]): Transact
     if (commandNames.has(call.name)) return { type: 'dispatch_command', commandName: call.name, input: args }
     throw rejectTransactName(call.name)
   })
+  for (const request of requests) {
+    const id = historyOperator(request)
+    if (id !== undefined) throw rejectHistoryOperator(id)
+  }
+  return requests
 }
 
 async function runEngineSubRequest(engine: EditorEngine, request: TransactSubRequest): Promise<unknown> {

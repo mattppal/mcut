@@ -25,6 +25,7 @@ is still hardening.
   SRT, and VTT
 - `@mcut/transcription-ai-sdk`, `@mcut/transcription-assemblyai`,
   `@mcut/transcription-local` - transcription providers
+- `@mcut/voice` - DeepFilterNet3 voice cleanup in browser and Node workers
 - `@mcut/cli` - headless CLI
 - `@mcut/mcp-server` - MCP and local browser bridge tooling
 
