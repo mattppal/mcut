@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { WebSocket, WebSocketServer, type VerifyClientCallbackSync } from 'ws'
 import { LiveBridgeError } from './bridge-error'
+import { EXPORTS_PATH, ExportJobs } from './export-jobs'
 import { createMcutMcpServerForTarget, type McutMcpTarget } from './server'
 
 export { LiveBridgeError } from './bridge-error'
@@ -16,6 +17,7 @@ export interface LiveBridgeOptions {
   requestTimeoutMs?: number
   transcriptionTimeoutMs?: number
   reconnectGraceMs?: number
+  exportDir?: string
 }
 
 interface PendingRequest {
@@ -116,6 +118,7 @@ export class LiveMcutBridge {
 
   private readonly server = createServer((req, res) => void this.handleHttp(req, res))
   private readonly wss: WebSocketServer
+  private readonly exports: ExportJobs
   private readonly pending = new Map<string, PendingRequest>()
   private readonly socketWaiters = new Set<SocketWaiter>()
   private socket: WebSocket | null = null
@@ -137,6 +140,13 @@ export class LiveMcutBridge {
       verifyClient,
     })
     this.wss.on('connection', (socket) => this.attach(socket))
+    this.exports = new ExportJobs({
+      exportDir: options.exportDir,
+      token: this.token,
+      allowOrigin: (origin) => isAllowedOrigin(origin, allowedOrigins),
+      address: () => this.server.address(),
+      request: (type, payload) => this.request(type, payload),
+    })
   }
 
   async listen(port = 0): Promise<number> {
@@ -222,6 +232,12 @@ export class LiveMcutBridge {
           connected: this.isConnected(),
           tab: this.tabInfo,
         }
+      case 'export_video':
+        return await this.exports.start(payload)
+      case 'get_export':
+        return await this.exports.get(payload)
+      case 'cancel_export':
+        return await this.exports.cancel(payload)
       default:
         return await this.request(type, payload)
     }
@@ -264,6 +280,9 @@ export class LiveMcutBridge {
       runOperator: (operatorId, input) => this.request('run_operator', { operatorId, input: input ?? {} }),
       dispatchCommand: (commandName, input) => this.request('dispatch_command', { commandName, input: input ?? {} }),
       applyCommands: (commands) => this.request('apply_commands', { commands }),
+      exportVideo: (input) => this.exports.start(input),
+      getExport: (input) => this.exports.get(input),
+      cancelExport: (input) => this.exports.cancel(input),
     }
   }
 
@@ -284,6 +303,7 @@ export class LiveMcutBridge {
         pending.reject(new LiveBridgeError('browser-disconnected', `Browser disconnected before response ${id}.`))
       }
       this.pending.clear()
+      this.exports.disconnect()
     })
   }
 
@@ -336,6 +356,8 @@ export class LiveMcutBridge {
       return
     }
 
+    if (this.exports.receive(message)) return
+
     if (!message.id && message.type === 'hello') {
       this.tabInfo = message.payload ?? null
       return
@@ -355,8 +377,14 @@ export class LiveMcutBridge {
   }
 
   private async handleHttp(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    if (requestUrl(req).pathname === '/mcp') {
+    const url = requestUrl(req)
+    if (url.pathname === '/mcp') {
       await this.handleMcp(req, res)
+      return
+    }
+
+    if (url.pathname.startsWith(EXPORTS_PATH)) {
+      await this.exports.serveUpload(req, res, url)
       return
     }
 
@@ -477,5 +505,8 @@ export function createHttpBridgeTarget(port = DEFAULT_BRIDGE_PORT, token?: strin
     runOperator: (operatorId, input) => rpc('run_operator', { operatorId, input: input ?? {} }),
     dispatchCommand: (commandName, input) => rpc('dispatch_command', { commandName, input: input ?? {} }),
     applyCommands: (commands) => rpc('apply_commands', { commands }),
+    exportVideo: (input) => rpc('export_video', input ?? {}),
+    getExport: (input) => rpc('get_export', input ?? {}),
+    cancelExport: (input) => rpc('cancel_export', input ?? {}),
   }
 }

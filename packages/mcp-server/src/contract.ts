@@ -2,6 +2,9 @@ import { z } from 'zod'
 import { operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions } from '@mcut/timeline'
 import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
+import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
+
+export * from './export-protocol'
 
 export interface McpToolDefinition {
   name: string
@@ -57,6 +60,9 @@ export const MCP_AGENT_TOOL_NAMES = [
   'run_action',
   'undo',
   'redo',
+  'export_video',
+  'get_export',
+  'cancel_export',
 ] as const
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
@@ -119,6 +125,9 @@ export const MCP_TOOL_INPUTS = {
   run_action: z.strictObject({ actionId: z.string(), input: TOOL_INPUT }),
   undo: EMPTY_INPUT,
   redo: EMPTY_INPUT,
+  export_video: exportVideoInputSchema,
+  get_export: getExportInputSchema,
+  cancel_export: cancelExportInputSchema,
 } satisfies Record<McpAgentToolName, z.ZodType>
 
 const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
@@ -173,6 +182,15 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'To export or render the finished video, run file.export-video with input {"format":"mp4"} or {"format":"webm"}.',
   undo: 'Undo the most recent edit.',
   redo: 'Redo the most recently undone edit.',
+  export_video:
+    'Live bridge only: render the whole timeline to a video file in Studio and write it to disk through the bridge. No dialog opens. ' +
+    'Returns at once with a jobId while Studio renders in the background, which takes minutes for a long timeline. ' +
+    'Then call get_export { jobId, waitMs: 20000 } until state is done, which reports the file path and byte size. One export runs at a time.',
+  get_export:
+    'Report an export job from export_video: state (rendering, writing, done, failed, or cancelled), percent, elapsedMs, ' +
+    'an etaMs estimate while rendering, outputPath, and bytes once done. waitMs long-polls until the job ends or the wait runs out, ' +
+    'so call it with waitMs 20000 until state is done.',
+  cancel_export: 'Cancel the running export from export_video. Studio stops rendering and nothing is written.',
 }
 
 const toolDefinition = (name: McpAgentToolName): McpToolDefinition => ({
@@ -206,6 +224,9 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('run_action'),
   staticToolCall('undo'),
   staticToolCall('redo'),
+  staticToolCall('export_video'),
+  staticToolCall('get_export'),
+  staticToolCall('cancel_export'),
 ])
 
 export type McpServerStaticToolCall = z.infer<typeof MCP_SERVER_STATIC_TOOL_CALL_SCHEMA>
