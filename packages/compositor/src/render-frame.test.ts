@@ -312,7 +312,7 @@ describe('multicam rendering', () => {
     })
     project = applyCommand(project, {
       type: 'createMulticam',
-      elementIds: ['e-s', 'e-c'],
+      sources: [{ elementId: 'e-s' }, { elementId: 'e-c' }],
       multicamId: 'e-mc',
     })
     const both = project.layouts.find((l) => l.name === 'Screen + Cam')!.id
