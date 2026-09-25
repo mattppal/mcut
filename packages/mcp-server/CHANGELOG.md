@@ -1,5 +1,18 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.6
+
+### Minor Changes
+
+- [#156](https://github.com/mattppal/mcut/pull/156) [`53b78d7`](https://github.com/mattppal/mcut/commit/53b78d7fdaaeed29df8d1654702d073eacf75e65) Thanks [@mattppal](https://github.com/mattppal)! - `run_action` and `list_actions` name `file.export-video` for export. `apply_captions` warns when its transcript matches no captions in the project, so invented transcripts are visible, and it now fails without touching existing captions when the transcript yields no captions. `applyAnimationPreset` points to `effects.fade-open-close` for a fade in and out as one undo step.
+
+### Patch Changes
+
+- Updated dependencies [[`53b78d7`](https://github.com/mattppal/mcut/commit/53b78d7fdaaeed29df8d1654702d073eacf75e65)]:
+  - @mcut/timeline@0.1.0-alpha.5
+  - @mcut/editor@0.1.0-alpha.5
+  - @mcut/transcription@0.1.0-alpha.5
+
 ## 0.1.0-alpha.5
 
 ### Minor Changes
