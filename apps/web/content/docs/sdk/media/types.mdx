@@ -370,6 +370,14 @@ interface SyncResult {
 
 A sync offset in milliseconds and the confidence of the match.
 
+### ProjectStill
+
+The PNG blob from `renderProjectStill`, with its pixel width, pixel height, and the ids of the elements drawn.
+
+### RenderProjectStillOptions
+
+Optional arguments for `renderProjectStill`. `soloElementId` draws only that element, including a multicam composite. `width` caps the PNG width and keeps the project aspect ratio.
+
 ### FaceSample
 
 `FaceSample` is `{ sourceMs, box }`, one reading of `createLocalFaceDetector` at an integer source media time. `box` is the largest face as `{ x, y, w, h }` fractions of the frame, or `null` when the frame has none. It fits `FaceSample` from `@mcut/editor`, so `detect` output goes straight to `planCenterPerson`.

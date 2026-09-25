@@ -6,6 +6,7 @@ const AGENT_TOOL_NAMES = [
   'get_summary',
   'get_project',
   'get_media_context',
+  'get_frame',
   'get_audio_activity',
   'get_transcript',
   'search_transcript',

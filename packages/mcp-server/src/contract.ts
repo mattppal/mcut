@@ -46,6 +46,7 @@ export const MCP_AGENT_TOOL_NAMES = [
   'get_summary',
   'get_project',
   'get_media_context',
+  'get_frame',
   'get_audio_activity',
   'get_transcript',
   'search_transcript',
@@ -90,6 +91,11 @@ export const MCP_TOOL_INPUTS = {
   get_summary: EMPTY_INPUT,
   get_project: EMPTY_INPUT,
   get_media_context: EMPTY_INPUT,
+  get_frame: z.strictObject({
+    timeMs: z.number().min(0).describe('Timeline time in milliseconds.'),
+    elementId: elementIdSchema.describe('When set, render only this element. A multicam renders its composite.').optional(),
+    maxWidth: z.int().min(64).max(3840).default(1280).describe('Maximum PNG width in pixels. Defaults to 1280. Height follows the project aspect ratio.'),
+  }),
   get_audio_activity: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
     includeWaveform: z.boolean().describe('Include compact max-amplitude waveform buckets for coarse inspection.').optional(),
@@ -208,6 +214,10 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   get_media_context:
     'Agent-friendly project/video metadata: project dimensions/fps/duration, playback, selection, ' +
     'assets, tracks, elements, clip source ranges, markers, and transcript availability. Use this before content-aware edits.',
+  get_frame:
+    'Live bridge only. Render one timeline frame as a PNG. Call get_frame before placing a zoom or a crop. ' +
+    'Pass elementId to render only that element, including a multicam composite. ' +
+    'timeMs is the timeline position in milliseconds. maxWidth caps the PNG width and keeps the project aspect ratio.',
   get_audio_activity:
     'Live bridge only: analyze a video/audio clip and return compact source sound/silence windows. ' +
     'Use this only through the connected browser for audio-aware inspection; do not fall back to ffmpeg. ' +
@@ -315,6 +325,7 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('get_summary'),
   staticToolCall('get_project'),
   staticToolCall('get_media_context'),
+  staticToolCall('get_frame'),
   staticToolCall('get_transcript'),
   staticToolCall('search_transcript'),
   staticToolCall('find_retakes'),
