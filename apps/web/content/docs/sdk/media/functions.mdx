@@ -173,7 +173,7 @@ function getActiveMediaItems(
 ): ActiveMediaItem[]
 ```
 
-Returns the video and audio items the preview pool keeps live at `timeMs`, with their source time, rate, volume, and reversal. When `audioSources` maps an element id to a URL, each item for that element carries it as `audioSrc`.
+Returns the video and audio items the preview pool keeps live at `timeMs`, with their source time, rate, volume, and reversal. When `audioSources` maps an element id to a URL, the item that plays that element's audio carries it as `audioSrc`. The other camera feeds of a multicam do not.
 
 ### exportProject
 

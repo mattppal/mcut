@@ -114,7 +114,7 @@ Returns `true` when the element has a fade in or fade out longer than 0 ms.
 
 `function getVoiceSource(project: Project, element: TimelineElement): { assetId: AssetId; amount: number } | null`
 
-Returns the asset and mix amount for a clip whose voice cleanup is on and whose amount is above 0. Video and audio clips use their own asset. Multicam clips use `getMulticamAudioSource`. Returns null when voice is off, the amount is 0, or the asset is missing.
+Returns the asset and mix amount for a clip whose voice cleanup is on and whose amount is above 0. Video and audio clips use their own asset. A multicam uses the asset of its audio source, the one `resolveElementAudioSource` returns. Returns null when voice is off, the amount is 0, or the asset is missing.
 
 ### resolveElementAudioSource
 
