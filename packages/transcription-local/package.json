@@ -1,6 +1,6 @@
 {
   "name": "@mcut/transcription-local",
-  "version": "0.1.0-alpha.10",
+  "version": "1.0.0-alpha.12",
   "description": "On-device mcut transcription provider. Whisper via Transformers.js in a worker, WebGPU-gated, with chunked streaming and repetition/VAD guards",
   "license": "Apache-2.0",
   "type": "module",
