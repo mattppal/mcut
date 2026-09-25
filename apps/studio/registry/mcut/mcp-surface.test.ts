@@ -77,7 +77,7 @@ describe('MCP tool manifest', () => {
 
     expect(body.profile).toBe('full')
     expect(tools).toEqual(listMcpToolDefinitions('full'))
-    expect(tools.length, '19 agent tools + 42 editor operators + 59 timeline commands').toBe(120)
+    expect(tools.length, '19 agent tools + 43 editor operators + 59 timeline commands').toBe(121)
     expect(toolNames.size).toBe(tools.length)
     for (const name of LIVE_MCP_STATIC_TOOL_REQUESTS) expect(toolNames.has(name)).toBe(true)
     for (const id of operatorIds) expect(toolNames.has(liveMcpOperatorToolName(id))).toBe(true)
