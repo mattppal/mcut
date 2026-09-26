@@ -4,12 +4,11 @@ import { collectAudibleSegments } from './export-audio'
 import type { AudibleSegment } from './export-audio-composite'
 import { AUDIO_SAMPLE_RATE } from './export-types'
 import { inputFor } from './probe'
-import { contextAt, heardContextS, timelineAt, type AudioAnchor } from './preview-audio-plan'
+import { contextAt, epochChange, heardContextS, timelineAt, type AudioAnchor } from './preview-audio-plan'
 import { createVoice, dropVoice, LOOKAHEAD_S, pumpVoice, retuneVoice, START_LEAD_S, type Voice } from './preview-audio-voice'
 import { sourceAudioSink } from './source-timing'
 
 const MAX_AUDIBLE_RATE = 4
-const REANCHOR_TOLERANCE_MS = 1
 
 interface OpenSource {
   input: Input
@@ -135,8 +134,7 @@ export class PreviewAudio {
 
   private ensureEpoch(context: AudioContext, master: GainNode, playback: PlaybackState, segments: KeyedSegment[]): Epoch {
     const current = this.epoch
-    if (current && current.anchor.rate === playback.playbackRate && Math.abs(playback.currentTimeMs - current.reportedMs) <= REANCHOR_TOLERANCE_MS)
-      return current
+    if (current && epochChange({ rate: current.anchor.rate, reportedMs: current.reportedMs }, playback) === 'keep') return current
     this.flush()
     const output = context.createGain()
     output.connect(master)

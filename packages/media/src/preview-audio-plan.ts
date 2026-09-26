@@ -26,6 +26,20 @@ export function heardContextS(stamp: OutputStamp, perfMs: number): number {
   return stamp.contextTime + (perfMs - stamp.performanceTime) / 1000
 }
 
+const REANCHOR_TOLERANCE_MS = 1
+
+export interface EpochView {
+  rate: number
+  reportedMs: number
+}
+
+export type EpochChange = 'keep' | 'restart'
+
+export function epochChange(current: EpochView | null, playback: { currentTimeMs: number; playbackRate: number }): EpochChange {
+  if (!current || Math.abs(playback.currentTimeMs - current.reportedMs) > REANCHOR_TOLERANCE_MS) return 'restart'
+  return current.rate === playback.playbackRate ? 'keep' : 'restart'
+}
+
 const STRETCH_PREROLL_MS = 250
 const CROSSFADE_MS = 10
 const REMAP_STEP_MS = 10
