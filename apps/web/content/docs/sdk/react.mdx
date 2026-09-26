@@ -362,4 +362,4 @@ Creates or adopts an `EditorEngine` and a `PreviewMediaPool` and provides both t
 function PlayerCanvas({ renderer = 'webgpu', ...props }: PlayerCanvasProps)
 ```
 
-Picks the WebGPU or Canvas2D playback loop for the chosen renderer, then renders the project at the current playback time onto a canvas and, when interactive, handles element selection, drag, resize, and rotate gestures.
+Picks the WebGPU or Canvas2D playback loop for the chosen renderer, then renders the project at the current playback time onto a canvas and, when playing, advances that time by the pool's audio clock so the picture follows the sound. When interactive, it handles element selection, drag, resize, and rotate gestures.

@@ -93,16 +93,13 @@ Options for `extractAudioToWav`, the output sample rate and channel count, a pro
 ```ts
 interface ActiveMediaItem {
   assetId: AssetId
-  kind: 'video' | 'audio'
   sourceTimeMs: number
   rate: number
-  volume: number
   reversed?: boolean
-  audioSrc?: string
 }
 ```
 
-One media asset that is playing at a moment, with its source time, playback rate, volume, reversal, and optional replacement audio URL.
+One video feed that is showing at a moment, with its source time, playback rate, and reversal.
 
 ### PreviewSyncOptions
 
@@ -110,12 +107,10 @@ One media asset that is playing at a moment, with its source time, playback rate
 interface PreviewSyncOptions {
   isPlaying: boolean
   playbackRate: number
-  masterVolume: number
-  muted: boolean
 }
 ```
 
-The playback clock state passed to `PreviewMediaPool.sync`, playing flag, rate, master volume, and mute.
+The playback state passed to `PreviewMediaPool.sync`, the playing flag and the transport rate.
 
 ### ContainerFormatId
 

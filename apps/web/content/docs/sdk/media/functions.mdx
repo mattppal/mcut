@@ -166,14 +166,10 @@ Registers the WASM AAC encoder once when the runtime cannot encode AAC natively,
 ### getActiveMediaItems
 
 ```ts
-function getActiveMediaItems(
-  project: Project,
-  timeMs: number,
-  audioSources?: ReadonlyMap<ElementId, string>,
-): ActiveMediaItem[]
+function getActiveMediaItems(project: Project, timeMs: number): ActiveMediaItem[]
 ```
 
-Returns the video and audio items the preview pool keeps live at `timeMs`, with their source time, rate, volume, and reversal. When `audioSources` maps an element id to a URL, the item that plays that element's audio carries it as `audioSrc`. The other camera feeds of a multicam do not.
+Returns the video feeds the preview pool keeps live at `timeMs` on visible tracks, with their source time, rate, and reversal. Audio clips and audio-only multicam sources are left out because `PreviewAudio` plays sound.
 
 ### exportProject
 
