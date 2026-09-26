@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test'
 import { chromium, type Browser, type Page } from '@playwright/test'
+import type { MagnifiedReading } from './magnified-multicam-probe'
 import type { ZoomBlurReading } from './zoom-blur-probe'
 
 let server: ReturnType<typeof Bun.serve>
@@ -7,7 +8,7 @@ let browser: Browser
 let page: Page
 
 beforeAll(async () => {
-  const probes = ['zoom-blur-probe'].map((name) => `${import.meta.dir}/${name}.ts`)
+  const probes = ['zoom-blur-probe', 'magnified-multicam-probe'].map((name) => `${import.meta.dir}/${name}.ts`)
   const bundle = await Bun.build({ entrypoints: probes, target: 'browser' })
   if (!bundle.success) throw new Error(bundle.logs.join('\n'))
   const scripts = await Promise.all(bundle.outputs.map((output) => output.text()))
@@ -27,4 +28,13 @@ test.each([8, 16])('a zoom ramp blurred over %i samples keeps flat grey at 100 a
   const reading: ZoomBlurReading = await page.evaluate((count) => zoomBlurProbe(count), samples)
   expect(Math.abs(reading.grey - 100)).toBeLessThanOrEqual(1)
   expect(reading.cameraMaxShift).toBeLessThanOrEqual(1)
+})
+
+test('a multicam magnified 2x keeps a checkerboard as crisp as a video clip magnified 2x, at export, in a half-scale preview, and cropped', async () => {
+  const reading: MagnifiedReading = await page.evaluate(() => magnifiedMulticamProbe())
+  expect(reading).toEqual({
+    export: { video: 128, multicam: 128 },
+    halfPreview: { video: 128, multicam: 128 },
+    cropped: { video: 128, multicam: 128 },
+  })
 })
