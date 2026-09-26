@@ -23,6 +23,7 @@ export interface ElementRenderContext {
   timeMs: number
   viewTimeMs: number
   source: FrameSource | undefined
+  acquireScratch: (width: number, height: number) => Canvas2D
 }
 
 export type ElementRenderer<E extends TimelineElement = TimelineElement> = (element: E, context: ElementRenderContext) => void

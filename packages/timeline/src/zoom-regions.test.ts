@@ -5,7 +5,7 @@ import { createProject, splitElementAt, type MulticamElement, type Project, type
 import { getElement } from './selectors'
 import { summarizeProject } from './summarize'
 import { thrownBy } from './test-helpers'
-import { getClipView, getSlotView, getZoomShutterMs, listZoomRegions, type ZoomRegion } from './zoom-regions'
+import { getClipView, getSlotView, getZoomedRect, getZoomShutterMs, getZoomWindow, listZoomRegions, type ZoomRegion } from './zoom-regions'
 
 function projectWithScreenAndCam(): Project {
   let project = createProject({ width: 1280, height: 720 })
@@ -80,6 +80,13 @@ describe('zoom regions on a clip', () => {
     expect(getClipView(clip, 4000)).toEqual({ scale: 1, focus: { x: 0.5, y: 0.5 } })
     expect(getZoomShutterMs(clip, 1100, 40)).toBe(20)
     expect(getZoomShutterMs(clip, 2500, 40)).toBe(0)
+  })
+
+  test('the zoom window is the anchored 1/scale share of what the target shows, and grows past the frame below scale 1', () => {
+    expect(getZoomWindow({ scale: 2, focus: { x: 1, y: 0 } })).toEqual({ x: 0.5, y: 0, w: 0.5, h: 0.5 })
+    expect(getZoomWindow({ scale: 2, focus: { x: 1, y: 1 } }, { x: 1, y: 0.5 })).toEqual({ x: 0.5, y: 0.75, w: 0.5, h: 0.25 })
+    expect(getZoomWindow({ scale: 0.8, focus: { x: 0.5, y: 0.5 } })).toEqual({ x: -0.125, y: -0.125, w: 1.25, h: 1.25 })
+    expect(getZoomedRect({ scale: 2, focus: { x: 1, y: 0 } }, { x: 0.5, y: 0, w: 0.5, h: 0.5 })).toEqual({ x: 0, y: 0, w: 1, h: 1 })
   })
 
   test('a rect aims the zoom at its center and fills it only up to the preset scale', () => {

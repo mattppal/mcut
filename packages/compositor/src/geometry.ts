@@ -1,4 +1,4 @@
-import type { Project, TextBox, TextRun, TextStyle, TimelineElement, Transform } from '@mcut/timeline'
+import { assertNever, type Crop, type Project, type TextBox, type TextRun, type TextStyle, type TimelineElement, type Transform } from '@mcut/timeline'
 
 export function toCanvasPoint(project: Project, x: number, y: number): { x: number; y: number } {
   return { x: project.width / 2 + x, y: project.height / 2 + y }
@@ -28,23 +28,32 @@ export interface SizeHelpers {
   measureText?: (text: string, style: TextStyle, box?: TextBox, runs?: readonly TextRun[]) => ElementSize
 }
 
-export function getElementNaturalSize(element: TimelineElement, helpers: SizeHelpers = {}): ElementSize | null {
-  if (element.type === 'audio' || element.type === 'caption' || element.type === 'multicam') {
-    return null
-  }
-  if (element.type === 'text') {
-    return helpers.measureText?.(element.text, element.style, element.box, element.runs) ?? null
-  }
-  const size = helpers.getAssetSize?.(element.assetId) ?? null
-  if (size && 'crop' in element && element.crop) {
-    return { width: size.width * element.crop.w, height: size.height * element.crop.h }
-  }
-  return size
+function croppedSize(size: ElementSize, crop: Crop | undefined): ElementSize {
+  return crop ? { width: size.width * crop.w, height: size.height * crop.h } : size
 }
 
-export function getElementDisplaySize(element: TimelineElement, helpers: SizeHelpers = {}): ElementSize | null {
+export function getElementNaturalSize(project: Project, element: TimelineElement, helpers: SizeHelpers = {}): ElementSize | null {
+  switch (element.type) {
+    case 'audio':
+    case 'caption':
+      return null
+    case 'text':
+      return helpers.measureText?.(element.text, element.style, element.box, element.runs) ?? null
+    case 'multicam':
+      return croppedSize({ width: project.width, height: project.height }, element.crop)
+    case 'video':
+    case 'image': {
+      const size = helpers.getAssetSize?.(element.assetId) ?? null
+      return size ? croppedSize(size, element.crop) : null
+    }
+    default:
+      return assertNever(element)
+  }
+}
+
+export function getElementDisplaySize(project: Project, element: TimelineElement, helpers: SizeHelpers = {}): ElementSize | null {
   if (!('transform' in element)) return null
-  const natural = getElementNaturalSize(element, helpers)
+  const natural = getElementNaturalSize(project, element, helpers)
   if (!natural || natural.width <= 0 || natural.height <= 0) return null
   return {
     width: natural.width * Math.abs(element.transform.scaleX),
@@ -75,22 +84,11 @@ export function getTransformForDisplaySize(transform: Transform, natural: Elemen
 }
 
 export function getElementOBB(project: Project, element: TimelineElement, helpers: SizeHelpers = {}): OBB | null {
-  if (element.type === 'audio' || element.type === 'caption' || element.type === 'multicam') {
-    return null
-  }
-
-  const natural = getElementNaturalSize(element, helpers)
-  const transform = element.transform
-  if (!natural || natural.width <= 0 || natural.height <= 0) return null
-
-  const center = toCanvasPoint(project, transform.x, transform.y)
-  return {
-    cx: center.x,
-    cy: center.y,
-    width: natural.width * Math.abs(transform.scaleX),
-    height: natural.height * Math.abs(transform.scaleY),
-    rotation: transform.rotation,
-  }
+  if (!('transform' in element)) return null
+  const size = getElementDisplaySize(project, element, helpers)
+  if (!size) return null
+  const center = toCanvasPoint(project, element.transform.x, element.transform.y)
+  return { cx: center.x, cy: center.y, width: size.width, height: size.height, rotation: element.transform.rotation }
 }
 
 export function hitTestOBB(obb: OBB, x: number, y: number): boolean {
