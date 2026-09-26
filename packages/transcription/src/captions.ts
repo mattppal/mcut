@@ -106,7 +106,7 @@ export function toCaptionElements(result: TranscriptResult, options: ToCaptionEl
         startMs: mapSourceTimeToCaptionTime(word.startMs, sourceStartMs, sourceEndMs, timeOffsetMs),
         endMs: mapSourceTimeToCaptionTime(word.endMs, sourceStartMs, sourceEndMs, timeOffsetMs),
       }))
-      .filter((word) => word.endMs > word.startMs)
+      .filter((word) => word.endMs >= word.startMs)
     groups = groupWords(words, options)
   } else if (result.segments.length > 0) {
     groups = result.segments

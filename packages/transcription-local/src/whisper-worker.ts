@@ -1,6 +1,6 @@
 import { env, pipeline } from '@huggingface/transformers'
-import type { TranscriptResult, TranscriptSegment } from '@mcut/transcription'
-import { mergeChunkSegments, planChunks, type ChunkSegmentResult } from './chunking'
+import type { TranscriptResult, TranscriptWord } from '@mcut/transcription'
+import { mergeChunkWords, planChunks, segmentsFromWords, type ChunkResult } from './chunking'
 import { textHasRepetitionLoop } from './repetition'
 import { hasSpeech } from './vad'
 import { WHISPER_SAMPLE_RATE } from './wav'
@@ -13,10 +13,12 @@ interface WorkerScope {
 
 const scope = globalThis as unknown as WorkerScope
 
-type AsrPipeline = (
-  audio: Float32Array,
-  options: Record<string, unknown>,
-) => Promise<{ text: string; chunks?: Array<{ text: string; timestamp: [number | null, number | null] }> }>
+interface AsrChunk {
+  text: string
+  timestamp: [number | null, number | null]
+}
+
+type AsrPipeline = (audio: Float32Array, options: Record<string, unknown>) => Promise<{ text: string; chunks?: AsrChunk[] }>
 
 interface OrtWasmEnv {
   wasmPaths?: string | { mjs?: string | URL; wasm?: string | URL }
@@ -107,10 +109,10 @@ async function transcribeWindow(
   audio: Float32Array,
   multilingual: boolean,
   language: string | undefined,
-): Promise<Array<{ text: string; timestamp: [number | null, number | null] }> | null> {
+): Promise<AsrChunk[] | null> {
   const baseOptions: Record<string, unknown> = {
-    // onnx-community Whisper builds need a _timestamped export for word-level return_timestamps. https://huggingface.co/onnx-community/whisper-medium.en_timestamped
-    return_timestamps: true,
+    // onnx-community Whisper builds need a _timestamped export for word-level return_timestamps. https://huggingface.co/onnx-community/whisper-base_timestamped
+    return_timestamps: 'word',
     ...whisperLanguageTaskOptions(multilingual, language),
   }
   for (const temperature of [0, 0.2, 0.4]) {
@@ -118,11 +120,23 @@ async function transcribeWindow(
       ...baseOptions,
       ...(temperature > 0 ? { temperature, do_sample: true } : {}),
     })
-    if (!textHasRepetitionLoop(output.text)) {
-      return output.chunks ?? [{ text: output.text, timestamp: [0, audio.length / WHISPER_SAMPLE_RATE] }]
-    }
+    if (!textHasRepetitionLoop(output.text)) return output.chunks ?? []
   }
   return null
+}
+
+function windowWords(raw: AsrChunk[], offsetMs: number): TranscriptWord[] {
+  const words: TranscriptWord[] = []
+  for (const piece of raw) {
+    const text = piece.text.trim()
+    if (!text) continue
+    const [startS, endS] = piece.timestamp
+    const previousEndMs = words.at(-1)?.endMs ?? offsetMs
+    const startMs = startS === null ? previousEndMs : Math.round(offsetMs + startS * 1000)
+    const endMs = endS === null ? startMs : Math.round(offsetMs + endS * 1000)
+    words.push({ text, startMs, endMs: Math.max(startMs, endMs) })
+  }
+  return words
 }
 
 async function handleTranscribe(message: WhisperWorkerRequest): Promise<TranscriptResult> {
@@ -133,24 +147,12 @@ async function handleTranscribe(message: WhisperWorkerRequest): Promise<Transcri
 
   const durationS = audio.length / WHISPER_SAMPLE_RATE
   const chunks = planChunks(durationS)
-  const results: ChunkSegmentResult[] = []
+  const results: ChunkResult[] = []
   for (const [index, chunk] of chunks.entries()) {
     const window = audio.subarray(Math.floor(chunk.startS * WHISPER_SAMPLE_RATE), Math.floor(chunk.endS * WHISPER_SAMPLE_RATE))
     if (hasSpeech(window, WHISPER_SAMPLE_RATE)) {
       const raw = await transcribeWindow(asr, window, multilingual, language)
-      if (raw) {
-        const offsetMs = chunk.startS * 1000
-        const segments: TranscriptSegment[] = []
-        for (const piece of raw) {
-          const text = piece.text.trim()
-          if (!text) continue
-          const [startS, endS] = piece.timestamp
-          const startMs = Math.round(offsetMs + (startS ?? 0) * 1000)
-          const endMs = endS !== null ? Math.round(offsetMs + endS * 1000) : startMs + 1000
-          segments.push({ text, startMs, endMs: Math.max(startMs, endMs) })
-        }
-        results.push({ chunk, segments })
-      }
+      if (raw) results.push({ chunk, words: windowWords(raw, chunk.startS * 1000) })
     }
     scope.postMessage({
       type: 'progress',
@@ -160,13 +162,13 @@ async function handleTranscribe(message: WhisperWorkerRequest): Promise<Transcri
     })
   }
 
-  const segments = mergeChunkSegments(results)
+  const words = mergeChunkWords(results)
   return {
-    text: segments.map((s) => s.text).join(' '),
+    text: words.map((w) => w.text).join(' '),
     ...(language ? { language } : {}),
     durationMs: Math.round(durationS * 1000),
-    words: [],
-    segments,
+    words,
+    segments: segmentsFromWords(words),
   }
 }
 

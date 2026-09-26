@@ -218,6 +218,9 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const project = await targetProject(target)
       const transcript = getProjectTranscript(project, { includeWords: true })
       const words = transcript.captions.flatMap((caption) => caption.words ?? [])
+      if (words.length === 0 && transcript.captions.length > 0) {
+        return failure('find_retakes needs word timings, but the captions have segment timing only. Call ensure_transcript with replace true to re-transcribe.')
+      }
       if (words.length === 0) return failure('find_retakes needs a word-timed transcript. Call ensure_transcript first.')
       const { elementId, ...options } = call.arguments
       const candidates = findRetakes(words, options)

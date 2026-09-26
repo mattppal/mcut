@@ -76,6 +76,21 @@ describe('toCaptionElements', () => {
     expect(() => applyCommand(project, buildApplyCaptionsCommand(overlapping))).not.toThrow()
   })
 
+  test('keeps zero-length words', () => {
+    const zero: TranscriptResult = {
+      text: 'an example here',
+      words: [
+        { text: 'an', startMs: 0, endMs: 200 },
+        { text: 'example', startMs: 300, endMs: 300 },
+        { text: 'here', startMs: 400, endMs: 700 },
+      ],
+      segments: [],
+    }
+    const elements = toCaptionElements(zero)
+    expect(elements.map((element) => element.text)).toEqual(['an example here'])
+    expect(elements[0]!.words![1]).toEqual({ text: 'example', startMs: 300, endMs: 300 })
+  })
+
   test('falls back to a single caption when only text is available', () => {
     const bare: TranscriptResult = { text: 'Just text.', words: [], segments: [], durationMs: 3000 }
     expect(toCaptionElements(bare)).toEqual([{ type: 'caption', startMs: 0, durationMs: 3000, text: 'Just text.' }])
