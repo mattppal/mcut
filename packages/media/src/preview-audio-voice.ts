@@ -15,7 +15,7 @@ import {
   type WindowGate,
 } from './preview-audio-plan'
 
-export const START_LEAD_S = 0.04
+export const START_LEAD_S = 0.025
 export const LOOKAHEAD_S = 1
 const WINDOW_S = 0.5
 const RETRY_S = 1
