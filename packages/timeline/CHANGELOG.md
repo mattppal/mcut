@@ -1,5 +1,11 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.15
+
+### Patch Changes
+
+- [#199](https://github.com/mattppal/mcut/pull/199) [`d9c79e8`](https://github.com/mattppal/mcut/commit/d9c79e82e236119e64192b02ece2529e1cac6a38) Thanks [@mattppal](https://github.com/mattppal)! - A multicam zoom region with no `source` now zooms the whole composite, overlays included, instead of being rejected.
+
 ## 0.1.0-alpha.14
 
 ### Patch Changes
