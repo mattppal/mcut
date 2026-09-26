@@ -155,6 +155,7 @@ function byteReader(src: MediaSourceLike): ByteReader {
   return async (start, end) => {
     const response = await fetch(src, { headers: { Range: `bytes=${start}-${end - 1}` } })
     if (response.status === 206) return new Uint8Array(await response.arrayBuffer())
+    if (response.status === 416) return new Uint8Array(0)
     if (!response.ok) throw new Error(`Reading bytes ${start}-${end - 1} of ${src} failed with HTTP ${response.status}.`)
     const reader = response.body?.getReader()
     const chunks: Uint8Array[] = []
