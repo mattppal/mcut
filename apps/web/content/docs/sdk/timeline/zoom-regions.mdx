@@ -106,6 +106,10 @@ Explicit fields override the preset. A `rect` aims the zoom at its center and fi
 
 `getClipView(element, timelineMs)` returns the `ContentView` of a video or image clip inside its crop, or of a whole multicam composite from its zooms with no `source`.
 
+### getZoomedRect
+
+`getZoomedRect(view, rect)` maps a normalized frame rect through a whole-composite `ContentView`. It returns where the rect lands on the canvas when the composite shows the view's 1/scale crop window at its anchored focus. The multicam renderer draws every slot through it, and `flattenMulticam` bakes it into each flattened clip's transform keyframes, so a flattened clip follows its slot exactly.
+
 ### getZoomShutterMs
 
 `getZoomShutterMs(element, timelineMs, frameMs)` returns the motion blur shutter in milliseconds while any zoom on the element ramps, and 0 while every zoom holds or rests. The compositor renders the element at views sampled across this window into a scratch canvas and composites the average once, the same path as keyframe motion blur.
