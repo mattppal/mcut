@@ -199,6 +199,22 @@ describe('frame style rendering', () => {
     expect(ctx.callsTo('drawImage').map((c) => c.args.slice(1))).toEqual([[0, 0, 640, 360, -960, -540, 1920, 1080]])
   })
 
+  test('a whole-composite zoom mid ramp crops the anchored window around a picture-in-picture slot', () => {
+    const base = projectWithMulticam({ width: 1920, height: 1080 }, { rect: { x: 0.7, y: 0.69, w: 0.275, h: 0.275 } })
+    const project = applyCommand(base, {
+      type: 'addZoomRegion',
+      elementId: 'e-mc',
+      zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 1.5, focus: { x: 0.84, y: 0.83 }, easing: 'linear' },
+    })
+    const ctx = new FakeContext2D()
+    renderFrame(asCtx(ctx), project, 500, { source: new FakeSource() })
+    const last = (method: string) => (ctx.callsTo(method).at(-1)?.args ?? []).map((v) => Math.round(Number(v) * 1e6) / 1e6)
+    expect(last('rect')).toEqual([-960, -540, 1920, 1080])
+    expect(last('translate')).toEqual([-120, -67.5])
+    expect(last('scale')).toEqual([1.25, 1.25])
+    expect(last('drawImage').slice(1)).toEqual([0, 0, 640, 360, 384, 205.2, 528, 297])
+  })
+
   test('a reframe track slides a slot crop onto the subject, and the fitted part keeps following once the crop meets the frame edge', () => {
     const cropped = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
     const project = applyCommand(cropped, {
