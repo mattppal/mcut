@@ -8,7 +8,8 @@ in over `inMs`, holds for `holdMs`, and zooms back out over `outMs`, all in
 element-local time. A multicam zoom names a `source` key, so every slot showing
 that source zooms and the other slots keep their framing. The screen can zoom
 while the camera overlay stays put. A slot zooms inside its crop, so a zoom
-never shows source the crop cuts away.
+never shows source the crop cuts away. A multicam zoom with no `source` zooms
+the whole composite, overlays included, inside the element's frame.
 
 Regions on one target never overlap. The zoom commands keep the region they add
 or change inside the element. A split copies a region that crosses the cut into
@@ -59,7 +60,7 @@ axis it cuts, and a contain slot shows more than 1 on the axis it letterboxes.
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `id` | string | Stable id, minted as `z-...` when omitted |
-| `source` | string, optional | Multicam source key whose slots zoom. Absent on clips |
+| `source` | string, optional | Multicam source key whose slots zoom. Absent on clips, and absent on a multicam zoom of the whole composite |
 | `atMs` | integer ms | Element-local start of the zoom-in, negative on the right half of a split through a zoom |
 | `inMs`, `holdMs`, `outMs` | integer ms | Ramp in, hold, ramp out |
 | `focus` | `{ x, y }` from 0 to 1 | Target center, across the cropped frame of a clip or multicam slot |
@@ -103,7 +104,7 @@ Explicit fields override the preset. A `rect` aims the zoom at its center and fi
 
 ### getClipView
 
-`getClipView(element, timelineMs)` returns the `ContentView` of a video or image clip inside its crop.
+`getClipView(element, timelineMs)` returns the `ContentView` of a video or image clip inside its crop, or of a whole multicam composite from its zooms with no `source`.
 
 ### getZoomShutterMs
 

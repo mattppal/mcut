@@ -257,6 +257,16 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
     if (!layout) return
     withTransform(ctx, context, element, () => {
       drawFramedComposite(ctx, project, element, () => {
+        const view = getClipView(element, context.viewTimeMs)
+        if (view.scale > 1) {
+          const left = view.focus.x * (1 - 1 / view.scale) * W
+          const top = view.focus.y * (1 - 1 / view.scale) * H
+          ctx.beginPath()
+          ctx.rect(-W / 2, -H / 2, W, H)
+          ctx.clip()
+          ctx.translate(-W / 2 - (left - W / 2) * view.scale, -H / 2 - (top - H / 2) * view.scale)
+          ctx.scale(view.scale, view.scale)
+        }
         for (const slot of layout.slots) {
           const source = element.sources.find((s) => s.key === slot.source)
           if (!source || isAudioOnlySource(project, source)) continue
