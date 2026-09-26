@@ -1,124 +1,53 @@
-import type { Input, VideoSampleSink } from 'mediabunny'
 import type { FrameSource } from '@mcut/compositor'
+import { DecodedVideoFrames } from './decoded-video-frames'
+import { PreviewAudio } from './preview-audio'
 import { ScrubFrameCache } from './scrub-cache'
-import { inputFor } from './probe'
-import { sampleCanvas } from './sample-bitmap'
 import { canUseNativeVideoPreview } from './video-capabilities'
 import {
   assertNever,
-  getEffectiveVolume,
   getRenderableElements,
   getSourceTimeMs,
   getSpeedAt,
   isAudioOnlySource,
-  isElementActiveAt,
   isMediaClip,
   type AssetId,
   type AssetRef,
-  type ElementId,
   type MediaClip,
   type Project,
 } from '@mcut/timeline'
 
 export interface ActiveMediaItem {
   assetId: AssetId
-  kind: 'video' | 'audio'
   sourceTimeMs: number
   rate: number
-  volume: number
   reversed?: boolean
-  audioSrc?: string
 }
 
-const SAME_SOURCE_TOLERANCE_MS = 40
-const SAME_RATE_TOLERANCE = 0.001
-
-function hasSameMediaClock(a: ActiveMediaItem, b: ActiveMediaItem): boolean {
-  return (
-    Math.abs(a.sourceTimeMs - b.sourceTimeMs) <= SAME_SOURCE_TOLERANCE_MS &&
-    Math.abs(a.rate - b.rate) <= SAME_RATE_TOLERANCE &&
-    Boolean(a.reversed) === Boolean(b.reversed)
-  )
-}
-
-function mergeActiveMediaItems(current: ActiveMediaItem, next: ActiveMediaItem): ActiveMediaItem {
-  const kind = current.kind === 'video' || next.kind === 'video' ? 'video' : 'audio'
-  const currentAudible = current.volume > 0
-  const nextAudible = next.volume > 0
-
-  if (currentAudible && nextAudible) {
-    const preferred = next.volume > current.volume ? next : current
-    return {
-      ...preferred,
-      kind,
-      volume: hasSameMediaClock(current, next) ? current.volume + next.volume : Math.max(current.volume, next.volume),
-    }
-  }
-
-  if (nextAudible && !currentAudible) return { ...next, kind }
-  if (currentAudible && !nextAudible) return { ...current, kind }
-  if (current.kind !== 'video' && next.kind === 'video') return { ...next, kind }
-  return { ...current, kind }
-}
-
-function coalesceKey(item: ActiveMediaItem): string {
-  if (item.audioSrc === undefined) return item.assetId
-  return `${item.assetId}\u0000${item.audioSrc}`
-}
-
-function stemPoolKey(assetId: AssetId, audioSrc: string): string {
-  return `${assetId}\u0000${audioSrc}`
-}
-
-export function coalesceActiveMediaItems(items: ActiveMediaItem[]): ActiveMediaItem[] {
-  const grouped = new Map<string, ActiveMediaItem>()
-  for (const item of items) {
-    const key = coalesceKey(item)
-    const current = grouped.get(key)
-    grouped.set(key, current ? mergeActiveMediaItems(current, item) : item)
-  }
-  return [...grouped.values()]
-}
-
-type MediaFeed = Pick<ActiveMediaItem, 'assetId' | 'kind'> & { offsetMs: number; heard: boolean }
-
-function mediaFeeds(project: Project, clip: MediaClip): MediaFeed[] {
+function videoFeeds(project: Project, clip: MediaClip): { assetId: AssetId; offsetMs: number }[] {
   switch (clip.type) {
     case 'video':
+      return [{ assetId: clip.assetId, offsetMs: 0 }]
     case 'audio':
-      return [{ assetId: clip.assetId, kind: clip.type, offsetMs: 0, heard: true }]
+      return []
     case 'multicam':
-      return clip.sources
-        .map((source): MediaFeed => {
-          const kind = isAudioOnlySource(project, source) ? 'audio' : 'video'
-          return { assetId: source.assetId, kind, offsetMs: source.offsetMs, heard: source.key === clip.audioSource }
-        })
-        .filter((feed) => feed.kind === 'video' || feed.heard)
+      return clip.sources.filter((source) => !isAudioOnlySource(project, source)).map((source) => ({ assetId: source.assetId, offsetMs: source.offsetMs }))
     default:
       return assertNever(clip)
   }
 }
 
-export function getActiveMediaItems(project: Project, timeMs: number, audioSources?: ReadonlyMap<ElementId, string>): ActiveMediaItem[] {
+export function getActiveMediaItems(project: Project, timeMs: number): ActiveMediaItem[] {
   const items: ActiveMediaItem[] = []
   for (const { track, element } of getRenderableElements(project, timeMs)) {
-    if (!isMediaClip(element)) continue
-    if (element.type !== 'audio' && track.hidden && (track.muted || element.muted)) continue
+    if (!isMediaClip(element) || track.hidden) continue
     const localMs = timeMs - element.startMs
-    const audible = isElementActiveAt(element, timeMs)
-    if (element.type === 'audio' && !audible) continue
     const groupMs = getSourceTimeMs(element, localMs)
-    const silent = !audible || track.muted || element.muted || element.reversed === true
-    const audioSrc = audioSources?.get(element.id)
-    for (const feed of mediaFeeds(project, element)) {
+    for (const feed of videoFeeds(project, element)) {
       items.push({
         assetId: feed.assetId,
-        kind: feed.kind,
         sourceTimeMs: Math.max(0, feed.offsetMs + groupMs),
         rate: getSpeedAt(element, localMs),
-        volume: silent || !feed.heard ? 0 : getEffectiveVolume(element, timeMs),
         ...(element.reversed ? { reversed: true } : {}),
-        ...(feed.heard && audioSrc ? { audioSrc } : {}),
       })
     }
   }
@@ -128,38 +57,20 @@ export function getActiveMediaItems(project: Project, timeMs: number, audioSourc
 export interface PreviewSyncOptions {
   isPlaying: boolean
   playbackRate: number
-  masterVolume: number
-  muted: boolean
 }
 
 const MAX_CATCHUP_DRIFT_S = 1
-const MIN_CATCHUP_DRIFT_S = 0.05
+const MIN_CATCHUP_DRIFT_S = 0.01
+const CATCHUP_GAIN = 4
 const CATCHUP_RATE_MAX_BIAS = 1.5
 const CATCHUP_RATE_MIN_BIAS = 0.75
 const PAUSED_DRIFT_TOLERANCE_S = 0.04
-const DECODED_FRAME_STEP_MS = 100
-const DECODED_FRAME_NEARBY_MS = 750
 const MAX_SEEK_LEAD_S = 2
 const STUCK_SEEK_MS = 4000
 const RECOVERY_INTERVAL_MS = 3000
-const DECODED_INIT_RETRY_MS = 3000
-
-interface DecodedVideoState {
-  src: string | null
-  input: Input | null
-  sink: VideoSampleSink | null
-  frames: Map<number, CanvasImageSource>
-  pendingKey: number | null
-  failed: boolean
-  lastInitFailureAt: number
-}
-
-function decodedFrameKey(sourceTimeMs: number): number {
-  return Math.max(0, Math.round(sourceTimeMs / DECODED_FRAME_STEP_MS) * DECODED_FRAME_STEP_MS)
-}
 
 interface PooledMedia {
-  el: HTMLVideoElement | HTMLAudioElement
+  el: HTMLVideoElement
   src: string
   seekStartedAt: number | null
   seekLatencyS: number
@@ -170,29 +81,22 @@ export class PreviewMediaPool implements FrameSource {
   private media = new Map<AssetId, PooledMedia>()
   private images = new Map<AssetId, ImageBitmap | 'loading' | 'error'>()
   private scrubCaches = new Map<AssetId, ScrubFrameCache>()
-  private decodedVideos = new Map<AssetId, DecodedVideoState>()
-  private stemAudio = new Map<string, PooledMedia>()
-  private audioSources: ReadonlyMap<ElementId, string> | undefined
   private disposed = false
   private playing = false
   private frameChanges = 0
-
-  constructor(private resolveAsset: (assetId: AssetId) => AssetRef | undefined) {}
-
-  get frameVersion(): number {
-    return this.frameChanges
-  }
 
   private readonly markFrameChanged = (): void => {
     this.frameChanges++
   }
 
-  setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
-    this.audioSources = sources
-  }
+  private readonly decoded = new DecodedVideoFrames(this.markFrameChanged)
 
-  getAudioSources(): ReadonlyMap<ElementId, string> | undefined {
-    return this.audioSources
+  readonly audio = new PreviewAudio()
+
+  constructor(private resolveAsset: (assetId: AssetId) => AssetRef | undefined) {}
+
+  get frameVersion(): number {
+    return this.frameChanges
   }
 
   getFrame(assetId: AssetId, sourceTimeMs: number): CanvasImageSource | null {
@@ -210,10 +114,10 @@ export class PreviewMediaPool implements FrameSource {
 
     if (asset.kind === 'video') {
       if (!canUseNativeVideoPreview(asset)) {
-        return this.getDecodedVideoFrame(assetId, asset, sourceTimeMs)
+        return this.decoded.getFrame(assetId, asset, sourceTimeMs)
       }
       const element = this.media.get(assetId)?.el
-      if (!(element instanceof HTMLVideoElement)) return null
+      if (!element) return null
       const cache = this.ensureScrubCache(assetId)
       const onFrame = element.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && !element.seeking
       if (onFrame) {
@@ -233,40 +137,30 @@ export class PreviewMediaPool implements FrameSource {
   sync(items: ActiveMediaItem[], options: PreviewSyncOptions): void {
     if (this.disposed) return
     this.playing = options.isPlaying && options.playbackRate > 0
-    const activeItems = coalesceActiveMediaItems(items)
-    const activeIds = new Set(activeItems.map((item) => item.assetId))
-    const activeStemKeys = new Set<string>()
-    for (const item of activeItems) {
-      if (item.audioSrc) activeStemKeys.add(stemPoolKey(item.assetId, item.audioSrc))
+    const activeItems = new Map<AssetId, ActiveMediaItem>()
+    for (const item of items) {
+      if (!activeItems.has(item.assetId)) activeItems.set(item.assetId, item)
     }
 
     for (const [assetId, pooled] of this.media) {
       this.settleSeek(pooled)
-      if (!activeIds.has(assetId) && !pooled.el.paused) pooled.el.pause()
+      if (!activeItems.has(assetId) && !pooled.el.paused) pooled.el.pause()
     }
-    this.releaseInactiveStems(activeStemKeys)
 
-    const dryAssets = new Set(activeItems.filter((item) => !item.audioSrc).map((item) => item.assetId))
-    for (const item of activeItems) {
-      const pooled = this.ensureMediaElement(item.assetId, item.kind)
-      if (!pooled) continue
-      if (!item.audioSrc || !dryAssets.has(item.assetId)) this.followMediaClock(pooled, item, options, pooled.src, !item.audioSrc)
-      if (!item.audioSrc) continue
-      const stem = this.ensureStemAudio(item.assetId, item.audioSrc)
-      this.followMediaClock(stem, item, options, item.audioSrc, true)
+    for (const item of activeItems.values()) {
+      const pooled = this.ensureVideoElement(item.assetId)
+      if (pooled) this.followMediaClock(pooled, item, options)
     }
   }
 
-  private followMediaClock(pooled: PooledMedia, item: ActiveMediaItem, options: PreviewSyncOptions, src: string, playAudio: boolean): void {
+  private followMediaClock(pooled: PooledMedia, item: ActiveMediaItem, options: PreviewSyncOptions): void {
     const element = pooled.el
     if (element.error) {
-      this.recoverMediaElement(pooled, src)
+      this.recoverMediaElement(pooled)
       return
     }
 
     const targetSeconds = item.sourceTimeMs / 1000
-    element.volume = playAudio ? Math.max(0, Math.min(1, item.volume * options.masterVolume)) : 0
-    element.muted = !playAudio || options.muted || item.volume <= 0
     const frozen = item.rate <= 0.01
     const forwardRate = Math.max(0.0625, options.playbackRate * (frozen ? 1 : item.rate))
 
@@ -278,7 +172,7 @@ export class PreviewMediaPool implements FrameSource {
         const lead = drift > 0 ? Math.min(MAX_SEEK_LEAD_S, pooled.seekLatencyS * forwardRate) : 0
         this.requestSeek(pooled, targetSeconds + lead)
       } else if (Math.abs(drift) > MIN_CATCHUP_DRIFT_S && !element.seeking) {
-        rate = forwardRate * Math.min(CATCHUP_RATE_MAX_BIAS, Math.max(CATCHUP_RATE_MIN_BIAS, 1 + drift))
+        rate = forwardRate * Math.min(CATCHUP_RATE_MAX_BIAS, Math.max(CATCHUP_RATE_MIN_BIAS, 1 + drift * CATCHUP_GAIN))
       }
       if (element.playbackRate !== rate) element.playbackRate = rate
       if (element.paused) {
@@ -295,51 +189,12 @@ export class PreviewMediaPool implements FrameSource {
     }
   }
 
-  private recoverMediaElement(pooled: PooledMedia, src: string): void {
+  private recoverMediaElement(pooled: PooledMedia): void {
     const now = performance.now()
     if (now - pooled.lastRecoveryAt < RECOVERY_INTERVAL_MS) return
     pooled.lastRecoveryAt = now
-    if (pooled.src !== src) {
-      pooled.src = src
-      pooled.el.src = src
-    }
     pooled.el.load()
     pooled.seekStartedAt = null
-  }
-
-  private ensureStemAudio(assetId: AssetId, audioSrc: string): PooledMedia {
-    const key = stemPoolKey(assetId, audioSrc)
-    const existing = this.stemAudio.get(key)
-    if (existing) return existing
-    const element = document.createElement('audio')
-    element.src = audioSrc
-    element.preload = 'auto'
-    element.crossOrigin = 'anonymous'
-    const pooled: PooledMedia = {
-      el: element,
-      src: audioSrc,
-      seekStartedAt: null,
-      seekLatencyS: 0,
-      lastRecoveryAt: 0,
-    }
-    this.stemAudio.set(key, pooled)
-    return pooled
-  }
-
-  private releaseInactiveStems(activeKeys: ReadonlySet<string>): void {
-    for (const [key, pooled] of this.stemAudio) {
-      this.settleSeek(pooled)
-      if (activeKeys.has(key)) continue
-      if (!pooled.el.paused) pooled.el.pause()
-      pooled.el.removeAttribute('src')
-      pooled.el.load()
-      this.stemAudio.delete(key)
-    }
-  }
-
-  private forEachPooled(visit: (pooled: PooledMedia) => void): void {
-    for (const pooled of this.media.values()) visit(pooled)
-    for (const pooled of this.stemAudio.values()) visit(pooled)
   }
 
   private requestSeek(pooled: PooledMedia, targetSeconds: number): void {
@@ -360,33 +215,27 @@ export class PreviewMediaPool implements FrameSource {
   }
 
   pauseAll(): void {
-    this.forEachPooled((pooled) => {
+    for (const pooled of this.media.values()) {
       if (!pooled.el.paused) pooled.el.pause()
-    })
+    }
   }
 
   dispose(): void {
     this.disposed = true
-    this.forEachPooled((pooled) => {
+    this.audio.dispose()
+    for (const pooled of this.media.values()) {
       pooled.el.pause()
       pooled.el.removeAttribute('src')
       pooled.el.load()
-    })
+    }
     this.media.clear()
-    this.stemAudio.clear()
     for (const cache of this.scrubCaches.values()) cache.clear()
     this.scrubCaches.clear()
     for (const image of this.images.values()) {
       if (image instanceof ImageBitmap) image.close()
     }
     this.images.clear()
-    for (const state of this.decodedVideos.values()) {
-      state.input?.dispose()
-      for (const frame of state.frames.values()) {
-        if (typeof ImageBitmap !== 'undefined' && frame instanceof ImageBitmap) frame.close()
-      }
-    }
-    this.decodedVideos.clear()
+    this.decoded.dispose()
   }
 
   private ensureScrubCache(assetId: AssetId): ScrubFrameCache {
@@ -398,22 +247,10 @@ export class PreviewMediaPool implements FrameSource {
     return cache
   }
 
-  private ensureMediaElement(assetId: AssetId, kind: 'video' | 'audio'): PooledMedia | null {
+  private ensureVideoElement(assetId: AssetId): PooledMedia | null {
     const asset = this.resolveAsset(assetId)
-    if (!asset) return null
-    let existing = this.media.get(assetId)
-    const audioOnly = kind === 'video' && !canUseNativeVideoPreview(asset)
-    const wantsVideoElement = kind === 'video' && !audioOnly
-    if (existing) {
-      const existingIsVideo = existing.el instanceof HTMLVideoElement
-      if ((wantsVideoElement && !existingIsVideo) || (audioOnly && existingIsVideo)) {
-        existing.el.pause()
-        existing.el.removeAttribute('src')
-        existing.el.load()
-        this.media.delete(assetId)
-        existing = undefined
-      }
-    }
+    if (!asset || asset.kind !== 'video' || !canUseNativeVideoPreview(asset)) return null
+    const existing = this.media.get(assetId)
     if (existing) {
       if (existing.src !== asset.src) {
         existing.src = asset.src
@@ -423,15 +260,13 @@ export class PreviewMediaPool implements FrameSource {
       }
       return existing
     }
-    const element = kind === 'video' && !audioOnly ? document.createElement('video') : document.createElement('audio')
+    const element = document.createElement('video')
     element.src = asset.src
     element.preload = 'auto'
     element.crossOrigin = 'anonymous'
-    if (element instanceof HTMLVideoElement) {
-      element.playsInline = true
-      element.muted = true
-      for (const type of ['loadeddata', 'seeked', 'emptied', 'error']) element.addEventListener(type, this.markFrameChanged)
-    }
+    element.playsInline = true
+    element.muted = true
+    for (const type of ['loadeddata', 'seeked', 'emptied', 'error']) element.addEventListener(type, this.markFrameChanged)
     const pooled: PooledMedia = {
       el: element,
       src: asset.src,
@@ -441,107 +276,6 @@ export class PreviewMediaPool implements FrameSource {
     }
     this.media.set(assetId, pooled)
     return pooled
-  }
-
-  private getDecodedVideoFrame(assetId: AssetId, asset: AssetRef, sourceTimeMs: number): CanvasImageSource | null {
-    const state = this.ensureDecodedVideoState(assetId, asset)
-    if (state.failed) return null
-
-    const key = decodedFrameKey(sourceTimeMs)
-    const exact = state.frames.get(key)
-    if (exact) return exact
-
-    this.requestDecodedVideoFrame(assetId, asset, key)
-
-    let nearest: { distance: number; frame: CanvasImageSource } | null = null
-    for (const [frameKey, frame] of state.frames) {
-      const distance = Math.abs(frameKey - sourceTimeMs)
-      if (distance > DECODED_FRAME_NEARBY_MS) continue
-      if (!nearest || distance < nearest.distance) nearest = { distance, frame }
-    }
-    return nearest?.frame ?? null
-  }
-
-  private ensureDecodedVideoState(assetId: AssetId, asset?: AssetRef): DecodedVideoState {
-    let state = this.decodedVideos.get(assetId)
-    if (state && asset && state.src !== null && state.src !== asset.src) {
-      state.input?.dispose()
-      for (const frame of state.frames.values()) {
-        if (typeof ImageBitmap !== 'undefined' && frame instanceof ImageBitmap) frame.close()
-      }
-      state = undefined
-    }
-    if (!state) {
-      state = {
-        src: asset?.src ?? null,
-        input: null,
-        sink: null,
-        frames: new Map(),
-        pendingKey: null,
-        failed: false,
-        lastInitFailureAt: Number.NEGATIVE_INFINITY,
-      }
-      this.decodedVideos.set(assetId, state)
-    }
-    return state
-  }
-
-  private requestDecodedVideoFrame(assetId: AssetId, asset: AssetRef, key: number): void {
-    const state = this.ensureDecodedVideoState(assetId, asset)
-    if (state.failed || state.pendingKey === key || state.frames.has(key)) return
-    if (!state.sink && performance.now() - state.lastInitFailureAt < DECODED_INIT_RETRY_MS) return
-    state.pendingKey = key
-
-    void this.decodeVideoFrame(asset, key)
-      .then((frame) => {
-        if (this.disposed) return
-        const current = this.decodedVideos.get(assetId)
-        if (!current) return
-        if (frame) {
-          current.frames.set(key, frame)
-          this.trimDecodedVideoFrames(current, key)
-          this.markFrameChanged()
-        }
-      })
-      .catch(() => {
-        if (!this.disposed) setTimeout(this.markFrameChanged, DECODED_INIT_RETRY_MS)
-      })
-      .finally(() => {
-        const current = this.decodedVideos.get(assetId)
-        if (current?.pendingKey === key) current.pendingKey = null
-      })
-  }
-
-  private async decodeVideoFrame(asset: AssetRef, sourceTimeMs: number): Promise<CanvasImageSource | null> {
-    const state = this.ensureDecodedVideoState(asset.id, asset)
-    if (!state.sink) {
-      const input = await inputFor(asset.src)
-      try {
-        const track = await input.getPrimaryVideoTrack()
-        if (!track || !(await track.canDecode())) {
-          state.failed = true
-          input.dispose()
-          return null
-        }
-        const { VideoSampleSink } = await import('mediabunny')
-        state.sink = new VideoSampleSink(track)
-        state.input = input
-      } catch (error) {
-        state.lastInitFailureAt = performance.now()
-        input.dispose()
-        throw error
-      }
-    }
-    const sample = await state.sink.getSample(sourceTimeMs / 1000)
-    return sample ? await sampleCanvas(sample, Math.min(1280, asset.width ?? 1280), 'contain') : null
-  }
-
-  private trimDecodedVideoFrames(state: DecodedVideoState, centerKey: number): void {
-    if (state.frames.size <= 80) return
-    const keep = new Set([...state.frames.keys()].sort((a, b) => Math.abs(a - centerKey) - Math.abs(b - centerKey)).slice(0, 60))
-    for (const key of state.frames.keys()) {
-      if (!keep.has(key)) state.frames.delete(key)
-    }
   }
 
   private loadImage(assetId: AssetId, src: string): void {

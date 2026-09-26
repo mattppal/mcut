@@ -1,5 +1,6 @@
 import type { ConversionAudioOptions } from 'mediabunny'
 import { inputFor, type MediaSourceLike } from './probe'
+import { sourceStartLabelS, trackTiming } from './source-timing'
 
 export interface ExtractAudioOptions {
   sampleRate?: number
@@ -19,6 +20,8 @@ async function runWavConversion(src: MediaSourceLike, audio: ConversionAudioOpti
   const { BufferTarget, Conversion, Output, WavOutputFormat } = await import('mediabunny')
   const input = await inputFor(src)
   try {
+    const track = await input.getPrimaryAudioTrack()
+    const timing = track && (await trackTiming(src, input, track))
     const target = new BufferTarget()
     const output = new Output({ format: new WavOutputFormat(), target })
     const conversion = await Conversion.init({
@@ -26,6 +29,7 @@ async function runWavConversion(src: MediaSourceLike, audio: ConversionAudioOpti
       output,
       video: { discard: true },
       audio,
+      trim: { start: timing ? await sourceStartLabelS(timing) : 0 },
       showWarnings: false,
     })
     if (!conversion.isValid) {

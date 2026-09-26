@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { AudioBufferSink } from 'mediabunny'
-import { decodeCompositeRange, decoderLeadStart, reversedChunkSpans } from './export-audio-composite'
+import { decodeCompositeRange, decoderLeadStart, lateStart, reversedChunkSpans } from './export-audio-composite'
 
 describe('reversedChunkSpans', () => {
   test('plays the source from the end in bounded pieces', () => {
@@ -86,5 +86,19 @@ describe('decodeCompositeRange', () => {
       status: 'ready',
       audio: { channels: [source.slice(1_500, 4_500)], sampleRate: RATE },
     })
+  })
+})
+
+describe('lateStart', () => {
+  test('a node placed at or after the context clock starts where it was placed', () => {
+    expect(lateStart({ whenS: 10, offsetS: 0.5, durationS: 2 }, 1, 0)).toEqual({ whenS: 10, offsetS: 0.5, durationS: 2 })
+  })
+
+  test('a node placed before the context clock starts now, skipping what was already due', () => {
+    expect(lateStart({ whenS: 10, offsetS: 0.5, durationS: 2 }, 2, 10.25)).toEqual({ whenS: 10.25, offsetS: 1, durationS: 1.5 })
+  })
+
+  test('a node that should already have finished plays nothing', () => {
+    expect(lateStart({ whenS: 10, offsetS: 0, durationS: 1 }, 1, 12)).toBeNull()
   })
 })

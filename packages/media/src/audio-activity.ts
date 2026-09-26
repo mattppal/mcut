@@ -1,5 +1,6 @@
 import { bucketPeaks } from './audio-peaks'
 import { inputFor, type MediaSourceLike } from './probe'
+import { sourceAudioSink } from './source-timing'
 
 export const DEFAULT_ACTIVITY_FRAME_MS = 30
 export const DEFAULT_ACTIVITY_THRESHOLD = 0.004
@@ -272,7 +273,6 @@ export async function analyzeAudioActivity(src: MediaSourceLike, options: AudioA
   try {
     const track = await input.getPrimaryAudioTrack()
     if (!track) return null
-    const { AudioBufferSink } = await import('mediabunny')
 
     const sourceEndMs = normalized.endMs ?? (await input.computeDuration()) * 1000
     const sourceStartMs = Math.min(normalized.startMs, sourceEndMs)
@@ -280,7 +280,7 @@ export async function analyzeAudioActivity(src: MediaSourceLike, options: AudioA
     const samples: number[] = []
     let sampleRate = 48_000
 
-    const sink = new AudioBufferSink(track)
+    const sink = await sourceAudioSink(src, input, track)
     for await (const { buffer, timestamp } of sink.buffers(sourceStartMs / 1000, sourceEndMs / 1000)) {
       sampleRate = buffer.sampleRate
       const channels = Math.max(1, buffer.numberOfChannels)

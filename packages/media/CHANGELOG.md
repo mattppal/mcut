@@ -1,5 +1,17 @@
 # @mcut/media
 
+## 0.1.0-alpha.33
+
+### Minor Changes
+
+- [#214](https://github.com/mattppal/mcut/pull/214) [`2c9dd9c`](https://github.com/mattppal/mcut/commit/2c9dd9ccafa04d84f1f640c3f55127f74d16aed9) Thanks [@mattppal](https://github.com/mattppal)! - Preview plays audio from the same timed decode and segment mixer as export, on one `AudioContext`, so preview and export are heard at the same source time for every container. `PlayerCanvas` advances playback by that audio clock. A clip at a constant speed plays from one continuous decode and one time stretcher, so stretched and reversed clips have no seams, and a clip played from its start matches export's decoded and stretched samples. A play that starts inside a clip can sit from export by the container's timestamp rounding, about a millisecond in WebM. A clip on a speed curve plays in crossfaded half-second windows. A playback rate change crossfades into the new rate instead of cutting to silence. While the audio output starts or its context resumes, the playhead waits at the play position only when a clip is due, and a silent stretch plays on the wall clock. A pause keeps the audio context running and fades the sound out at a stop 50 ms ahead, and a play from pause starts where that stop landed, so nothing is skipped or heard twice. `PreviewAudio` is exported as a type. Breaking changes: `PreviewMediaPool` now shows picture only and its sound lives on `pool.audio`, a `PreviewAudio`. `setAudioSources` and `getAudioSources` moved to `pool.audio`. `getActiveMediaItems` takes no `audioSources` and returns only video feeds, `ActiveMediaItem` drops `kind`, `volume`, and `audioSrc`, and `PreviewSyncOptions` drops `masterVolume` and `muted`.
+
+## 0.1.0-alpha.32
+
+### Patch Changes
+
+- [#213](https://github.com/mattppal/mcut/pull/213) [`c110c29`](https://github.com/mattppal/mcut/commit/c110c297bc02e616c0cf721a191e0025b915f4a8) Thanks [@mattppal](https://github.com/mattppal)! - Audio from MP3, AAC, Opus, and Vorbis files now lands at its source time in the export, the waveform, audio activity, audio sync, and the WAV that transcription reads. The package used to place each decoded buffer at its container timestamp. That kept an MP3 encoder's delay and an AAC encoder's priming whenever no edit list trimmed them, and it missed the samples an Opus or Vorbis decoder drops or delays when a decode starts partway into a file. The package now reads the gapless facts each container records and places every buffer at the source time of its first sample. Those facts are the LAME tag in an MP3, iTunSMPB in an m4a without an edit list, CodecDelay in Matroska, the OpusHead pre-skip, and the Vorbis block size. A LAME MP3 no longer plays 1105 frames late, an m4a with iTunSMPB 2048 frames late, AAC in Matroska 1024 frames late, or Opus in MP4 312 frames early. A clip that starts partway into a file no longer plays 48 frames late from WebM Opus, 312 frames early from Ogg Opus, or up to 1024 frames early from Vorbis. WAV, FLAC, and AAC in MP4 with an edit list already decoded at source time and are unchanged. ADTS records no priming, so it keeps its decoder timing, as ffmpeg's gapless decode does. A file whose gapless facts can't be read keeps its decoder timing too, rather than failing.
+
 ## 0.1.0-alpha.31
 
 ### Patch Changes

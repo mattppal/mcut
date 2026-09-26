@@ -5,9 +5,14 @@ import { getProjectDurationMs, type EditorEngine, type PlaybackState, type Proje
 
 export type RequestFrame = (callback: (frameTimeMs: number) => void) => () => void
 
+export type PlaybackClock = (displayTimeMs: number) => number | null
+
+const MAX_DISPLAY_LEAD_MS = 50
+
 export interface PlaybackLoopOptions {
   onFrame: (project: Project, playback: PlaybackState) => void
   requestFrame?: RequestFrame
+  clock?: PlaybackClock
 }
 
 const requestAnimationFrameOnce: RequestFrame = (callback) => {
@@ -15,14 +20,15 @@ const requestAnimationFrameOnce: RequestFrame = (callback) => {
   return () => cancelAnimationFrame(handle)
 }
 
-export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = requestAnimationFrameOnce }: PlaybackLoopOptions): void {
-  const onFrameRef = useRef(onFrame)
+export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = requestAnimationFrameOnce, clock }: PlaybackLoopOptions): void {
+  const latest = useRef({ onFrame, clock })
   useLayoutEffect(() => {
-    onFrameRef.current = onFrame
+    latest.current = { onFrame, clock }
   })
 
   useEffect(() => {
     let previousFrameMs: number | null = null
+    let knownMs = engine.playback.state.currentTimeMs
     let cancel = () => {}
     const tick = (frameTimeMs: number) => {
       const elapsedMs = previousFrameMs === null ? 0 : frameTimeMs - previousFrameMs
@@ -30,7 +36,9 @@ export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = 
       const playback = engine.playback.state
       if (playback.isPlaying) {
         const durationMs = getProjectDurationMs(engine.project)
-        const next = playback.currentTimeMs + elapsedMs * playback.playbackRate
+        const displayTimeMs = frameTimeMs + Math.min(elapsedMs, MAX_DISPLAY_LEAD_MS)
+        const clockMs = playback.currentTimeMs === knownMs ? latest.current.clock?.(displayTimeMs) : null
+        const next = clockMs ?? playback.currentTimeMs + elapsedMs * playback.playbackRate
         if (durationMs > 0 && next >= durationMs && playback.playbackRate > 0) {
           engine.seek(durationMs)
           engine.pause()
@@ -41,7 +49,8 @@ export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = 
           engine.seek(next)
         }
       }
-      onFrameRef.current(engine.project, engine.playback.state)
+      knownMs = engine.playback.state.currentTimeMs
+      latest.current.onFrame(engine.project, engine.playback.state)
       cancel = requestFrame(tick)
     }
     cancel = requestFrame(tick)

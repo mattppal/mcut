@@ -157,6 +157,71 @@ describe('usePlaybackLoop', () => {
     expect(engine.playback.state.currentTimeMs).toBe(100)
   })
 
+  test('follows the clock while it reports a time and falls back to elapsed time when it does not', () => {
+    const engine = engineWithClip(10_000)
+    engine.play()
+    const reports: (number | null)[] = [null, 40, 90, null]
+    const frames = fakeFrames()
+    renderHook(() => usePlaybackLoop(engine, { onFrame: () => {}, requestFrame: frames.requestFrame, clock: () => reports.shift() ?? null }))
+    const seen: number[] = []
+    for (const frameTimeMs of [0, 16, 32, 48]) {
+      frames.step(frameTimeMs)
+      seen.push(engine.playback.state.currentTimeMs)
+    }
+    expect(seen).toEqual([0, 40, 90, 106])
+  })
+
+  test('asks the clock for the time heard when the frame reaches the screen, one bounded frame interval later', () => {
+    const engine = engineWithClip(10_000)
+    engine.play()
+    const asked: number[] = []
+    const frames = fakeFrames()
+    renderHook(() =>
+      usePlaybackLoop(engine, {
+        onFrame: () => {},
+        requestFrame: frames.requestFrame,
+        clock: (displayTimeMs) => {
+          asked.push(displayTimeMs)
+          return null
+        },
+      }),
+    )
+    for (const frameTimeMs of [1000, 1016, 1500]) frames.step(frameTimeMs)
+    expect(asked).toEqual([1000, 1032, 1550])
+  })
+
+  test('a seek between frames wins over a clock still reporting the old position', () => {
+    const engine = engineWithClip(10_000)
+    engine.play()
+    const frames = fakeFrames()
+    renderHook(() => usePlaybackLoop(engine, { onFrame: () => {}, requestFrame: frames.requestFrame, clock: (frameTimeMs) => 1000 + frameTimeMs }))
+    frames.step(0)
+    frames.step(16)
+    engine.seek(5000)
+    frames.step(32)
+    expect(engine.playback.state.currentTimeMs).toBe(5016)
+  })
+
+  test('the clock is not asked while paused', () => {
+    const engine = engineWithClip(10_000)
+    engine.seek(500)
+    const frames = fakeFrames()
+    let asked = 0
+    renderHook(() =>
+      usePlaybackLoop(engine, {
+        onFrame: () => {},
+        requestFrame: frames.requestFrame,
+        clock: () => {
+          asked++
+          return 9000
+        },
+      }),
+    )
+    frames.step(0)
+    frames.step(16)
+    expect([asked, engine.playback.state.currentTimeMs]).toEqual([0, 500])
+  })
+
   test('unmount cancels the pending frame', () => {
     const engine = engineWithClip(10_000)
     const { frames, unmount } = mountLoop(engine)

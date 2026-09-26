@@ -1,4 +1,5 @@
 import { inputFor, type MediaSourceLike } from './probe'
+import { sourceAudioSink } from './source-timing'
 import { valueAt } from './value-at'
 
 export interface SyncResult {
@@ -57,11 +58,10 @@ export async function extractEnvelope(src: MediaSourceLike, { windowS = 60, rate
   try {
     const track = await input.getPrimaryAudioTrack()
     if (!track) return null
-    const { AudioBufferSink } = await import('mediabunny')
     const buckets = Math.ceil(windowS * rateHz)
     const sums = new Float64Array(buckets)
     const counts = new Float64Array(buckets)
-    const sink = new AudioBufferSink(track)
+    const sink = await sourceAudioSink(src, input, track)
     for await (const { buffer, timestamp } of sink.buffers(0, windowS)) {
       signal?.throwIfAborted()
       const data = buffer.getChannelData(0)
