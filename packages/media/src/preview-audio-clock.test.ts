@@ -50,7 +50,10 @@ describe('preview audio clock before the output renders', () => {
     audio = new PreviewAudio()
   })
 
-  afterEach(() => audio.dispose())
+  afterEach(() => {
+    audio.dispose()
+    Reflect.deleteProperty(globalThis, 'AudioContext')
+  })
 
   test('a running context whose output has not started leaves the playhead on the wall clock', async () => {
     const project = createProject()

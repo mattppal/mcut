@@ -52,6 +52,10 @@ function keyed(segment: AudibleSegment): KeyedSegment {
   }
 }
 
+function outputStarted(context: AudioContext): boolean {
+  return (context.getOutputTimestamp().performanceTime ?? 0) > 0
+}
+
 function equalPower(rising: boolean): Float32Array {
   const curve = new Float32Array(FADE_STEPS)
   for (let step = 0; step < FADE_STEPS; step++) {
@@ -131,7 +135,7 @@ export class PreviewAudio {
     }
     const { context, master } = this.ensureContext()
     master.gain.value = playback.muted ? 0 : playback.volume
-    if (context.state !== 'running') {
+    if (context.state !== 'running' || !outputStarted(context)) {
       this.flush()
       if (context.state === 'suspended') void context.resume()
       return
