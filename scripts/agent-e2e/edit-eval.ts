@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, relative } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -25,7 +25,7 @@ const DEFAULT_GROK_MODEL = 'grok-4.7'
 const SETTLE_MS = 1_500
 
 const USAGE = [
-  'usage: bun scripts/agent-e2e/edit-eval.ts --edits <file.yaml|file.txt> [--media <dir>] [--driver grok-build|cursor-agent] [--app running|dev] [--max-steps N] [--wall-clock-ms N] [--only <edit id>]... [--report <file.md>]',
+  'usage: bun scripts/agent-e2e/edit-eval.ts --edits <file.yaml|file.txt> [--media <dir>] [--driver grok-build|cursor-agent] [--app running|dev] [--max-steps N] [--wall-clock-ms N] [--skill <skill dir>] [--only <edit id>]... [--report <file.md>]',
   '',
   'Runs each edit instruction as one headless agent prompt against Studio through the mcut MCP server,',
   'and writes one report row per edit to reports/agent-e2e/<stamp>-edit-eval/.',
@@ -49,6 +49,18 @@ const SYSTEM = [
   'Inspect the project with get_summary or get_project when you need to. Finish the edit without asking questions.',
   'If part of the edit cannot be done with the available tools, do what you can and say plainly what is missing.',
 ].join(' ')
+
+const GENERATED_REFERENCES = new Set(['commands.md', 'recipes.md'])
+
+function skillPrompt(dir: string): string {
+  const referenceDir = join(dir, 'references')
+  const references = readdirSync(referenceDir)
+    .filter((name) => name.endsWith('.md') && !GENERATED_REFERENCES.has(name))
+    .sort()
+    .map((name) => `## references/${name}\n\n${readFileSync(join(referenceDir, name), 'utf8')}`)
+  const skill = readFileSync(join(dir, 'SKILL.md'), 'utf8').replace(/^---\n[\s\S]*?\n---\n/, '')
+  return [SYSTEM, 'Follow the mcut-editing skill below. Its references are included after it.', skill, ...references].join('\n\n')
+}
 
 class ConfigError extends Error {}
 
@@ -123,7 +135,7 @@ async function applyTranscript(mcp: McpSession, file: string): Promise<void> {
 
 async function runStep(
   step: EditStep,
-  context: { mcp: McpSession; page: StudioPage; driver: Driver; recorder: ReturnType<typeof startMcpRecorder>; runDir: string },
+  context: { mcp: McpSession; page: StudioPage; driver: Driver; recorder: ReturnType<typeof startMcpRecorder>; runDir: string; system: string },
 ): Promise<EditRow> {
   const { mcp, page, driver, recorder, runDir } = context
   const startedAt = Date.now()
@@ -131,7 +143,7 @@ async function runStep(
   const before = await mcp.getProject()
   await page.drain()
   const mark = recorder.mark()
-  const turn = await driver(step.id, { system: SYSTEM, user: step.ask }).catch((error: unknown): AgentTurn => {
+  const turn = await driver(step.id, { system: context.system, user: step.ask }).catch((error: unknown): AgentTurn => {
     if (error instanceof CursorAgentAuthError || error instanceof GrokBuildAuthError) throw error
     return {
       toolCalls: [],
@@ -201,6 +213,7 @@ async function main(argv: string[]): Promise<number> {
       app: { type: 'string', default: 'running' },
       'max-steps': { type: 'string' },
       'wall-clock-ms': { type: 'string' },
+      skill: { type: 'string' },
       report: { type: 'string' },
       only: { type: 'string', multiple: true, default: [] },
       help: { type: 'boolean', default: false },
@@ -220,6 +233,7 @@ async function main(argv: string[]): Promise<number> {
     maxSteps: positive(values['max-steps'], DEFAULT_CAPS.maxSteps * 2, '--max-steps'),
     wallClockMs: positive(values['wall-clock-ms'], DEFAULT_CAPS.wallClockMs * 2, '--wall-clock-ms'),
   }
+  const system = values.skill === undefined ? SYSTEM : skillPrompt(values.skill)
   const runDir = createRunDir(`edit-eval-${values.driver}`)
   const cleanups: Array<() => unknown> = []
   try {
@@ -249,7 +263,7 @@ async function main(argv: string[]): Promise<number> {
     let files = writeEditReport(report, runDir)
     for (const step of steps) {
       log(`${step.id}: ${step.ask}`)
-      const row = await runStep(step, { mcp, page, driver, recorder, runDir })
+      const row = await runStep(step, { mcp, page, driver, recorder, runDir, system })
       log(`${step.id} ${row.pass ? 'PASS' : `FAIL (${row.failure})`} ${row.toolCalls.length} tool calls, ${row.toolErrors.length} errors, ${row.durationMs} ms`)
       report.rows.push(row)
       report.driver = report.rows[0]?.driver ?? values.driver
