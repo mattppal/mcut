@@ -69,3 +69,95 @@ describe('find_retakes with elementId', () => {
     expect(textOf(result)).toBe('CommandError (invalid-payload): clip "e-talk" has a time remap, so apply_captions cannot rebuild its captions')
   })
 })
+
+const fullTranscript = {
+  words: [
+    { text: 'hello', startMs: 2000, endMs: 2300 },
+    { text: 'there', startMs: 3000, endMs: 3300 },
+    { text: 'um', startMs: 6000, endMs: 6300 },
+    { text: 'world', startMs: 12000, endMs: 12300 },
+  ],
+}
+
+function multicamWithOffsetMic(): EditorEngine {
+  const engine = new EditorEngine({ project: createProject({ id: 'p-mc', width: 1280, height: 720 }) })
+  engine.dispatch({ type: 'addTrack', id: 't-mic' })
+  engine.dispatch({ type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'media/screen.mp4', durationMs: 60000, width: 1280, height: 720 } })
+  engine.dispatch({ type: 'addAsset', asset: { id: 'a-mic', kind: 'audio', src: 'media/mic.wav', durationMs: 60000 } })
+  engine.dispatch({
+    type: 'addElement',
+    trackId: 't-default',
+    element: { id: 'e-screen', type: 'video', assetId: 'a-screen', startMs: 1000, durationMs: 20000, trimStartMs: 0 },
+  })
+  engine.dispatch({
+    type: 'addElement',
+    trackId: 't-mic',
+    element: { id: 'e-mic', type: 'audio', assetId: 'a-mic', startMs: 1000, durationMs: 20000, trimStartMs: 1800 },
+  })
+  engine.dispatch({
+    type: 'createMulticam',
+    sources: [{ elementId: 'e-screen' }, { elementId: 'e-mic' }],
+    multicamId: 'e-mc',
+  })
+  return engine
+}
+
+function wordTimes(engine: EditorEngine): Array<[string, number, number]> {
+  return getProjectTranscript(engine.project, { includeWords: true })
+    .captions.flatMap((caption) => caption.words ?? [])
+    .map((word) => [word.text, word.startMs, word.endMs])
+}
+
+describe('find_retakes on a cut multicam', () => {
+  test('maps each remaining piece into the offset audio asset, and the full transcript captions those words at their original timeline times', async () => {
+    const engine = multicamWithOffsetMic()
+    const client = await connect(engine)
+    await client.callTool({ name: 'apply_captions', arguments: { transcript: fullTranscript, elementId: 'e-mc' } })
+    expect(wordTimes(engine)).toEqual([
+      ['hello', 1200, 1500],
+      ['there', 2200, 2500],
+      ['um', 5200, 5500],
+      ['world', 11200, 11500],
+    ])
+
+    engine.dispatch({ type: 'splitElement', elementId: 'e-mc', atMs: 10000, rightElementId: 'e-right' })
+    engine.dispatch({ type: 'splitElement', elementId: 'e-mc', atMs: 4000, rightElementId: 'e-mid' })
+    engine.dispatch({ type: 'removeElement', elementId: 'e-mid' })
+
+    const left = replySchema.parse(JSON.parse(textOf(await client.callTool({ name: 'find_retakes', arguments: { elementId: 'e-mc' } }))))
+    const right = replySchema.parse(JSON.parse(textOf(await client.callTool({ name: 'find_retakes', arguments: { elementId: 'e-right' } }))))
+    expect(left.transcript.words).toEqual([
+      { text: 'hello', startMs: 2000, endMs: 2300 },
+      { text: 'there', startMs: 3000, endMs: 3300 },
+    ])
+    expect(right.transcript.words).toEqual([{ text: 'world', startMs: 12000, endMs: 12300 }])
+
+    await client.callTool({ name: 'apply_captions', arguments: { transcript: fullTranscript, elementId: 'e-mc', replace: true } })
+    await client.callTool({ name: 'apply_captions', arguments: { transcript: fullTranscript, elementId: 'e-right', replace: false } })
+    expect(wordTimes(engine)).toEqual([
+      ['hello', 1200, 1500],
+      ['there', 2200, 2500],
+      ['world', 11200, 11500],
+    ])
+  })
+
+  test('a reversed multicam is rejected', async () => {
+    const engine = multicamWithOffsetMic()
+    const client = await connect(engine)
+    await client.callTool({ name: 'apply_captions', arguments: { transcript: fullTranscript, elementId: 'e-mc' } })
+    engine.dispatch({ type: 'updateElement', elementId: 'e-mc', patch: { reversed: true } })
+
+    const result = await client.callTool({ name: 'find_retakes', arguments: { elementId: 'e-mc' } })
+    expect(textOf(result)).toBe('CommandError (invalid-payload): clip "e-mc" plays reversed, so its captions have no forward source time')
+  })
+
+  test('a multicam with no audio source points at setMulticamAudio', async () => {
+    const engine = multicamWithOffsetMic()
+    const client = await connect(engine)
+    await client.callTool({ name: 'apply_captions', arguments: { transcript: fullTranscript, elementId: 'e-mc' } })
+    engine.dispatch({ type: 'setMulticamAudio', elementId: 'e-mc', sourceKey: null })
+
+    const result = await client.callTool({ name: 'find_retakes', arguments: { elementId: 'e-mc' } })
+    expect(textOf(result)).toBe('CommandError (invalid-payload): element "e-mc" has no audio source; set one with setMulticamAudio')
+  })
+})

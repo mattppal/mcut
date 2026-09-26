@@ -191,6 +191,26 @@ describe('ensureTranscriptForBridge', () => {
     expect(getProjectTranscript(engine.project).text).toBe('Existing')
   })
 
+  test('a second call while the first is transcribing shares its work and returns the applied transcript', async () => {
+    const engine = new EditorEngine({ project: project() })
+    const base = deps()
+    let calls = 0
+    const shared: EnsureTranscriptDeps = {
+      ...base,
+      transcribeOnDevice: async (audio, options) => {
+        calls += 1
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        return base.transcribeOnDevice(audio, options)
+      },
+    }
+
+    const [first, second] = await Promise.all([ensureTranscriptForBridge(engine, {}, shared), ensureTranscriptForBridge(engine, {}, shared)])
+
+    expect(calls).toBe(1)
+    expect([first.applied, second.applied].sort()).toEqual([false, true])
+    expect(getProjectTranscript(engine.project).text).toBe('Hello world')
+  })
+
   test('transcribes a multicam clip from its pinned audio source', async () => {
     const engine = new EditorEngine({ project: multicamProject() })
     let extractedSrc = ''

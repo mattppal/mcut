@@ -847,18 +847,8 @@ export function trimSelectionToPlayhead(engine: EditorEngine, edge: 'start' | 'e
       const endMs = element.startMs + element.durationMs
       if (now <= element.startMs || now >= endMs) continue
       try {
-        if (edge === 'end') {
-          engine.dispatch({ type: 'trimElement', elementId: id, durationMs: now - element.startMs })
-        } else {
-          const shiftMs = now - element.startMs
-          engine.dispatch({
-            type: 'trimElement',
-            elementId: id,
-            startMs: now,
-            durationMs: element.durationMs - shiftMs,
-            ...('trimStartMs' in element ? { trimStartMs: element.trimStartMs + shiftMs } : {}),
-          })
-        }
+        const deltaMs = edge === 'end' ? now - endMs : now - element.startMs
+        engine.dispatch({ type: 'trimEdge', elementId: id, edge, deltaMs })
       } catch {}
     }
   })

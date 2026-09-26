@@ -41,8 +41,8 @@ Commands:
   validate       Parse + lint a project; exits 1 on errors (--strict: warnings too).
   summarize      Print the compact textual rendering of a project (read this before editing).
   apply          Dispatch a JSON command batch (object or array) as one undo step, then save.
-  captions       Add captions from a transcript JSON ({ words: [{ text, startMs, endMs }] }).
-  silence-cuts   Cut transcript silence out of one element (splits + ripple deletes + edge trims).
+  captions       Add captions from a transcript JSON ({ words: [{ text, startMs, endMs }] }). --element scopes them to one clip with source audio, including a multicam.
+  silence-cuts   Cut transcript silence out of one clip with source audio (splits + ripple deletes + edge trims). A multicam uses its audio source.
   clean-voice    Remove background noise from speech in a 48 kHz WAV; --amount below 1 mixes the original back in.
   commands       List every editing command; --name prints one command's JSON schema.
   presets        List platform presets (dimensions, fps, safe areas).

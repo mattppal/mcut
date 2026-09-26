@@ -456,6 +456,46 @@ describe('createMcutMcpServer', () => {
     expect(contentText(centered)).toBe('center_person requires a live browser bridge connected to an editor tab.')
   })
 
+  test('get_audio_activity resolves a multicam audio source headless', async () => {
+    const engine = new EditorEngine()
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { id: 'e-title', type: 'text', startMs: 0, durationMs: 1000, text: 'Title' },
+    })
+    engine.dispatch({ type: 'addTrack', id: 't-cam' })
+    engine.dispatch({ type: 'addTrack', id: 't-mic' })
+    engine.dispatch({ type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'media/screen.mp4', durationMs: 60000 } })
+    engine.dispatch({ type: 'addAsset', asset: { id: 'a-mic', kind: 'audio', src: 'media/mic.wav', durationMs: 60000 } })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-cam',
+      element: { id: 'e-screen', type: 'video', assetId: 'a-screen', startMs: 0, durationMs: 4000, trimStartMs: 0 },
+    })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-mic',
+      element: { id: 'e-mic', type: 'audio', assetId: 'a-mic', startMs: 0, durationMs: 4000, trimStartMs: 250 },
+    })
+    engine.dispatch({
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-mic' }],
+      multicamId: 'e-mc',
+    })
+    const client = await connect(engine)
+
+    const activity = await client.callTool({ name: 'get_audio_activity', arguments: {} })
+    expect(activity.isError).toBe(true)
+    expect(contentText(activity)).toBe(
+      'get_audio_activity requires a live browser bridge connected to an editor tab. Resolved element e-mc asset a-mic source 250-4250ms.',
+    )
+
+    engine.dispatch({ type: 'setMulticamAudio', elementId: 'e-mc', sourceKey: null })
+    const silent = await client.callTool({ name: 'get_audio_activity', arguments: { elementId: 'e-mc' } })
+    expect(silent.isError).toBe(true)
+    expect(contentText(silent)).toBe('Element "e-mc" has no audio source. Set one with setMulticamAudio.')
+  })
+
   test('live bridge forwards MCP tools to a connected browser tab', async () => {
     const bridge = new LiveMcutBridge({ token: 'test-token', requestTimeoutMs: 1000 })
     const port = await bridge.listen(0)

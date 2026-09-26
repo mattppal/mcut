@@ -94,6 +94,57 @@ describe('editor operators', () => {
     })
   })
 
+  test('reverse toggles a multicam-only selection', async () => {
+    const engine = new EditorEngine()
+    engine.dispatch({ type: 'addTrack', id: 't-cam' })
+    engine.dispatch({ type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'blob:screen', durationMs: 20000 } })
+    engine.dispatch({ type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:cam', durationMs: 20000 } })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { id: 'e-screen', type: 'video', assetId: 'a-screen', startMs: 0, durationMs: 10000 },
+    })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-cam',
+      element: { id: 'e-cam', type: 'video', assetId: 'a-cam', startMs: 0, durationMs: 10000 },
+    })
+    engine.dispatch({ type: 'createMulticam', sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }], multicamId: 'e-mc' })
+    engine.select(['e-mc'])
+
+    expect(listOperators({ engine }).find((operator) => operator.id === 'edit.toggleReverseSelection')?.enabled).toBe(true)
+    await runOperator('edit.toggleReverseSelection', { engine })
+    expect(getElement(engine.project, 'e-mc')).toMatchObject({ type: 'multicam', reversed: true })
+    await runOperator('edit.toggleReverseSelection', { engine })
+    expect(getElement(engine.project, 'e-mc')).toMatchObject({ type: 'multicam', reversed: false })
+  })
+
+  test('trim to the playhead moves a multicam in-point', async () => {
+    const engine = new EditorEngine()
+    engine.dispatch({ type: 'addTrack', id: 't-cam' })
+    engine.dispatch({ type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'blob:screen', durationMs: 20000 } })
+    engine.dispatch({ type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:cam', durationMs: 20000 } })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { id: 'e-screen', type: 'video', assetId: 'a-screen', startMs: 0, durationMs: 10000 },
+    })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-cam',
+      element: { id: 'e-cam', type: 'video', assetId: 'a-cam', startMs: 0, durationMs: 10000 },
+    })
+    engine.dispatch({ type: 'createMulticam', sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }], multicamId: 'e-mc' })
+    const before = getElement(engine.project, 'e-mc')
+    const angles = before?.type === 'multicam' ? before.angles.map((angle) => ({ atMs: angle.atMs, layoutId: angle.layoutId })) : []
+    engine.seek(2500)
+    engine.select(['e-mc'])
+
+    await runOperator('edit.trimSelectionToPlayhead', { engine }, { edge: 'start' })
+
+    expect(getElement(engine.project, 'e-mc')).toMatchObject({ startMs: 2500, durationMs: 7500, trimStartMs: 2500, angles })
+  })
+
   test('audio.cleanVoice toggles selected media in one undo step', async () => {
     const engine = new EditorEngine()
     const track = engine.project.tracks[0]

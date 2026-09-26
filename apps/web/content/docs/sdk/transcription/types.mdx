@@ -267,7 +267,7 @@ Zod object schema for `CaptionsCommandOptions`, shared by the CLI `captions` com
 
 | Field | Meaning |
 | --- | --- |
-| `elementId` | Scope the transcript to one video or audio element and position captions at its timeline location. Without it the transcript starts at timeline 0. |
+| `elementId` | Scope the transcript to one clip with source audio, including a multicam audio source, and position captions at its timeline location. Without it the transcript starts at timeline 0. |
 | `styleId` | A preset id from `CAPTION_STYLE_PRESETS`, such as `classic`, `karaoke`, or `spotlight`. |
 | `maxChars` | Soft maximum characters per caption, a positive integer, default 36. |
 | `maxGapMs` | A silence gap longer than this starts a new caption, default 800. |

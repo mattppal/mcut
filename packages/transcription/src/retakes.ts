@@ -58,10 +58,27 @@ function tokenize(words: readonly TimedWord[], pauseMs: number): Token[] {
   return tokens
 }
 
-function sharedRun(tokens: readonly Token[], a: number, b: number): number {
-  let length = 0
-  while (b + length < tokens.length && a + length < b && tokens[a + length]?.norm === tokens[b + length]?.norm) length++
-  return length
+function sharedRun(tokens: readonly Token[], a: number, b: number): { matched: number; keptLength: number } {
+  let i = 0
+  let j = 0
+  let matched = 0
+  let skipped = false
+  const norm = (index: number) => tokens[index]?.norm
+  while (b + j < tokens.length && a + i < b) {
+    if (norm(a + i) === norm(b + j)) {
+      i++
+      j++
+      matched++
+      continue
+    }
+    const droppedFromKept = a + i + 1 < b && norm(a + i + 1) === norm(b + j)
+    const insertedInKept = norm(a + i) === norm(b + j + 1)
+    if (skipped || matched === 0 || !(droppedFromKept || insertedInKept)) break
+    skipped = true
+    if (droppedFromKept) i++
+    if (!droppedFromKept) j++
+  }
+  return { matched, keptLength: j }
 }
 
 const textOf = (tokens: readonly Token[], from: number, to: number) =>
@@ -80,15 +97,15 @@ export function findRetakes(words: readonly TimedWord[], options: RetakeOptions 
   for (const start of starts) {
     const first = tokens[start]
     if (!first || start < coveredUntil) continue
-    let restart: { index: number; length: number } | null = null
+    let restart: { index: number; length: number; matched: number } | null = null
     for (let k = start + minMatchWords; k < tokens.length; k++) {
       const candidate = tokens[k]
       if (!candidate || candidate.word.startMs - first.word.startMs > maxLookaheadMs) break
       for (let offset = 0; offset <= MAX_OPENING_DRIFT && k - offset > start; offset++) {
         if (offset > 0 && !tokens[k - offset]?.opensPhrase) continue
-        const length = sharedRun(tokens, start + offset, k)
-        if (length >= minMatchWords) {
-          restart = { index: k - offset, length: length + offset }
+        const run = sharedRun(tokens, start + offset, k)
+        if (run.matched >= minMatchWords) {
+          restart = { index: k - offset, length: run.keptLength + offset, matched: run.matched + offset }
           break
         }
       }
@@ -103,7 +120,7 @@ export function findRetakes(words: readonly TimedWord[], options: RetakeOptions 
         endMs: kept.word.startMs,
         abandonedText: `${previous.abandonedText} ${textOf(tokens, start, restart.index)}`,
         keptText: textOf(tokens, restart.index, restart.index + restart.length),
-        matchedWords: restart.length,
+        matchedWords: restart.matched,
       }
       coveredUntil = restart.index
       continue
@@ -113,7 +130,7 @@ export function findRetakes(words: readonly TimedWord[], options: RetakeOptions 
       endMs: kept.word.startMs,
       abandonedText: textOf(tokens, start, restart.index),
       keptText: textOf(tokens, restart.index, restart.index + restart.length),
-      matchedWords: restart.length,
+      matchedWords: restart.matched,
     })
     coveredUntil = restart.index
   }

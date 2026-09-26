@@ -52,7 +52,7 @@ function buildCaptionsCommand(
 ): CommandOfType<'applyCaptions'>
 ```
 
-Returns an `applyCaptions` command from validated options, resolving a caption style preset by id and scoping the transcript to one video or audio element's trimmed span, and throws for an unknown style, a missing element, or an element with a time remap.
+Returns an `applyCaptions` command from validated options, resolving a caption style preset by id and scoping the transcript to one clip's audio window, and throws for an unknown style, a missing element, a clip with no source audio, or an element with a time remap. A multicam uses its audio source.
 
 ### groupWords
 

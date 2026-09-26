@@ -8,6 +8,7 @@ import {
   getElement,
   getLinkedElementIds,
   getProjectDurationMs,
+  isMediaClip,
   quantizeMsToFrame,
   toOtioJson,
   trackIdSchema,
@@ -452,23 +453,23 @@ export const operators = {
 
   'edit.toggleReverseSelection': defineOperator({
     label: 'Reverse selected clips',
-    description: 'Toggle reverse playback on the selected video/audio clips.',
+    description: 'Toggle reverse playback on the selected media clips.',
     category: 'edit',
     inputSchema: emptyInputSchema,
     enabled: ({ engine }) =>
       engine.selection.elementIds.some((id) => {
         const element = getElement(engine.project, id)
-        return element?.type === 'video' || element?.type === 'audio'
+        return element !== undefined && isMediaClip(element)
       }),
     run: ({ engine }) => {
       engine.transact(() => {
         for (const id of engine.selection.elementIds) {
           const element = getElement(engine.project, id)
-          if (element?.type !== 'video' && element?.type !== 'audio') continue
+          if (!element || !isMediaClip(element)) continue
           engine.dispatch({
             type: 'updateElement',
             elementId: id,
-            patch: { reversed: !element.reversed },
+            patch: { reversed: element.reversed !== true },
           })
         }
       })

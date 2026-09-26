@@ -18,8 +18,8 @@ export { parseWav, resampleTo, WHISPER_SAMPLE_RATE, type DecodedAudio } from './
 export type { WhisperDtype, WhisperWorkerConfig, WhisperWorkerRequest, WhisperWorkerResponse } from './protocol'
 
 export const WHISPER_MODELS = {
-  base: 'onnx-community/whisper-base',
-  'tiny.en': 'onnx-community/whisper-tiny.en',
+  base: 'onnx-community/whisper-base_timestamped',
+  'tiny.en': 'onnx-community/whisper-tiny.en_timestamped',
 } as const
 
 const MIN_DEVICE_MEMORY_GIB = 4

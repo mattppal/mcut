@@ -1,5 +1,13 @@
 # @mcut/transcription
 
+## 0.1.0-alpha.17
+
+### Patch Changes
+
+- [#201](https://github.com/mattppal/mcut/pull/201) [`3f2951b`](https://github.com/mattppal/mcut/commit/3f2951b3db1b9b21b8ac254b6ae638f01769b366) Thanks [@mattppal](https://github.com/mattppal)! - `findRetakes` tolerates one dropped or inserted word inside a matched opening, so "hopefully take this as an example" still matches its retake "hopefully you take this as an example". Only matched words count toward `minMatchWords`.
+
+- [#201](https://github.com/mattppal/mcut/pull/201) [`3f2951b`](https://github.com/mattppal/mcut/commit/3f2951b3db1b9b21b8ac254b6ae638f01769b366) Thanks [@mattppal](https://github.com/mattppal)! - The on-device Whisper provider now returns word timings. `WHISPER_MODELS` point at the `_timestamped` onnx-community exports, the worker asks for `return_timestamps: 'word'`, merges words across chunk overlaps, and derives `segments` from the words. Captions built from a transcript keep zero-length words instead of dropping them. `find_retakes` says when captions carry segment timing only.
+
 ## 0.1.0-alpha.16
 
 ### Patch Changes

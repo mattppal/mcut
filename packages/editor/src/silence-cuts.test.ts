@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { EditorEngine, createProject, getElementLocation } from '@mcut/timeline'
+import { EditorEngine, createProject, getElement, getElementLocation } from '@mcut/timeline'
 import { OperatorError } from './operators'
 
 function thrownBy(run: () => unknown): unknown {
@@ -149,5 +149,98 @@ describe('planSilenceCuts', () => {
     const thrown = thrownBy(() => planSilenceCuts(projectWithClip(), 'e-1', transcript([[20000, 21000]]), {}))
     expect(thrown).toBeInstanceOf(OperatorError)
     expect(thrown).toMatchObject({ code: 'invalid-payload', message: expect.stringMatching(/no words/) })
+  })
+
+  test('refuses a reversed clip', () => {
+    const engine = new EditorEngine({ project: projectWithClip() })
+    engine.dispatch({ type: 'updateElement', elementId: 'e-1', patch: { reversed: true } })
+    const thrown = thrownBy(() => planSilenceCuts(engine.project, 'e-1', transcript([[0, 1000]]), {}))
+    expect(thrown).toBeInstanceOf(OperatorError)
+    expect(thrown).toMatchObject({ code: 'unsupported', message: expect.stringMatching(/reversed/) })
+  })
+
+  test('cuts a muted multicam on its offset audio source and keeps each angle cut', () => {
+    const engine = new EditorEngine({ project: createProject({ id: 'p-mc' }) })
+    engine.dispatch({ type: 'addTrack', id: 't-mic' })
+    engine.dispatch({
+      type: 'addAsset',
+      asset: { id: 'a-screen', kind: 'video', src: 'media/screen.mp4', durationMs: 60000 },
+    })
+    engine.dispatch({
+      type: 'addAsset',
+      asset: { id: 'a-mic', kind: 'audio', src: 'media/mic.wav', durationMs: 60000 },
+    })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { id: 'e-screen', type: 'video', assetId: 'a-screen', startMs: 1000, durationMs: 20000, trimStartMs: 0 },
+    })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-mic',
+      element: { id: 'e-mic', type: 'audio', assetId: 'a-mic', startMs: 1000, durationMs: 20000, trimStartMs: 1800 },
+    })
+    engine.dispatch({
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-mic' }],
+      multicamId: 'e-mc',
+    })
+    const camera = engine.project.layouts.find((layout) => layout.name === 'Camera')
+    if (!camera) throw new Error('missing camera layout')
+    engine.dispatch({ type: 'addAngleCut', elementId: 'e-mc', atMs: 5000, layoutId: camera.id })
+    engine.dispatch({ type: 'updateElement', elementId: 'e-mc', patch: { muted: true, volume: 0 } })
+    const before = getElement(engine.project, 'e-mc')
+    if (before?.type !== 'multicam') throw new Error('missing multicam')
+    const angles = before.angles.map((angle) => ({ atMs: angle.atMs, layoutId: angle.layoutId }))
+
+    const plan = planSilenceCuts(
+      engine.project,
+      'e-mc',
+      transcript([
+        [1800, 4800],
+        [10800, 15800],
+      ]),
+      { paddingMs: 0, trimEnds: false },
+    )
+
+    expect(plan.silences).toEqual([{ startMs: 4800, endMs: 10800 }])
+    expect(plan.removedMs).toBe(6000)
+    const pieces = plan.project.tracks.flatMap((track) => track.elements).filter((element) => element.type === 'multicam')
+    expect(pieces).toHaveLength(2)
+    expect(pieces[0]).toMatchObject({ id: 'e-mc', startMs: 1000, durationMs: 3000, trimStartMs: 0, angles })
+    expect(pieces[1]).toMatchObject({ startMs: 4000, durationMs: 11000, trimStartMs: 9000, angles })
+  })
+
+  test('a multicam with no audio source points at setMulticamAudio', () => {
+    const engine = new EditorEngine({ project: createProject({ id: 'p-silent' }) })
+    engine.dispatch({
+      type: 'addAsset',
+      asset: { id: 'a-screen', kind: 'video', src: 'media/screen.mp4', durationMs: 60000 },
+    })
+    engine.dispatch({
+      type: 'addAsset',
+      asset: { id: 'a-cam', kind: 'video', src: 'media/cam.mp4', durationMs: 60000 },
+    })
+    engine.dispatch({ type: 'addTrack', id: 't-cam' })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-default',
+      element: { id: 'e-screen', type: 'video', assetId: 'a-screen', startMs: 0, durationMs: 8000 },
+    })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-cam',
+      element: { id: 'e-cam', type: 'video', assetId: 'a-cam', startMs: 0, durationMs: 8000 },
+    })
+    engine.dispatch({
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
+    engine.dispatch({ type: 'setMulticamAudio', elementId: 'e-mc', sourceKey: null })
+
+    const thrown = thrownBy(() => planSilenceCuts(engine.project, 'e-mc', transcript([[0, 1000]]), {}))
+    expect(thrown).toBeInstanceOf(OperatorError)
+    expect(thrown).toMatchObject({ code: 'invalid-payload', message: 'element "e-mc" has no audio source; set one with setMulticamAudio' })
   })
 })

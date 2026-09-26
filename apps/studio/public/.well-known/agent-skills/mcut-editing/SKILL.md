@@ -97,22 +97,22 @@ no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 ### Remove retakes
 
 After `ensure_transcript`, call `find_retakes` with the captioned clip's
-`elementId`. Each candidate is a timeline range from the abandoned take to the
-start of the kept take, and the reply's `transcript` holds that clip's words in
-source time. Read `abandonedText` and skip any candidate that is a deliberate
+`elementId`. A multicam is included, and so is each piece left after the cuts.
+Each candidate is a timeline range from the abandoned take to the start of the
+kept take. Read `abandonedText` and skip any candidate that is a deliberate
 repetition. Candidates come last to first, so cut them in the returned order,
 each with a split at both ends and a ripple delete on the clip only. Do not cut
 the caption track the same way, because a ripple delete keeps the gaps between
-captions and leaves every later word late. Rebuild captions instead with one
-`apply_captions` call per remaining piece of that clip, passing the reply's
-`transcript` unchanged and the piece's `elementId`. Pass `replace` true until a
-call reports OK, then false. That first OK call clears the whole caption track,
-so when another clip has captions on it, call `find_retakes` with that clip's
-`elementId` too before cutting, and rebuild its pieces the same way from its
-own `transcript`. Expect the calls after it to warn that the transcript matches
-none in the project, since that first call replaced those captions. Pass a
-lower `minMatchWords` only when a short restart was missed, and check each
-extra candidate, since lower values match spoken lists.
+captions and leaves every later word late. Rebuild captions with one
+`apply_captions` call per remaining clip. Pass the full, unchanged transcript
+each time, never a slice. Pass `replace` true until a call reports OK and false
+after it, because that call clears the caption track. So when another clip has
+captions on that track, call `find_retakes` with that clip's `elementId` before
+cutting, and rebuild its pieces the same way from its own full `transcript`.
+Expect the calls for that other clip to warn that the transcript matches none
+in the project, since the first call replaced those captions.
+Pass a lower `minMatchWords` only when a short restart was missed, and check
+each extra candidate, since lower values match spoken lists.
 
 ### Fade from black or fade to black
 
@@ -226,8 +226,10 @@ with ffmpeg.
 - Timeline positions are absolute.
 - Keyframes, time maps, and animation preset internals are element-local.
 - Multicam angle cuts are on the source clock the multicam's sources share.
-- Transcript word times from captions are timeline times. Silence cuts convert
-  them back to source time for 1x clips.
+- Transcript word times from captions are timeline times. Silence cuts, captions
+  scoped to a clip, and audio activity read that clip's audio source. A multicam
+  uses its `audioSource`. They convert back to that asset's media time for forward
+  1x clips.
 - `trimStartMs` is source-media time.
 - `rippleDelete` closes gaps. `removeElement` leaves gaps.
 - Tracks render bottom-up. Later tracks appear on top.
