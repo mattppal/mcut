@@ -181,4 +181,25 @@ describe('preview audio clock around the output start', () => {
     audio.sync(project, playing(1500))
     expect(audio.clockTimeMs(116)).toBe(1500)
   })
+
+  test('a context that starts suspended holds the playhead at the play position while sound is due until it anchors', async () => {
+    const project = toneProject()
+    startState = 'suspended'
+    resumeLands = false
+    audio.sync(project, playing(1000))
+    await settle()
+    expect(audio.clockTimeMs(116)).toBe(1000)
+    for (const context of contexts) context.state = 'running'
+    expect(audio.clockTimeMs(132)).toBe(1000)
+    audio.sync(project, playing(1000))
+    expect(audio.clockTimeMs(148)).toBe(1000)
+  })
+
+  test('a context that starts suspended leaves a silent stretch on the wall clock', async () => {
+    startState = 'suspended'
+    resumeLands = false
+    audio.sync(createProject(), playing(1000))
+    await settle()
+    expect(audio.clockTimeMs(116)).toBeNull()
+  })
 })
