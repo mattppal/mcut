@@ -21,11 +21,9 @@ const requestAnimationFrameOnce: RequestFrame = (callback) => {
 }
 
 export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = requestAnimationFrameOnce, clock }: PlaybackLoopOptions): void {
-  const onFrameRef = useRef(onFrame)
-  const clockRef = useRef(clock)
+  const latest = useRef({ onFrame, clock })
   useLayoutEffect(() => {
-    onFrameRef.current = onFrame
-    clockRef.current = clock
+    latest.current = { onFrame, clock }
   })
 
   useEffect(() => {
@@ -39,7 +37,7 @@ export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = 
       if (playback.isPlaying) {
         const durationMs = getProjectDurationMs(engine.project)
         const displayTimeMs = frameTimeMs + Math.min(elapsedMs, MAX_DISPLAY_LEAD_MS)
-        const clockMs = playback.currentTimeMs === knownMs ? clockRef.current?.(displayTimeMs) : null
+        const clockMs = playback.currentTimeMs === knownMs ? latest.current.clock?.(displayTimeMs) : null
         const next = clockMs ?? playback.currentTimeMs + elapsedMs * playback.playbackRate
         if (durationMs > 0 && next >= durationMs && playback.playbackRate > 0) {
           engine.seek(durationMs)
@@ -52,7 +50,7 @@ export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = 
         }
       }
       knownMs = engine.playback.state.currentTimeMs
-      onFrameRef.current(engine.project, engine.playback.state)
+      latest.current.onFrame(engine.project, engine.playback.state)
       cancel = requestFrame(tick)
     }
     cancel = requestFrame(tick)

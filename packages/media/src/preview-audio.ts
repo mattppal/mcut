@@ -197,7 +197,8 @@ export class PreviewAudio {
 
   private ensureEpoch(context: AudioContext, master: GainNode, playback: PlaybackState, segments: KeyedSegment[]): Epoch {
     const current = this.epoch
-    if (current && current.anchor.rate === playback.playbackRate && Math.abs(playback.currentTimeMs - current.reportedMs) <= REANCHOR_TOLERANCE_MS) return current
+    if (current && current.anchor.rate === playback.playbackRate && Math.abs(playback.currentTimeMs - current.reportedMs) <= REANCHOR_TOLERANCE_MS)
+      return current
     this.flush()
     const output = context.createGain()
     output.connect(master)
@@ -248,11 +249,12 @@ export class PreviewAudio {
       const voice = epoch.voices.get(key)
       if (!voice) {
         epoch.voices.set(key, this.createVoice(context, epoch, segment, volumeKey, Math.max(startS, nowS + START_LEAD_S, epoch.anchor.contextS)))
-      } else if (voice.volumeKey !== volumeKey) {
-        voice.segment = segment
-        voice.volumeKey = volumeKey
-        programVolume(voice.gain.gain, epoch.anchor, segment, nowS)
+        continue
       }
+      if (voice.volumeKey === volumeKey) continue
+      voice.segment = segment
+      voice.volumeKey = volumeKey
+      programVolume(voice.gain.gain, epoch.anchor, segment, nowS)
     }
     for (const [key, voice] of epoch.voices) {
       if (wanted.has(key)) continue

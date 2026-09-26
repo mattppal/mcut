@@ -202,7 +202,14 @@ async function scheduleReversedChunks(
     switch (decoded.status) {
       case 'ready':
         for (const channel of decoded.audio.channels) channel.reverse()
-        scheduleBuffer(context, destination, decoded.audio.channels, decoded.audio.sampleRate, outputStartS + span.outputFrame / sampleRate, span.frames / sampleRate)
+        scheduleBuffer(
+          context,
+          destination,
+          decoded.audio.channels,
+          decoded.audio.sampleRate,
+          outputStartS + span.outputFrame / sampleRate,
+          span.frames / sampleRate,
+        )
         break
       case 'empty':
         throw new Error(`Reversed audio produced no samples (element ${segment.elementId}).`)
