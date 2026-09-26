@@ -1,7 +1,7 @@
 import type { KeyframeMap } from './keyframes'
 import type { LayoutSlot } from './layouts'
 import type { MulticamElement, Project, Transform, VideoElement } from './model'
-import { getClipView, zoomRegionEndMs, type ContentView } from './zoom-regions'
+import { getClipView, getZoomedRect, zoomRegionEndMs, type ContentView } from './zoom-regions'
 
 const TOLERANCE_PX = 0.5
 const MIN_SHUTTER_ANGLE = 15
@@ -27,12 +27,15 @@ const lerpBox = (a: Box, b: Box, t: number): Box => ({
 
 export function flattenSlotMotion(project: Project, clip: SlotClip): Pick<VideoElement, 'transform' | 'keyframes' | 'motionBlur'> {
   const { element, fromMs, toMs, rect, size } = clip
-  const boxIn = ({ scale, focus }: ContentView): Box => ({
-    x: (scale * (rect.x + rect.w / 2 - focus.x * (1 - 1 / scale)) - 0.5) * project.width,
-    y: (scale * (rect.y + rect.h / 2 - focus.y * (1 - 1 / scale)) - 0.5) * project.height,
-    scaleX: clip.fitScale * scale,
-    scaleY: clip.fitScale * scale,
-  })
+  const boxIn = (view: ContentView): Box => {
+    const box = getZoomedRect(view, rect)
+    return {
+      x: (box.x + box.w / 2 - 0.5) * project.width,
+      y: (box.y + box.h / 2 - 0.5) * project.height,
+      scaleX: clip.fitScale * view.scale,
+      scaleY: clip.fitScale * view.scale,
+    }
+  }
   const transform = { ...boxIn(REST), rotation: 0 }
   const regions = (element.zooms ?? []).filter((z) => z.source === undefined && z.atMs < toMs && zoomRegionEndMs(z) > fromMs)
   if (regions.length === 0) return { transform }

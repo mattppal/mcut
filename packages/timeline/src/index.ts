@@ -75,6 +75,7 @@ export {
 export {
   getClipView,
   getSlotView,
+  getZoomedRect,
   getZoomShutterMs,
   isZoomable,
   listZoomRegions,
