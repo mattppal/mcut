@@ -185,6 +185,20 @@ describe('frame style rendering', () => {
     expect(drawAt({ x: 0, y: 0 })).toEqual([[320, 0, 160, 90, -960, -540, 1920, 1080]])
   })
 
+  test('a multicam zoom without a source scales the whole composite toward its focus and leaves slot framing alone', () => {
+    const base = projectWithMulticam({ width: 1920, height: 1080 }, {})
+    const project = applyCommand(base, {
+      type: 'addZoomRegion',
+      elementId: 'e-mc',
+      zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus: { x: 1, y: 1 } },
+    })
+    const ctx = new FakeContext2D()
+    renderFrame(asCtx(ctx), project, 1500, { source: new FakeSource() })
+    expect(ctx.callsTo('scale').at(-1)?.args).toEqual([2, 2])
+    expect(ctx.callsTo('translate').at(-1)?.args).toEqual([-960, -540])
+    expect(ctx.callsTo('drawImage').map((c) => c.args.slice(1))).toEqual([[0, 0, 640, 360, -960, -540, 1920, 1080]])
+  })
+
   test('a reframe track slides a slot crop onto the subject, and the fitted part keeps following once the crop meets the frame edge', () => {
     const cropped = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
     const project = applyCommand(cropped, {
