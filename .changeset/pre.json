@@ -59,6 +59,7 @@
     "flatten-composite-zoom",
     "flatten-multicam-reframe",
     "flatten-multicam-zooms",
+    "gapless-source-time",
     "get-frame-end-frame",
     "get-frame-first-timestamp",
     "get-frame-leak",
