@@ -4,7 +4,7 @@ import { collectAudibleSegments } from './export-audio'
 import type { AudibleSegment } from './export-audio-composite'
 import { AUDIO_SAMPLE_RATE } from './export-types'
 import { inputFor } from './probe'
-import { contextAt, epochChange, handoffAnchor, heardContextS, heardTimelineMs, type AudioAnchor } from './preview-audio-plan'
+import { contextAt, epochChange, handoffAnchor, heardContextS, heardTimelineMs, voiceStartS, type AudioAnchor } from './preview-audio-plan'
 import { createVoice, dropVoice, LOOKAHEAD_S, pumpVoice, retuneVoice, START_LEAD_S, type SinkOf, type Voice } from './preview-audio-voice'
 import { sourceAudioSink } from './source-timing'
 
@@ -249,10 +249,7 @@ export class PreviewAudio {
       wanted.add(key)
       const voice = epoch.voices.get(key)
       if (!voice) {
-        epoch.voices.set(
-          key,
-          createVoice(context, epoch.anchor, epoch.output, segment, volumeKey, Math.max(startS, nowS + START_LEAD_S, epoch.anchor.contextS)),
-        )
+        epoch.voices.set(key, createVoice(context, epoch.anchor, epoch.output, segment, volumeKey, voiceStartS(epoch.anchor, startS, nowS, START_LEAD_S)))
         continue
       }
       if (voice.volumeKey !== volumeKey) retuneVoice(voice, epoch.anchor, segment, volumeKey, nowS)

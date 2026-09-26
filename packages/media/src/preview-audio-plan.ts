@@ -22,6 +22,10 @@ export function contextAt(anchor: AudioAnchor, timelineMs: number): number {
   return anchor.contextS + (timelineMs - anchor.timelineMs) / 1000 / anchor.rate
 }
 
+export function voiceStartS(anchor: AudioAnchor, segmentStartS: number, nowS: number, leadS: number): number {
+  return Math.max(segmentStartS, nowS + leadS, anchor.contextS)
+}
+
 export function heardContextS(stamp: OutputStamp, perfMs: number): number {
   return stamp.contextTime + (perfMs - stamp.performanceTime) / 1000
 }
