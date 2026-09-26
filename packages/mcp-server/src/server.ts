@@ -223,10 +223,11 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       }
       if (words.length === 0) return failure('find_retakes needs a word-timed transcript. Call ensure_transcript first.')
       const { elementId, ...options } = call.arguments
-      transcripts.captureCaptions(project, { elementId, replace: false })
       const candidates = findRetakes(words, options)
       if (elementId === undefined) return text(JSON.stringify({ wordCount: words.length, candidates }, null, 2))
-      return text(JSON.stringify({ wordCount: words.length, candidates, transcript: { words: toClipSourceWords(project, elementId, words) } }, null, 2))
+      const clipWords = toClipSourceWords(project, elementId, words)
+      transcripts.captureCaptions(project, { elementId, replace: false })
+      return text(JSON.stringify({ wordCount: words.length, candidates, transcript: { words: clipWords } }, null, 2))
     }
     case 'ensure_transcript': {
       if (!target.ensureTranscript) return failure('ensure_transcript is not available on this target.')

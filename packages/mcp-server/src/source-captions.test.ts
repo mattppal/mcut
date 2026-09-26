@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { applyCommands } from '@mcut/editor'
-import { EditorEngine, createProject, getProjectTranscript, resolveElementAudioSource, type ElementId } from '@mcut/timeline'
+import { EditorEngine, createProject, getProjectCaptions, getProjectTranscript, resolveElementAudioSource, type ElementId } from '@mcut/timeline'
 import { buildCaptionsCommand } from '@mcut/transcription'
 import { z } from 'zod'
 import { createMcutMcpServer, createMcutMcpServerForTarget, type McutMcpTarget } from './server'
@@ -158,19 +158,45 @@ describe('apply_captions with a source scope', () => {
   })
 
   test('the transcript an earlier apply_captions passed is reused after cuts, and a slice keeps the rest of it', async () => {
-    const { engine, client } = await cutRetakes()
+    const engine = multicam()
+    const client = await connect(engine)
+    await client.callTool({ name: 'apply_captions', arguments: { transcript, elementId: 'e-mc' } })
+    cutTwoRetakes(engine)
+    await client.callTool({ name: 'apply_captions', arguments: { transcript, elementId: 'e-mc' } })
     const lastPiece = expectedWords(engine, ['e-keep-3'])
-    await client.callTool({ name: 'apply_captions', arguments: { transcript: { words: words.filter((word) => lastPiece.has(word.text)) }, elementId: 'e-keep-3' } })
+    const slice = await client.callTool({ name: 'apply_captions', arguments: { transcript: { words: words.filter((word) => lastPiece.has(word.text)) }, elementId: 'e-keep-3' } })
+    expect(slice.isError).toBeFalsy()
+    for (const { caption } of getProjectCaptions(engine.project)) engine.dispatch({ type: 'removeElement', elementId: caption.id })
 
-    await client.callTool({ name: 'apply_captions', arguments: { elementId: 'e-keep-2' } })
+    const result = await client.callTool({ name: 'apply_captions', arguments: { elementId: 'e-keep-2' } })
+    expect(result.isError).toBeFalsy()
     expect(captionWords(engine)).toEqual(expectedWords(engine, ['e-mc', 'e-keep-2', 'e-keep-3']))
   })
 
-  test('apply_captions without a transcript fails when nothing is stored for that audio', async () => {
-    const { engine } = await cutRetakes()
-    const result = await (await connect(engine)).callTool({ name: 'apply_captions', arguments: { elementId: 'e-keep-2' } })
+  test('find_retakes after the cut stores nothing, so apply_captions without a transcript fails instead of placing words off sync', async () => {
+    const engine = multicam()
+    await (await connect(engine)).callTool({ name: 'apply_captions', arguments: { transcript, elementId: 'e-mc' } })
+    cutTwoRetakes(engine)
+    const client = await connect(engine)
+    await client.callTool({ name: 'find_retakes', arguments: { elementId: 'e-keep-2' } })
+
+    const result = await client.callTool({ name: 'apply_captions', arguments: { elementId: 'e-keep-2' } })
     expect(result.isError).toBe(true)
     expect(textOf(result)).toContain('no stored transcript')
+  })
+
+  test('a stored transcript that an undo took off the timeline is refused', async () => {
+    const engine = multicam()
+    const client = await connect(engine)
+    await client.callTool({ name: 'apply_captions', arguments: { transcript, elementId: 'e-mc' } })
+    const wrong = { words: words.map((word) => ({ ...word, text: `x${word.text}` })) }
+    await client.callTool({ name: 'apply_captions', arguments: { transcript: wrong, elementId: 'e-mc' } })
+    expect(engine.undo()).toBe(true)
+    cutTwoRetakes(engine)
+
+    const result = await client.callTool({ name: 'apply_captions', arguments: { elementId: 'e-keep-2' } })
+    expect(result.isError).toBe(true)
+    expect(textOf(result)).toContain('does not match the captions')
   })
 
   test('a transcript slice replaces only the pieces it has words for', async () => {

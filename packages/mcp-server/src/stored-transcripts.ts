@@ -1,6 +1,16 @@
 import { z } from 'zod'
 import type { TranscriptResult } from '@mcut/transcription'
-import { CommandError, elementIdSchema, getProjectTranscript, isMediaClip, resolveElementAudioSource, type ElementId, type Project } from '@mcut/timeline'
+import {
+  CommandError,
+  elementIdSchema,
+  getProjectCaptions,
+  getProjectTranscript,
+  isMediaClip,
+  resolveElementAudioSource,
+  type ElementId,
+  type Project,
+} from '@mcut/timeline'
+import { captionTranscriptsMatch } from './caption-transcript-match'
 import { toClipSourceWords } from './clip-source-words'
 
 interface SourceWord {
@@ -26,44 +36,58 @@ function spliced(stored: readonly SourceWord[], incoming: readonly SourceWord[])
   return [...outside, ...incoming.map(({ text, startMs, endMs }) => ({ text, startMs, endMs }))].sort((a, b) => a.startMs - b.startMs)
 }
 
-function forwardSourceKey(project: Project, elementId: ElementId): string | undefined {
+function forwardSourceKey(project: Project, elementId: ElementId): string {
   const source = resolveElementAudioSource(project, elementId)
-  if (!source || source.timeMap || source.reversed) return undefined
+  if (!source) throw new CommandError('invalid-payload', `element "${elementId}" has no source audio`)
+  if (source.timeMap) throw new CommandError('invalid-payload', `clip "${elementId}" has a time remap, so apply_captions cannot rebuild its captions`)
+  if (source.reversed) throw new CommandError('invalid-payload', `clip "${elementId}" plays reversed, so its captions have no forward source time`)
   return `${source.assetId}\n${source.asset.src}`
+}
+
+function isCut(project: Project, elementId: ElementId): boolean {
+  const assetId = resolveElementAudioSource(project, elementId)?.assetId
+  const pieces = project.tracks.flatMap((track) =>
+    track.elements.filter((element) => isMediaClip(element) && resolveElementAudioSource(project, element.id)?.assetId === assetId),
+  )
+  return pieces.length > 1
 }
 
 export class StoredTranscripts {
   readonly #bySource = new Map<string, SourceWord[]>()
 
   remember(project: Project, elementId: ElementId, words: readonly SourceWord[]): void {
+    const source = resolveElementAudioSource(project, elementId)
+    if (!source || source.timeMap || source.reversed || words.length === 0) return
     const key = forwardSourceKey(project, elementId)
-    if (key && words.length > 0) this.#bySource.set(key, spliced(this.#bySource.get(key) ?? [], words))
+    this.#bySource.set(key, spliced(this.#bySource.get(key) ?? [], words))
   }
 
-  captureCaptions(project: Project, options: { elementId?: ElementId; replace: boolean }): void {
+  captureCaptions(project: Project, options: { elementId: ElementId; replace: boolean }): void {
+    const key = forwardSourceKey(project, options.elementId)
+    if (!options.replace && (this.#bySource.has(key) || isCut(project, options.elementId))) return
     const placed = getProjectTranscript(project, { includeWords: true }).captions.flatMap((caption) => caption.words ?? [])
-    if (placed.length === 0) return
-    const clipIds = options.elementId
-      ? [options.elementId]
-      : project.tracks.flatMap((track) => track.elements.filter((element) => isMediaClip(element)).map((element) => element.id))
-    const captured = new Set<string>()
-    for (const clipId of clipIds) {
-      const key = forwardSourceKey(project, clipId)
-      if (!key || (!options.replace && this.#bySource.has(key) && !captured.has(key))) continue
-      captured.add(key)
-      this.#bySource.set(key, spliced(this.#bySource.get(key) ?? [], toClipSourceWords(project, clipId, placed)))
-    }
+    const words = toClipSourceWords(project, options.elementId, placed)
+    if (words.length > 0) this.#bySource.set(key, spliced(this.#bySource.get(key) ?? [], words))
   }
 
   recall(project: Project, elementId: ElementId): TranscriptResult {
-    const key = forwardSourceKey(project, elementId)
-    const words = key ? this.#bySource.get(key) : undefined
-    if (!words || words.length === 0) {
+    const words = this.#bySource.get(forwardSourceKey(project, elementId)) ?? []
+    if (words.length === 0) {
       throw new CommandError(
         'invalid-payload',
-        `no stored transcript for the audio "${elementId}" plays. Call find_retakes with elementId before cutting, or pass transcript.`,
+        `no stored transcript for the audio "${elementId}" plays. Pass the full transcript. find_retakes with elementId stores one only before that audio is cut.`,
       )
     }
-    return { text: words.map((word) => word.text).join(' '), words, segments: [] }
+    const text = words.map((word) => word.text).join(' ')
+    const captionText = getProjectCaptions(project)
+      .map(({ caption }) => caption.text)
+      .join(' ')
+    if (captionText.trim() && !captionTranscriptsMatch(text, captionText)) {
+      throw new CommandError(
+        'invalid-payload',
+        `the stored transcript for the audio "${elementId}" plays does not match the captions in the project, for example after an undo. Pass the full transcript.`,
+      )
+    }
+    return { text, words, segments: [] }
   }
 }
