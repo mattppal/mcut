@@ -20,11 +20,7 @@ import {
   describeLayoutChange,
   getProjectCaptions,
   getProjectMediaContext,
-  getElement,
   getProjectTranscript,
-  getSourceTimeMs,
-  type ElementId,
-  type ProjectTranscriptWordContext,
   listZoomRegions,
   parseCommand,
   parseProject,
@@ -43,7 +39,10 @@ import {
   type McpServerStaticToolCall,
   type TransactSubRequest,
 } from './contract'
+import { toClipSourceWords } from './clip-source-words'
+import { severeZoomNote } from './zoom-warnings'
 import { frameContent, frameGrabSchema } from './frame-content'
+import { contactSheetContent } from './picture-tools'
 import { runEngineTransact, translateTransactCalls } from './transact'
 
 export interface McutMcpTarget {
@@ -56,6 +55,8 @@ export interface McutMcpTarget {
   centerPerson?(input: unknown): unknown | Promise<unknown>
   getAudioActivity?(input: unknown): unknown | Promise<unknown>
   getFrame?(input: unknown): unknown | Promise<unknown>
+  findSceneChanges?(input: unknown): unknown | Promise<unknown>
+  getContactSheet?(input: unknown): unknown | Promise<unknown>
   listActions(): unknown | Promise<unknown>
   listOperators(): unknown | Promise<unknown>
   runAction(actionId: string, input: unknown): unknown | Promise<unknown>
@@ -94,6 +95,13 @@ const failure = (value: string) => ({ ...text(value), isError: true })
 const targetProject = async (target: McutMcpTarget): Promise<Project> => parseProject(await target.getProject())
 
 const savedLayoutArgs = z.object({ layout: z.object({ id: z.string() }) })
+const resizedSlotArgs = z.object({ layoutId: z.string() })
+
+function changedLayoutId(name: string, args: unknown): string | undefined {
+  if (name === 'saveLayout') return savedLayoutArgs.safeParse(args).data?.layout.id
+  if (name === 'resizeLayoutSlot') return resizedSlotArgs.safeParse(args).data?.layoutId
+  return undefined
+}
 
 type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure> | ReturnType<typeof frameContent>
 
@@ -147,9 +155,6 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
     getAudioActivity: async () => {
       throw new Error('get_audio_activity requires a live browser bridge connected to an editor tab.')
     },
-    getFrame: async () => {
-      throw new Error('get_frame requires the live bridge connected to Studio.')
-    },
     listActions: () => [],
     listOperators: () =>
       listOperators({ engine }).map((operator) => ({
@@ -194,21 +199,6 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
   }
 }
 
-function toClipSourceWords(project: Project, elementId: ElementId, words: readonly ProjectTranscriptWordContext[]): ProjectTranscriptWordContext[] {
-  const clip = getElement(project, elementId)
-  if (clip?.type !== 'video' && clip?.type !== 'audio')
-    throw new CommandError('invalid-payload', `find_retakes elementId must name a video or audio clip, got "${elementId}"`)
-  if (clip.reversed) throw new CommandError('invalid-payload', `clip "${elementId}" plays reversed, so its captions have no forward source time`)
-  const endMs = clip.startMs + clip.durationMs
-  return words
-    .filter((word) => word.startMs >= clip.startMs && word.startMs < endMs)
-    .map((word) => ({
-      text: word.text,
-      startMs: Math.round(getSourceTimeMs(clip, word.startMs - clip.startMs)),
-      endMs: Math.round(getSourceTimeMs(clip, Math.min(word.endMs, endMs) - clip.startMs)),
-    }))
-}
-
 async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCall): Promise<ToolResult> {
   switch (call.name) {
     case 'get_summary':
@@ -248,13 +238,21 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       if (!parsed.success) return failure(`get_frame: ${z.prettifyError(parsed.error)}`)
       return frameContent(parsed.data)
     }
+    case 'find_scene_changes':
+      if (!target.findSceneChanges) return failure('find_scene_changes requires the live bridge connected to Studio.')
+      return text(JSON.stringify(await target.findSceneChanges(call.arguments), null, 2))
+    case 'get_contact_sheet':
+      if (!target.getContactSheet) return failure('get_contact_sheet requires the live bridge connected to Studio.')
+      return contactSheetContent(await target.getContactSheet(call.arguments))
     case 'lint_project':
       return text(JSON.stringify(lintProject(await targetProject(target)), null, 2))
     case 'list_zooms':
       return text(JSON.stringify(listZoomRegions(await targetProject(target)), null, 2))
     case 'edit_zooms':
       await target.applyCommands(call.arguments.edits)
-      return text(`OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}`)
+      return text(
+        `OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}${severeZoomNote(await targetProject(target))}`,
+      )
     case 'center_person': {
       if (!target.centerPerson) return failure('center_person is not available on this target.')
       const result = await target.centerPerson(call.arguments)
@@ -308,7 +306,7 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const requests = translateTransactCalls(call.arguments.calls)
       const results = await target.transact(requests)
       const lead = `OK: ${requests.length} calls applied as one undo step.`
-      return text(`${withResult(lead, results)}\n\n${await target.getSummary()}`)
+      return text(`${withResult(lead, results)}\n\n${await target.getSummary()}${severeZoomNote(await targetProject(target))}`)
     }
     case 'undo':
       if (!(await target.undo())) return failure('Nothing to undo.')
@@ -375,11 +373,14 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
         const result = await target.runOperator(operatorId, args ?? {})
         return text(`${withResult(`OK: operator ${operatorId} applied.`, result)}\n\n${await target.getSummary()}`)
       }
-      const layoutId = name === 'saveLayout' ? savedLayoutArgs.safeParse(args).data?.layout.id : undefined
+      const layoutId = changedLayoutId(name, args)
       const before = layoutId ? await targetProject(target) : null
       await target.dispatchCommand(name, args ?? {})
       const change = before && layoutId ? describeLayoutChange(before, await targetProject(target), layoutId) : []
-      return text([`OK: ${name} applied.`, ...change, '', await target.getSummary()].join('\n'))
+      return text(
+        [`OK: ${name} applied.`, ...change, '', await target.getSummary()].join('\n') +
+          (name.endsWith('ZoomRegion') ? severeZoomNote(await targetProject(target)) : ''),
+      )
     } catch (error) {
       if (error instanceof CommandError || error instanceof ProjectFormatError || error instanceof OperatorError) {
         return failure(`${error.name} (${error.code}): ${error.message}`)

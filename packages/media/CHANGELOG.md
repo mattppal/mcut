@@ -1,5 +1,55 @@
 # @mcut/media
 
+## 0.1.0-alpha.22
+
+### Patch Changes
+
+- Updated dependencies [[`8e23a05`](https://github.com/mattppal/mcut/commit/8e23a054f987d7cdb3deef7866517164c63c351e)]:
+  - @mcut/timeline@0.1.0-alpha.14
+  - @mcut/compositor@0.1.0-alpha.14
+
+## 0.1.0-alpha.21
+
+### Patch Changes
+
+- Updated dependencies [[`fa6f581`](https://github.com/mattppal/mcut/commit/fa6f581da9ce078b05916c46bfa5159e61b341a5)]:
+  - @mcut/timeline@0.1.0-alpha.13
+  - @mcut/compositor@0.1.0-alpha.13
+
+## 0.1.0-alpha.20
+
+### Patch Changes
+
+- [#182](https://github.com/mattppal/mcut/pull/182) [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b) Thanks [@mattppal](https://github.com/mattppal)! - Preview feeds and export audio play a multicam through the same media clip path as a video clip. A multicam plays at its own speed, a reversed multicam is silent in preview like a reversed video, and a multicam on a hidden and muted track is skipped. Audio-only sources feed as audio. Export audio honors the source offset, trim, and reverse of every media clip.
+
+- Updated dependencies [[`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b), [`4f45456`](https://github.com/mattppal/mcut/commit/4f45456d76e16003afc6765c7c51174c46f1001b)]:
+  - @mcut/timeline@0.1.0-alpha.12
+  - @mcut/compositor@0.1.0-alpha.12
+
+## 0.1.0-alpha.19
+
+### Patch Changes
+
+- Updated dependencies [[`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78), [`9b91a7b`](https://github.com/mattppal/mcut/commit/9b91a7b4e74b9eae01a9f46e864014e88284cd78)]:
+  - @mcut/timeline@0.1.0-alpha.11
+  - @mcut/compositor@0.1.0-alpha.11
+
+## 0.1.0-alpha.18
+
+### Minor Changes
+
+- [#195](https://github.com/mattppal/mcut/pull/195) [`c5aed4a`](https://github.com/mattppal/mcut/commit/c5aed4a4615a3fd5dcb1d76c385cd28ea3574b40) Thanks [@mattppal](https://github.com/mattppal)! - Find where the picture changes with `findSceneChanges`, and render a labelled thumbnail grid with `renderContactSheet`. Both read one video clip or one multicam source over a timeline range. Agents get them as the `find_scene_changes` and `get_contact_sheet` MCP tools on the live Studio bridge.
+
+  `find_scene_changes` compares 64 by 36 luma frames every `stepMs`, reports a change when the changed fraction of the picture passes the `sensitivity` threshold, and refines each change to the exact frame. It returns the changes and the stable segments between them.
+
+  `McutMcpTarget.findSceneChanges` and `getContactSheet` are optional. On a target without them, the tools fail with `find_scene_changes requires the live bridge connected to Studio.` and the same for `get_contact_sheet`.
+
+## 0.1.0-alpha.17
+
+### Patch Changes
+
+- [#190](https://github.com/mattppal/mcut/pull/190) [`0792372`](https://github.com/mattppal/mcut/commit/0792372e344836d0a7ae62b87039eec934bfccda) Thanks [@mattppal](https://github.com/mattppal)! - Export, the decoded preview for video without native playback, thumbnails, and filmstrips copy each decoded video frame to RGBA before they draw it, in browsers whose `VideoFrame.copyTo` accepts a `format`. A long export or MKV playback no longer leaves hundreds of megabytes of shared memory and about 80 open file descriptors in the Studio renderer. Export also reuses one RGBA buffer across frames, which made a 6 minute 1080p export about 12% faster in the desktop app.
+
 ## 0.1.0-alpha.16
 
 ### Patch Changes

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError } from './commands'
+import type { LayoutSlot } from './layouts'
 import { createProject, parseProject, type Project, type VideoElement } from './model'
 
 function projectWithVideo(): { project: Project; trackId: `t-${string}` } {
@@ -61,33 +62,19 @@ describe('frame style fields', () => {
     ).toThrow(CommandError)
   })
 
-  test('styled elements and slot strokes round-trip serialization', () => {
+  test('styled elements and slots round-trip serialization with the same frame style', () => {
     let { project } = projectWithVideo()
-    project = applyCommand(project, {
-      type: 'updateElement',
-      elementId: 'e-v',
-      patch: { cornerRadius: 0.1, shadow: { color: '#000', blur: 10, offsetX: 0, offsetY: 4 } },
-    })
-    project = applyCommand(project, {
-      type: 'saveLayout',
-      layout: {
-        id: 'lay-1',
-        name: 'PiP',
-        slots: [
-          {
-            source: 'camera',
-            rect: { x: 0.7, y: 0.7, w: 0.25, h: 0.25 },
-            fit: 'cover',
-            focus: { x: 0.5, y: 0.5 },
-            cornerRadius: 0.12,
-            shadow: true,
-            stroke: { color: '#ffffff', width: 4 },
-          },
-        ],
-      },
-    })
+    const style = {
+      crop: { x: 0.1, y: 0, w: 0.8, h: 1 },
+      cornerRadius: 0.12,
+      stroke: { color: '#ffffff', width: 4 },
+      shadow: { color: '#000', blur: 10, offsetX: 0, offsetY: 4 },
+    }
+    project = applyCommand(project, { type: 'updateElement', elementId: 'e-v', patch: style })
+    const slot: LayoutSlot = { source: 'camera', rect: { x: 0.7, y: 0.7, w: 0.25, h: 0.25 }, fit: 'cover', ...style }
+    project = applyCommand(project, { type: 'saveLayout', layout: { id: 'lay-1', name: 'PiP', slots: [slot] } })
     const restored = parseProject(JSON.parse(JSON.stringify(project)))
-    expect(restored.tracks[0]!.elements[0]).toMatchObject({ cornerRadius: 0.1 })
-    expect(restored.layouts[0]!.slots[0]!.stroke).toEqual({ color: '#ffffff', width: 4 })
+    expect(restored.tracks[0]!.elements[0]).toMatchObject(style)
+    expect(restored.layouts[0]!.slots).toEqual([slot])
   })
 })

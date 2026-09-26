@@ -1,54 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError } from './commands'
 import { getFrameRequests } from './frame-requests'
-import { createProject, type MulticamElement, type Project } from './model'
-import { getActiveAngleIndex, getActiveLayout, getAngleTransitionAt, getMulticamSourceTimeMs, splitAngles } from './multicam'
+import { createProject, type MulticamElement } from './model'
+import { getActiveAngleIndex, getActiveLayout, getAngleTransitionAt, getMulticamSourceTimeMs } from './multicam'
+import { createMc, mc, projectWithRecordings } from './multicam-fixture'
 import { getElement } from './selectors'
-
-function projectWithRecordings(): { project: Project; trackId: `t-${string}` } {
-  let project = createProject({ name: 'mc', width: 1920, height: 1080 })
-  const trackId = project.tracks[0]!.id
-  project = applyCommand(project, {
-    type: 'addAsset',
-    asset: { id: 'a-screen', kind: 'video', src: 'blob:s', durationMs: 60_000, width: 2560, height: 1440 },
-  })
-  project = applyCommand(project, {
-    type: 'addAsset',
-    asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 58_000, width: 1920, height: 1080 },
-  })
-  project = applyCommand(project, {
-    type: 'addElement',
-    trackId,
-    element: { type: 'video', id: 'e-screen', assetId: 'a-screen', startMs: 0, durationMs: 30_000 },
-  })
-  project = applyCommand(project, {
-    type: 'addTrack',
-  })
-  const camTrack = project.tracks[1]!.id
-  project = applyCommand(project, {
-    type: 'addElement',
-    trackId: camTrack,
-    element: {
-      type: 'video',
-      id: 'e-cam',
-      assetId: 'a-cam',
-      startMs: 2000,
-      durationMs: 28_000,
-      trimStartMs: 500,
-    },
-  })
-  return { project, trackId }
-}
-
-function createMc(project: Project): Project {
-  return applyCommand(project, {
-    type: 'createMulticam',
-    elementIds: ['e-screen', 'e-cam'],
-    multicamId: 'e-mc',
-  })
-}
-
-const mc = (p: Project) => getElement(p, 'e-mc' as `e-${string}`) as MulticamElement
 
 describe('createMulticam', () => {
   test('infers roles, syncs by timeline alignment, seeds default layouts', () => {
@@ -62,8 +18,9 @@ describe('createMulticam', () => {
     const camera = element.sources.find((s) => s.key === 'camera')!
     expect(screen.assetId).toBe('a-screen')
     expect(camera.assetId).toBe('a-cam')
-    expect(screen.trimStartMs).toBe(0)
-    expect(camera.trimStartMs).toBe(0)
+    expect(element.trimStartMs).toBe(0)
+    expect(screen.offsetMs).toBe(0)
+    expect(camera.offsetMs).toBe(0)
     expect(element.audioSource).toBe('camera')
     expect(element.angles).toEqual([{ atMs: 0, layoutId: next.layouts[0]!.id }])
     expect(next.layouts.length).toBeGreaterThanOrEqual(5)
@@ -101,7 +58,7 @@ describe('createMulticam', () => {
     })
     const next = applyCommand(project, {
       type: 'createMulticam',
-      elementIds: ['e-top', 'e-bottom'],
+      sources: [{ elementId: 'e-top' }, { elementId: 'e-bottom' }],
       multicamId: 'e-mc',
     })
     const element = mc(next)
@@ -117,7 +74,7 @@ describe('createMulticam', () => {
       trackId,
       element: { type: 'text', id: 'e-t', text: 'x', startMs: 0, durationMs: 1000 },
     })
-    expect(() => applyCommand(project, { type: 'createMulticam', elementIds: ['e-t'] })).toThrow(CommandError)
+    expect(() => applyCommand(project, { type: 'createMulticam', sources: [{ elementId: 'e-t' }] })).toThrow(CommandError)
   })
 })
 
@@ -160,7 +117,7 @@ describe('angle cuts', () => {
     expect(mc(merged).angles).toHaveLength(1)
   })
 
-  test('saveLayout defaults slot fit/focus (crop) when omitted', () => {
+  test('saveLayout defaults slot fit and leaves the frame style unset', () => {
     const { project } = projectWithRecordings()
     const next = applyCommand(createMc(project), {
       type: 'saveLayout',
@@ -171,8 +128,7 @@ describe('angle cuts', () => {
       },
     })
     const saved = next.layouts.find((l) => l.id === 'lay-x')!
-    expect(saved.slots[0]!.fit).toBe('cover')
-    expect(saved.slots[0]!.focus).toEqual({ x: 0.5, y: 0.5 })
+    expect(saved.slots).toEqual([{ source: 'camera', rect: { x: 0.25, y: 0.25, w: 0.5, h: 0.5 }, fit: 'cover' }])
   })
 
   test('removeLayout refuses while a cut uses it', () => {
@@ -307,14 +263,14 @@ describe('angle transitions', () => {
 })
 
 describe('source time + frame requests', () => {
-  test('per-source trim feeds source time; requests follow the active layout', () => {
+  test('per-source offset feeds source time; requests follow the active layout', () => {
     const { project } = projectWithRecordings()
     let next = createMc(project)
     next = applyCommand(next, {
-      type: 'setMulticamSourceTrim',
+      type: 'setMulticamSourceOffset',
       elementId: 'e-mc',
       sourceKey: 'camera',
-      trimStartMs: 1500,
+      offsetMs: 1500,
     })
     const element = mc(next)
     const camera = element.sources.find((s) => s.key === 'camera')!
@@ -327,53 +283,5 @@ describe('source time + frame requests', () => {
     next = applyCommand(next, { type: 'addAngleCut', elementId: 'e-mc', atMs: 0, layoutId: camLayout.id })
     const one = getFrameRequests(next, mc(next), 4000)
     expect(one).toEqual([{ assetId: 'a-cam', sourceTimeMs: 5500 }])
-  })
-})
-
-describe('split + flatten', () => {
-  test('splitting a multicam divides the switch list', () => {
-    const { project } = projectWithRecordings()
-    let next = createMc(project)
-    const camLayout = next.layouts.find((l) => l.name === 'Camera')!
-    next = applyCommand(next, { type: 'addAngleCut', elementId: 'e-mc', atMs: 10_000, layoutId: camLayout.id })
-    next = applyCommand(next, { type: 'splitElement', elementId: 'e-mc', atMs: 6000, rightElementId: 'e-mc2' })
-
-    const left = mc(next)
-    const right = getElement(next, 'e-mc2' as `e-${string}`) as MulticamElement
-    expect(left.angles).toEqual([{ atMs: 0, layoutId: next.layouts[0]!.id }])
-    expect(right.angles.map((a) => a.atMs)).toEqual([0, 4000])
-    expect(right.sources.find((s) => s.key === 'screen')!.trimStartMs).toBe(6000)
-  })
-
-  test('splitAngles helper keeps the active layout at the boundary', () => {
-    const { left, right } = splitAngles(
-      [
-        { atMs: 0, layoutId: 'lay-a' },
-        { atMs: 5000, layoutId: 'lay-b' },
-      ],
-      7000,
-    )
-    expect(left).toEqual([
-      { atMs: 0, layoutId: 'lay-a' },
-      { atMs: 5000, layoutId: 'lay-b' },
-    ])
-    expect(right[0]).toEqual({ atMs: 0, layoutId: 'lay-b' })
-  })
-
-  test('flatten explodes spans into plain clips + audio', () => {
-    const { project } = projectWithRecordings()
-    let next = createMc(project)
-    const camLayout = next.layouts.find((l) => l.name === 'Camera')!
-    next = applyCommand(next, { type: 'addAngleCut', elementId: 'e-mc', atMs: 12_000, layoutId: camLayout.id })
-    next = applyCommand(next, { type: 'flattenMulticam', elementId: 'e-mc' })
-
-    expect(getElement(next, 'e-mc' as `e-${string}`)).toBeUndefined()
-    const all = next.tracks.flatMap((t) => t.elements)
-    const videos = all.filter((e) => e.type === 'video')
-    const audios = all.filter((e) => e.type === 'audio')
-    expect(videos).toHaveLength(3)
-    expect(audios).toHaveLength(1)
-    expect(audios[0]).toMatchObject({ assetId: 'a-cam', startMs: 0, durationMs: 30_000 })
-    expect(videos.every((v) => v.type === 'video' && v.muted)).toBe(true)
   })
 })

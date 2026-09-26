@@ -3,6 +3,7 @@ import { centerPersonOptionsSchema, operatorIds, operators, silenceCutOptionsSch
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
 import { captionsCommandOptionsSchema, retakeOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
+import { PICTURE_TOOL_DESCRIPTIONS, PICTURE_TOOL_INPUTS } from './picture-tools'
 import { commandBatchSchema } from './transact-shape'
 
 export * from './export-protocol'
@@ -47,6 +48,8 @@ export const MCP_AGENT_TOOL_NAMES = [
   'get_project',
   'get_media_context',
   'get_frame',
+  'find_scene_changes',
+  'get_contact_sheet',
   'get_audio_activity',
   'get_transcript',
   'search_transcript',
@@ -96,6 +99,7 @@ export const MCP_TOOL_INPUTS = {
     elementId: elementIdSchema.describe('When set, render only this element. A multicam renders its composite.').optional(),
     maxWidth: z.int().min(64).max(3840).default(1280).describe('Maximum PNG width in pixels. Defaults to 1280. Height follows the project aspect ratio.'),
   }),
+  ...PICTURE_TOOL_INPUTS,
   get_audio_activity: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
     includeWaveform: z.boolean().describe('Include compact max-amplitude waveform buckets for coarse inspection.').optional(),
@@ -118,7 +122,7 @@ export const MCP_TOOL_INPUTS = {
     .extend({
       elementId: elementIdSchema
         .describe(
-          'The video or audio clip the captions came from. The reply then includes transcript, its words in source ms, ready to pass to apply_captions per remaining clip after the cuts.',
+          'The video or audio clip the captions came from. The reply then includes transcript, its words in source ms, ready to pass to apply_captions per remaining piece of that clip after the cuts.',
         )
         .optional(),
     })
@@ -165,7 +169,11 @@ export const MCP_TOOL_INPUTS = {
   get_export: getExportInputSchema,
   cancel_export: cancelExportInputSchema,
   import_media: z.strictObject({
-    paths: z.array(z.string().min(1)).min(1).max(50).describe('Absolute paths of local media files. Studio probes each file and registers an asset.'),
+    paths: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(50)
+      .describe('Absolute paths of local media files. A leading ~/ expands to the home folder. Studio probes each file and registers an asset.'),
   }),
 } satisfies Record<McpAgentToolName, z.ZodType>
 
@@ -217,7 +225,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   get_frame:
     'Live bridge only. Render one timeline frame as a PNG. Call get_frame before placing a zoom or a crop. ' +
     'Pass elementId to render only that element, including a multicam composite. ' +
-    'timeMs is the timeline position in milliseconds. maxWidth caps the PNG width and keeps the project aspect ratio.',
+    'timeMs is the timeline position in milliseconds. maxWidth caps the PNG width and keeps the project aspect ratio. ' +
+    'To find when something is on screen, call find_scene_changes and get_contact_sheet instead of stepping get_frame through time.',
+  ...PICTURE_TOOL_DESCRIPTIONS,
   get_audio_activity:
     'Live bridge only: analyze a video/audio clip and return compact source sound/silence windows. ' +
     'Use this only through the connected browser for audio-aware inspection; do not fall back to ffmpeg. ' +
@@ -232,7 +242,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Find retakes in the word-timed transcript: a phrase whose opening words are spoken again within maxLookaheadMs. ' +
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
     'Candidates come last to first; cut them in that order so no ripple delete shifts a range still to cut. ' +
-    'Pass elementId to get transcript back in source ms. Cut the clip only, then call apply_captions once per remaining clip with that transcript and the clip elementId; cutting the caption track leaves later words late. ' +
+    'Pass elementId to get transcript back in source ms. Cut the clip only, then call apply_captions once per remaining piece of that clip with that transcript and the piece elementId, passing replace true until a call reports OK and false after. ' +
+    'That call clears the caption track, so before cutting also call find_retakes for each other captioned clip on it, and rebuild its pieces from its own transcript. ' +
+    'Cutting the caption track instead leaves later words late. ' +
     'Review abandonedText before cutting. Needs captions with word timings; call ensure_transcript first.',
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
@@ -260,7 +272,8 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. Read this before revising zooms.',
   edit_zooms:
     'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
-    'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.5x) with rect or focus on the discussed screen region. ' +
+    'If any edit is rejected, none apply. ' +
+    'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.3x) with rect or focus on the discussed screen region. ' +
     'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the screen key so the camera overlay stays put.',
   center_person:
     'Live bridge only: find the face on device in the connected editor and keep the person in frame as one undoable edit. Waits for the analysis. ' +
@@ -326,6 +339,8 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('get_project'),
   staticToolCall('get_media_context'),
   staticToolCall('get_frame'),
+  staticToolCall('find_scene_changes'),
+  staticToolCall('get_contact_sheet'),
   staticToolCall('get_transcript'),
   staticToolCall('search_transcript'),
   staticToolCall('find_retakes'),

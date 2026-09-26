@@ -13,6 +13,7 @@ import {
 } from '../keyframes'
 import { elementIdSchema, type Project, type TimelineElement } from '../model'
 import { defineCommand, mustLocate, replaceTrack } from './shared'
+import { isVisualElement } from './visual'
 
 function mustSupportProperty(element: TimelineElement, property: AnimatableProperty): void {
   if (!elementSupportsProperty(element, property)) {
@@ -177,11 +178,7 @@ export const applyAnimationPreset = defineCommand({
       mustSupportProperty(element, property)
     }
     const nextElement: TimelineElement = { ...element, keyframes: expanded }
-    if (
-      MOTION_BLUR_PRESETS.has(payload.preset) &&
-      (nextElement.type === 'video' || nextElement.type === 'image' || nextElement.type === 'text') &&
-      nextElement.motionBlur === undefined
-    ) {
+    if (MOTION_BLUR_PRESETS.has(payload.preset) && isVisualElement(nextElement) && nextElement.motionBlur === undefined) {
       nextElement.motionBlur = { enabled: true, shutterAngle: 180 }
     }
     return replaceTrack(project, track.id, (t) => ({

@@ -14,12 +14,12 @@ import {
 } from '@/lib/icons'
 import { toast } from 'sonner'
 import { createProject, getProjectDurationMs, toOtioJson } from '@mcut/timeline'
-import { findTargetMulticam, switchToLayout } from './multicam-ui'
+import { findTargetMulticam, multicamSourcesInSelection, switchToLayout } from './multicam-ui'
 import { defineAction, type ActionContext } from './action-registry'
 import { ASPECT_PRESETS } from './aspect-presets'
 import { openCommandPalette } from './command-palette-events'
 import { clearEditorLayoutStorage } from './editor-layout'
-import { trackOfSelection } from './editor-actions'
+import { dispatchSafe, trackOfSelection } from './editor-actions'
 import { copySelection, cutSelection, pasteAtPlayheadFromAnywhere } from './editor-clipboard'
 import { MEDIA_FILE_ACCEPT, importMediaFiles, pickFiles } from './media-import'
 import { clearSavedSession, saveAssetBlob } from './persistence'
@@ -607,12 +607,17 @@ defineAction({
   category: 'multicam',
   enabled: ({ engine }) =>
     engine.selection.elementIds.some((id) => engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video'))),
-  run: ({ engine, ui }) => {
-    const videoIds = engine.selection.elementIds.filter((id) => engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video')))
-    try {
-      engine.dispatch({ type: 'createMulticam', elementIds: videoIds })
+  run: ({ engine, ui, throwOnError }) => {
+    const command = {
+      type: 'createMulticam' as const,
+      sources: multicamSourcesInSelection(engine.project, engine.selection.elementIds),
+    }
+    if (throwOnError) {
+      engine.dispatch(command)
       ui.setMode('multicam')
-    } catch {}
+      return
+    }
+    if (dispatchSafe(engine, command)) ui.setMode('multicam')
   },
 })
 

@@ -1,33 +1,32 @@
 import { z } from 'zod'
 import { applyEdgeTrim } from '../edge-trim'
 import { CommandError } from '../errors'
+import { isMediaClip, type MediaClip } from '../media-clip'
 import { elementIdSchema, MIN_ELEMENT_DURATION_MS, validateElement, type TimelineElement, type Track } from '../model'
 import { compactTimelineIfMagnetic, placementFor } from '../placement'
 import { getSourceSpanMs, makeConstantSpeedMap, timeMapSchema } from '../speed'
 import { defineCommand, mustLocate, replaceTrack, sortByStart } from './shared'
 
-function mustBeTimeMappable(element: TimelineElement): asserts element is TimelineElement & {
-  type: 'video' | 'audio'
-} {
-  if (element.type !== 'video' && element.type !== 'audio') {
-    throw new CommandError('invalid-payload', `"${element.type}" elements have no playback speed`)
+function mustBeMediaClip(element: TimelineElement, missing: string): asserts element is MediaClip {
+  if (!isMediaClip(element)) {
+    throw new CommandError('invalid-payload', `"${element.type}" elements have no ${missing}`)
   }
 }
 
 export const setElementSpeed = defineCommand({
   type: 'setElementSpeed',
   description:
-    'Set a constant playback speed on a video/audio element (2 = twice as fast). ' +
+    'Set a constant playback speed on a video, audio, or multicam element (2 = twice as fast). ' +
     'The clip keeps its in-point; its timeline duration rescales to play the same ' +
     'source span. Replaces any existing speed ramp with a constant map; speed 1 ' +
-    'removes the map. For ramps and freeze-frames use setTimeMap.',
+    'removes the map. Multicam angle cuts stay on the same content. For ramps and freeze-frames use setTimeMap.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     speed: z.number().min(0.05).max(20),
   }),
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
-    mustBeTimeMappable(element)
+    mustBeMediaClip(element, 'playback speed')
     const sourceSpanMs = getSourceSpanMs(element)
     const durationMs = Math.max(MIN_ELEMENT_DURATION_MS, Math.round(sourceSpanMs / payload.speed))
     const next: TimelineElement = { ...element, durationMs }
@@ -46,7 +45,7 @@ export const setElementSpeed = defineCommand({
 export const setTimeMap = defineCommand({
   type: 'setTimeMap',
   description:
-    'Set or clear a time remap curve on a video/audio element: keyframes from ' +
+    'Set or clear a time remap curve on a video, audio, or multicam element: keyframes from ' +
     'element-local output ms to source ms (relative to trimStartMs), monotone ' +
     'non-decreasing. Bezier easing between keyframes = speed ramp; a flat ' +
     'segment = freeze-frame. Pass null to restore 1x.',
@@ -56,7 +55,7 @@ export const setTimeMap = defineCommand({
   }),
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
-    mustBeTimeMappable(element)
+    mustBeMediaClip(element, 'playback speed')
     const next: TimelineElement = { ...element }
     if (payload.timeMap === null) delete next.timeMap
     else next.timeMap = payload.timeMap
@@ -108,34 +107,19 @@ export const trimEdge = defineCommand({
 export const slipElement = defineCommand({
   type: 'slipElement',
   description:
-    'Slip a clip: shift WHICH part of the source plays without moving the clip ' +
-    'on the timeline. Positive deltaMs slides the source window later. Applies ' +
-    'to video/audio (trim offset) and multicam (every source in sync).',
+    'Slip a clip, shifting WHICH part of the source plays without moving the clip ' +
+    'on the timeline. Positive deltaMs slides the source window (trimStartMs) later. Applies ' +
+    'to video, audio, and multicam, whose sources and angle cuts stay in sync on the source clock.',
   payloadSchema: z.object({ elementId: elementIdSchema, deltaMs: z.number().int() }),
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
     if (payload.deltaMs === 0) return project
-    let next: TimelineElement
-    if (element.type === 'video' || element.type === 'audio') {
-      const trimStartMs = element.trimStartMs + payload.deltaMs
-      if (trimStartMs < 0) {
-        throw new CommandError('out-of-bounds', `"${element.id}" has no media before its trim start`)
-      }
-      next = { ...element, trimStartMs }
-    } else if (element.type === 'multicam') {
-      next = {
-        ...element,
-        sources: element.sources.map((source) => {
-          const trimStartMs = source.trimStartMs + payload.deltaMs
-          if (trimStartMs < 0) {
-            throw new CommandError('out-of-bounds', `multicam source "${source.key}" has no media before its trim start`)
-          }
-          return { ...source, trimStartMs }
-        }),
-      }
-    } else {
-      throw new CommandError('invalid-payload', `"${element.type}" elements have no source to slip`)
+    mustBeMediaClip(element, 'source to slip')
+    const trimStartMs = element.trimStartMs + payload.deltaMs
+    if (trimStartMs < 0) {
+      throw new CommandError('out-of-bounds', `"${element.id}" has no media before its trim start`)
     }
+    const next: TimelineElement = { ...element, trimStartMs }
     validateElement(project, next)
     return replaceTrack(project, track.id, (t) => ({
       ...t,

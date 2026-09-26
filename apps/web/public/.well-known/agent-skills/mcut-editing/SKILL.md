@@ -104,10 +104,15 @@ repetition. Candidates come last to first, so cut them in the returned order,
 each with a split at both ends and a ripple delete on the clip only. Do not cut
 the caption track the same way, because a ripple delete keeps the gaps between
 captions and leaves every later word late. Rebuild captions instead with one
-`apply_captions` call per remaining clip, passing the reply's `transcript`
-unchanged and that clip's `elementId`, with `replace` true on the first call
-and false after. Pass a lower `minMatchWords` only when a short restart was
-missed, and check each extra candidate, since lower values match spoken lists.
+`apply_captions` call per remaining piece of that clip, passing the reply's
+`transcript` unchanged and the piece's `elementId`. Pass `replace` true until a
+call reports OK, then false. That first OK call clears the whole caption track,
+so when another clip has captions on it, call `find_retakes` with that clip's
+`elementId` too before cutting, and rebuild its pieces the same way from its
+own `transcript`. Expect the calls after it to warn that the transcript matches
+none in the project, since that first call replaced those captions. Pass a
+lower `minMatchWords` only when a short restart was missed, and check each
+extra candidate, since lower values match spoken lists.
 
 ### Fade from black or fade to black
 
@@ -150,6 +155,27 @@ elements in it, so you can find a button or a region in a screen recording
 before you set the zoom. Pass `elementId` to render one element. A multicam
 element renders its composite. `maxWidth` defaults to 1280.
 
+### Find when something is on screen
+
+Don't step `get_frame` through time to find when a page or a window is on
+screen. Call `find_scene_changes` first. In one call it compares downscaled
+frames over the clip and returns each change refined to the frame, plus the
+stable `segments` between changes, all in timeline milliseconds.
+
+```json
+{ "elementId": "e-...", "source": "screen" }
+```
+
+On a multicam it reads the `screen` source by default, so the camera overlay
+doesn't count. `sensitivity` runs from 0 to 1 and defaults to 0.5, which
+reports new pages and cuts but not scrolling. Raise it to catch smaller
+changes. Pass `startMs` and `endMs` to scan part of the clip.
+
+Then call `get_contact_sheet` with `timesMs` set to each segment's start and
+midpoint. It returns one PNG with a labelled thumbnail per time, so one look
+tells you which segments show the region. Place a detail zoom's in, hold, and
+out inside that segment, and end it before the next change.
+
 ### Punch-ins and detail zooms
 
 Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
@@ -164,10 +190,11 @@ Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
 }
 ```
 
-Keep zooms subtle (1.1x to 1.5x), keep `easeOutExpo`, and keep `motionBlur` on.
+Keep zooms subtle (1.1x to 1.35x), keep `easeOutExpo`, and keep `motionBlur` on.
 On a multicam, set `source` to the screen key so the camera overlay stays put.
 Place a detail zoom over the words that discuss the region, found with
-`search_transcript`. When asked to tone zooms down, lower `scale` rather than
+`search_transcript`, and inside the `find_scene_changes` segment that shows the
+region. When asked to tone zooms down, lower `scale` rather than
 removing zooms or turning off motion blur.
 
 ### Keep a person in frame
@@ -197,8 +224,8 @@ with ffmpeg.
 
 - All project times are integer milliseconds.
 - Timeline positions are absolute.
-- Keyframes, angle cuts, time maps, and animation preset internals are
-  element-local.
+- Keyframes, time maps, and animation preset internals are element-local.
+- Multicam angle cuts are on the source clock the multicam's sources share.
 - Transcript word times from captions are timeline times. Silence cuts convert
   them back to source time for 1x clips.
 - `trimStartMs` is source-media time.

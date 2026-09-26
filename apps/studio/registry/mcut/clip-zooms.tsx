@@ -4,7 +4,7 @@ import { useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent a
 import { toast } from 'sonner'
 import { planZoomRegionDrag, type ZoomRegionDragMode } from '@mcut/editor'
 import { useEditor } from '@mcut/react'
-import { getLinkedElementIds, type BuiltinCommand, type ZoomableElement, type ZoomRegion } from '@mcut/timeline'
+import { getLinkedElementIds, zoomRegionEndMs, type BuiltinCommand, type ZoomableElement, type ZoomRegion } from '@mcut/timeline'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
 
@@ -59,6 +59,7 @@ function ZoomBlock({ element, zoom, pxPerMs, topPx }: { element: ZoomableElement
   const holdStartMs = shown.inMs
   const holdEndMs = shown.inMs + shown.holdMs
   const spanMs = holdEndMs + shown.outMs
+  const fitsPiece = zoom.atMs >= 0 && zoomRegionEndMs(zoom) <= element.durationMs
   const label = zoomLabel(zoom)
 
   const dispatch = (command: BuiltinCommand) => {
@@ -150,16 +151,17 @@ function ZoomBlock({ element, zoom, pxPerMs, topPx }: { element: ZoomableElement
         <span className="pointer-events-none relative truncate px-1 font-mono text-2xs text-overlay-foreground">
           {drag ? DRAG_READOUTS[drag.mode](shown) : label}
         </span>
-        {ZOOM_EDGES.map((edge) => (
-          <span
-            key={edge.mode}
-            title={edge.title}
-            data-zoom-edge={edge.mode}
-            className="absolute inset-y-0 w-1.5 -translate-x-1/2 cursor-ew-resize rounded-full transition-colors hover:bg-overlay-foreground/50"
-            style={{ left: edge.offsetMs(shown) * pxPerMs }}
-            onPointerDown={(event) => begin(event, edge.mode)}
-          />
-        ))}
+        {fitsPiece &&
+          ZOOM_EDGES.map((edge) => (
+            <span
+              key={edge.mode}
+              title={edge.title}
+              data-zoom-edge={edge.mode}
+              className="absolute inset-y-0 w-1.5 -translate-x-1/2 cursor-ew-resize rounded-full transition-colors hover:bg-overlay-foreground/50"
+              style={{ left: edge.offsetMs(shown) * pxPerMs }}
+              onPointerDown={(event) => begin(event, edge.mode)}
+            />
+          ))}
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem variant="destructive" onClick={remove}>

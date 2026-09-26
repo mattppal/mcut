@@ -40,6 +40,109 @@ describe('project format versioning', () => {
   })
 })
 
+function v1Doc(fields: object): unknown {
+  return {
+    version: 1,
+    id: 'p-v1',
+    name: 'v1',
+    width: 1920,
+    height: 1080,
+    fps: 30,
+    assets: {
+      'a-screen': { id: 'a-screen', kind: 'video', src: 'blob:screen', durationMs: 60_000 },
+      'a-camera': { id: 'a-camera', kind: 'video', src: 'blob:camera', durationMs: 60_000 },
+    },
+    tracks: [{ id: 't-1', name: 'Track 1', elements: [] }],
+    ...fields,
+  }
+}
+
+const v1Multicam = (multicam: object): unknown =>
+  v1Doc({ tracks: [{ id: 't-1', name: 'Track 1', elements: [{ id: 'e-mc', type: 'multicam', startMs: 0, durationMs: 6000, ...multicam }] }] })
+
+describe('v1 to v2 migration', () => {
+  test('moves a multicam onto its group clock through the old time map', () => {
+    const project = parseProject(
+      v1Multicam({
+        sources: [
+          { key: 'screen', assetId: 'a-screen', trimStartMs: 1000 },
+          { key: 'camera', assetId: 'a-camera', trimStartMs: 1600 },
+        ],
+        angles: [
+          { atMs: 0, layoutId: 'l-screen' },
+          { atMs: 2000, layoutId: 'l-camera' },
+          { atMs: 5000, layoutId: 'l-screen' },
+        ],
+        timeMap: [
+          { timeMs: 0, value: 0 },
+          { timeMs: 6000, value: 12_000 },
+        ],
+      }),
+    )
+    expect(project.version).toBe(2)
+    expect(project.tracks[0]?.elements[0]).toMatchObject({
+      trimStartMs: 1000,
+      sources: [
+        { key: 'screen', assetId: 'a-screen', offsetMs: 0 },
+        { key: 'camera', assetId: 'a-camera', offsetMs: 600 },
+      ],
+      angles: [
+        { atMs: 1000, layoutId: 'l-screen' },
+        { atMs: 5000, layoutId: 'l-camera' },
+        { atMs: 11_000, layoutId: 'l-screen' },
+      ],
+    })
+  })
+
+  test('keeps cut spacing when the multicam has no time map', () => {
+    const project = parseProject(
+      v1Multicam({
+        sources: [
+          { key: 'screen', assetId: 'a-screen', trimStartMs: 500 },
+          { key: 'camera', assetId: 'a-camera', trimStartMs: 300 },
+        ],
+        angles: [
+          { atMs: 0, layoutId: 'l-screen' },
+          { atMs: 2000, layoutId: 'l-camera' },
+        ],
+      }),
+    )
+    expect(project.tracks[0]?.elements[0]).toMatchObject({
+      trimStartMs: 300,
+      sources: [
+        { key: 'screen', offsetMs: 200 },
+        { key: 'camera', offsetMs: 0 },
+      ],
+      angles: [
+        { atMs: 300, layoutId: 'l-screen' },
+        { atMs: 2300, layoutId: 'l-camera' },
+      ],
+    })
+  })
+
+  test('turns the slot shadow flag into the shadow it drew and drops focus', () => {
+    const pip = { x: 0.7, y: 0.69, w: 0.275, h: 0.275 }
+    const project = parseProject(
+      v1Doc({
+        layouts: [
+          {
+            id: 'l-pip',
+            name: 'Screen + Cam',
+            slots: [
+              { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', focus: { x: 0.5, y: 0.5 }, cornerRadius: 0, shadow: false },
+              { source: 'camera', rect: pip, fit: 'cover', focus: { x: 0.3, y: 0.5 }, cornerRadius: 0.12, shadow: true },
+            ],
+          },
+        ],
+      }),
+    )
+    expect(project.layouts[0]?.slots).toEqual([
+      { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', cornerRadius: 0 },
+      { source: 'camera', rect: pip, fit: 'cover', cornerRadius: 0.12, shadow: { color: 'rgba(0, 0, 0, 0.45)', blur: 36, offsetX: 0, offsetY: 12 } },
+    ])
+  })
+})
+
 describe('frame quantization helpers', () => {
   test('frame boundaries round-trip', () => {
     for (const fps of [24, 30, 60]) {

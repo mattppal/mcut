@@ -59,6 +59,7 @@ function project(options: { caption?: string } = {}): Project {
 
 function multicamProject(): Project {
   return parseProject({
+    version: 2,
     id: 'p-live-transcript-multicam',
     name: 'Live transcript multicam',
     width: 1920,
@@ -102,8 +103,8 @@ function multicamProject(): Project {
             startMs: 2000,
             durationMs: 4000,
             sources: [
-              { key: 'screen', assetId: 'a-screen', trimStartMs: 0 },
-              { key: 'camera', assetId: 'a-camera', trimStartMs: 600 },
+              { key: 'screen', assetId: 'a-screen', offsetMs: 0 },
+              { key: 'camera', assetId: 'a-camera', offsetMs: 600 },
             ],
             angles: [{ atMs: 0, layoutId: 'lay-camera' }],
             audioSource: 'camera',

@@ -1,3 +1,16 @@
+import { toast } from 'sonner'
+import type { BuiltinCommand, EditorEngine } from '@mcut/timeline'
+
+export function dispatchSafe(engine: EditorEngine, command: BuiltinCommand): boolean {
+  try {
+    engine.dispatch(command)
+    return true
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Edit failed')
+    return false
+  }
+}
+
 export {
   addTextAtPlayhead,
   allElementIds,

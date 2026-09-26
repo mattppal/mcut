@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { randomBytes } from 'node:crypto'
+import { homedir } from 'node:os'
 import path from 'node:path'
 import { z } from 'zod'
 import { MCP_TOOL_INPUTS, importMediaBridgePayloadSchema, mediaImportReportSchema, type MediaImportReport } from './contract'
@@ -79,33 +80,39 @@ function mimeTypeFor(filePath: string): string | null {
 
 function statFailure(filePath: string, error: unknown): string {
   const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : ''
-  if (code === 'ENOENT') return `import_media could not find "${filePath}".`
+  if (code === 'ENOENT') return `import_media could not find "${filePath}". Home is ${homedir()}.`
   if (code.length > 0) return `import_media could not read "${filePath}" (${code}).`
   return `import_media could not read "${filePath}".`
 }
 
-async function classifyPath(filePath: string): Promise<ClassifiedPath> {
-  if (!path.isAbsolute(filePath)) {
-    return { ok: false, path: filePath, error: `import_media requires an absolute path, got "${filePath}".` }
+function resolveMediaPath(input: string): string | null {
+  if (input === '~' || input.startsWith('~/')) return path.join(homedir(), input.slice(1))
+  return path.isAbsolute(input) ? path.resolve(input) : null
+}
+
+async function classifyPath(input: string): Promise<ClassifiedPath> {
+  const filePath = resolveMediaPath(input)
+  if (filePath === null) {
+    return { ok: false, path: input, error: `import_media requires an absolute path or one starting with ~/, got "${input}". Home is ${homedir()}.` }
   }
   let info: Awaited<ReturnType<typeof stat>>
   try {
     info = await stat(filePath)
   } catch (error) {
-    return { ok: false, path: filePath, error: statFailure(filePath, error) }
+    return { ok: false, path: input, error: statFailure(filePath, error) }
   }
   if (info.isDirectory()) {
-    return { ok: false, path: filePath, error: `import_media cannot import "${filePath}" because it is a directory.` }
+    return { ok: false, path: input, error: `import_media cannot import "${filePath}" because it is a directory.` }
   }
   if (!info.isFile()) {
-    return { ok: false, path: filePath, error: `import_media cannot import "${filePath}" because it is not a regular file.` }
+    return { ok: false, path: input, error: `import_media cannot import "${filePath}" because it is not a regular file.` }
   }
   if (info.size === 0) {
-    return { ok: false, path: filePath, error: `import_media cannot import "${filePath}" because it is empty.` }
+    return { ok: false, path: input, error: `import_media cannot import "${filePath}" because it is empty.` }
   }
   const mimeType = mimeTypeFor(filePath)
   if (mimeType === null) {
-    return { ok: false, path: filePath, error: `import_media does not recognize the extension of "${filePath}".` }
+    return { ok: false, path: input, error: `import_media does not recognize the extension of "${filePath}".` }
   }
   return { ok: true, path: filePath, name: path.basename(filePath), mimeType, size: info.size }
 }

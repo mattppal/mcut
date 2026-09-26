@@ -1,6 +1,6 @@
 {
   "name": "@mcut/editor",
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-alpha.14",
   "description": "Programmable editor operators for mcut: user-level actions over the timeline engine",
   "license": "Apache-2.0",
   "type": "module",

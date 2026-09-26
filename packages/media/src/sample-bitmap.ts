@@ -5,10 +5,20 @@ function convertsToRgba(sample: VideoSample): boolean {
   return sample.allocationSize({ format: 'RGBA' }) === sample.visibleRect.width * sample.visibleRect.height * 4
 }
 
-export async function sampleBitmap(sample: VideoSample, image = new ImageData(sample.visibleRect.width, sample.visibleRect.height)): Promise<ImageBitmap> {
-  if (!convertsToRgba(sample)) return createImageBitmap(sample.toCanvasImageSource())
+interface BitmapSize {
+  width: number
+  height: number
+}
+
+export async function sampleBitmap(
+  sample: VideoSample,
+  image = new ImageData(sample.visibleRect.width, sample.visibleRect.height),
+  size: BitmapSize = { width: sample.squarePixelWidth, height: sample.squarePixelHeight },
+): Promise<ImageBitmap> {
+  const resize: ImageBitmapOptions = { resizeWidth: size.width, resizeHeight: size.height, resizeQuality: 'high' }
+  if (!convertsToRgba(sample)) return createImageBitmap(sample.toCanvasImageSource(), resize)
   await sample.copyTo(image.data, { format: 'RGBA' })
-  return createImageBitmap(image, { resizeWidth: sample.squarePixelWidth, resizeHeight: sample.squarePixelHeight })
+  return createImageBitmap(image, resize)
 }
 
 function surfaceContext(width: number, height: number, settings?: CanvasRenderingContext2DSettings) {

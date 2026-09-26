@@ -378,6 +378,22 @@ The PNG blob from `renderProjectStill`, with its pixel width, pixel height, and 
 
 Optional arguments for `renderProjectStill`. `soloElementId` draws only that element, including a multicam composite. `width` caps the PNG width and keeps the project aspect ratio.
 
+### SceneChangeOptions
+
+Optional arguments for `findSceneChanges`. `elementId` picks a video or multicam clip and defaults to the first multicam, then the first video clip. `source` picks a multicam source and defaults to `screen`, then the first video source. `startMs` and `endMs` bound the scan in timeline time and default to the clip span. `stepMs` defaults to 500. `sensitivity` runs from 0 to 1 and defaults to 0.5, where a change needs 30% of the picture to change. `maxChanges` defaults to 40 and keeps the largest changes.
+
+### SceneChangeReport
+
+The result of `findSceneChanges`. It names the element, the source, and the asset it read, the range, `stepMs`, `sensitivity`, the `threshold` fraction it used, and the number of samples. `changes` lists `{ timeMs, changed }` in timeline order. `segments` lists the `{ startMs, endMs }` stretches between changes. `truncated` is true when `maxChanges` dropped smaller changes.
+
+### ContactSheetOptions
+
+Optional arguments for `renderContactSheet`. It takes the same `elementId`, `source`, `startMs`, and `endMs` as `SceneChangeOptions`, plus `timesMs`, `count` (default 12), `columns` (default a square grid), and `thumbWidth` in pixels (default 320).
+
+### ContactSheet
+
+The PNG blob from `renderContactSheet`, with its pixel width and height, the column count, the element and source it read, and `tiles`, the timeline time of each tile in grid order.
+
 ### FaceSample
 
 `FaceSample` is `{ sourceMs, box }`, one reading of `createLocalFaceDetector` at an integer source media time. `box` is the largest face as `{ x, y, w, h }` fractions of the frame, or `null` when the frame has none. It fits `FaceSample` from `@mcut/editor`, so `detect` output goes straight to `planCenterPerson`.

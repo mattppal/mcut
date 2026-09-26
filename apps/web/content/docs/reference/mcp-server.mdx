@@ -42,18 +42,20 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `get_project` | Full serializable project JSON. |
 | `get_media_context` | Project, playback, selection, asset, track, element, marker, and transcript metadata. |
 | `get_frame` | Live bridge only. PNG of one timeline frame. Call it before placing a zoom or a crop. |
+| `find_scene_changes` | Live bridge only. Timeline times where the picture of one video clip or multicam source changes, refined to the frame, and the stable segments between them. `sensitivity` from 0 to 1, default 0.5. A multicam reads its `screen` source by default. |
+| `get_contact_sheet` | Live bridge only. One PNG grid of thumbnails of one video clip or multicam source, each labelled with its timeline time. Pass `timesMs` or `count`. |
 | `get_audio_activity` | Live bridge only. Sound and silence windows for one video or audio clip in source time. |
 | `get_transcript` | Caption-derived transcript. Never starts transcription. |
 | `search_transcript` | Find spoken words or phrases with timeline times. |
 | `find_retakes` | Retake candidates from the word-timed transcript, last to first, each a timeline range that keeps the last take. With `elementId`, also that clip's transcript in source time for `apply_captions`. |
 | `ensure_transcript` | Live bridge only. Transcribe the target clip in the editor and apply word-timed captions. |
 | `list_commands` | Live bridge only. Every raw timeline command schema. |
-| `apply_commands` | Live bridge only. Apply several commands in one undoable transaction. |
+| `apply_commands` | Live bridge only. Apply several commands in one undoable transaction. A failed command leaves the project unchanged. |
 | `apply_captions` | Turn a transcript into caption elements as one undoable edit. |
 | `apply_silence_cuts` | Cut transcript silence out of one clip as one undoable edit. |
 | `lint_project` | Cross-entity problems `parseProject` cannot reject, each with a severity and code. |
 | `list_zooms` | Every zoom region with its element, timing, target, easing, and motion blur. |
-| `edit_zooms` | Add, update, or remove zoom regions as one undoable edit. |
+| `edit_zooms` | Add, update, or remove zoom regions as one undoable edit. A rejected edit leaves the project unchanged. |
 | `center_person` | Live bridge only. Find the face on device and keep the person in frame as one undoable edit, on a video crop or a multicam camera source. A video crop at the project aspect also scales the clip to fill the frame, and `fill` overrides that. |
 | `list_presets` | Platform delivery presets with dimensions, fps, and safe areas. |
 | `list_operators` | List available UI-level editor operators. |
@@ -132,7 +134,7 @@ ids and payload.
 
 ## Import local media
 
-`import_media` takes `paths`, from 1 to 50 absolute file paths. The bridge
+`import_media` takes `paths`, from 1 to 50 absolute file paths. A leading `~/` expands to the home folder. The bridge
 checks that each path exists, is a non-empty regular file, and has a known
 media extension. Studio fetches each accepted file from a one-call bridge URL,
 then probes it, registers the asset, and stores the bytes the same way the

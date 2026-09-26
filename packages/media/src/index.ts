@@ -36,6 +36,10 @@ export { containerFormats, listContainerFormats, type ContainerFormat, type Cont
 
 export { renderProjectStill, type ProjectStill, type RenderProjectStillOptions } from './still'
 
+export { findSceneChanges, type SceneChangeOptions, type SceneChangeReport } from './scene-changes'
+
+export { renderContactSheet, type ContactSheet, type ContactSheetOptions } from './contact-sheet'
+
 export { getFilmstrip, type Filmstrip, type FilmstripOptions } from './filmstrip'
 
 export { canUseNativeVideoPreview, isMatroskaLike, type VideoPreviewCapability } from './video-capabilities'

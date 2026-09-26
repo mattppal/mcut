@@ -71,9 +71,11 @@ describe('measureFile structure', () => {
     expect(measureFile('packages/x/src/a.test.ts', line).get('consoleLog')).toBe(0)
   })
 
-  test('prose counts dashes and colon connectors only', () => {
-    const counts = measureFile('packages/x/README.md', ['# Title', 'Use it: it works', 'A \u2014 B', ''].join('\n'))
-    expect(counts.get('colonConnector')).toBe(1)
+  test('prose counts dashes and colon connectors outside code fences only', () => {
+    const fence = '```'
+    const lines = ['# Title', 'Use it: it works', 'A \u2014 B', `${fence}ts`, 'function f(x: number): number', fence, 'Then: again', '']
+    const counts = measureFile('packages/x/README.md', lines.join('\n'))
+    expect(counts.get('colonConnector')).toBe(2)
     expect(counts.get('longDash')).toBe(1)
     expect(counts.get('commentLines')).toBe(0)
   })

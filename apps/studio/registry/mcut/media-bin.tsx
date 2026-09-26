@@ -284,7 +284,13 @@ export function MediaBin({ className, onAssetImported }: { className?: string; o
       engine.transact(() => {
         const screenId = insertElementOnNewTrack(engine, elementForAsset(engine, screen), startMs)
         const cameraId = insertElementOnNewTrack(engine, elementForAsset(engine, camera), startMs)
-        engine.dispatch({ type: 'createMulticam', elementIds: [screenId, cameraId] })
+        engine.dispatch({
+          type: 'createMulticam',
+          sources: [
+            { elementId: screenId, key: 'screen' },
+            { elementId: cameraId, key: 'camera' },
+          ],
+        })
       })
       setSelectedIds([])
       setMode('multicam')

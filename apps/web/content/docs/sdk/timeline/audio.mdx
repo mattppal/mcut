@@ -22,7 +22,6 @@ The duration and fade fields of an element that can carry audio fades.
 ```ts
 interface ElementAudioSource {
   elementId: ElementId
-  elementType: ElementAudioSourceType
   assetId: AssetId
   asset: AssetRef
   timelineStartMs: number
@@ -32,19 +31,10 @@ interface ElementAudioSource {
   sourceSpanMs: number
   timeMap?: TimeMap
   reversed: boolean
-  multicamSourceKey?: string
 }
 ```
 
-The asset and source range an element plays audio from, with its timeline placement, time map, reversal, and the multicam source key when relevant.
-
-### ElementAudioSourceType
-
-```ts
-type ElementAudioSourceType = 'video' | 'audio' | 'multicam'
-```
-
-The element types that can play audio, `'video'`, `'audio'`, and `'multicam'`.
+The asset and source range a media clip plays audio from, with its timeline placement, time map, and reversal. For a multicam the asset is the `audioSource` source, and `sourceStartMs` is that source's `offsetMs` plus the multicam `trimStartMs`.
 
 ### AngleCut
 
@@ -55,7 +45,19 @@ interface AngleCut {
 }
 ```
 
-One entry in a multicam element's angle list, the element-local time a layout takes over and its layout id.
+One entry in a multicam element's angle list, the source clock time a layout takes over and its layout id.
+
+### VisibleAngleCut
+
+```ts
+interface VisibleAngleCut {
+  atMs: number
+  localMs: number
+  layoutId: string
+}
+```
+
+An angle cut as it lands in a multicam's window, with its source clock time, its element-local position, and the layout that plays after it in playback order.
 
 ### AngleTransitionWindow
 
@@ -69,7 +71,7 @@ interface AngleTransitionWindow {
 }
 ```
 
-A blend window around an angle cut, with the transition type, the clamped duration, the cut time, and the layouts on each side.
+A blend window around an angle cut, with the transition type, the clamped duration, the cut time on the source clock, and the layouts on each side.
 
 ### FrameRequest
 
@@ -112,7 +114,7 @@ Returns `true` when the element has a fade in or fade out longer than 0 ms.
 
 `function getVoiceSource(project: Project, element: TimelineElement): { assetId: AssetId; amount: number } | null`
 
-Returns the asset and mix amount for a clip whose voice cleanup is on and whose amount is above 0. Video and audio clips use their own asset. Multicam clips use `getMulticamAudioSource`. Returns null when voice is off, the amount is 0, or the asset is missing.
+Returns the asset and mix amount for a clip whose voice cleanup is on and whose amount is above 0. Video and audio clips use their own asset. A multicam uses the asset of its audio source, the one `resolveElementAudioSource` returns. Returns null when voice is off, the amount is 0, or the asset is missing.
 
 ### resolveElementAudioSource
 
@@ -123,15 +125,15 @@ function resolveElementAudioSource(
 ): ElementAudioSource | null
 ```
 
-Returns the audio source of a video, audio, or multicam element, or `null` when the element, its asset, or the multicam audio source is missing.
+Returns the audio source of a video, audio, or multicam element, or `null` when the element, its asset, or the multicam audio source is missing. Every media clip resolves the same way, so trim, time map, and `reversed` apply to a multicam as they do to a video clip.
 
 ### getActiveAngleIndex
 
 ```ts
-function getActiveAngleIndex(angles: readonly AngleCut[], localMs: number): number
+function getActiveAngleIndex(angles: readonly AngleCut[], groupMs: number): number
 ```
 
-Returns the index of the angle cut active at an element-local time, or 0 before the first cut.
+Returns the index of the angle cut active at a source clock time, or 0 before the first cut.
 
 ### getActiveLayout
 
@@ -143,26 +145,26 @@ function getActiveLayout(
 ): Layout | null
 ```
 
-Returns the layout active in a multicam element at a timeline time, or `null` when the layout id does not resolve.
+Returns the layout active in a multicam element at a timeline time, read on the source clock, or `null` when the layout id does not resolve.
 
 ### getAngleTransitionAt
 
 ```ts
 function getAngleTransitionAt(
   element: MulticamElement,
-  localMs: number,
+  groupMs: number,
 ): AngleTransitionWindow | null
 ```
 
-Returns the angle transition window that contains an element-local time, where each window is centered on its cut and clamped so neighbors never overlap, or `null`.
+Returns the angle transition window that contains a source clock time, where each window is centered on its cut and clamped so neighbors never overlap, or `null`.
 
-### getMulticamAudioSource
+### getMulticamGroupTimeMs
 
 ```ts
-function getMulticamAudioSource(element: MulticamElement): MulticamSource | null
+function getMulticamGroupTimeMs(element: MulticamElement, timelineMs: number): number
 ```
 
-Returns the multicam source whose key matches `audioSource`, or `null` when none is set or found.
+Returns the source clock time a multicam plays at a timeline time. The source clock is the synced time every source shares, reached through the multicam's trim, time map, and reversal the way `getSourceTimeMs` reaches a video clip's media time.
 
 ### getMulticamSourceTimeMs
 
@@ -174,18 +176,31 @@ function getMulticamSourceTimeMs(
 ): number
 ```
 
-Returns the source media time of one multicam source at a timeline time, applying the element time map first and the source trim second, clamped to 0 or more.
+Returns the media time of one multicam source at a timeline time, its `offsetMs` plus the source clock time, clamped to 0 or more.
 
-### splitAngles
+### getVisibleAngleCuts
 
 ```ts
-function splitAngles(
-  angles: readonly AngleCut[],
-  offsetMs: number,
-): { left: AngleCut[]; right: AngleCut[] }
+function getVisibleAngleCuts(element: MulticamElement): VisibleAngleCut[]
 ```
 
-Splits an angle list at an element-local offset, keeping earlier cuts on the left and starting the right with the active layout at 0 followed by the rebased later cuts.
+Returns the cuts a multicam plays, in playback order. The first entry is the layout open at local 0 and the rest are the cuts strictly inside the window, so each half of a split lists only its own cuts.
+
+### isAudioOnlySource
+
+```ts
+function isAudioOnlySource(project: Project, source: MulticamSource): boolean
+```
+
+Returns `true` when a multicam source's asset is audio. An audio-only source is never drawn and can be the multicam's `audioSource`.
+
+### getElementAssetIds
+
+```ts
+function getElementAssetIds(element: TimelineElement): AssetId[]
+```
+
+Returns the assets an element reads, its own asset for a video, audio, or image element, one per source for a multicam, and none for text or captions.
 
 ### getFrameRequests
 
@@ -197,4 +212,4 @@ function getFrameRequests(
 ): FrameRequest[]
 ```
 
-Returns the source frames an element needs at a timeline time, one request for a video or image, one per visible angle for a multicam element, and none for audio, text, or captions.
+Returns the source frames an element needs at a timeline time, one request for a video or image, one per drawn source of the active layouts for a multicam element, and none for audio, text, or captions. Audio-only multicam sources never request a frame.

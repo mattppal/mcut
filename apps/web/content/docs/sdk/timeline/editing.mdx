@@ -25,7 +25,15 @@ interface TimeMappedElement {
 }
 ```
 
-The timing fields of a video or audio element that the speed helpers read.
+The timing fields of a media clip that the speed helpers read.
+
+### MediaClip
+
+```ts
+type MediaClip = VideoElement | AudioElement | MulticamElement
+```
+
+An element that plays a window over source media. Video, audio, and multicam share `trimStartMs`, `timeMap`, `reversed`, `volume`, `muted`, and fades, so trims, splits, slips, and speed changes treat all three the same way.
 
 ### EdgeTrimRange
 
@@ -143,6 +151,22 @@ function getAverageSpeed(element: { durationMs: number; timeMap?: TimeMap | unde
 
 Returns the source span divided by the output duration, or 1 without a time map.
 
+### getLocalTimeMs
+
+```ts
+function getLocalTimeMs(element: TimeMappedElement, sourceMs: number): number
+```
+
+Returns the element-local output time at which a source time plays, the inverse of `getSourceTimeMs`. It follows the time map and `reversed`, clamps to the clip, and resolves a freeze to its first local moment.
+
+### getMediaSourceDurationMs
+
+```ts
+function getMediaSourceDurationMs(project: Project, clip: MediaClip): number | undefined
+```
+
+Returns how much source media a clip can play from source time 0. For video and audio it is the asset duration. For a multicam it is the shortest coverage over the sources whose asset duration is known, each asset `durationMs` minus the source `offsetMs`. It returns `undefined` when no duration is known.
+
 ### getSourceSpanMs
 
 ```ts
@@ -166,6 +190,14 @@ function getSpeedAt(element: TimeMappedElement, localMs: number, windowMs = 8): 
 ```
 
 Returns the instantaneous speed at an element-local time by finite difference over `windowMs`, which is 0 inside a freeze and 1 without a time map.
+
+### isMediaClip
+
+```ts
+function isMediaClip(element: TimelineElement): element is MediaClip
+```
+
+Returns true for video, audio, and multicam elements.
 
 ### makeConstantSpeedMap
 

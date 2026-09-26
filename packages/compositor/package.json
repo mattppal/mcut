@@ -1,6 +1,6 @@
 {
   "name": "@mcut/compositor",
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-alpha.14",
   "description": "Canvas2D and WebGPU frame renderer for mcut projects. One compositor for interactive preview and deterministic export",
   "license": "Apache-2.0",
   "type": "module",
@@ -29,6 +29,9 @@
   },
   "dependencies": {
     "@mcut/timeline": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0"
   },
   "publishConfig": {
     "access": "public",

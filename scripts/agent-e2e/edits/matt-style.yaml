@@ -4,8 +4,8 @@ edits:
   - id: 01-multicam
     ask: Put the talking track, the screen recording, and the audio file together as one synced multicam clip. Use the separate audio file as the audio source.
     checks: [multicam sources 3, multicam audio from audio file]
-    capability: missing
-    note: createMulticam accepts only video elements and audio follows a video source, so an audio-only file cannot be the multicam audio source.
+    capability: exists
+    note: createMulticam takes the audio file as a source, and audioSource defaults to the first audio-only source.
   - id: 02-layout
     ask: Make the base layout the screen recording full frame with my head overlaid in the bottom right corner, the head cropped narrow and tall, a little less tall than 9:16. Keep the slightly rounded corners and the drop shadow on the head shot, but no border stroke.
     checks: [head overlay aspect 0.62-0.70, head overlay without border, head overlay styled]

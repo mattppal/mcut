@@ -71,8 +71,8 @@ export function sampleOverlay(file: string, timeMs: number, slot: LayoutSlot, wi
   const x0 = slot.rect.x * width
   const y0 = slot.rect.y * height
   const x1 = x0 + slot.rect.w * width
-  const radius =
-    slot.cornerRadius > 0 ? slot.cornerRadius * Math.min(slot.rect.w * width, slot.rect.h * height) : 0.06 * Math.min(slot.rect.w * width, slot.rect.h * height)
+  const cornerRadius = slot.cornerRadius ?? 0
+  const radius = (cornerRadius > 0 ? cornerRadius : 0.06) * Math.min(slot.rect.w * width, slot.rect.h * height)
   const inset = Math.max(2, radius * 0.12)
   const along = radius + 10
   const corners = [
