@@ -106,6 +106,7 @@ export class PreviewAudio {
   private audioSources: ReadonlyMap<ElementId, string> | undefined
   private memo: SegmentMemo | null = null
   private outputRendered = false
+  private heldMs: number | null = null
   private disposed = false
 
   setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
@@ -118,7 +119,7 @@ export class PreviewAudio {
 
   clockTimeMs(displayTimeMs: number): number | null {
     const { context, epoch } = this
-    if (!context || !epoch || context.state !== 'running') return null
+    if (!context || !epoch || context.state !== 'running') return this.heldMs
     const outgoing = this.outgoing?.epoch.anchor ?? null
     const anchor = epoch.primed ? epoch.anchor : outgoing
     if (!anchor) return epoch.reportedMs
@@ -140,12 +141,13 @@ export class PreviewAudio {
     }
     const { context, master } = this.ensureContext()
     master.gain.value = playback.muted ? 0 : playback.volume
+    const segments = this.segmentsOf(project)
     if (context.state !== 'running') {
       this.flush()
+      if (dueSegments(segments, playback.currentTimeMs, rate).length > 0) this.heldMs = playback.currentTimeMs
       if (context.state === 'suspended') void context.resume()
       return
     }
-    const segments = this.segmentsOf(project)
     this.outputRendered ||= outputStarted(context)
     if (!this.outputRendered && dueSegments(segments, playback.currentTimeMs, rate).length === 0) {
       this.flush()
@@ -297,6 +299,7 @@ export class PreviewAudio {
   }
 
   private flush(): void {
+    this.heldMs = null
     this.dropOutgoing()
     if (this.epoch) dropEpoch(this.epoch)
     this.epoch = null
