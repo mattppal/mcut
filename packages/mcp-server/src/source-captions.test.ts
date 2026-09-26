@@ -13,8 +13,16 @@ function multicam(): EditorEngine {
   engine.dispatch({ type: 'addTrack', id: 't-mic' })
   engine.dispatch({ type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'media/screen.mp4', durationMs: 60000, width: 1280, height: 720 } })
   engine.dispatch({ type: 'addAsset', asset: { id: 'a-mic', kind: 'audio', src: 'media/mic.wav', durationMs: 60000 } })
-  engine.dispatch({ type: 'addElement', trackId: 't-default', element: { id: 'e-screen', type: 'video', assetId: 'a-screen', startMs: 1000, durationMs: 20000, trimStartMs: 0 } })
-  engine.dispatch({ type: 'addElement', trackId: 't-mic', element: { id: 'e-mic', type: 'audio', assetId: 'a-mic', startMs: 1000, durationMs: 20000, trimStartMs: 1800 } })
+  engine.dispatch({
+    type: 'addElement',
+    trackId: 't-default',
+    element: { id: 'e-screen', type: 'video', assetId: 'a-screen', startMs: 1000, durationMs: 20000, trimStartMs: 0 },
+  })
+  engine.dispatch({
+    type: 'addElement',
+    trackId: 't-mic',
+    element: { id: 'e-mic', type: 'audio', assetId: 'a-mic', startMs: 1000, durationMs: 20000, trimStartMs: 1800 },
+  })
   engine.dispatch({ type: 'createMulticam', sources: [{ elementId: 'e-screen' }, { elementId: 'e-mic' }], multicamId: 'e-mc' })
   return engine
 }
