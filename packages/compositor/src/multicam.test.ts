@@ -86,6 +86,19 @@ describe('multicam compose density', () => {
     ])
   })
 
+  test('a zoom region without source multiplies the density of the transform, and a slot zoom leaves it alone', () => {
+    const zoomed = (element: object, source?: string) =>
+      applyCommand(multicam(element), {
+        type: 'addZoomRegion',
+        elementId: 'e-mc',
+        zoom: { atMs: 0, inMs: 500, holdMs: 1000, outMs: 500, scale: 2, motionBlur: 0, ...(source ? { source } : {}) },
+      })
+    expect(composeSizes(zoomed({}))).toEqual([[3840, 2160]])
+    expect(composeSizes(zoomed(scaled(2)))).toEqual([[7680, 4320]])
+    expect(composeSizes(zoomed({}), { renderScale: 0.5 })).toEqual([[1920, 1080]])
+    expect(composeSizes(zoomed({}, 'cam-0'))).toEqual([[1920, 1080]])
+  })
+
   test('crop narrows the composed frame without adding density', () => {
     expect(composeSizes(multicam({ ...scaled(2), crop: { x: 0.25, y: 0.25, w: 0.5, h: 0.5 } }))).toEqual([[3840, 2160]])
   })

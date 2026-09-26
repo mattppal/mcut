@@ -79,16 +79,22 @@ function sourceDensity(project: Project, { slot, source, box }: PlacedSlot): num
   return slot.fit === 'cover' ? Math.min(across, down) : Math.max(across, down)
 }
 
-function composeSize(project: Project, element: MulticamElement, slots: readonly PlacedSlot[], renderScale: number): { width: number; height: number } {
+function composeSize(
+  project: Project,
+  element: MulticamElement,
+  slots: readonly PlacedSlot[],
+  renderScale: number,
+  zoom: number,
+): { width: number; height: number } {
   const cap = Math.max(renderScale, ...slots.map((placed) => sourceDensity(project, placed)))
   const side = (length: number, scale: number) => {
-    const density = Math.min(roundUpToQuarterOctave(Math.abs(scale)) * renderScale, cap)
+    const density = Math.min(roundUpToQuarterOctave(Math.abs(scale) * zoom) * renderScale, cap)
     return Math.max(1, Math.min(MAX_COMPOSE_SIDE_PX, Math.ceil(length * density)))
   }
   return { width: side(project.width, element.transform.scaleX), height: side(project.height, element.transform.scaleY) }
 }
 
-export function composeMulticam(element: MulticamElement, context: ElementRenderContext, frames: FrameSource): Canvas2D | null {
+export function composeMulticam(element: MulticamElement, context: ElementRenderContext, frames: FrameSource, zoom: number): Canvas2D | null {
   const { project } = context
   const groupMs = getMulticamGroupTimeMs(element, context.timeMs)
   const transition = getAngleTransitionAt(element, groupMs)
@@ -96,7 +102,7 @@ export function composeMulticam(element: MulticamElement, context: ElementRender
     ? [getLayout(project.layouts, transition.fromLayoutId), getLayout(project.layouts, transition.toLayoutId)]
     : [getActiveLayout(project, element, context.timeMs)]
   const placed = layouts.map((layout) => (layout ? placeSlots(project, element, layout) : []))
-  const { width, height } = composeSize(project, element, placed.flat(), context.backend.renderScale)
+  const { width, height } = composeSize(project, element, placed.flat(), context.backend.renderScale, zoom)
   const surface = context.acquireScratch(width, height)
   if (!surface) return null
   surface.setTransform(width / project.width, 0, 0, height / project.height, 0, 0)
