@@ -199,7 +199,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
     'Pass elementId for a clip with source audio, including a multicam and each piece left after the cuts. ' +
     'It stores the word-timed transcript of that audio in source time, and with elementId the reply also lists those words. ' +
-    'The retake flow is find_retakes, then one remove_ranges call with the candidates you keep, then one apply_captions call with elementId set to any remaining piece, replace true, and no transcript, each call on its own and not in a transact. ' +
+    'The retake flow is find_retakes, then a single remove_ranges call with every candidate you keep in its ranges list, never one call per retake, so the whole cut is one undo step, then one apply_captions call with elementId set to any remaining piece, replace true, and no transcript, each call on its own and not in a transact. ' +
     'One more find_retakes call after the cut is enough to confirm it. Do not cut retakes by hand with splitElement, trimElement, or rippleDelete. Do not copy the words back into apply_captions. ' +
     'Review abandonedText before cutting. Needs captions with word timings. Call ensure_transcript first.',
   remove_ranges: removeRangesDescription,
