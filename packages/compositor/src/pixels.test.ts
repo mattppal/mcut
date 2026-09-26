@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test'
 import { chromium, type Browser, type Page } from '@playwright/test'
 import type { MagnifiedReading } from './magnified-multicam-probe'
+import type { CropParity } from './multicam-parity-probe'
 import type { ZoomBlurReading } from './zoom-blur-probe'
 
 let server: ReturnType<typeof Bun.serve>
@@ -8,7 +9,7 @@ let browser: Browser
 let page: Page
 
 beforeAll(async () => {
-  const probes = ['zoom-blur-probe', 'magnified-multicam-probe'].map((name) => `${import.meta.dir}/${name}.ts`)
+  const probes = ['zoom-blur-probe', 'magnified-multicam-probe', 'multicam-parity-probe'].map((name) => `${import.meta.dir}/${name}.ts`)
   const bundle = await Bun.build({ entrypoints: probes, target: 'browser' })
   if (!bundle.success) throw new Error(bundle.logs.join('\n'))
   const scripts = await Promise.all(bundle.outputs.map((output) => output.text()))
@@ -38,4 +39,10 @@ test('a multicam magnified 2x keeps a checkerboard as crisp as a video clip magn
     cropped: { video: 128, multicam: 128 },
     zoomed: { video: 128, multicam: 128 },
   })
+})
+
+test('a cropped multicam matches drawing its slots straight onto the canvas under a crop clip, within one level, with and without a zoom region', async () => {
+  const parity: CropParity = await page.evaluate(() => multicamParityProbe())
+  expect(parity.cropped).toBeLessThanOrEqual(1)
+  expect(parity.zoomed).toBeLessThanOrEqual(1)
 })
