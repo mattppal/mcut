@@ -1,4 +1,4 @@
-import { applyChrome, drawImageQuad2D, type ImageQuad, type LayerChrome, type RenderBackend } from '../backend'
+import { applyChrome, drawImageQuad2D, type ImageQuad, type LayerChrome, type PixelGrid, type RenderBackend } from '../backend'
 import { getImageSize } from '../framed-media'
 import type { Canvas2D } from '../types'
 import { parseCssColor } from './color'
@@ -164,6 +164,10 @@ export class WebGPUBackend implements RenderBackend {
       identity[i * 4 + 3] = 255
     }
     device.queue.writeTexture({ texture: this.identityCurves }, identity, { bytesPerRow: 256 * 4 }, { width: 256, height: 1 })
+  }
+
+  pixelGrid(): PixelGrid {
+    return { transform: this.rasterCtx.getTransform(), width: this.width, height: this.height }
   }
 
   registerLut3D(lutId: string, size: number, data: Float32Array): void {

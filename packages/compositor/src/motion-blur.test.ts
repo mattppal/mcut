@@ -143,6 +143,32 @@ function zoomedClip(opacity: number): Project {
   return applyCommand(project, { type: 'addZoomRegion', elementId: 'e-vid', zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, motionBlur: 1 } })
 }
 
+function zoomedMulticam(): Project {
+  let project = createProject({ width: 1280, height: 720, fps: 30 })
+  project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-vid', kind: 'video', src: 'blob:x', durationMs: 60_000, width: 1280, height: 720 } })
+  project = applyCommand(project, {
+    type: 'saveLayout',
+    layout: { id: 'l-full', name: 'Full', slots: [{ source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 } }] },
+  })
+  project = applyCommand(project, {
+    type: 'addElement',
+    trackId: 't-default',
+    element: {
+      id: 'e-mc',
+      type: 'multicam',
+      startMs: 0,
+      durationMs: 5000,
+      sources: [{ key: 'screen', assetId: 'a-vid' }],
+      angles: [{ atMs: 0, layoutId: 'l-full' }],
+    },
+  })
+  return applyCommand(project, {
+    type: 'addZoomRegion',
+    elementId: 'e-mc',
+    zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, motionBlur: 1, source: 'screen' },
+  })
+}
+
 describe('zoom motion blur', () => {
   test('a ramp renders zooming passes whole and adds them at 1/N, keeping the clip opacity inside each pass', () => {
     const main = new FakeContext2D()
@@ -170,7 +196,17 @@ describe('zoom motion blur', () => {
       [640, 360],
     ])
     expect(sample.callsTo('setTransform').map((c) => c.args)).toEqual([[0.5, 0, 0, 0.5, 0, 0]])
-    expect(main.callsTo('drawImage').map((c) => c.args)).toEqual([[accumulate.canvas, 0, 0, 1280, 720]])
+    expect(main.callsTo('drawImage').map((c) => [c.args[0] === accumulate.canvas, ...c.args.slice(1)])).toEqual([[true, 0, 0, 1280, 720]])
+  })
+
+  test('a multicam inside a half-scale pass composes at half size', () => {
+    const sizes: number[][] = []
+    const createScratchContext = (width: number, height: number) => {
+      sizes.push([width, height])
+      return asCtx(new FakeContext2D(width, height))
+    }
+    renderFrame(asCtx(new FakeContext2D()), zoomedMulticam(), 100, { source, motionBlurSamples: 4, renderScale: 0.5, createScratchContext })
+    expect(sizes).toEqual(Array.from({ length: 6 }, () => [640, 360]))
   })
 
   test('a hold draws one sharp pass straight into the frame', () => {

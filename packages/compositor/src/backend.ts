@@ -1,5 +1,7 @@
-import { buildFilterString, toCompositeOperation, type BlendMode, type Effect, type Project, type Track } from '@mcut/timeline'
-import type { Canvas2D, ElementRenderContext, FrameSource } from './types'
+import { buildFilterString, toCompositeOperation, type BlendMode, type Effect, type Project, type Track, type Transform } from '@mcut/timeline'
+import { toCanvasPoint } from './geometry'
+import { acquireScratch, ScratchContextError } from './scratch'
+import type { Canvas2D, ElementRenderContext, RenderFrameOptions } from './types'
 
 export interface LayerChrome {
   centerX: number
@@ -20,10 +22,17 @@ export interface ImageQuad {
   cornerRadius: number
 }
 
+export interface PixelGrid {
+  transform: { a: number; b: number; c: number; d: number; e: number; f: number }
+  width: number
+  height: number
+}
+
 export interface RenderBackend {
   readonly kind: 'canvas2d' | 'webgpu' | (string & {})
   readonly width: number
   readonly height: number
+  pixelGrid(): PixelGrid
   beginFrame(backgroundColor: string): void
   endFrame(): void
   acquireRaster(): Canvas2D
@@ -32,15 +41,40 @@ export interface RenderBackend {
   popRasterScope(): void
 }
 
+export interface VisualChrome {
+  transform: Transform
+  opacity: number
+  effects?: Effect[] | undefined
+  blendMode?: BlendMode | undefined
+}
+
+export function chromeOf(project: Project, element: VisualChrome): LayerChrome {
+  const center = toCanvasPoint(project, element.transform.x, element.transform.y)
+  return {
+    centerX: center.x,
+    centerY: center.y,
+    rotationDeg: element.transform.rotation,
+    scaleX: element.transform.scaleX,
+    scaleY: element.transform.scaleY,
+    opacity: element.opacity,
+    blendMode: element.blendMode,
+    effects: element.effects,
+  }
+}
+
+export function transformByChrome(ctx: Canvas2D, chrome: LayerChrome): void {
+  ctx.translate(chrome.centerX, chrome.centerY)
+  if (chrome.rotationDeg !== 0) ctx.rotate((chrome.rotationDeg * Math.PI) / 180)
+  ctx.scale(chrome.scaleX, chrome.scaleY)
+}
+
 export function applyChrome(ctx: Canvas2D, chrome: LayerChrome, draw: () => void): void {
   ctx.save()
   ctx.globalAlpha *= chrome.opacity
   const filter = buildFilterString(chrome.effects)
   if (filter && 'filter' in ctx) ctx.filter = filter
   if (chrome.blendMode) ctx.globalCompositeOperation = toCompositeOperation(chrome.blendMode)
-  ctx.translate(chrome.centerX, chrome.centerY)
-  if (chrome.rotationDeg !== 0) ctx.rotate((chrome.rotationDeg * Math.PI) / 180)
-  ctx.scale(chrome.scaleX, chrome.scaleY)
+  transformByChrome(ctx, chrome)
   draw()
   ctx.restore()
 }
@@ -69,6 +103,10 @@ export class Canvas2DBackend implements RenderBackend {
     readonly height: number,
   ) {}
 
+  pixelGrid(): PixelGrid {
+    return { transform: this.ctx.getTransform(), width: this.ctx.canvas.width, height: this.ctx.canvas.height }
+  }
+
   beginFrame(backgroundColor: string): void {
     this.ctx.save()
     this.ctx.fillStyle = backgroundColor
@@ -96,7 +134,7 @@ export function createElementContext(
   project: Project,
   track: Track,
   timeMs: number,
-  source: FrameSource | undefined,
+  options: RenderFrameOptions,
   viewTimeMs: number = timeMs,
 ): ElementRenderContext {
   return {
@@ -105,7 +143,12 @@ export function createElementContext(
     track,
     timeMs,
     viewTimeMs,
-    source,
+    source: options.source,
+    acquireScratch: (width, height) => {
+      const scratch = acquireScratch('compose', width, height, options)
+      if (!scratch) throw new ScratchContextError(width, height)
+      return scratch
+    },
     get ctx() {
       return backend.acquireRaster()
     },

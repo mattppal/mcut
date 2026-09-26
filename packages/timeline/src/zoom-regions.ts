@@ -194,12 +194,19 @@ export function getClipView(element: ZoomableElement, timelineMs: number): Conte
   return zoomViewAt(element.zooms, undefined, timelineMs - element.startMs, FULL_FRAME, CENTER)
 }
 
-export function getZoomedRect({ scale, focus }: ContentView, rect: LayoutSlot['rect']): LayoutSlot['rect'] {
+export function getZoomWindow({ scale, focus }: ContentView, visible: VisibleFraction = FULL_FRAME): LayoutSlot['rect'] {
+  const w = visible.x / scale
+  const h = visible.y / scale
+  return { x: focus.x * (1 - w), y: focus.y * (1 - h), w, h }
+}
+
+export function getZoomedRect(view: ContentView, rect: LayoutSlot['rect']): LayoutSlot['rect'] {
+  const shown = getZoomWindow(view)
   return {
-    x: scale * (rect.x - focus.x * (1 - 1 / scale)),
-    y: scale * (rect.y - focus.y * (1 - 1 / scale)),
-    w: scale * rect.w,
-    h: scale * rect.h,
+    x: view.scale * (rect.x - shown.x),
+    y: view.scale * (rect.y - shown.y),
+    w: view.scale * rect.w,
+    h: view.scale * rect.h,
   }
 }
 

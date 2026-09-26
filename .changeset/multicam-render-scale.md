@@ -1,0 +1,5 @@
+---
+"@mcut/compositor": minor
+---
+
+`RenderBackend` now exposes `pixelGrid()`, the pixels its raster lands on, as the raster's current transform and its size in pixels. `Canvas2DBackend` reads it from its context and `WebGPUBackend` from its raster. A custom backend must add the method. A multicam composes on that grid and copies the composed pixels onto the target one to one, so an element crop, a zoom region, a transform, and a preview drawn below full size put every slot on the pixels a direct draw would, and the composed frame is no softer than slots drawn straight onto the target. A multicam magnified by its transform, by a keyframed punch-in, or by a zoom region without `source` stays as sharp as a video clip at the same scale, and a still rendered at 2x or 4x keeps the detail of sources larger than the project. A multicam magnified past the canvas composes only the canvas's pixels. An effect that reads neighboring pixels, as blur, drop shadow, and CSS filters do, composes past the canvas edge, up to 8192 pixels a side.

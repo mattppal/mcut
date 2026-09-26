@@ -1,5 +1,11 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.20
+
+### Minor Changes
+
+- [#196](https://github.com/mattppal/mcut/pull/196) [`46f3ce3`](https://github.com/mattppal/mcut/commit/46f3ce34f1a9284df47e6de48958011f46c829a4) Thanks [@mattppal](https://github.com/mattppal)! - `getZoomWindow(view, visible)` returns the part of the content a zoom view shows, as a normalized rect anchored at the view's focus. `getZoomedRect` maps a rect through that window, and the compositor draws a clip's zoom and a slot's zoom from it, so the renderer and `flattenMulticam` read one zoom formula.
+
 ## 0.1.0-alpha.19
 
 ### Patch Changes

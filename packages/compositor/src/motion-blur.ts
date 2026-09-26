@@ -1,6 +1,7 @@
 import { getZoomShutterMs, resolveAnimatedElement, toCompositeOperation, type MotionBlur, type Project, type TimelineElement, type Track } from '@mcut/timeline'
 import { Canvas2DBackend, createElementContext, type RenderBackend } from './backend'
-import type { Canvas2D, ElementRenderer, RenderFrameOptions } from './types'
+import { acquireScratch } from './scratch'
+import type { ElementRenderer, RenderFrameOptions } from './types'
 
 const TRANSFORM_PROPERTIES = ['position.x', 'position.y', 'scale.x', 'scale.y', 'rotation'] as const
 
@@ -40,28 +41,6 @@ function transformShutterMs(element: TimelineElement, timeMs: number, frameMs: n
   return isMovingBetween(element, start, start + windowMs) ? windowMs : 0
 }
 
-type ScratchRole = 'sample' | 'accumulate'
-
-const cachedScratch = new Map<ScratchRole, OffscreenCanvasRenderingContext2D>()
-
-type ScratchSettings = CanvasRenderingContext2DSettings & { colorType: 'unorm8' | 'float16' }
-
-const SCRATCH_SETTINGS: Record<ScratchRole, ScratchSettings> = {
-  sample: { colorType: 'unorm8' },
-  accumulate: { colorType: 'float16' },
-}
-
-function acquireScratch(role: ScratchRole, width: number, height: number, options: RenderFrameOptions): Canvas2D | null {
-  if (options.createScratchContext) return options.createScratchContext(width, height)
-  if (typeof OffscreenCanvas === 'undefined') return null
-  const cached = cachedScratch.get(role)
-  if (cached && cached.canvas.width === width && cached.canvas.height === height) return cached
-  const ctx = new OffscreenCanvas(width, height).getContext('2d', SCRATCH_SETTINGS[role])
-  if (!ctx) return null
-  cachedScratch.set(role, ctx)
-  return ctx
-}
-
 export function renderElementWithMotionBlur(
   backend: RenderBackend,
   project: Project,
@@ -92,7 +71,7 @@ export function renderElementWithMotionBlur(
     const resolved = resolveAnimatedElement(element, transformWindowMs > 0 ? sampleMs : timeMs)
     const sub = 'blendMode' in resolved && resolved.blendMode ? { ...resolved, blendMode: undefined } : resolved
     sample.clearRect(0, 0, width / renderScale, height / renderScale)
-    renderer(sub, createElementContext(subBackend, project, track, timeMs, options.source, sampleMs))
+    renderer(sub, createElementContext(subBackend, project, track, timeMs, options, sampleMs))
     accumulate.save()
     accumulate.globalCompositeOperation = 'lighter'
     accumulate.globalAlpha = 1 / samples

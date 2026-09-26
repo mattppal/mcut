@@ -47,7 +47,7 @@ function renderElement(backend: RenderBackend, project: Project, track: Track, e
   if (renderElementWithMotionBlur(backend, project, track, element, timeMs, options, renderElementLayer)) {
     return
   }
-  renderElementLayer(resolveAnimatedElement(element, timeMs), createElementContext(backend, project, track, timeMs, options.source))
+  renderElementLayer(resolveAnimatedElement(element, timeMs), createElementContext(backend, project, track, timeMs, options))
 }
 
 function renderTransition(backend: RenderBackend, project: Project, track: Track, pair: TransitionPair, timeMs: number, options: RenderFrameOptions): void {

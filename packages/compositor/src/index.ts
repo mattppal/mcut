@@ -19,9 +19,22 @@ export {
   type SizeHelpers,
 } from './geometry'
 
+export { getSlotBoxes, type SlotBox } from './multicam'
+
 export { renderFrame, renderFrameWith } from './render-frame'
 
-export { applyChrome, Canvas2DBackend, createElementContext, drawImageQuad2D, type ImageQuad, type LayerChrome, type RenderBackend } from './backend'
+export { ScratchContextError } from './scratch'
+
+export {
+  applyChrome,
+  Canvas2DBackend,
+  createElementContext,
+  drawImageQuad2D,
+  type ImageQuad,
+  type LayerChrome,
+  type PixelGrid,
+  type RenderBackend,
+} from './backend'
 
 export { isWebGPUSupported, WebGPUBackend, type WebGPUBackendOptions } from './webgpu/webgpu-backend'
 

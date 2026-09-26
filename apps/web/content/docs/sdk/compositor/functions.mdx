@@ -19,7 +19,7 @@ Distance in canvas pixels from the top edge of a box to its rotate handle.
 const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> }
 ```
 
-The closed table of element renderers keyed by `ElementType`, where each renderer receives the element of its own kind and the `audio` renderer draws nothing.
+The closed table of element renderers keyed by `ElementType`, where each renderer receives the element of its own kind and the `audio` renderer draws nothing. The `multicam` renderer composes the active layout, or both layouts of an angle transition, into the compose scratch, then copies the composed pixels onto the target. The scratch shares the backend's `pixelGrid`, so scratch pixel (x, y) is target pixel (x, y), and each slot draws under the multicam's transform, crop, and zoom at the target pixels a direct draw would hit. The copy covers the target pixels the crop reaches, rounded out to whole pixels, and moves them one to one under any axis-aligned grid, so a composed frame resamples no more than a slot drawn straight onto the target, rotated or not. The scratch is the size of the target, so a keyframed scale reuses one scratch, a multicam magnified past the target composes only the target's pixels, a preview drawn at half size composes at half size, and a target without pixels composes nothing. An effect that reads neighboring pixels, as blur, drop shadow, and CSS filters do, draws from past the target's edge, so for one the scratch reaches past it, up to 8192 pixels a side, the default `maxTextureDimension2D` of WebGPU. A slot that reaches past the multicam's frame is cut at the frame. The multicam's opacity, blend mode, and effects apply once to the composed frame through the image quad a `video` clip draws through, and its crop, corner radius, stroke, and shadow frame the composed frame the way they frame a clip.
 
 ### transitionRenderers
 
@@ -51,6 +51,7 @@ Converts a canvas pixel position to center-origin element coordinates.
 
 ```ts
 function getElementDisplaySize(
+  project: Project,
   element: TimelineElement,
   helpers: SizeHelpers = {},
 ): ElementSize | null
@@ -62,12 +63,13 @@ Returns the element's natural size multiplied by the absolute transform scale, o
 
 ```ts
 function getElementNaturalSize(
+  project: Project,
   element: TimelineElement,
   helpers: SizeHelpers = {},
 ): ElementSize | null
 ```
 
-Returns the unscaled size of a text or media element from the helpers, reduced to the crop region when one is set, or `null` for audio, caption, and multicam elements.
+Returns the unscaled size of an element, reduced to the crop region when one is set. Text and media sizes come from the helpers. A multicam is the project frame, because it composes its layout at the frame size. Audio and caption elements return `null`.
 
 ### getElementOBB
 
@@ -79,7 +81,7 @@ function getElementOBB(
 ): OBB | null
 ```
 
-Returns the element's oriented bounding box in canvas pixels, or `null` for audio, caption, and multicam elements and for media whose size is unknown.
+Returns the element's oriented bounding box in canvas pixels, or `null` for audio and caption elements and for media whose size is unknown.
 
 ### getFitScale
 
@@ -133,6 +135,14 @@ function toCanvasPoint(project: Project, x: number, y: number): { x: number; y: 
 
 Converts center-origin element coordinates to canvas pixels.
 
+### getSlotBoxes
+
+```ts
+function getSlotBoxes(project: Project, element: MulticamElement, timelineMs: number): SlotBox[]
+```
+
+Resolves the multicam at `timelineMs` and returns one box per shown slot of its active layout, in canvas pixels. Each box is the slot's frame carried through the placement the renderer composes with. It follows the multicam's crop, a zoom region without `source`, and the transform, and it is cut where the renderer cuts the slot, at the crop and at the edge of the frame. A zoom region with `source` moves the picture inside its slot and leaves the box in place. A slot the renderer shows none of has no box, and neither does a slot whose source is missing or audio only. During an angle transition the boxes are the active layout's at rest. The list is empty when no layout is active.
+
 ### renderFrame
 
 ```ts
@@ -175,11 +185,12 @@ function createElementContext(
   project: Project,
   track: Track,
   timeMs: number,
-  source: FrameSource | undefined,
+  options: RenderFrameOptions,
+  viewTimeMs: number = timeMs,
 ): ElementRenderContext
 ```
 
-Builds the per-element render context for a backend, exposing `ctx` as a getter so the backend learns when raster drawing begins.
+Builds the per-element render context for a backend, exposing `ctx` as a getter so the backend learns when raster drawing begins. The frame source and the compose scratch come from the render options. `viewTimeMs` is the time zoom views read, and each motion blur pass sets it to its own sample time.
 
 ### drawImageQuad2D
 

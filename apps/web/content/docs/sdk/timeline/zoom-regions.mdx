@@ -106,9 +106,13 @@ Explicit fields override the preset. A `rect` aims the zoom at its center and fi
 
 `getClipView(element, timelineMs)` returns the `ContentView` of a video or image clip inside its crop, or of a whole multicam composite from its zooms with no `source`.
 
+### getZoomWindow
+
+`getZoomWindow(view, visible)` returns the part of the content a `ContentView` shows, as a normalized rect across the content. The window covers `visible / scale` of the content on each axis, anchored at the view's focus. `visible` is the `VisibleFraction` the target shows at scale 1, and it defaults to the full frame. Below scale 1 the window reaches past the content. The compositor draws a clip's window of its crop. It clamps a slot's window to the slot crop, so a contain slot keeps its letterbox centered.
+
 ### getZoomedRect
 
-`getZoomedRect(view, rect)` maps a normalized frame rect through a whole-composite `ContentView`. It returns where the rect lands on the canvas when the composite shows the view's 1/scale crop window at its anchored focus. The multicam renderer draws every slot through it, and `flattenMulticam` bakes it into each flattened clip's transform keyframes, so a flattened clip follows its slot exactly.
+`getZoomedRect(view, rect)` maps a normalized frame rect through a whole-composite `ContentView`. It returns where the rect lands on the canvas when the composite shows the view's `getZoomWindow` window. The multicam renderer maps its whole composite through it before the crop, and `flattenMulticam` bakes it into each flattened clip's transform keyframes, so a flattened clip follows its slot exactly.
 
 ### getZoomShutterMs
 

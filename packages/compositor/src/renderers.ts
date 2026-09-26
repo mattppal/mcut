@@ -1,32 +1,19 @@
 import {
-  getActiveLayout,
   getClipView,
-  getAngleTransitionAt,
-  getLayout,
-  getMulticamGroupTimeMs,
-  getMulticamSourceTimeMs,
   getSourceTimeMs,
-  getTransitionCompletion,
-  getZoomedRect,
-  isAudioOnlySource,
-  type MulticamElement,
-  type BlendMode,
   type CaptionElement,
-  type Effect,
   type ElementType,
+  type FrameStyle,
   type ImageElement,
-  type Layout,
   type TextElement,
   type TimelineElement,
-  type Transform,
   type VideoElement,
 } from '@mcut/timeline'
-import { applyChrome, type LayerChrome } from './backend'
-import { drawFramedComposite, drawFramedMedia, frameRadius, getImageSize, viewSourceRect } from './framed-media'
-import { toCanvasPoint } from './geometry'
+import { applyChrome, chromeOf, drawImageQuad2D, type VisualChrome } from './backend'
+import { frameRadius, getImageSize, viewSourceRect, withFrameChrome, type SourceRect } from './framed-media'
 import { getCaptionLane } from './caption-lane'
-import { reframedCrop, reframedSlot } from './reframe-views'
-import { transitionRenderers } from './transition-renderers'
+import { renderMulticam } from './multicam'
+import { reframedCrop } from './reframe-views'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
 import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
 
@@ -47,45 +34,29 @@ function measureWith(ctx: Canvas2D): MeasureFn {
   }
 }
 
-interface VisualChrome {
-  transform: Transform
-  opacity: number
-  effects?: Effect[] | undefined
-  blendMode?: BlendMode | undefined
-}
-
-function chromeOf(context: ElementRenderContext, element: VisualChrome): LayerChrome {
-  const center = toCanvasPoint(context.project, element.transform.x, element.transform.y)
-  return {
-    centerX: center.x,
-    centerY: center.y,
-    rotationDeg: element.transform.rotation,
-    scaleX: element.transform.scaleX,
-    scaleY: element.transform.scaleY,
-    opacity: element.opacity,
-    blendMode: element.blendMode,
-    effects: element.effects,
-  }
-}
-
 function withTransform(ctx: Canvas2D, context: ElementRenderContext, element: VisualChrome, draw: () => void): void {
-  applyChrome(ctx, chromeOf(context, element), draw)
+  applyChrome(ctx, chromeOf(context.project, element), draw)
 }
 
-function drawMediaFrame(context: ElementRenderContext, element: VideoElement | ImageElement, frame: CanvasImageSource, dw: number, dh: number): void {
+function drawMediaFrame(
+  context: ElementRenderContext,
+  element: VisualChrome & FrameStyle,
+  image: CanvasImageSource,
+  dw: number,
+  dh: number,
+  src: SourceRect | null,
+): void {
   const box = { x: -dw / 2, y: -dh / 2, w: dw, h: dh }
-  const view = getClipView(element, context.viewTimeMs)
-  const crop = reframedCrop(element, context.timeMs)
   if (!element.stroke && !element.shadow) {
-    context.backend.drawImageQuad(
-      { image: frame, src: viewSourceRect(crop, frame, view), dw, dh, cornerRadius: frameRadius(element, box) },
-      chromeOf(context, element),
-    )
+    context.backend.drawImageQuad({ image, src, dw, dh, cornerRadius: frameRadius(element, box) }, chromeOf(context.project, element))
     return
   }
   const ctx = context.ctx
-  withTransform(ctx, context, element, () => drawFramedMedia(ctx, frame, box, { ...element, crop }, 'fill', () => view))
+  withTransform(ctx, context, element, () => withFrameChrome(ctx, element, box, () => drawImageQuad2D(ctx, { image, src, dw, dh, cornerRadius: 0 })))
 }
+
+const clipSourceRect = (context: ElementRenderContext, element: VideoElement | ImageElement, frame: CanvasImageSource): SourceRect | null =>
+  viewSourceRect(reframedCrop(element, context.timeMs), frame, getClipView(element, context.viewTimeMs))
 
 const renderVideo: ElementRenderer<VideoElement> = (element, context) => {
   if (!context.source) return
@@ -97,7 +68,7 @@ const renderVideo: ElementRenderer<VideoElement> = (element, context) => {
   if (width <= 0 || height <= 0) return
   const dw = width * (element.crop?.w ?? 1)
   const dh = height * (element.crop?.h ?? 1)
-  drawMediaFrame(context, element, frame, dw, dh)
+  drawMediaFrame(context, element, frame, dw, dh, clipSourceRect(context, element, frame))
 }
 
 const renderImage: ElementRenderer<ImageElement> = (element, context) => {
@@ -108,7 +79,7 @@ const renderImage: ElementRenderer<ImageElement> = (element, context) => {
   if (width <= 0 || height <= 0) return
   const dw = width * (element.crop?.w ?? 1)
   const dh = height * (element.crop?.h ?? 1)
-  drawMediaFrame(context, element, frame, dw, dh)
+  drawMediaFrame(context, element, frame, dw, dh, clipSourceRect(context, element, frame))
 }
 
 const renderText: ElementRenderer<TextElement> = (element, context) => {
@@ -246,64 +217,6 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
     }
   }
   ctx.restore()
-}
-
-const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
-  const frames = context.source
-  if (!frames) return
-  const { ctx, project } = context
-  const W = project.width
-  const H = project.height
-
-  const drawLayout = (layout: Layout | null) => {
-    if (!layout) return
-    withTransform(ctx, context, element, () => {
-      drawFramedComposite(ctx, project, element, () => {
-        const view = getClipView(element, context.viewTimeMs)
-        if (view.scale > 1) {
-          const frame = getZoomedRect(view, { x: 0, y: 0, w: 1, h: 1 })
-          ctx.beginPath()
-          ctx.rect(-W / 2, -H / 2, W, H)
-          ctx.clip()
-          ctx.translate((frame.x + frame.w / 2 - 0.5) * W, (frame.y + frame.h / 2 - 0.5) * H)
-          ctx.scale(frame.w, frame.h)
-        }
-        for (const slot of layout.slots) {
-          const source = element.sources.find((s) => s.key === slot.source)
-          if (!source || isAudioOnlySource(project, source)) continue
-          const frame = frames.getFrame(source.assetId, getMulticamSourceTimeMs(element, source, context.timeMs))
-          if (!frame) continue
-          const box = { x: (slot.rect.x - 0.5) * W, y: (slot.rect.y - 0.5) * H, w: slot.rect.w * W, h: slot.rect.h * H }
-          const framing = reframedSlot(element, slot, context.timeMs, context.viewTimeMs)
-          drawFramedMedia(ctx, frame, box, framing.slot, slot.fit, framing.viewFor)
-        }
-      })
-    })
-  }
-
-  const groupMs = getMulticamGroupTimeMs(element, context.timeMs)
-  const window = getAngleTransitionAt(element, groupMs)
-  if (window) {
-    const pair = {
-      left: element,
-      right: element,
-      cutMs: window.cutMs,
-      durationMs: window.durationMs,
-      type: window.type,
-    }
-    transitionRenderers[window.type]({
-      ctx,
-      project,
-      pair,
-      timeMs: groupMs,
-      completion: getTransitionCompletion(pair, groupMs),
-      drawLeft: () => drawLayout(getLayout(project.layouts, window.fromLayoutId)),
-      drawRight: () => drawLayout(getLayout(project.layouts, window.toLayoutId)),
-    })
-    return
-  }
-
-  drawLayout(getActiveLayout(project, element, context.timeMs))
 }
 
 export const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> } = {
