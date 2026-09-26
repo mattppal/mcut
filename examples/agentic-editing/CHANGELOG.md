@@ -1,5 +1,12 @@
 # agentic-editing-example
 
+## 0.0.1-alpha.17
+
+### Patch Changes
+
+- Updated dependencies [[`ec1f719`](https://github.com/mattppal/mcut/commit/ec1f719b9a09f82dd95d548ec4a44f989895e8de)]:
+  - @mcut/timeline@0.1.0-alpha.18
+
 ## 0.0.1-alpha.16
 
 ### Patch Changes

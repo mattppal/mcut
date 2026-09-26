@@ -1,5 +1,11 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.18
+
+### Minor Changes
+
+- [#207](https://github.com/mattppal/mcut/pull/207) [`ec1f719`](https://github.com/mattppal/mcut/commit/ec1f719b9a09f82dd95d548ec4a44f989895e8de) Thanks [@mattppal](https://github.com/mattppal)! - New `removeRanges` command and `remove_ranges` MCP tool. One call removes a list of time ranges, in any order, from every unlocked track and closes the gaps as one undo step, so a multicam, its audio, and its captions stay in sync. `remove_ranges` takes timeline ranges such as `find_retakes` candidates, or source-media ranges of a clip's audio with `time: "source"`. The retake flow is `find_retakes`, then `remove_ranges`, then `apply_captions { elementId, replace: true }`.
+
 ## 0.1.0-alpha.17
 
 ### Minor Changes
