@@ -131,7 +131,7 @@ interface RenderBackend {
   readonly kind: 'canvas2d' | 'webgpu' | (string & {})
   readonly width: number
   readonly height: number
-  readonly renderScale: number
+  pixelGrid(): PixelGrid
   beginFrame(backgroundColor: string): void
   endFrame(): void
   acquireRaster(): Canvas2D
@@ -141,7 +141,19 @@ interface RenderBackend {
 }
 ```
 
-The interface a compositing backend implements, with frame begin and end, raster access, image quad drawing, and raster scopes. `renderScale` is how many target pixels one project unit covers.
+The interface a compositing backend implements, with its pixel grid, frame begin and end, raster access, image quad drawing, and raster scopes. `pixelGrid` answers for the moment it is called, so it carries a transform a transition has set on the raster.
+
+### PixelGrid
+
+```ts
+interface PixelGrid {
+  transform: { a: number; b: number; c: number; d: number; e: number; f: number }
+  width: number
+  height: number
+}
+```
+
+The pixels a backend's raster lands on, as the raster's current transform from project units to pixels and the raster's size in pixels. A multicam composes on this grid, so its slots land on the pixels a direct draw would hit.
 
 ### WebGPUBackendOptions
 
@@ -287,13 +299,12 @@ interface ElementRenderContext {
   track: Track
   timeMs: number
   viewTimeMs: number
-  viewport: { x: number; y: number; w: number; h: number } | null
   source: FrameSource | undefined
   acquireScratch: (width: number, height: number) => Canvas2D | null
 }
 ```
 
-What an element renderer receives, the 2D context, backend, project, track, time, frame source, and a scratch surface. `viewTimeMs` is the time zoom views read. `viewport` is the part of the frame the target shows, in project pixels, and a renderer may leave out what falls outside it. It is `null` when the renderer can't know, as inside a transition. `acquireScratch` returns an off screen 2D context that is reused across frames, or `null` where no off screen canvas exists. A renderer composes into it and draws it straight away, because the next renderer that asks gets the same surface.
+What an element renderer receives, the 2D context, backend, project, track, time, frame source, and a scratch surface. `viewTimeMs` is the time zoom views read. `acquireScratch` returns an off screen 2D context that is reused across frames, or `null` where no off screen canvas exists. A renderer composes into it and draws it straight away, because the next renderer that asks gets the same surface.
 
 ### ElementRenderer
 

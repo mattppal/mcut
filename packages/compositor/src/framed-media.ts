@@ -1,4 +1,4 @@
-import { getZoomWindow, type ContentView, type Crop, type FrameStyle, type LayoutSlot, type VisibleFraction } from '@mcut/timeline'
+import { getZoomWindow, type ContentView, type Crop, type FrameStyle, type LayoutSlot, type Shadow, type Stroke, type VisibleFraction } from '@mcut/timeline'
 import type { Canvas2D } from './types'
 
 export interface FrameBox {
@@ -34,11 +34,9 @@ function lengthInPixels(length: number | SVGAnimatedLength): number {
   return typeof length === 'number' ? length : length.baseVal.value
 }
 
-function cropSourceRect(crop: Crop | undefined, frame: CanvasImageSource): SourceRect | null {
-  if (!crop) return null
-  const { width: fw, height: fh } = getImageSize(frame)
-  if (fw <= 0 || fh <= 0) return null
-  return { sx: crop.x * fw, sy: crop.y * fh, sw: crop.w * fw, sh: crop.h * fh }
+export function cropSourceRect(crop: Crop | undefined, { width, height }: { width: number; height: number }): SourceRect | null {
+  if (!crop || width <= 0 || height <= 0) return null
+  return { sx: crop.x * width, sy: crop.y * height, sw: crop.w * width, sh: crop.h * height }
 }
 
 const windowOf = (base: SourceRect, part: LayoutSlot['rect']): SourceRect => ({
@@ -49,51 +47,56 @@ const windowOf = (base: SourceRect, part: LayoutSlot['rect']): SourceRect => ({
 })
 
 export function viewSourceRect(crop: Crop | undefined, frame: CanvasImageSource, view: ContentView): SourceRect | null {
-  const cropped = cropSourceRect(crop, frame)
+  const size = getImageSize(frame)
+  const cropped = cropSourceRect(crop, size)
   if (view.scale === 1) return cropped
-  const { width, height } = getImageSize(frame)
-  return windowOf(cropped ?? { sx: 0, sy: 0, sw: width, sh: height }, getZoomWindow(view))
+  return windowOf(cropped ?? { sx: 0, sy: 0, sw: size.width, sh: size.height }, getZoomWindow(view))
 }
 
 export const frameRadius = (style: FrameStyle, box: { w: number; h: number }): number => (style.cornerRadius ?? 0) * Math.min(box.w, box.h)
 
+function tracePath(ctx: Canvas2D, box: FrameBox, radius: number): void {
+  ctx.beginPath()
+  ctx.roundRect(box.x, box.y, box.w, box.h, radius)
+}
+
+export function drawFrameShadow(ctx: Canvas2D, shadow: Shadow, box: FrameBox, radius: number): void {
+  ctx.save()
+  ctx.shadowColor = shadow.color
+  ctx.shadowBlur = shadow.blur
+  ctx.shadowOffsetX = shadow.offsetX
+  ctx.shadowOffsetY = shadow.offsetY
+  ctx.fillStyle = '#000'
+  tracePath(ctx, box, radius)
+  ctx.fill()
+  ctx.restore()
+}
+
+export function drawFrameStroke(ctx: Canvas2D, stroke: Stroke, box: FrameBox, radius: number): void {
+  ctx.save()
+  tracePath(ctx, box, radius)
+  ctx.clip()
+  ctx.strokeStyle = stroke.color
+  ctx.lineWidth = stroke.width * 2
+  tracePath(ctx, box, radius)
+  ctx.stroke()
+  ctx.restore()
+}
+
 export function withFrameChrome(ctx: Canvas2D, style: FrameStyle, box: FrameBox, draw: () => void): void {
   const radius = frameRadius(style, box)
-  const tracePath = () => {
-    ctx.beginPath()
-    ctx.roundRect(box.x, box.y, box.w, box.h, radius)
-  }
-  if (style.shadow) {
-    ctx.save()
-    ctx.shadowColor = style.shadow.color
-    ctx.shadowBlur = style.shadow.blur
-    ctx.shadowOffsetX = style.shadow.offsetX
-    ctx.shadowOffsetY = style.shadow.offsetY
-    ctx.fillStyle = '#000'
-    tracePath()
-    ctx.fill()
-    ctx.restore()
-  }
+  if (style.shadow) drawFrameShadow(ctx, style.shadow, box, radius)
   ctx.save()
   if (radius > 0) {
-    tracePath()
+    tracePath(ctx, box, radius)
     ctx.clip()
   }
   draw()
   ctx.restore()
-  if (style.stroke) {
-    ctx.save()
-    tracePath()
-    ctx.clip()
-    ctx.strokeStyle = style.stroke.color
-    ctx.lineWidth = style.stroke.width * 2
-    tracePath()
-    ctx.stroke()
-    ctx.restore()
-  }
+  if (style.stroke) drawFrameStroke(ctx, style.stroke, box, radius)
 }
 
-function placeSource(base: SourceRect, box: FrameBox, fit: LayoutSlot['fit'], viewFor: ViewFor): { src: SourceRect; dest: FrameBox } {
+export function placeSource(base: SourceRect, box: FrameBox, fit: LayoutSlot['fit'], viewFor: ViewFor): { src: SourceRect; dest: FrameBox } {
   const fitScale = fit === 'cover' ? Math.max(box.w / base.sw, box.h / base.sh) : Math.min(box.w / base.sw, box.h / base.sh)
   const visible = { x: box.w / (fitScale * base.sw), y: box.h / (fitScale * base.sh) }
   const view = viewFor(visible)
@@ -103,11 +106,4 @@ function placeSource(base: SourceRect, box: FrameBox, fit: LayoutSlot['fit'], vi
   const dw = src.sw * scale
   const dh = src.sh * scale
   return { src, dest: { x: box.x + (box.w - dw) / 2, y: box.y + (box.h - dh) / 2, w: dw, h: dh } }
-}
-
-export function drawFramedMedia(ctx: Canvas2D, frame: CanvasImageSource, box: FrameBox, style: FrameStyle, fit: LayoutSlot['fit'], viewFor: ViewFor): void {
-  const { width, height } = getImageSize(frame)
-  if (width <= 0 || height <= 0) return
-  const { src, dest } = placeSource(cropSourceRect(style.crop, frame) ?? { sx: 0, sy: 0, sw: width, sh: height }, box, fit, viewFor)
-  withFrameChrome(ctx, style, box, () => ctx.drawImage(frame, src.sx, src.sy, src.sw, src.sh, dest.x, dest.y, dest.w, dest.h))
 }

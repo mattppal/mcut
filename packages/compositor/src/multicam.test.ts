@@ -1,24 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, createProject, type LayoutSlot, type Project } from '@mcut/timeline'
-import type { RenderBackend } from './backend'
-import { renderFrame, renderFrameWith } from './render-frame'
+import { renderFrame } from './render-frame'
 import { deviceRect, FakeContext2D, onCanvas } from './test-utils'
-import type { Canvas2D, RenderFrameOptions } from './types'
-
-class SizingBackend implements RenderBackend {
-  readonly kind = 'sizing'
-  readonly width = 1920
-  readonly height = 1080
-  constructor(readonly renderScale: number) {}
-  beginFrame(): void {}
-  endFrame(): void {}
-  acquireRaster(): Canvas2D {
-    throw new Error('a multicam composes off the raster')
-  }
-  drawImageQuad(): void {}
-  pushRasterScope(): void {}
-  popRasterScope(): void {}
-}
+import type { Canvas2D } from './types'
 
 type Camera = { rect: LayoutSlot['rect']; fit?: LayoutSlot['fit'] }
 
@@ -49,40 +33,22 @@ function multicam(element: object, cameras: readonly Camera[] = [{ rect: FULL }]
 const placed = (x: number, y: number, scaleX: number, scaleY = scaleX) => ({ transform: { x, y, scaleX, scaleY, rotation: 0 } })
 const scaled = (scaleX: number, scaleY = scaleX) => placed(0, 0, scaleX, scaleY)
 
-const zoomed = (element: object, source?: string) =>
+const zoomed = (element: object) =>
   applyCommand(multicam(element), {
     type: 'addZoomRegion',
     elementId: 'e-mc',
-    zoom: { atMs: 0, inMs: 500, holdMs: 1000, outMs: 500, scale: 2, motionBlur: 0, ...(source ? { source } : {}) },
+    zoom: { atMs: 0, inMs: 500, holdMs: 1000, outMs: 500, scale: 2, motionBlur: 0 },
   })
-
-function composeSizes(project: Project, { renderScale = 1, timeMs = 1000 } = {}): number[][] {
-  const sizes: number[][] = []
-  renderFrameWith(new SizingBackend(renderScale), project, timeMs, {
-    source: { getFrame: () => null },
-    createScratchContext: (width, height) => {
-      sizes.push([width, height])
-      return null
-    },
-  })
-  return sizes
-}
 
 const asCtx = (fake: FakeContext2D): Canvas2D => fake as unknown as Canvas2D
 
 const frame: ImageBitmap = { width: 640, height: 360, close: () => {} }
 
-function renderComposed(
-  project: Project,
-  timeMs = 1000,
-  renderScale = 1,
-  options: RenderFrameOptions = {},
-): { main: FakeContext2D; scratches: FakeContext2D[] } {
+function renderComposed(project: Project, timeMs = 1000, renderScale = 1): { main: FakeContext2D; scratches: FakeContext2D[] } {
   const main = new FakeContext2D(1920 * renderScale, 1080 * renderScale)
   main.setTransform(renderScale, 0, 0, renderScale, 0, 0)
   const scratches: FakeContext2D[] = []
   renderFrame(asCtx(main), project, timeMs, {
-    ...options,
     source: { getFrame: () => frame },
     createScratchContext: (width, height) => {
       const scratch = new FakeContext2D(width, height)
@@ -93,124 +59,99 @@ function renderComposed(
   return { main, scratches }
 }
 
-describe('multicam compose density', () => {
-  test('a multicam composes at the density its transform lands on the canvas', () => {
-    expect(composeSizes(multicam(scaled(0.5)))).toEqual([[960, 540]])
-    expect(composeSizes(multicam(scaled(0.5, 0.25)))).toEqual([[960, 270]])
-    expect(composeSizes(multicam(scaled(0.5)), { renderScale: 0.5 })).toEqual([[480, 270]])
-    expect(composeSizes(multicam(scaled(-0.5, 0.5)))).toEqual([[960, 540]])
+function composed(project: Project, timeMs = 1000, renderScale = 1) {
+  const { main, scratches } = renderComposed(project, timeMs, renderScale)
+  return {
+    scratch: scratches.map(({ canvas }) => [canvas.width, canvas.height]),
+    cleared: scratches.flatMap((scratch) => scratch.callsTo('clearRect').map(deviceRect)),
+    slots: scratches.flatMap((scratch) => onCanvas(main, scratch, 'drawImage')),
+    copied: main.callsTo('drawImage').map(({ args }) => args.slice(1, 5)),
+    landed: main.callsTo('drawImage').map(deviceRect),
+  }
+}
+
+describe('multicam compose grid', () => {
+  test('a multicam composes on a scratch the size of the canvas, at the canvas pixels it covers, and copies those pixels one to one', () => {
+    expect(composed(multicam(scaled(0.5)))).toEqual({
+      scratch: [[1920, 1080]],
+      cleared: [[480, 270, 960, 540]],
+      slots: [[480, 270, 960, 540]],
+      copied: [[480, 270, 960, 540]],
+      landed: [[480, 270, 960, 540]],
+    })
+    expect(composed(multicam(scaled(0.5)), 1000, 0.5)).toEqual({
+      scratch: [[960, 540]],
+      cleared: [[240, 135, 480, 270]],
+      slots: [[240, 135, 480, 270]],
+      copied: [[240, 135, 480, 270]],
+      landed: [[240, 135, 480, 270]],
+    })
   })
 
-  test('keyframed scale sets the density of each frame', () => {
+  test('a scale animation keeps one scratch size, so the pool hands back the same canvas every frame', () => {
     let project = multicam({})
     for (const property of ['scale.x', 'scale.y'] as const) {
       project = applyCommand(project, { type: 'setKeyframe', elementId: 'e-mc', property, timeMs: 0, value: 0.25, easing: 'linear' })
       project = applyCommand(project, { type: 'setKeyframe', elementId: 'e-mc', property, timeMs: 2000, value: 0.75 })
     }
-    expect(composeSizes(project, { timeMs: 0 })).toEqual([[480, 270]])
-    expect(composeSizes(project, { timeMs: 1000 })).toEqual([[960, 540]])
-  })
-
-  test('the density rounds up to quarter octaves, so nearby scales share one scratch size', () => {
-    expect([0.6, 0.65, 0.7, 0.8].flatMap((scale) => composeSizes(multicam(scaled(scale))))).toEqual([
-      [1358, 764],
-      [1358, 764],
-      [1358, 764],
-      [1615, 909],
-    ])
-  })
-
-  test('sizing tolerates float error, so a scratch matches the canvas pixels it lands on', () => {
-    expect(composeSizes(multicam({}), { renderScale: 248 / 1920 })).toEqual([[248, 140]])
-    expect(composeSizes(multicam({ ...scaled(1 / 0.6), crop: { x: 0.2, y: 0.2, w: 0.6, h: 0.6 } }), { renderScale: 0.1 })).toEqual([[192, 108]])
-  })
-
-  test('a zoom region leaves the compose size to the transform and the render scale', () => {
-    expect(composeSizes(zoomed(scaled(0.5)))).toEqual([[960, 540]])
-    expect(composeSizes(zoomed({}), { renderScale: 0.5 })).toEqual([[960, 540]])
-    expect(composeSizes(zoomed({}, 'cam-0'))).toEqual([[1920, 1080]])
-  })
-
-  test('crop composes only the kept part of the frame, at the density of the transform', () => {
-    expect(composeSizes(multicam({ ...scaled(2), crop: { x: 0.25, y: 0.25, w: 0.5, h: 0.5 } }))).toEqual([[1920, 1080]])
-    expect(composeSizes(multicam({ crop: { x: 0.25, y: 0.25, w: 0.5, h: 0.5 } }))).toEqual([[960, 540]])
-  })
-
-  test('each compose clears the whole scratch before it draws, because the pool hands the same canvas to the next frame', () => {
-    const { scratches } = renderComposed(multicam({ ...scaled(2), crop: { x: 0.25, y: 0.25, w: 0.5, h: 0.5 } }))
-    const painted = scratches.flatMap(({ calls }) => calls.filter(({ method }) => method === 'clearRect' || method === 'drawImage'))
-    expect(painted.map((call) => [call.method, ...deviceRect(call)])).toEqual([
-      ['clearRect', 0, 0, 1920, 1080],
-      ['drawImage', -960, -540, 3840, 2160],
-    ])
-  })
-
-  test('a side stops at 8192 pixels and the frame squeezes into it', () => {
-    const { scratches } = renderComposed(multicam({}), 1000, 8)
-    expect(scratches.map(({ canvas }) => [canvas.width, canvas.height])).toEqual([[8192, 8192]])
-    expect(scratches.flatMap((scratch) => scratch.callsTo('drawImage').map(deviceRect))).toEqual([[0, 0, 8192, 8192]])
-  })
-})
-
-describe('multicam compose window', () => {
-  const sizesOf = (scratches: readonly FakeContext2D[]) => scratches.map(({ canvas }) => [canvas.width, canvas.height])
-
-  test('a held 2x zoom composes only the window it draws, one scratch pixel per canvas pixel', () => {
-    const { main, scratches } = renderComposed(zoomed({}))
-    expect(sizesOf(scratches)).toEqual([[1920, 1080]])
-    expect(scratches.flatMap((scratch) => scratch.callsTo('drawImage').map(deviceRect))).toEqual([[-960, -540, 3840, 2160]])
-    expect(scratches.flatMap((scratch) => onCanvas(main, scratch, 'drawImage'))).toEqual([[-960, -540, 3840, 2160]])
-  })
-
-  test('a multicam magnified past the canvas composes only the part the canvas shows, one scratch pixel per canvas pixel', () => {
-    const { main, scratches } = renderComposed(multicam(scaled(2)))
-    expect(sizesOf(scratches)).toEqual([[1920, 1080]])
-    expect(scratches.flatMap((scratch) => scratch.callsTo('drawImage').map(deviceRect))).toEqual([[-960, -540, 3840, 2160]])
-    expect(scratches.flatMap((scratch) => onCanvas(main, scratch, 'drawImage'))).toEqual([[-960, -540, 3840, 2160]])
-    expect(composeSizes(multicam(scaled(2)), { renderScale: 0.5 })).toEqual([[960, 540]])
-    expect(composeSizes(multicam(scaled(-2, 1)))).toEqual([[1920, 1080]])
-    expect(composeSizes(multicam(placed(960, 0, 1)))).toEqual([[960, 1080]])
-    expect(composeSizes(multicam({ transform: { x: 0, y: 0, scaleX: 2, scaleY: 2, rotation: 90 } }))).toEqual([[1142, 2160]])
-  })
-
-  test('each motion blur sample composes only the part the canvas shows', () => {
-    let project = multicam({ motionBlur: { enabled: true, shutterAngle: 180 } })
-    for (const property of ['scale.x', 'scale.y'] as const) {
-      project = applyCommand(project, { type: 'setKeyframe', elementId: 'e-mc', property, timeMs: 0, value: 2, easing: 'linear' })
-      project = applyCommand(project, { type: 'setKeyframe', elementId: 'e-mc', property, timeMs: 2000, value: 3 })
+    const at = (timeMs: number) => {
+      const { scratch, slots } = composed(project, timeMs)
+      return { scratch, slots }
     }
-    expect(sizesOf(renderComposed(project, 1000, 1, { motionBlurSamples: 2 }).scratches)).toEqual([
-      [1920, 1080],
-      [1920, 1080],
-      [1920, 1080],
-      [1920, 1080],
-    ])
+    expect(at(0)).toEqual({ scratch: [[1920, 1080]], slots: [[720, 405, 480, 270]] })
+    expect(at(1000)).toEqual({ scratch: [[1920, 1080]], slots: [[480, 270, 960, 540]] })
   })
 
-  test('a multicam in a track transition composes its whole crop, because the transition moves it on the canvas', () => {
-    let project = applyCommand(multicam(scaled(2)), {
-      type: 'addElement',
-      trackId: 't-default',
-      element: { id: 'e-next', type: 'text', text: 'NEXT', startMs: 5000, durationMs: 2000 },
+  test('a multicam half off the canvas copies only its on-canvas half, and one wholly off the canvas composes nothing', () => {
+    expect(composed(multicam(placed(960, 0, 1)))).toEqual({
+      scratch: [[1920, 1080]],
+      cleared: [[960, 0, 960, 1080]],
+      slots: [[960, 0, 1920, 1080]],
+      copied: [[960, 0, 960, 1080]],
+      landed: [[960, 0, 960, 1080]],
     })
-    project = applyCommand(project, { type: 'setTransition', elementId: 'e-mc', transition: { type: 'slide-left', durationMs: 1000 } })
-    expect(sizesOf(renderComposed(project, 4000).scratches)).toEqual([[1920, 1080]])
-    expect(sizesOf(renderComposed(project, 4750).scratches)).toEqual([[3840, 2160]])
+    expect(composed(multicam(placed(3000, 0, 1)))).toEqual({ scratch: [], cleared: [], slots: [], copied: [], landed: [] })
   })
 
-  test('an effect that reads neighboring pixels, or a shadow, composes the whole crop so nothing near the canvas edge goes missing', () => {
+  test('a held 2x zoom draws each slot at the canvas pixels main draws it at', () => {
+    const { slots, copied, landed } = composed(zoomed({}))
+    expect({ slots, copied, landed }).toEqual({ slots: [[-960, -540, 3840, 2160]], copied: [[0, 0, 1920, 1080]], landed: [[0, 0, 1920, 1080]] })
+  })
+
+  test('an effect that reads neighboring pixels composes past the canvas edge, up to 8192 pixels a side', () => {
     const blur = { type: 'blur', enabled: true, radius: 4 }
     const dropShadow = { type: 'drop-shadow', enabled: true, offsetX: 0, offsetY: 8, blur: 12, color: '#000000' }
     const brightness = { type: 'brightness', enabled: true, amount: 1.2 }
-    expect(composeSizes(multicam({ ...scaled(2), effects: [blur] }))).toEqual([[3840, 2160]])
-    expect(composeSizes(multicam({ ...scaled(2), effects: [brightness, dropShadow] }))).toEqual([[3840, 2160]])
-    expect(composeSizes(multicam({ ...scaled(2), effects: [{ type: 'css', enabled: true, filter: 'blur(2px)' }] }))).toEqual([[3840, 2160]])
-    expect(composeSizes(multicam({ ...scaled(2), shadow: { color: 'rgba(0,0,0,0.5)', blur: 20, offsetX: 0, offsetY: 8 } }))).toEqual([[3840, 2160]])
-    expect(composeSizes(multicam({ ...scaled(2), effects: [brightness, { ...blur, enabled: false }] }))).toEqual([[1920, 1080]])
+    const css = { type: 'css', enabled: true, filter: 'blur(2px)' }
+    const reach = (element: object) => {
+      const { scratch, landed } = composed(multicam(element))
+      return { scratch, landed }
+    }
+    expect(reach({ ...scaled(2), effects: [blur] })).toEqual({ scratch: [[3840, 2160]], landed: [[-960, -540, 3840, 2160]] })
+    expect(reach({ ...scaled(2), effects: [brightness, dropShadow] })).toEqual({ scratch: [[3840, 2160]], landed: [[-960, -540, 3840, 2160]] })
+    expect(reach({ ...scaled(2), effects: [css] })).toEqual({ scratch: [[3840, 2160]], landed: [[-960, -540, 3840, 2160]] })
+    expect(reach({ ...scaled(8), effects: [blur] })).toEqual({ scratch: [[8192, 8192]], landed: [[-3136, -3556, 8192, 8192]] })
+    expect(reach({ ...scaled(2), effects: [brightness, { ...blur, enabled: false }] })).toEqual({ scratch: [[1920, 1080]], landed: [[0, 0, 1920, 1080]] })
   })
 
-  test('a multicam wholly off the canvas composes its whole crop', () => {
-    expect(composeSizes(multicam(placed(3000, 0, 1)))).toEqual([[1920, 1080]])
+  test('a multicam sliding in on a track transition composes where the slide draws it', () => {
+    let project = applyCommand(multicam({ ...scaled(0.5), startMs: 5000 }), {
+      type: 'addElement',
+      trackId: 't-default',
+      element: { id: 'e-prev', type: 'text', text: 'PREV', startMs: 0, durationMs: 5000 },
+    })
+    project = applyCommand(project, { type: 'setTransition', elementId: 'e-prev', transition: { type: 'slide-left', durationMs: 1000 } })
+    expect(composed(project, 5250).landed).toEqual([[600, 270, 960, 540]])
+    expect(composed(project, 6000).landed).toEqual([[480, 270, 960, 540]])
+  })
+
+  test('a slot that leaves the frame is cut at the frame, and a layout inside its frame draws without a frame clip', () => {
+    const clips = (camera: LayoutSlot['rect']) => {
+      const { main, scratches } = renderComposed(multicam(scaled(0.5), [{ rect: FULL }, { rect: camera }]))
+      return scratches.flatMap((scratch) => onCanvas(main, scratch, 'rect'))
+    }
+    expect(clips({ x: 0.8, y: 0.1, w: 0.4, h: 0.3 })).toEqual([[480, 270, 960, 540]])
+    expect(clips({ x: 0.6, y: 0.1, w: 0.3, h: 0.3 })).toEqual([])
   })
 })
 
@@ -224,20 +165,33 @@ describe('multicam zoom and crop', () => {
       })
       const { main, scratches } = renderComposed(project, 1500)
       return {
-        crop: main.callsTo('drawImage').map(deviceRect),
-        zoomClip: scratches.flatMap((scratch) => onCanvas(main, scratch, 'rect')),
+        copied: main.callsTo('drawImage').map(deviceRect),
+        clips: scratches.flatMap((scratch) => onCanvas(main, scratch, 'rect')),
         slots: scratches.flatMap((scratch) => onCanvas(main, scratch, 'drawImage')),
       }
     }
-    expect(drawn({})).toEqual({ crop: [[480, 270, 960, 540]], zoomClip: [[-480, -270, 1920, 1080]], slots: [[-480, -270, 3840, 2160]] })
+    expect(drawn({})).toEqual({
+      copied: [[480, 270, 960, 540]],
+      clips: [
+        [480, 270, 960, 540],
+        [-480, -270, 1920, 1080],
+      ],
+      slots: [[-480, -270, 3840, 2160]],
+    })
     expect(drawn(placed(200, -100, 1.5))).toEqual({
-      crop: [[440, 35, 1440, 810]],
-      zoomClip: [[-1000, -775, 2880, 1620]],
+      copied: [[440, 35, 1440, 810]],
+      clips: [
+        [440, 35, 1440, 810],
+        [-1000, -775, 2880, 1620],
+      ],
       slots: [[-1000, -775, 5760, 3240]],
     })
     expect(drawn(placed(600, 0, 1.5))).toEqual({
-      crop: [[840, 135, 1440, 810]],
-      zoomClip: [[-600, -675, 2880, 1620]],
+      copied: [[840, 135, 1080, 810]],
+      clips: [
+        [840, 135, 1440, 810],
+        [-600, -675, 2880, 1620],
+      ],
       slots: [[-600, -675, 5760, 3240]],
     })
   })

@@ -66,13 +66,12 @@ export function renderElementWithMotionBlur(
   accumulate.clearRect(0, 0, width, height)
   sample.setTransform(renderScale, 0, 0, renderScale, 0, 0)
   const subBackend = new Canvas2DBackend(sample, project.width, project.height)
-  const frame = { x: 0, y: 0, w: project.width, h: project.height }
   for (let i = 0; i < samples; i++) {
     const sampleMs = start + windowMs * ((i + 0.5) / samples)
     const resolved = resolveAnimatedElement(element, transformWindowMs > 0 ? sampleMs : timeMs)
     const sub = 'blendMode' in resolved && resolved.blendMode ? { ...resolved, blendMode: undefined } : resolved
     sample.clearRect(0, 0, width / renderScale, height / renderScale)
-    renderer(sub, createElementContext(subBackend, project, track, timeMs, options, sampleMs, frame))
+    renderer(sub, createElementContext(subBackend, project, track, timeMs, options, sampleMs))
     accumulate.save()
     accumulate.globalCompositeOperation = 'lighter'
     accumulate.globalAlpha = 1 / samples

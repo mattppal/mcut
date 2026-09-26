@@ -1,23 +1,18 @@
 import {
   getClipView,
   getSourceTimeMs,
-  type MulticamElement,
-  type BlendMode,
   type CaptionElement,
-  type Effect,
   type ElementType,
   type FrameStyle,
   type ImageElement,
   type TextElement,
   type TimelineElement,
-  type Transform,
   type VideoElement,
 } from '@mcut/timeline'
-import { applyChrome, drawImageQuad2D, type LayerChrome } from './backend'
+import { applyChrome, chromeOf, drawImageQuad2D, type VisualChrome } from './backend'
 import { frameRadius, getImageSize, viewSourceRect, withFrameChrome, type SourceRect } from './framed-media'
-import { toCanvasPoint } from './geometry'
 import { getCaptionLane } from './caption-lane'
-import { composeMulticam } from './multicam'
+import { renderMulticam } from './multicam'
 import { reframedCrop } from './reframe-views'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
 import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
@@ -39,29 +34,8 @@ function measureWith(ctx: Canvas2D): MeasureFn {
   }
 }
 
-interface VisualChrome {
-  transform: Transform
-  opacity: number
-  effects?: Effect[] | undefined
-  blendMode?: BlendMode | undefined
-}
-
-function chromeOf(context: ElementRenderContext, element: VisualChrome): LayerChrome {
-  const center = toCanvasPoint(context.project, element.transform.x, element.transform.y)
-  return {
-    centerX: center.x,
-    centerY: center.y,
-    rotationDeg: element.transform.rotation,
-    scaleX: element.transform.scaleX,
-    scaleY: element.transform.scaleY,
-    opacity: element.opacity,
-    blendMode: element.blendMode,
-    effects: element.effects,
-  }
-}
-
 function withTransform(ctx: Canvas2D, context: ElementRenderContext, element: VisualChrome, draw: () => void): void {
-  applyChrome(ctx, chromeOf(context, element), draw)
+  applyChrome(ctx, chromeOf(context.project, element), draw)
 }
 
 function drawMediaFrame(
@@ -74,7 +48,7 @@ function drawMediaFrame(
 ): void {
   const box = { x: -dw / 2, y: -dh / 2, w: dw, h: dh }
   if (!element.stroke && !element.shadow) {
-    context.backend.drawImageQuad({ image, src, dw, dh, cornerRadius: frameRadius(element, box) }, chromeOf(context, element))
+    context.backend.drawImageQuad({ image, src, dw, dh, cornerRadius: frameRadius(element, box) }, chromeOf(context.project, element))
     return
   }
   const ctx = context.ctx
@@ -243,15 +217,6 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
     }
   }
   ctx.restore()
-}
-
-const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
-  const frames = context.source
-  if (!frames) return
-  const composed = composeMulticam(element, context, frames, chromeOf(context, element))
-  if (!composed) return
-  const { width, height } = context.project
-  drawMediaFrame(context, element, composed.image, width * (element.crop?.w ?? 1), height * (element.crop?.h ?? 1), composed.src)
 }
 
 export const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> } = {

@@ -19,7 +19,7 @@ Distance in canvas pixels from the top edge of a box to its rotate handle.
 const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> }
 ```
 
-The closed table of element renderers keyed by `ElementType`, where each renderer receives the element of its own kind and the `audio` renderer draws nothing. The `multicam` renderer composes the active layout, or both layouts of an angle transition, into the compose scratch. The scratch covers the part of the element's crop that reaches the context's `viewport`, at the density the multicam lands on the target. That part is the crop cut to the bounding box of the viewport mapped back through the multicam's transform. That density is the absolute transform scale at the frame, keyframes included, times the backend's `renderScale`. A multicam magnified 2x by its transform in an export composes only the canvas pixels it covers, not its whole crop at 2x. The scratch covers the whole crop when the viewport is `null` or no part of the crop reaches it. It also covers the whole crop when an effect reads neighboring pixels, as blur, drop shadow, and CSS filters do, or when the multicam has a shadow, because those carry pixels from outside the viewport onto the target. Each axis sizes on its own. Each side rounds up to the frame's side at `renderScale` times a power of the fourth root of 2, so a keyframed scale reuses one scratch between steps. A preview drawn at half size composes at half size. A zoom region without `source` adds no density, because it scales the whole composite, overlays included, on the scratch before the crop cuts it. A slot zoom adds none either, because it magnifies a source inside its slot. Each side stops at 8192 pixels, the default `maxTextureDimension2D` of WebGPU, and is at least one pixel. Past that, the part squeezes into the side at a lower density. The renderer then draws the scratch as one image quad the way the `video` renderer draws a clip, so the multicam's effects, blend mode, crop, corner radius, stroke, and shadow apply to the composed frame. The quad's source rect spans the whole crop and reaches past a trimmed scratch. `drawImage` clips such a source rect to the image and clips the destination in proportion, per the [HTML canvas spec](https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-drawimage).
+The closed table of element renderers keyed by `ElementType`, where each renderer receives the element of its own kind and the `audio` renderer draws nothing. The `multicam` renderer composes the active layout, or both layouts of an angle transition, into the compose scratch, then copies the composed pixels onto the target. The scratch shares the backend's `pixelGrid`, so scratch pixel (x, y) is target pixel (x, y), and each slot draws under the multicam's transform, crop, and zoom at the target pixels a direct draw would hit. The copy covers the target pixels the crop reaches, rounded out to whole pixels, and moves them one to one under any axis-aligned grid, so a composed frame resamples no more than a slot drawn straight onto the target, rotated or not. The scratch is the size of the target, so a keyframed scale reuses one scratch, a multicam magnified past the target composes only the target's pixels, a preview drawn at half size composes at half size, and a target without pixels composes nothing. An effect that reads neighboring pixels, as blur, drop shadow, and CSS filters do, draws from past the target's edge, so for one the scratch reaches past it, up to 8192 pixels a side, the default `maxTextureDimension2D` of WebGPU. A slot that reaches past the multicam's frame is cut at the frame. The multicam's opacity, blend mode, and effects apply once to the composed frame through the image quad a `video` clip draws through, and its crop, corner radius, stroke, and shadow frame the composed frame the way they frame a clip.
 
 ### transitionRenderers
 
@@ -167,7 +167,7 @@ function renderFrameWith(
 ): void
 ```
 
-Renders one frame through the given backend, walking tracks bottom up and elements in start order and blending clips joined by an active transition. The target shows the project frame, so each element outside a transition gets the frame as its `viewport`, and an element inside one gets `null` because the transition moves it.
+Renders one frame through the given backend, walking tracks bottom up and elements in start order and blending clips joined by an active transition.
 
 ### applyChrome
 
@@ -187,11 +187,10 @@ function createElementContext(
   timeMs: number,
   options: RenderFrameOptions,
   viewTimeMs: number = timeMs,
-  viewport: ElementRenderContext['viewport'] = null,
 ): ElementRenderContext
 ```
 
-Builds the per-element render context for a backend, exposing `ctx` as a getter so the backend learns when raster drawing begins. The frame source and the compose scratch come from the render options. `viewTimeMs` is the time zoom views read, and each motion blur pass sets it to its own sample time. `viewport` is the part of the frame the target shows, and the default `null` has every renderer draw its whole element.
+Builds the per-element render context for a backend, exposing `ctx` as a getter so the backend learns when raster drawing begins. The frame source and the compose scratch come from the render options. `viewTimeMs` is the time zoom views read, and each motion blur pass sets it to its own sample time.
 
 ### drawImageQuad2D
 
