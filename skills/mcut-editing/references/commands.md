@@ -132,10 +132,11 @@ Patch element properties (text, style, transform, opacity, volume, ...). The mer
 
 ## applyCaptions
 
-Add caption elements (e.g. from a transcription) to a caption track, creating the track when needed.
+Add caption elements (e.g. from a transcription) to a caption track, creating the track when needed. `replace` clears every caption on that track first. `replaceIds` removes only those caption elements first, wherever they are, and never ripples.
 
 - `trackId` (string, optional)
 - `replace` (boolean, optional)
+- `replaceIds` (string[], optional)
 - `captions` (object[], required)
 
 ## setKeyframe
