@@ -171,6 +171,25 @@ describe('usePlaybackLoop', () => {
     expect(seen).toEqual([0, 40, 90, 106])
   })
 
+  test('asks the clock for the time heard when the frame reaches the screen, one bounded frame interval later', () => {
+    const engine = engineWithClip(10_000)
+    engine.play()
+    const asked: number[] = []
+    const frames = fakeFrames()
+    renderHook(() =>
+      usePlaybackLoop(engine, {
+        onFrame: () => {},
+        requestFrame: frames.requestFrame,
+        clock: (displayTimeMs) => {
+          asked.push(displayTimeMs)
+          return null
+        },
+      }),
+    )
+    for (const frameTimeMs of [1000, 1016, 1500]) frames.step(frameTimeMs)
+    expect(asked).toEqual([1000, 1032, 1550])
+  })
+
   test('a seek between frames wins over a clock still reporting the old position', () => {
     const engine = engineWithClip(10_000)
     engine.play()
