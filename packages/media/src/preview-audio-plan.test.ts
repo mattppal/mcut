@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { AudibleSegment } from './export-audio-composite'
-import { contextAt, epochChange, handoffAnchor, heardContextS, heardTimelineMs, planFeed, planWindow, sourceMapOf, timelineAt } from './preview-audio-plan'
+import { contextAt, epochChange, handoffAnchor, heardContextS, heardTimelineMs, planFeed, planWindow, sourceMapOf, timelineAt, voiceStartS } from './preview-audio-plan'
 
 describe('audio clock anchor', () => {
   const anchor = { timelineMs: 1000, contextS: 2, rate: 1 }
@@ -22,6 +22,22 @@ describe('audio clock anchor', () => {
 
   test('extrapolates the output timestamp to the frame time', () => {
     expect(heardContextS({ contextTime: 10, performanceTime: 5000 }, 5016)).toBeCloseTo(10.016, 9)
+  })
+})
+
+describe('voiceStartS', () => {
+  const anchor = { timelineMs: 1000, contextS: 0.525, rate: 1 }
+
+  test('a voice created after the context moved still starts at an anchor that lies ahead', () => {
+    expect(voiceStartS(anchor, -1, 0.51, 0.025)).toBe(0.525)
+  })
+
+  test('a voice whose anchor has passed starts one lead after now', () => {
+    expect(voiceStartS(anchor, -1, 0.6, 0.025)).toBeCloseTo(0.625, 9)
+  })
+
+  test('a voice for a later clip starts at the clip', () => {
+    expect(voiceStartS(anchor, 2, 0.51, 0.025)).toBe(2)
   })
 })
 
