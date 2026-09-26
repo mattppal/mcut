@@ -185,7 +185,7 @@ export class PreviewAudio {
     const change =
       current && epochChange({ rate: current.anchor.rate, reportedMs: current.reportedMs, sounding: current.primed || this.outgoing !== null }, playback)
     if (current && change === 'keep') return current
-    if (current && change === 'handoff') this.beginHandoff(current)
+    if (current && change === 'handoff') this.beginHandoff(context, current)
     else this.flush()
     const output = context.createGain()
     output.connect(master)
@@ -266,10 +266,16 @@ export class PreviewAudio {
     return opening
   }
 
-  private beginHandoff(current: Epoch): void {
+  private beginHandoff(context: AudioContext, current: Epoch): void {
     this.epoch = null
-    if (!current.primed) {
+    const outgoing = this.outgoing
+    if (!current.primed || (outgoing && context.currentTime < current.anchor.contextS)) {
       dropEpoch(current)
+      if (outgoing && outgoing.untilS !== null) {
+        outgoing.untilS = null
+        outgoing.epoch.output.gain.cancelScheduledValues(context.currentTime)
+        outgoing.epoch.output.gain.setValueAtTime(1, context.currentTime)
+      }
       return
     }
     this.dropOutgoing()
