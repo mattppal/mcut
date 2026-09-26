@@ -91,6 +91,18 @@ function decoderSink({ facts: { sampleRate }, packets, discardFrames, silentFirs
   }
 }
 
+function accumulatingSink(sampleRate: number, frames: number): Pick<AudioBufferSink, 'buffers'> {
+  return {
+    async *buffers() {
+      let timestamp = 0
+      for (let index = 0; index < 16; index++) {
+        yield { buffer: monoBuffer(new Float32Array(frames), sampleRate), timestamp, duration: frames / sampleRate }
+        timestamp += frames / sampleRate
+      }
+    },
+  }
+}
+
 function runs(samples: Float32Array): [number, number][] {
   const found: [number, number][] = []
   for (const [index, value] of samples.entries()) {
@@ -253,6 +265,19 @@ describe('timedSink', () => {
       { discardFrames: 312 },
     )
     expect(await decodedRuns(recorded, MID_S)).toEqual([[23_760, 3000]])
+  })
+
+  test('keeps the decoder timestamps of a source with nothing to correct', async () => {
+    const wav = facts({ container: 'other', codec: 'pcm-f32', sampleRate: 44_100, resolution: 44_100 })
+    const packets = framedPackets(
+      2048,
+      (index) => (index * 2048) / 44_100,
+      (index) => index * 2048,
+    )
+    const timing = await buildSourceTiming(wav, packetIndex(packets), valueAt(packets, 0))
+    const timestamps: number[] = []
+    for await (const { timestamp } of timedSink(accumulatingSink(44_100, 2048), timing).buffers()) timestamps.push(timestamp)
+    expect(timestamps.slice(12, 15)).toEqual([0.5572789115646258, 0.6037188208616779, 0.65015873015873])
   })
 })
 
