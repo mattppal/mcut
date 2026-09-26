@@ -104,6 +104,7 @@ export function createElementContext(
   timeMs: number,
   options: RenderFrameOptions,
   viewTimeMs: number = timeMs,
+  viewport: ElementRenderContext['viewport'] = null,
 ): ElementRenderContext {
   return {
     backend,
@@ -111,6 +112,7 @@ export function createElementContext(
     track,
     timeMs,
     viewTimeMs,
+    viewport,
     source: options.source,
     acquireScratch: (width, height) => acquireScratch('compose', width, height, options),
     get ctx() {

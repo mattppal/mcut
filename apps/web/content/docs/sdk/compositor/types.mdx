@@ -287,12 +287,13 @@ interface ElementRenderContext {
   track: Track
   timeMs: number
   viewTimeMs: number
+  viewport: { x: number; y: number; w: number; h: number } | null
   source: FrameSource | undefined
   acquireScratch: (width: number, height: number) => Canvas2D | null
 }
 ```
 
-What an element renderer receives, the 2D context, backend, project, track, time, frame source, and a scratch surface. `viewTimeMs` is the time zoom views read. `acquireScratch` returns an off screen 2D context that is reused across frames, or `null` where no off screen canvas exists. A renderer composes into it and draws it straight away, because the next renderer that asks gets the same surface.
+What an element renderer receives, the 2D context, backend, project, track, time, frame source, and a scratch surface. `viewTimeMs` is the time zoom views read. `viewport` is the part of the frame the target shows, in project pixels, and a renderer may leave out what falls outside it. It is `null` when the renderer can't know, as inside a transition. `acquireScratch` returns an off screen 2D context that is reused across frames, or `null` where no off screen canvas exists. A renderer composes into it and draws it straight away, because the next renderer that asks gets the same surface.
 
 ### ElementRenderer
 

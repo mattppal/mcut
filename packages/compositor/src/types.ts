@@ -22,6 +22,7 @@ export interface ElementRenderContext {
   track: Track
   timeMs: number
   viewTimeMs: number
+  viewport: { x: number; y: number; w: number; h: number } | null
   source: FrameSource | undefined
   acquireScratch: (width: number, height: number) => Canvas2D | null
 }

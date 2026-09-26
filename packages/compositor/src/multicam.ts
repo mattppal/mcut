@@ -9,6 +9,7 @@ import {
   getZoomedRect,
   isAudioOnlySource,
   resolveAnimatedElement,
+  type Effect,
   type Layout,
   type LayoutSlot,
   type MulticamElement,
@@ -21,6 +22,7 @@ import { degToRad, toCanvasPoint, type OBB } from './geometry'
 import { reframedSlot } from './reframe-views'
 import { transitionRenderers } from './transition-renderers'
 import type { ElementRenderContext, FrameSource } from './types'
+import { invertChrome } from './webgpu/transform'
 
 interface PlacedSlot {
   slot: LayoutSlot
@@ -86,6 +88,37 @@ function composeAxis(length: number, density: number, frame: number): { pixels: 
   return { pixels, density: Math.min(density, pixels / length) }
 }
 
+const READS_NEIGHBORS: Record<Effect['type'], boolean> = {
+  brightness: false,
+  contrast: false,
+  saturate: false,
+  grayscale: false,
+  sepia: false,
+  'hue-rotate': false,
+  invert: false,
+  'chroma-key': false,
+  curves: false,
+  lut3d: false,
+  blur: true,
+  'drop-shadow': true,
+  css: true,
+}
+
+function visibleCrop(context: ElementRenderContext, element: MulticamElement, chrome: LayerChrome, crop: FrameBox): FrameBox {
+  const { viewport } = context
+  if (!viewport || element.shadow || chrome.effects?.some((effect) => effect.enabled && READS_NEIGHBORS[effect.type])) return crop
+  const { m00, m01, m10, m11, centerX, centerY } = invertChrome(chrome)
+  const corners = [viewport.x, viewport.x + viewport.w].flatMap((x) =>
+    [viewport.y, viewport.y + viewport.h].map((y) => ({ x: m00 * (x - centerX) + m01 * (y - centerY), y: m10 * (x - centerX) + m11 * (y - centerY) })),
+  )
+  const left = Math.max(-crop.w / 2, Math.min(...corners.map(({ x }) => x)))
+  const right = Math.min(crop.w / 2, Math.max(...corners.map(({ x }) => x)))
+  const top = Math.max(-crop.h / 2, Math.min(...corners.map(({ y }) => y)))
+  const bottom = Math.min(crop.h / 2, Math.max(...corners.map(({ y }) => y)))
+  if (!(right > left && bottom > top)) return crop
+  return { x: crop.x + crop.w / 2 + left, y: crop.y + crop.h / 2 + top, w: right - left, h: bottom - top }
+}
+
 export function composeMulticam(
   element: MulticamElement,
   context: ElementRenderContext,
@@ -101,14 +134,16 @@ export function composeMulticam(
     : [getActiveLayout(project, element, context.timeMs)]
   const placed = layouts.map((layout) => (layout ? placeSlots(project, element, layout) : []))
   const crop = element.crop ?? WHOLE_FRAME
+  const cropBox = { x: crop.x * width, y: crop.y * height, w: crop.w * width, h: crop.h * height }
+  const box = visibleCrop(context, element, chrome, cropBox)
   const { renderScale } = context.backend
-  const across = composeAxis(crop.w * width, Math.abs(chrome.scaleX) * renderScale, width * renderScale)
-  const down = composeAxis(crop.h * height, Math.abs(chrome.scaleY) * renderScale, height * renderScale)
+  const across = composeAxis(box.w, Math.abs(chrome.scaleX) * renderScale, width * renderScale)
+  const down = composeAxis(box.h, Math.abs(chrome.scaleY) * renderScale, height * renderScale)
   const surface = context.acquireScratch(across.pixels, down.pixels)
   if (!surface) return null
   surface.setTransform(1, 0, 0, 1, 0, 0)
   surface.clearRect(0, 0, across.pixels, down.pixels)
-  surface.setTransform(across.density, 0, 0, down.density, -across.density * crop.x * width, -down.density * crop.y * height)
+  surface.setTransform(across.density, 0, 0, down.density, -across.density * box.x, -down.density * box.y)
   const view = getClipView(element, context.viewTimeMs)
 
   const drawSlots = (slots: readonly PlacedSlot[] = []) => {
@@ -152,5 +187,13 @@ export function composeMulticam(
   } else {
     drawSlots(placed[0])
   }
-  return { image: surface.canvas, src: { sx: 0, sy: 0, sw: across.density * crop.w * width, sh: down.density * crop.h * height } }
+  return {
+    image: surface.canvas,
+    src: {
+      sx: across.density * (cropBox.x - box.x),
+      sy: down.density * (cropBox.y - box.y),
+      sw: across.density * cropBox.w,
+      sh: down.density * cropBox.h,
+    },
+  }
 }
