@@ -62,7 +62,8 @@ export interface PreviewSyncOptions {
 }
 
 const MAX_CATCHUP_DRIFT_S = 1
-const MIN_CATCHUP_DRIFT_S = 0.05
+const MIN_CATCHUP_DRIFT_S = 0.01
+const CATCHUP_GAIN = 4
 const CATCHUP_RATE_MAX_BIAS = 1.5
 const CATCHUP_RATE_MIN_BIAS = 0.75
 const PAUSED_DRIFT_TOLERANCE_S = 0.04
@@ -189,7 +190,7 @@ export class PreviewMediaPool implements FrameSource {
         const lead = drift > 0 ? Math.min(MAX_SEEK_LEAD_S, pooled.seekLatencyS * forwardRate) : 0
         this.requestSeek(pooled, targetSeconds + lead)
       } else if (Math.abs(drift) > MIN_CATCHUP_DRIFT_S && !element.seeking) {
-        rate = forwardRate * Math.min(CATCHUP_RATE_MAX_BIAS, Math.max(CATCHUP_RATE_MIN_BIAS, 1 + drift))
+        rate = forwardRate * Math.min(CATCHUP_RATE_MAX_BIAS, Math.max(CATCHUP_RATE_MIN_BIAS, 1 + drift * CATCHUP_GAIN))
       }
       if (element.playbackRate !== rate) element.playbackRate = rate
       if (element.paused) {
