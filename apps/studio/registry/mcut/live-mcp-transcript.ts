@@ -149,16 +149,18 @@ export async function ensureTranscriptForBridge(
 ): Promise<EnsureTranscriptResult> {
   const source = pickTranscriptionSource(engine, payload)
   const sourceInfo = sourceResult(source)
-  const existing = overlappingCaptions(engine, source)
+  const existingTranscript = (): EnsureTranscriptResult | null =>
+    !payload.replace && overlappingCaptions(engine, source).length > 0
+      ? {
+          applied: false,
+          reason: 'Transcript captions already overlap the target clip.',
+          source: sourceInfo,
+          transcript: getProjectTranscript(engine.project, { includeWords: true }),
+        }
+      : null
 
-  if (!payload.replace && existing.length > 0) {
-    return {
-      applied: false,
-      reason: 'Transcript captions already overlap the target clip.',
-      source: sourceInfo,
-      transcript: getProjectTranscript(engine.project, { includeWords: true }),
-    }
-  }
+  const before = existingTranscript()
+  if (before) return before
 
   assertBridgeTranscriptionSupported(source)
   if (!deps.isLocalTranscriptionSupported()) {
@@ -166,14 +168,8 @@ export async function ensureTranscriptForBridge(
   }
 
   const result = await sharedTranscription(source, payload.language, deps)
-  if (!payload.replace && overlappingCaptions(engine, source).length > 0) {
-    return {
-      applied: false,
-      reason: 'Transcript captions already overlap the target clip.',
-      source: sourceInfo,
-      transcript: getProjectTranscript(engine.project, { includeWords: true }),
-    }
-  }
+  const meanwhile = existingTranscript()
+  if (meanwhile) return meanwhile
   const command = buildApplyCaptionsCommand(result, {
     replace: false,
     timeOffsetMs: source.timelineStartMs,
