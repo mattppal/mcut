@@ -9,6 +9,7 @@ const XING_TAG_BYTES = 192
 const XING_OPTIONAL_FIELD_BYTES = [4, 4, 100, 4]
 const ITUNES_MAX_PRIMING_FRAMES = 16_384
 const MATROSKA_HEAD_BYTES = 65_536
+const MATROSKA_MAX_CODEC_DELAY_NS = 400_000_000
 const OPUS_FRAME_SIZES = {
   silk: [480, 960, 1920, 2880],
   hybrid: [480, 960],
@@ -28,8 +29,10 @@ const EBML = {
   cluster: 0x1f43b675,
 }
 
+const LATIN1 = new TextDecoder('latin1')
+
 function text(bytes: Uint8Array, start: number, length: number): string {
-  return String.fromCharCode(...bytes.subarray(start, start + length))
+  return LATIN1.decode(bytes.subarray(start, start + length))
 }
 
 function uint(bytes: Uint8Array, start: number, length: number): number {
@@ -181,7 +184,7 @@ function trackCodecDelay(bytes: Uint8Array, tracks: Element, trackNumber: number
       if (field.id === EBML.trackNumber) number = uint(bytes, field.data, field.end - field.data)
       if (field.id === EBML.codecDelay) delay = uint(bytes, field.data, field.end - field.data)
     }
-    if (number === trackNumber) return delay
+    if (number === trackNumber) return delay < MATROSKA_MAX_CODEC_DELAY_NS ? delay : 0
   }
   return 0
 }

@@ -78,18 +78,30 @@ describe('lameStartSkipFrames', () => {
   })
 })
 
+const SMPB = ' 00000000 00000840 000001CA 00000000003F31F6 00000000 00000000'
+
+function freeform(name: string, value: Part): Uint8Array {
+  return box('----', box('mean', FULL_BOX, 'com.apple.iTunes'), box('name', FULL_BOX, name), box('data', bigEndian(1, 4), zeros(4), value))
+}
+
+function m4a(...items: Uint8Array[]): Uint8Array {
+  const ftyp = box('ftyp', 'M4A ', zeros(4), 'M4A mp42isom')
+  const mvhd = box('mvhd', FULL_BOX, zeros(96))
+  if (items.length === 0) return bytes(ftyp, box('moov', mvhd), box('mdat', zeros(64)))
+  const meta = box('meta', FULL_BOX, box('hdlr', FULL_BOX, zeros(4), 'mdirappl', zeros(9)), box('ilst', ...items))
+  return bytes(ftyp, box('moov', mvhd, box('udta', meta)), box('mdat', zeros(64)))
+}
+
 describe('itunesPrimingFrames', () => {
   test('reads the priming field of iTunSMPB and nothing from a file without it', async () => {
-    const smpb = ' 00000000 00000840 000001CA 00000000003F31F6 00000000 00000000'
-    const ilst = box(
-      'ilst',
-      box('----', box('mean', FULL_BOX, 'com.apple.iTunes'), box('name', FULL_BOX, 'iTunSMPB'), box('data', bigEndian(1, 4), zeros(4), smpb)),
-    )
-    const meta = box('meta', FULL_BOX, box('hdlr', FULL_BOX, zeros(4), 'mdirappl', zeros(9)), ilst)
-    const ftyp = box('ftyp', 'M4A ', zeros(4), 'M4A mp42isom')
-    const mvhd = box('mvhd', FULL_BOX, zeros(96))
-    expect(await itunesPrimingFrames(reader(bytes(ftyp, box('moov', mvhd, box('udta', meta)), box('mdat', zeros(64)))))).toBe(2112)
-    expect(await itunesPrimingFrames(reader(bytes(ftyp, box('moov', mvhd), box('mdat', zeros(64)))))).toBe(0)
+    expect(await itunesPrimingFrames(reader(m4a(freeform('iTunSMPB', SMPB))))).toBe(2112)
+    expect(await itunesPrimingFrames(reader(m4a()))).toBe(0)
+  })
+
+  test('reads iTunSMPB after a freeform item of several megabytes', async () => {
+    const artwork = new Uint8Array(4_000_000).fill(0x41)
+    expect(await itunesPrimingFrames(reader(m4a(freeform('cover', artwork), freeform('iTunSMPB', SMPB))))).toBe(2112)
+    expect(await itunesPrimingFrames(reader(m4a(freeform('cover', artwork))))).toBe(0)
   })
 })
 
@@ -98,6 +110,11 @@ describe('matroskaCodecDelayNs', () => {
     const segment = ebml(0x18538067, ebml(0x1654ae6b, trackEntry(1, 6_500_000), trackEntry(2, 21_333_333)), ebml(0x1f43b675, [0xe7, 0x81, 0]))
     expect(await matroskaCodecDelayNs(reader(bytes(EBML_HEADER, segment)), 2)).toBe(21_333_333)
     expect(await matroskaCodecDelayNs(reader(bytes(EBML_HEADER, segment)), 1)).toBe(6_500_000)
+  })
+
+  test('reads no delay from a codec delay longer than any codec primes', async () => {
+    const segment = ebml(0x18538067, ebml(0x1654ae6b, trackEntry(1, 4_290_000_000)), ebml(0x1f43b675, [0xe7, 0x81, 0]))
+    expect(await matroskaCodecDelayNs(reader(bytes(EBML_HEADER, segment)), 1)).toBe(0)
   })
 
   test('follows the seek head to tracks written after the first 64 KB', async () => {
