@@ -217,6 +217,17 @@ describe('usePlaybackLoop', () => {
     expect(seen).toEqual([520, 540, 100, 100])
   })
 
+  test('a clock still sounding past the project end leaves the playhead at the end', () => {
+    const engine = engineWithClip(1000)
+    engine.seek(900)
+    engine.play()
+    const reports: (number | null)[] = [null, 1020, 1060, 1090]
+    const frames = fakeFrames()
+    renderHook(() => usePlaybackLoop(engine, { onFrame: () => {}, requestFrame: frames.requestFrame, clock: () => reports.shift() ?? null }))
+    for (const frameTimeMs of [0, 16, 32, 48]) frames.step(frameTimeMs)
+    expect(engine.playback.state).toMatchObject({ currentTimeMs: 1000, isPlaying: false })
+  })
+
   test('unmount cancels the pending frame', () => {
     const engine = engineWithClip(10_000)
     const { frames, unmount } = mountLoop(engine)
