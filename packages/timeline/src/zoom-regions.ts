@@ -194,6 +194,15 @@ export function getClipView(element: ZoomableElement, timelineMs: number): Conte
   return zoomViewAt(element.zooms, undefined, timelineMs - element.startMs, FULL_FRAME, CENTER)
 }
 
+export function getZoomedRect({ scale, focus }: ContentView, rect: LayoutSlot['rect']): LayoutSlot['rect'] {
+  return {
+    x: scale * (rect.x - focus.x * (1 - 1 / scale)),
+    y: scale * (rect.y - focus.y * (1 - 1 / scale)),
+    w: scale * rect.w,
+    h: scale * rect.h,
+  }
+}
+
 export function getZoomShutterMs(element: TimelineElement, timelineMs: number, frameMs: number): number {
   if (!isZoomable(element)) return 0
   const localMs = timelineMs - element.startMs

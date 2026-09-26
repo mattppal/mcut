@@ -7,6 +7,7 @@ import {
   getMulticamSourceTimeMs,
   getSourceTimeMs,
   getTransitionCompletion,
+  getZoomedRect,
   isAudioOnlySource,
   type MulticamElement,
   type BlendMode,
@@ -260,13 +261,12 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
       drawFramedComposite(ctx, project, element, () => {
         const view = getClipView(element, context.viewTimeMs)
         if (view.scale > 1) {
-          const left = view.focus.x * (1 - 1 / view.scale) * W
-          const top = view.focus.y * (1 - 1 / view.scale) * H
+          const frame = getZoomedRect(view, { x: 0, y: 0, w: 1, h: 1 })
           ctx.beginPath()
           ctx.rect(-W / 2, -H / 2, W, H)
           ctx.clip()
-          ctx.translate(-W / 2 - (left - W / 2) * view.scale, -H / 2 - (top - H / 2) * view.scale)
-          ctx.scale(view.scale, view.scale)
+          ctx.translate((frame.x + frame.w / 2 - 0.5) * W, (frame.y + frame.h / 2 - 0.5) * H)
+          ctx.scale(frame.w, frame.h)
         }
         for (const slot of layout.slots) {
           const source = element.sources.find((s) => s.key === slot.source)

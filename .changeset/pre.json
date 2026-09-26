@@ -52,6 +52,7 @@
     "find-retakes-time-remap",
     "find-retakes",
     "find-scene-changes",
+    "flatten-composite-zoom",
     "flatten-multicam-reframe",
     "flatten-multicam-zooms",
     "get-frame-end-frame",
@@ -78,6 +79,7 @@
     "media-prober",
     "media-thumbnail-decode-fallback",
     "motion-blur-render-scale",
+    "multicam-audio-consumers",
     "multicam-audio-source",
     "multicam-composite-zoom",
     "multicam-editor-media-clip",
@@ -85,6 +87,7 @@
     "multicam-media-clip",
     "multicam-media-path",
     "multicam-overlap-error",
+    "multicam-retakes-caption-match",
     "multicam-slot-zoom-crop",
     "native-video-thumbnails",
     "nested-cancel-transaction",
@@ -98,11 +101,13 @@
     "reframe-slot-crop",
     "resize-layout-slot",
     "retake-one-word-drift",
+    "retakes-full-transcript-guidance",
     "retire-zoom-presets",
     "reversed-split-integer-trim",
     "screen-cam-crop-preset",
     "secure-bridge-daemon",
     "sequential-video-collage",
+    "silent-multicam-no-fallback",
     "strict-transform",
     "thumbnail-track-per-layer",
     "transact-history-and-target",
@@ -136,6 +141,7 @@
     "zoom-rect-cap",
     "zoom-region-gestures",
     "zoom-regions",
-    "zoom-split-ids"
+    "zoom-split-ids",
+    "zoomed-rect-one-source"
   ]
 }
