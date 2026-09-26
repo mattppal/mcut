@@ -71,7 +71,7 @@ function sampleVolumeCurve(element: { startMs: number; durationMs: number }, get
   return curve
 }
 
-function collectAudibleSegments(project: Project, audioSources?: ReadonlyMap<ElementId, string>): AudibleSegment[] {
+export function collectAudibleSegments(project: Project, audioSources?: ReadonlyMap<ElementId, string>): AudibleSegment[] {
   const segments: AudibleSegment[] = []
   for (const track of project.tracks) {
     if (track.muted) continue

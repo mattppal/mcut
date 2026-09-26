@@ -470,13 +470,10 @@ function PlayerCanvasView({
   }, [])
 
   usePlaybackLoop(engine, {
+    clock: (frameTimeMs) => pool.audio.clockTimeMs(frameTimeMs),
     onFrame: (project, playback) => {
-      pool.sync(getActiveMediaItems(project, playback.currentTimeMs, pool.getAudioSources()), {
-        isPlaying: playback.isPlaying,
-        playbackRate: playback.playbackRate,
-        masterVolume: playback.volume,
-        muted: playback.muted,
-      })
+      pool.sync(getActiveMediaItems(project, playback.currentTimeMs), { isPlaying: playback.isPlaying, playbackRate: playback.playbackRate })
+      pool.audio.sync(project, playback)
       const container = containerRef.current
       const scale = getRenderScale(project, quality, container)
       const paintKey: PaintKey = [

@@ -44,7 +44,7 @@ const saved = { video: Reflect.get(globalThis, 'HTMLVideoElement'), document: Re
 
 beforeAll(() => {
   Reflect.set(globalThis, 'HTMLVideoElement', FakeVideo)
-  Reflect.set(globalThis, 'document', { createElement: (tag: string) => (tag === 'video' ? new FakeVideo() : new FakeMedia()) })
+  Reflect.set(globalThis, 'document', { createElement: () => new FakeVideo() })
 })
 
 afterAll(() => {
@@ -52,32 +52,11 @@ afterAll(() => {
   Reflect.set(globalThis, 'document', saved.document)
 })
 
-test('a cleaned copy keeps a simultaneous dry copy of the same asset audible', () => {
-  const asset: AssetRef = { id: 'a-shared', kind: 'audio', src: 'blob:dry' }
-  const pool = new PreviewMediaPool(() => asset)
-  const base: ActiveMediaItem = {
-    assetId: asset.id,
-    kind: 'audio',
-    sourceTimeMs: 0,
-    rate: 1,
-    volume: 0.5,
-  }
-  pool.sync([base, { ...base, audioSrc: 'blob:wet' }], {
-    isPlaying: true,
-    playbackRate: 1,
-    masterVolume: 1,
-    muted: false,
-  })
-  expect(created).toHaveLength(2)
-  expect(created[0]?.muted).toBe(false)
-  expect(created[1]?.muted).toBe(false)
-})
-
 test('a paused seek and its seeked event each move the frame version, and an idle sync does not', () => {
   const asset: AssetRef = { id: 'a-clip', kind: 'video', src: 'blob:clip', nativePreview: true }
   const pool = new PreviewMediaPool(() => asset)
-  const paused = { isPlaying: false, playbackRate: 1, masterVolume: 1, muted: false }
-  const item: ActiveMediaItem = { assetId: asset.id, kind: 'video', sourceTimeMs: 2000, rate: 1, volume: 0 }
+  const paused = { isPlaying: false, playbackRate: 1 }
+  const item: ActiveMediaItem = { assetId: asset.id, sourceTimeMs: 2000, rate: 1 }
 
   pool.sync([item], paused)
   const video = created.at(-1)
@@ -90,4 +69,11 @@ test('a paused seek and its seeked event each move the frame version, and an idl
 
   video?.listeners.get('seeked')?.()
   expect(pool.frameVersion).toBe(afterSeek + 1)
+})
+
+test('a playing video element stays muted so its sound comes only from the preview audio graph', () => {
+  const asset: AssetRef = { id: 'a-talk', kind: 'video', src: 'blob:talk', nativePreview: true }
+  const pool = new PreviewMediaPool(() => asset)
+  pool.sync([{ assetId: asset.id, sourceTimeMs: 0, rate: 1 }], { isPlaying: true, playbackRate: 1 })
+  expect({ muted: created.at(-1)?.muted, paused: created.at(-1)?.paused }).toEqual({ muted: true, paused: false })
 })

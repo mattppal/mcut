@@ -57,12 +57,7 @@ export async function captureViewportStill(engine: EditorEngine, options: Captur
 
   const source = options.source
   if (source && 'sync' in source) {
-    source.sync(getActiveMediaItems(project, timeMs, source.getAudioSources()), {
-      isPlaying: false,
-      playbackRate: engine.playback.state.playbackRate,
-      masterVolume: engine.playback.state.volume,
-      muted: true,
-    })
+    source.sync(getActiveMediaItems(project, timeMs), { isPlaying: false, playbackRate: engine.playback.state.playbackRate })
   }
 
   await ensureProjectFontsLoaded(project)
