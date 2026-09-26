@@ -157,6 +157,40 @@ describe('usePlaybackLoop', () => {
     expect(engine.playback.state.currentTimeMs).toBe(100)
   })
 
+  test('follows the clock while it reports a time and falls back to elapsed time when it does not', () => {
+    const engine = engineWithClip(10_000)
+    engine.play()
+    const reports: (number | null)[] = [null, 40, 90, null]
+    const frames = fakeFrames()
+    renderHook(() => usePlaybackLoop(engine, { onFrame: () => {}, requestFrame: frames.requestFrame, clock: () => reports.shift() ?? null }))
+    const seen: number[] = []
+    for (const frameTimeMs of [0, 16, 32, 48]) {
+      frames.step(frameTimeMs)
+      seen.push(engine.playback.state.currentTimeMs)
+    }
+    expect(seen).toEqual([0, 40, 90, 106])
+  })
+
+  test('the clock is not asked while paused', () => {
+    const engine = engineWithClip(10_000)
+    engine.seek(500)
+    const frames = fakeFrames()
+    let asked = 0
+    renderHook(() =>
+      usePlaybackLoop(engine, {
+        onFrame: () => {},
+        requestFrame: frames.requestFrame,
+        clock: () => {
+          asked++
+          return 9000
+        },
+      }),
+    )
+    frames.step(0)
+    frames.step(16)
+    expect([asked, engine.playback.state.currentTimeMs]).toEqual([0, 500])
+  })
+
   test('unmount cancels the pending frame', () => {
     const engine = engineWithClip(10_000)
     const { frames, unmount } = mountLoop(engine)
