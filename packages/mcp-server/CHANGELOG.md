@@ -1,5 +1,23 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.27
+
+### Minor Changes
+
+- [#188](https://github.com/mattppal/mcut/pull/188) [`937941c`](https://github.com/mattppal/mcut/commit/937941cdcb8aef0b4425a91ba2ab94bc92537150) Thanks [@mattppal](https://github.com/mattppal)! - Silence cuts, captions scoped to a clip, and audio activity read the clip's audio source, so a multicam uses its `audioSource` instead of being rejected as the wrong element type. A multicam with no audio source fails until `setMulticamAudio`. Reverse and trim-to-playhead treat a multicam as a media clip.
+
+### Patch Changes
+
+- [#188](https://github.com/mattppal/mcut/pull/188) [`937941c`](https://github.com/mattppal/mcut/commit/937941cdcb8aef0b4425a91ba2ab94bc92537150) Thanks [@mattppal](https://github.com/mattppal)! - `find_retakes` accepts a multicam through its audio source, including each piece left after a cut, and maps each word into that asset's media time. `apply_captions` treats a transcript as the project's when the caption words are that transcript with gaps, and still warns for a different transcript.
+
+- [#188](https://github.com/mattppal/mcut/pull/188) [`937941c`](https://github.com/mattppal/mcut/commit/937941cdcb8aef0b4425a91ba2ab94bc92537150) Thanks [@mattppal](https://github.com/mattppal)! - The `find_retakes` description says to pass the full, unchanged transcript to `apply_captions` once per remaining clip, never a slice, with `replace` true until a call reports OK. It also says to call `find_retakes` for every other captioned clip on the caption track before cutting and to rebuild each from that saved transcript.
+
+- [#188](https://github.com/mattppal/mcut/pull/188) [`937941c`](https://github.com/mattppal/mcut/commit/937941cdcb8aef0b4425a91ba2ab94bc92537150) Thanks [@mattppal](https://github.com/mattppal)! - `get_audio_activity` fails with setMulticamAudio when the selected multicam has no audio source, instead of analyzing another clip. With no selection it still uses the first clip that has source audio.
+
+- Updated dependencies [[`937941c`](https://github.com/mattppal/mcut/commit/937941cdcb8aef0b4425a91ba2ab94bc92537150)]:
+  - @mcut/editor@0.1.0-alpha.16
+  - @mcut/transcription@0.1.0-alpha.18
+
 ## 0.1.0-alpha.26
 
 ### Patch Changes

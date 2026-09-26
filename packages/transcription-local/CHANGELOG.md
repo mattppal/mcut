@@ -1,5 +1,12 @@
 # @mcut/transcription-local
 
+## 1.0.0-alpha.21
+
+### Patch Changes
+
+- Updated dependencies [[`937941c`](https://github.com/mattppal/mcut/commit/937941cdcb8aef0b4425a91ba2ab94bc92537150)]:
+  - @mcut/transcription@0.1.0-alpha.18
+
 ## 1.0.0-alpha.20
 
 ### Minor Changes
