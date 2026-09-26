@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { decoderLeadStart, reversedChunkSpans } from './export-audio-composite'
+import type { AudioBufferSink } from 'mediabunny'
+import { decodeCompositeRange, decoderLeadStart, reversedChunkSpans } from './export-audio-composite'
 
 describe('reversedChunkSpans', () => {
   test('plays the source from the end in bounded pieces', () => {
@@ -40,5 +41,50 @@ describe('decoderLeadStart', () => {
     expect(decoderLeadStart(10, 2048, 48_000)).toBe(10 - 2048 / 48_000)
     expect(decoderLeadStart(0, 2048, 48_000)).toBe(0)
     expect(decoderLeadStart(0.01, 2048, 48_000)).toBe(0)
+  })
+})
+
+const RATE = 48_000
+const PACKET = 1_024
+const source = Float32Array.from({ length: 64 * PACKET }, (_, frame) => Math.sin(frame / 7))
+
+function packetBuffer(samples: Float32Array<ArrayBuffer>): AudioBuffer {
+  return {
+    sampleRate: RATE,
+    length: samples.length,
+    duration: samples.length / RATE,
+    numberOfChannels: 1,
+    getChannelData: () => samples,
+    copyFromChannel: (destination) => destination.set(samples.subarray(0, destination.length)),
+    copyToChannel: (data) => samples.set(data),
+  }
+}
+
+function freshDecoderSink(): Pick<AudioBufferSink, 'buffers'> {
+  return {
+    async *buffers(start = 0, end = Infinity) {
+      const first = Math.floor((start * RATE) / PACKET)
+      for (let packet = first; packet * PACKET < Math.min(end * RATE, source.length); packet++) {
+        const samples = source.slice(packet * PACKET, (packet + 1) * PACKET)
+        if (packet === first && packet > 0) samples.fill(0)
+        yield { buffer: packetBuffer(samples), timestamp: (packet * PACKET) / RATE, duration: PACKET / RATE }
+      }
+    },
+  }
+}
+
+describe('decodeCompositeRange', () => {
+  test('returns the source for a mid-file range although a fresh decoder botches its first packet', async () => {
+    expect(await decodeCompositeRange(freshDecoderSink(), 0.5, 0.0625, 'all')).toEqual({
+      status: 'ready',
+      audio: { channels: [source.slice(24_000, 27_000)], sampleRate: RATE },
+    })
+  })
+
+  test('returns the source for a range that starts inside the second packet', async () => {
+    expect(await decodeCompositeRange(freshDecoderSink(), 0.03125, 0.0625, 'all')).toEqual({
+      status: 'ready',
+      audio: { channels: [source.slice(1_500, 4_500)], sampleRate: RATE },
+    })
   })
 })
