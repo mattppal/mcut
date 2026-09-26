@@ -19,6 +19,7 @@ import {
 } from './export-audio-composite'
 import { AUDIO_SAMPLE_RATE, type MixedAudioData } from './export-types'
 import { inputFor } from './probe'
+import { sourceAudioSink } from './source-timing'
 import { constantSpeedOf } from './time-stretch'
 import { valueAt } from './value-at'
 
@@ -125,8 +126,7 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
     try {
       const track = await input.getPrimaryAudioTrack()
       if (!track) continue
-      const { AudioBufferSink } = await import('mediabunny')
-      const sink = new AudioBufferSink(track)
+      const sink = await sourceAudioSink(segment.src, input, track)
       const segmentStartS = segment.startMs / 1000
       const segmentEndS = (segment.startMs + segment.durationMs) / 1000
       const trimS = segment.trimStartMs / 1000

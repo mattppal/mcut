@@ -107,6 +107,12 @@ async function decodedRuns(fake: FakeSource, startS: number): Promise<[number, n
   return decoded.status === 'ready' ? runs(valueAt(decoded.audio.channels, 0)) : decoded.status
 }
 
+async function buffersBeforeStart(fake: FakeSource, startS: number): Promise<number | null> {
+  const timing = await buildSourceTiming(fake.facts, packetIndex(fake.packets), valueAt(fake.packets, 0))
+  for await (const { timestamp, duration } of timedSink(decoderSink(fake), timing).buffers(startS)) return Math.floor((startS - timestamp) / duration)
+  return null
+}
+
 async function convertedRuns(fake: FakeSource): Promise<[number, number][]> {
   const timing = await buildSourceTiming(fake.facts, packetIndex(fake.packets), valueAt(fake.packets, 0))
   const trimS = await sourceStartLabelS(timing)
@@ -229,6 +235,10 @@ describe('timedSink', () => {
 
   test.each(SOURCES)('%s decodes a mid-file range at its source time', async (_, fake) => {
     expect(await decodedRuns(fake, MID_S)).toEqual([[MID_S * fake.facts.sampleRate, Math.ceil(SPAN_S * fake.facts.sampleRate)]])
+  })
+
+  test.each(SOURCES)('%s yields at most one buffer before a mid-file start', async (_, fake) => {
+    expect(await buffersBeforeStart(fake, MID_S)).toBeLessThanOrEqual(1)
   })
 
   test('keeps MediaRecorder timestamps that drift past the container tick', async () => {

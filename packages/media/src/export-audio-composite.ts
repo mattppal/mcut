@@ -141,7 +141,7 @@ export function scheduleComposite(
 export async function scheduleStretchedSegment(
   offline: OfflineAudioContext,
   gain: GainNode,
-  sink: AudioBufferSink,
+  sink: Pick<AudioBufferSink, 'buffers'>,
   segment: AudibleSegment,
   constant: ConstantSpeed,
   signal?: AbortSignal,
@@ -170,7 +170,7 @@ function reversedLimitMessage(segment: AudibleSegment, sampleRate: number): stri
 async function scheduleReversedChunks(
   offline: OfflineAudioContext,
   gain: GainNode,
-  sink: AudioBufferSink,
+  sink: Pick<AudioBufferSink, 'buffers'>,
   segment: AudibleSegment,
   totalFrames: number,
   sampleRate: number,
@@ -201,7 +201,7 @@ async function scheduleReversedChunks(
 export async function scheduleReversedSegment(
   offline: OfflineAudioContext,
   gain: GainNode,
-  sink: AudioBufferSink,
+  sink: Pick<AudioBufferSink, 'buffers'>,
   segment: AudibleSegment,
   signal?: AbortSignal,
 ): Promise<void> {

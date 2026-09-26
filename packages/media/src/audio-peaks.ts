@@ -1,4 +1,5 @@
 import { inputFor, type MediaSourceLike } from './probe'
+import { sourceAudioSink } from './source-timing'
 import { valueAt } from './value-at'
 
 export interface AudioPeaksOptions {
@@ -30,13 +31,12 @@ export async function extractAudioPeaks(src: MediaSourceLike, options: AudioPeak
   try {
     const track = await input.getPrimaryAudioTrack()
     if (!track) return null
-    const { AudioBufferSink } = await import('mediabunny')
     const durationMs = options.endMs ?? (await input.computeDuration()) * 1000
     const startMs = options.startMs ?? 0
     const spanMs = Math.max(1, durationMs - startMs)
 
     const peaks = new Float32Array(bucketCount)
-    const sink = new AudioBufferSink(track)
+    const sink = await sourceAudioSink(src, input, track)
     for await (const { buffer, timestamp } of sink.buffers(startMs / 1000, durationMs / 1000)) {
       const channel = buffer.getChannelData(0)
       const bufferStartMs = timestamp * 1000
