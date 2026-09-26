@@ -1,5 +1,13 @@
 # headless-editing-example
 
+## 0.0.1-alpha.19
+
+### Patch Changes
+
+- Updated dependencies [[`74b5c22`](https://github.com/mattppal/mcut/commit/74b5c22a2c48244113e77ca5f3e03a1c23b80774)]:
+  - @mcut/timeline@0.1.0-alpha.17
+  - @mcut/transcription@0.1.0-alpha.20
+
 ## 0.0.1-alpha.18
 
 ### Patch Changes
