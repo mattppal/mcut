@@ -103,6 +103,7 @@
     "recaption-stored-transcript",
     "reframe-slot-crop",
     "remove-ranges-keyframes",
+    "remove-ranges-single-call",
     "remove-ranges",
     "resize-layout-slot",
     "retake-one-word-drift",

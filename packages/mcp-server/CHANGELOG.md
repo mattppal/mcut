@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.36
+
+### Patch Changes
+
+- [#212](https://github.com/mattppal/mcut/pull/212) [`e619ae0`](https://github.com/mattppal/mcut/commit/e619ae04915875a7fe79c7d801e9757c2c6b5056) Thanks [@mattppal](https://github.com/mattppal)! - The `remove_ranges` and `find_retakes` descriptions say to pass every chosen range to a single `remove_ranges` call, never one call per retake, so the whole cut is one undo step.
+
 ## 0.1.0-alpha.35
 
 ### Patch Changes
