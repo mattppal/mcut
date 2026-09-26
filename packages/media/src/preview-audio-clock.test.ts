@@ -65,7 +65,11 @@ describe('preview audio clock around the output start', () => {
 
   test('a running context whose output has not started holds the playhead at the play position while sound is due', async () => {
     let project = applyCommand(createProject(), { type: 'addAsset', asset: { id: 'a-tone', kind: 'audio', src: 'data:,', durationMs: 60_000 } })
-    project = applyCommand(project, { type: 'addElement', trackId: 't-default', element: { type: 'audio', id: 'e-tone', assetId: 'a-tone', startMs: 0, durationMs: 5000 } })
+    project = applyCommand(project, {
+      type: 'addElement',
+      trackId: 't-default',
+      element: { type: 'audio', id: 'e-tone', assetId: 'a-tone', startMs: 0, durationMs: 5000 },
+    })
     audio.sync(project, playing(1000))
     await settle()
     audio.sync(project, playing(1000))
