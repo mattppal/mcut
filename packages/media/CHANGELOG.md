@@ -1,5 +1,35 @@
 # @mcut/media
 
+## 0.1.0-alpha.29
+
+### Patch Changes
+
+- Updated dependencies [[`1fab6ca`](https://github.com/mattppal/mcut/commit/1fab6cada1e1310f196b7f05e49cf15145cad849)]:
+  - @mcut/timeline@0.1.0-alpha.19
+  - @mcut/compositor@0.1.0-alpha.20
+
+## 0.1.0-alpha.28
+
+### Patch Changes
+
+- Updated dependencies [[`ec1f719`](https://github.com/mattppal/mcut/commit/ec1f719b9a09f82dd95d548ec4a44f989895e8de)]:
+  - @mcut/timeline@0.1.0-alpha.18
+  - @mcut/compositor@0.1.0-alpha.19
+
+## 0.1.0-alpha.27
+
+### Patch Changes
+
+- Updated dependencies [[`74b5c22`](https://github.com/mattppal/mcut/commit/74b5c22a2c48244113e77ca5f3e03a1c23b80774)]:
+  - @mcut/timeline@0.1.0-alpha.17
+  - @mcut/compositor@0.1.0-alpha.18
+
+## 0.1.0-alpha.26
+
+### Patch Changes
+
+- [#193](https://github.com/mattppal/mcut/pull/193) [`2290576`](https://github.com/mattppal/mcut/commit/2290576af0c2442076a14a5df44b838eaeb486ad) Thanks [@mattppal](https://github.com/mattppal)! - A reversed clip whose source is longer than the one-buffer mix can hold now exports reversed audio in bounded chunks, instead of a finished file with that clip silent. Each reversed decode starts 8192 frames early and drops that lead-in, so a chunk boundary or a join between reversed clips is not a click from a cold AAC, MP3, or Opus decoder. A reversed clip that is also time-stretched past the same limit fails the export, and the error names the clip.
+
 ## 0.1.0-alpha.25
 
 ### Patch Changes

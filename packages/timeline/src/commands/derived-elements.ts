@@ -29,6 +29,7 @@ import { defineCommand, insertSorted, mintElementId, mustGetTrack, mustLocate, r
 const applyCaptionsSchema = z.object({
   trackId: trackIdSchema.optional(),
   replace: z.boolean().default(true),
+  replaceIds: z.array(elementIdSchema).optional(),
   captions: z.array(
     z.object({
       id: elementIdSchema.optional(),
@@ -43,7 +44,9 @@ const applyCaptionsSchema = z.object({
 
 export const applyCaptions = defineCommand({
   type: 'applyCaptions',
-  description: 'Add caption elements (e.g. from a transcription) to a caption track, ' + 'creating the track when needed.',
+  description:
+    'Add caption elements (e.g. from a transcription) to a caption track, creating the track when needed. ' +
+    '`replace` clears every caption on that track first. `replaceIds` removes only those caption elements first, wherever they are, and never ripples.',
   payloadSchema: applyCaptionsSchema,
   reduce: (project, payload) => {
     let next = project
@@ -74,6 +77,13 @@ export const applyCaptions = defineCommand({
       }
     }
     const finalTrackId = trackId
+    if (payload.replaceIds && payload.replaceIds.length > 0) {
+      const ids = new Set<ElementId>(payload.replaceIds)
+      next = {
+        ...next,
+        tracks: next.tracks.map((t) => ({ ...t, elements: t.elements.filter((e) => e.type !== 'caption' || !ids.has(e.id)) })),
+      }
+    }
     if (payload.replace) {
       next = replaceTrack(next, finalTrackId, (t) => ({
         ...t,

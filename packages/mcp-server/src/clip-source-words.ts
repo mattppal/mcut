@@ -27,7 +27,7 @@ export function toClipSourceWords(project: Project, elementId: ElementId, words:
   const startMs = source.timelineStartMs
   const endMs = startMs + source.timelineDurationMs
   return words
-    .filter((word) => word.endMs > startMs && word.startMs < endMs)
+    .filter((word) => word.startMs < endMs && (word.endMs > startMs || word.startMs >= startMs))
     .map((word) => {
       const clippedStart = Math.min(endMs, Math.max(startMs, word.startMs))
       const clippedEnd = Math.min(endMs, Math.max(startMs, word.endMs))
@@ -37,5 +37,5 @@ export function toClipSourceWords(project: Project, elementId: ElementId, words:
         endMs: Math.round(source.sourceStartMs + (clippedEnd - startMs)),
       }
     })
-    .filter((word) => word.endMs > word.startMs)
+    .filter((word) => word.endMs >= word.startMs)
 }

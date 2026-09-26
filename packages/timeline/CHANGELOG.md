@@ -1,5 +1,25 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.19
+
+### Patch Changes
+
+- [#208](https://github.com/mattppal/mcut/pull/208) [`1fab6ca`](https://github.com/mattppal/mcut/commit/1fab6cada1e1310f196b7f05e49cf15145cad849) Thanks [@mattppal](https://github.com/mattppal)! - `removeRanges` keeps the keyframes of a text or image element that spans a removed range. Keyframes after the range shift left with the content and keyframes inside it are dropped, so a title's fade-out survives a retake cut. The MCP server's import media schemas and transcript search move to their own modules, with the same exports from `@mcut/mcp-server/contract`.
+
+## 0.1.0-alpha.18
+
+### Minor Changes
+
+- [#207](https://github.com/mattppal/mcut/pull/207) [`ec1f719`](https://github.com/mattppal/mcut/commit/ec1f719b9a09f82dd95d548ec4a44f989895e8de) Thanks [@mattppal](https://github.com/mattppal)! - New `removeRanges` command and `remove_ranges` MCP tool. One call removes a list of time ranges, in any order, from every unlocked track and closes the gaps as one undo step, so a multicam, its audio, and its captions stay in sync. `remove_ranges` takes timeline ranges such as `find_retakes` candidates, or source-media ranges of a clip's audio with `time: "source"`. The retake flow is `find_retakes`, then `remove_ranges`, then `apply_captions { elementId, replace: true }`.
+
+## 0.1.0-alpha.17
+
+### Minor Changes
+
+- [#204](https://github.com/mattppal/mcut/pull/204) [`74b5c22`](https://github.com/mattppal/mcut/commit/74b5c22a2c48244113e77ca5f3e03a1c23b80774) Thanks [@mattppal](https://github.com/mattppal)! - `apply_captions` with `elementId` now captions every piece on that clip's track that plays the same audio, so after retake or silence cuts one call with the full source-time transcript re-captions the whole cut. It replaces only the old captions over pieces the transcript has words for, plus captions over no clip, in one undo step. `scope: "clip"` keeps the old single-clip behavior. `applyCaptions` takes `replaceIds` to remove specific caption elements without a ripple.
+
+  `find_retakes` keeps zero-length words in the transcript it returns, so passing that transcript back to `apply_captions` captions every word.
+
 ## 0.1.0-alpha.16
 
 ### Patch Changes

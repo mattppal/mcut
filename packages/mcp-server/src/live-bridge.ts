@@ -6,6 +6,7 @@ import { LiveBridgeError } from './bridge-error'
 import { EXPORTS_PATH, ExportJobs } from './export-jobs'
 import { MediaGrantStore, runImportMedia, serveMediaGrant } from './media-grants'
 import { createMcutMcpServerForTarget, type McutMcpTarget } from './server'
+import { StoredTranscripts } from './stored-transcripts'
 
 export { LiveBridgeError } from './bridge-error'
 
@@ -127,6 +128,7 @@ export class LiveMcutBridge {
   readonly reconnectGraceMs: number
   private readonly allowedOrigins: readonly string[]
   private readonly mediaGrants = new MediaGrantStore()
+  private readonly transcripts = new StoredTranscripts()
 
   private readonly onError: (error: unknown) => void
   private readonly server = createServer((req, res) => {
@@ -523,6 +525,7 @@ export class LiveMcutBridge {
     const server = createMcutMcpServerForTarget({
       target: this.createTarget(),
       name: 'mcut-live',
+      transcripts: this.transcripts,
     })
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
