@@ -62,15 +62,15 @@ export function decoderLeadStart(startS: number, leadFrames: number, sampleRate:
   return Math.max(0, startS - leadFrames / sampleRate)
 }
 
-async function leadStart(sink: Pick<AudioBufferSink, 'buffers'>, startS: number, spanS: number, leadFrames: number, signal?: AbortSignal): Promise<number> {
-  if (leadFrames <= 0 || startS <= 0) return startS
+export async function leadStart(sink: Pick<AudioBufferSink, 'buffers'>, startS: number, spanS: number, signal?: AbortSignal): Promise<number> {
+  if (startS <= 0) return startS
   let sampleRate = 0
   for await (const { buffer } of sink.buffers(startS, startS + spanS)) {
     signal?.throwIfAborted()
     sampleRate = buffer.sampleRate
     break
   }
-  return decoderLeadStart(startS, leadFrames, sampleRate)
+  return decoderLeadStart(startS, DECODER_LEAD_FRAMES, sampleRate)
 }
 
 export async function decodeCompositeRange(
@@ -79,9 +79,8 @@ export async function decodeCompositeRange(
   spanS: number,
   keep: CompositeChannels,
   signal?: AbortSignal,
-  leadFrames = 0,
 ): Promise<CompositeDecode> {
-  const decodeStart = await leadStart(sink, startS, spanS, leadFrames, signal)
+  const decodeStart = await leadStart(sink, startS, spanS, signal)
   let composite: CompositeAudio | null = null
   for await (const { buffer, timestamp } of sink.buffers(decodeStart, startS + spanS)) {
     signal?.throwIfAborted()
@@ -181,7 +180,7 @@ async function scheduleReversedChunks(
   const outputStartS = segment.startMs / 1000
   for (const span of reversedChunkSpans(totalFrames, REVERSED_CHUNK_FRAMES)) {
     signal?.throwIfAborted()
-    const decoded = await decodeCompositeRange(sink, trimS + span.sourceFrame / sampleRate, span.frames / sampleRate, 'stereo', signal, DECODER_LEAD_FRAMES)
+    const decoded = await decodeCompositeRange(sink, trimS + span.sourceFrame / sampleRate, span.frames / sampleRate, 'stereo', signal)
     switch (decoded.status) {
       case 'ready':
         for (const channel of decoded.audio.channels) channel.reverse()
@@ -206,7 +205,7 @@ export async function scheduleReversedSegment(
   segment: AudibleSegment,
   signal?: AbortSignal,
 ): Promise<void> {
-  const decoded = await decodeCompositeRange(sink, segment.trimStartMs / 1000, segment.sourceSpanMs / 1000, 'stereo', signal, DECODER_LEAD_FRAMES)
+  const decoded = await decodeCompositeRange(sink, segment.trimStartMs / 1000, segment.sourceSpanMs / 1000, 'stereo', signal)
   switch (decoded.status) {
     case 'ready': {
       const composite = stereoOf(decoded.audio)
