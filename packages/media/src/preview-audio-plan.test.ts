@@ -1,6 +1,17 @@
 import { describe, expect, test } from 'bun:test'
 import type { AudibleSegment } from './export-audio-composite'
-import { contextAt, epochChange, handoffAnchor, heardContextS, heardTimelineMs, planFeed, planWindow, sourceMapOf, timelineAt, voiceStartS } from './preview-audio-plan'
+import {
+  contextAt,
+  epochChange,
+  handoffAnchor,
+  heardContextS,
+  heardTimelineMs,
+  planFeed,
+  planWindow,
+  sourceMapOf,
+  timelineAt,
+  voiceStartS,
+} from './preview-audio-plan'
 
 describe('audio clock anchor', () => {
   const anchor = { timelineMs: 1000, contextS: 2, rate: 1 }
