@@ -5,7 +5,9 @@ import { getProjectDurationMs, type EditorEngine, type PlaybackState, type Proje
 
 export type RequestFrame = (callback: (frameTimeMs: number) => void) => () => void
 
-export type PlaybackClock = (frameTimeMs: number) => number | null
+export type PlaybackClock = (displayTimeMs: number) => number | null
+
+const MAX_DISPLAY_LEAD_MS = 50
 
 export interface PlaybackLoopOptions {
   onFrame: (project: Project, playback: PlaybackState) => void
@@ -36,7 +38,8 @@ export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = 
       const playback = engine.playback.state
       if (playback.isPlaying) {
         const durationMs = getProjectDurationMs(engine.project)
-        const clockMs = playback.currentTimeMs === knownMs ? clockRef.current?.(frameTimeMs) : null
+        const displayTimeMs = frameTimeMs + Math.min(elapsedMs, MAX_DISPLAY_LEAD_MS)
+        const clockMs = playback.currentTimeMs === knownMs ? clockRef.current?.(displayTimeMs) : null
         const next = clockMs ?? playback.currentTimeMs + elapsedMs * playback.playbackRate
         if (durationMs > 0 && next >= durationMs && playback.playbackRate > 0) {
           engine.seek(durationMs)

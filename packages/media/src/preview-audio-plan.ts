@@ -21,8 +21,8 @@ export function contextAt(anchor: AudioAnchor, timelineMs: number): number {
   return anchor.contextS + (timelineMs - anchor.timelineMs) / 1000 / anchor.rate
 }
 
-export function heardContextS(stamp: OutputStamp, frameTimeMs: number): number {
-  return stamp.contextTime + (frameTimeMs - stamp.performanceTime) / 1000
+export function heardContextS(stamp: OutputStamp, perfMs: number): number {
+  return stamp.contextTime + (perfMs - stamp.performanceTime) / 1000
 }
 
 const STRETCH_PREROLL_MS = 250

@@ -140,14 +140,14 @@ export class PreviewAudio {
     return this.audioSources
   }
 
-  clockTimeMs(frameTimeMs: number): number | null {
+  clockTimeMs(displayTimeMs: number): number | null {
     const { context, epoch } = this
     if (!context || !epoch || context.state !== 'running') return null
     if (!epoch.primed) return epoch.reportedMs
     const stamp = context.getOutputTimestamp()
     const heardS =
       stamp.contextTime !== undefined && stamp.performanceTime !== undefined && stamp.performanceTime > 0
-        ? heardContextS({ contextTime: stamp.contextTime, performanceTime: stamp.performanceTime }, frameTimeMs)
+        ? heardContextS({ contextTime: stamp.contextTime, performanceTime: stamp.performanceTime }, displayTimeMs)
         : epoch.anchor.contextS
     epoch.reportedMs = Math.max(epoch.reportedMs, timelineAt(epoch.anchor, heardS))
     return epoch.reportedMs

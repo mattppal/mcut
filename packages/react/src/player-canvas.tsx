@@ -470,7 +470,7 @@ function PlayerCanvasView({
   }, [])
 
   usePlaybackLoop(engine, {
-    clock: (frameTimeMs) => pool.audio.clockTimeMs(frameTimeMs),
+    clock: (displayTimeMs) => pool.audio.clockTimeMs(displayTimeMs),
     onFrame: (project, playback) => {
       pool.sync(getActiveMediaItems(project, playback.currentTimeMs), { isPlaying: playback.isPlaying, playbackRate: playback.playbackRate })
       pool.audio.sync(project, playback)
