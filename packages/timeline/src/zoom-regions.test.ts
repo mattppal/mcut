@@ -217,9 +217,23 @@ describe('zoom regions on a multicam slot', () => {
     if (!screenSlot || !camSlot) throw new Error('default layout lost its slots')
     expect(getSlotView(multicam(project), screenSlot, 1000).scale).toBe(1.15)
     expect(getSlotView(multicam(project), camSlot, 1000)).toEqual({ scale: 1, focus: { x: 0.5, y: 0.5 } })
-    expect(thrownBy(() => applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { atMs: 5000 } }))).toMatchObject({
-      message: expect.stringContaining('screen'),
+    expect(thrownBy(() => applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'slides', atMs: 5000 } }))).toMatchObject({
+      message: expect.stringContaining('slides'),
     })
+  })
+
+  test('a zoom without a source zooms the whole composite and may overlap a slot zoom', () => {
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
+    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0 } })
+    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { atMs: 0, holdMs: 1000 } })
+    const camSlot = project.layouts.find((l) => l.name === 'Screen + Cam')?.slots.find((s) => s.source === 'camera')
+    if (!camSlot) throw new Error('default layout lost its camera slot')
+    expect(getClipView(multicam(project), 1000).scale).toBe(1.15)
+    expect(getSlotView(multicam(project), camSlot, 1000).scale).toBe(1)
   })
 
   test('the target center lands in the middle of a slot narrower than the video', () => {

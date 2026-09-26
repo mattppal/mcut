@@ -17,6 +17,7 @@ import {
 import { applyChrome, type LayerChrome } from './backend'
 import { drawFramedMedia, frameRadius, getImageSize, viewSourceRect } from './framed-media'
 import { toCanvasPoint } from './geometry'
+import { getCaptionLane } from './caption-lane'
 import { composeMulticam } from './multicam'
 import { reframedCrop } from './reframe-views'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
@@ -63,8 +64,6 @@ function chromeOf(context: ElementRenderContext, element: VisualChrome): LayerCh
 function withTransform(ctx: Canvas2D, context: ElementRenderContext, element: VisualChrome, draw: () => void): void {
   applyChrome(ctx, chromeOf(context, element), draw)
 }
-
-const WHOLE_FRAME: ContentView = { scale: 1, focus: { x: 0.5, y: 0.5 } }
 
 function drawMediaFrame(
   context: ElementRenderContext,
@@ -198,8 +197,9 @@ const renderText: ElementRenderer<TextElement> = (element, context) => {
 const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
   const { ctx, project, timeMs } = context
   const style = element.style
-  const maxWidth = project.width * 0.85
-  const layout = layoutCaption(measureWith(ctx), element, style, maxWidth)
+  const padX = style.fontSize * 0.4
+  const lane = getCaptionLane(project, timeMs, style.position, padX)
+  const layout = layoutCaption(measureWith(ctx), element, style, lane.maxWidth)
   if (layout.lines.length === 0) return
 
   const blockHeight = layout.lines.length * layout.lineHeight
@@ -213,7 +213,6 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
   }
 
   const relativeMs = timeMs - element.startMs
-  const padX = style.fontSize * 0.4
   const padY = style.fontSize * 0.18
 
   ctx.save()
@@ -222,7 +221,7 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
   ctx.textAlign = 'left'
 
   for (const [i, line] of layout.lines.entries()) {
-    const lineLeft = project.width / 2 - line.width / 2
+    const lineLeft = lane.centerX - line.width / 2
     const lineCenterY = blockTop + layout.lineHeight * (i + 0.5)
 
     if (style.backgroundColor) {
@@ -253,7 +252,7 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
   const surface = composeMulticam(element, context, frames)
   if (!surface) return
   const { width, height } = context.project
-  drawMediaFrame(context, element, surface.canvas, width * (element.crop?.w ?? 1), height * (element.crop?.h ?? 1), WHOLE_FRAME)
+  drawMediaFrame(context, element, surface.canvas, width * (element.crop?.w ?? 1), height * (element.crop?.h ?? 1), getClipView(element, context.viewTimeMs))
 }
 
 export const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> } = {

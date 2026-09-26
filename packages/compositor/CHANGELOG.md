@@ -1,5 +1,20 @@
 # @mcut/compositor
 
+## 0.1.0-alpha.16
+
+### Patch Changes
+
+- [#200](https://github.com/mattppal/mcut/pull/200) [`47f2eab`](https://github.com/mattppal/mcut/commit/47f2eab353bd22e9416c2d39c398f0169bc97b6b) Thanks [@mattppal](https://github.com/mattppal)! - Top and bottom captions now center in the space beside a picture-in-picture multicam slot, so a corner head overlay no longer covers them.
+
+## 0.1.0-alpha.15
+
+### Patch Changes
+
+- [#199](https://github.com/mattppal/mcut/pull/199) [`d9c79e8`](https://github.com/mattppal/mcut/commit/d9c79e82e236119e64192b02ece2529e1cac6a38) Thanks [@mattppal](https://github.com/mattppal)! - A multicam zoom region with no `source` now zooms the whole composite, overlays included, instead of being rejected.
+
+- Updated dependencies [[`d9c79e8`](https://github.com/mattppal/mcut/commit/d9c79e82e236119e64192b02ece2529e1cac6a38)]:
+  - @mcut/timeline@0.1.0-alpha.15
+
 ## 0.1.0-alpha.14
 
 ### Patch Changes

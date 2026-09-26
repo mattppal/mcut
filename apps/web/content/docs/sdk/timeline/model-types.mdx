@@ -93,6 +93,14 @@ type CaptionStyle = z.infer<typeof captionStyleSchema>
 
 Caption styling as inferred from `captionStyleSchema`.
 
+The compositor centers `top` and `bottom` captions across 85% of the frame.
+A multicam slot drawn over another slot in its layout is a picture-in-picture
+overlay. When an overlay reaches the bottom quarter of the frame for `bottom`,
+or the top quarter for `top`, the caption centers in the widest horizontal gap
+beside the overlays instead, so a corner head never covers it. A gap under 40%
+of the frame width keeps the full-frame placement. `middle` captions ignore
+overlays.
+
 ### CaptionWord
 
 ```ts

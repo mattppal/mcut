@@ -37,11 +37,7 @@ function mustFit(element: ZoomableElement, zoom: ZoomRegion): void {
     if (zoom.source !== undefined) throw new CommandError('invalid-payload', `source applies only to multicam zooms; "${element.id}" is ${element.type}`)
     return
   }
-  if (zoom.source === undefined) {
-    const keys = element.sources.map((s) => s.key).join(', ')
-    throw new CommandError('invalid-payload', `a multicam zoom needs source, one of: ${keys}`)
-  }
-  if (!element.sources.some((s) => s.key === zoom.source)) {
+  if (zoom.source !== undefined && !element.sources.some((s) => s.key === zoom.source)) {
     throw new CommandError('invalid-payload', `multicam "${element.id}" has no source "${zoom.source}"`)
   }
 }
@@ -57,7 +53,8 @@ export const addZoomRegion = defineCommand({
   description:
     'Add a zoom region to a video, image, or multicam element: zoom in over inMs, hold, zoom out over outMs, with easing and motion blur. ' +
     'Defaults to the subtlePunchIn preset (1.15x, easeOutExpo, motion blur 0.5). ' +
-    'On a multicam, source names the angle whose slots zoom, so the screen zooms while a camera overlay stays put.',
+    'On a multicam, source names the angle whose slots zoom, so the screen zooms while a camera overlay stays put. ' +
+    'A multicam zoom without source zooms the whole composite, overlays included.',
   payloadSchema: z.object({ elementId: elementIdSchema, zoom: zoomRegionInputSchema }),
   reduce: (project, payload) =>
     withZooms(project, payload.elementId, (zooms) => {

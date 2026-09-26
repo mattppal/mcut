@@ -213,6 +213,27 @@ describe('frame style rendering', () => {
     expect(drawAt({ x: 0, y: 0 })).toEqual([[320, 0, 160, 90, -960, -540, 1920, 1080]])
   })
 
+  test('a multicam zoom without a source scales the whole composite toward its focus inside the element crop and leaves slot framing alone', () => {
+    const zoomedAt = (focus: { x: number; y: number }, element: object = {}) => {
+      const base = projectWithMulticam({ width: 1920, height: 1080 }, {}, element)
+      const project = applyCommand(base, {
+        type: 'addZoomRegion',
+        elementId: 'e-mc',
+        zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus },
+      })
+      const { main, composed } = renderComposed(project, 1500)
+      return {
+        slots: composed.callsTo('drawImage').map((c) => c.args.slice(1)),
+        frame: main.callsTo('drawImage').map((c) => [c.args[0] === composed.canvas, ...c.args.slice(1)]),
+      }
+    }
+    expect(zoomedAt({ x: 1, y: 1 })).toEqual({
+      slots: [[0, 0, 640, 360, -960, -540, 1920, 1080]],
+      frame: [[true, 960, 540, 960, 540, -960, -540, 1920, 1080]],
+    })
+    expect(zoomedAt({ x: 0, y: 0 }, { crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } }).frame).toEqual([[true, 960, 540, 480, 270, -480, -270, 960, 540]])
+  })
+
   test('a reframe track slides a slot crop onto the subject, and the fitted part keeps following once the crop meets the frame edge', () => {
     const cropped = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
     const project = applyCommand(cropped, {

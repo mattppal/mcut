@@ -1,6 +1,6 @@
 {
   "name": "@mcut/desktop-ipc",
-  "version": "0.1.0-alpha.16",
+  "version": "0.1.0-alpha.17",
   "description": "Typed IPC contract between the mcut desktop main process and Studio. One zod schema table per channel, the DesktopApi the preload exposes, and readDesktopApi",
   "license": "Apache-2.0",
   "type": "module",
