@@ -12,21 +12,25 @@ interface Range {
 
 function sourceToTimeline(project: Project, elementId: ElementId, ranges: readonly Range[]): Range[] {
   if (!getElementLocation(project, elementId)) throw new CommandError('unknown-element', `no element "${elementId}" in project`)
-  const { pieces } = sourcePieces(project, elementId)
+  const { pieces, skipped } = sourcePieces(project, elementId)
+  const skippedNote =
+    skipped.length > 0 ? ` Skipped ${skipped.join(', ')}, which play with a speed change or in reverse, so pass timeline ranges for them.` : ''
   if (pieces.length === 0) {
-    throw new CommandError('invalid-payload', `remove_ranges with time "source" needs a clip with source audio playing forward, got "${elementId}"`)
+    throw new CommandError(
+      'invalid-payload',
+      `remove_ranges with time "source" needs a clip with source audio playing forward at 1x, got "${elementId}".${skippedNote}`,
+    )
   }
   return ranges.flatMap((range) => {
     const mapped = pieces.flatMap((piece) => {
       const startMs = Math.max(range.startMs, piece.sourceStartMs)
       const endMs = Math.min(range.endMs, piece.sourceEndMs)
       if (endMs <= startMs) return []
-      const rate = piece.timelineDurationMs / piece.sourceSpanMs
-      const toTimeline = (sourceMs: number) => Math.round(piece.timelineStartMs + (sourceMs - piece.sourceStartMs) * rate)
+      const toTimeline = (sourceMs: number) => piece.timelineStartMs + (sourceMs - piece.sourceStartMs)
       return [{ startMs: toTimeline(startMs), endMs: toTimeline(endMs) }]
     })
     if (mapped.length === 0) {
-      throw new CommandError('out-of-bounds', `source range ${range.startMs}-${range.endMs}ms is not played by any piece of "${elementId}"`)
+      throw new CommandError('out-of-bounds', `source range ${range.startMs}-${range.endMs}ms is not played by any piece of "${elementId}".${skippedNote}`)
     }
     return mapped
   })
@@ -34,7 +38,14 @@ function sourceToTimeline(project: Project, elementId: ElementId, ranges: readon
 
 function planRangeRemoval(project: Project, input: RemoveRangesInput): CommandOfType<'removeRanges'> {
   const rounded = input.ranges.map((range) => ({ startMs: Math.max(0, Math.round(range.startMs)), endMs: Math.round(range.endMs) }))
-  if (input.time !== 'source') return { type: 'removeRanges', ranges: rounded }
+  if (input.time !== 'source') {
+    if (input.elementId)
+      throw new CommandError(
+        'invalid-payload',
+        'remove_ranges reads elementId only with time "source". Omit it for timeline ranges such as find_retakes candidates.',
+      )
+    return { type: 'removeRanges', ranges: rounded }
+  }
   if (!input.elementId) throw new CommandError('invalid-payload', 'remove_ranges with time "source" needs elementId')
   return { type: 'removeRanges', ranges: sourceToTimeline(project, input.elementId, rounded) }
 }

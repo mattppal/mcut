@@ -41,7 +41,7 @@ export const removeRangesInputSchema = z.strictObject({
     .optional(),
   elementId: elementIdSchema
     .describe(
-      'With time "source", a clip with source audio, including a multicam. Every piece on its track that plays that audio maps the ranges to the timeline.',
+      'Only with time "source". A clip with source audio, including a multicam. Every piece on its track that plays that audio forward at 1x maps the ranges to the timeline.',
     )
     .optional(),
 })

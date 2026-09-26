@@ -129,6 +129,14 @@ describe('remove_ranges', () => {
     expect(spans(engine.project, 'a-mic')).toEqual(keptMicSpans)
   })
 
+  test('elementId with timeline ranges fails instead of being read as source time', async () => {
+    const engine = multicamWithMusic()
+    const before = engine.toJSON()
+    const result = await (await connect(engine)).callTool({ name: 'remove_ranges', arguments: { elementId: 'e-mc', ranges: [retakes[0]] } })
+    expect(result.isError).toBe(true)
+    expect(engine.toJSON()).toEqual(before)
+  })
+
   test('a source range no piece plays fails and changes nothing', async () => {
     const engine = multicamWithMusic()
     const client = await connect(engine)
