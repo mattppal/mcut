@@ -98,7 +98,9 @@ no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 ### Remove retakes
 
 The flow is `find_retakes`, then one `remove_ranges` call, then one
-`apply_captions` call.
+`apply_captions` call. Make each call on its own. `remove_ranges` is already
+one undo step, and `transact` rejects `apply_captions`, so never wrap either
+of them in `transact`.
 
 1. After `ensure_transcript`, call `find_retakes` with the captioned clip's
    `elementId` before any cut. A multicam works. The server stores that
@@ -114,6 +116,9 @@ The flow is `find_retakes`, then one `remove_ranges` call, then one
    transcript, captions every piece on the track that plays the same audio at
    its new timeline position, and replaces the old captions over those pieces,
    as one undo step. Writing the words back out is slow and never needed here.
+4. To confirm the cut, call `find_retakes` once more on any remaining piece.
+   One check is enough. If it returns only candidates you chose to keep, the
+   edit is done, so do not run it again.
 
 ```json
 { "name": "remove_ranges", "arguments": { "ranges": [{ "startMs": 325720, "endMs": 333580 }, { "startMs": 1080, "endMs": 15120 }] } }

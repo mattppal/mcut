@@ -199,8 +199,8 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
     'Pass elementId for a clip with source audio, including a multicam and each piece left after the cuts. ' +
     'It stores the word-timed transcript of that audio in source time, and with elementId the reply also lists those words. ' +
-    'The retake flow is find_retakes, then one remove_ranges call with the candidates you keep, then one apply_captions call with elementId set to any remaining piece, replace true, and no transcript. ' +
-    'Do not cut retakes by hand with splitElement, trimElement, or rippleDelete. Do not copy the words back into apply_captions. ' +
+    'The retake flow is find_retakes, then one remove_ranges call with the candidates you keep, then one apply_captions call with elementId set to any remaining piece, replace true, and no transcript, each call on its own and not in a transact. ' +
+    'One more find_retakes call after the cut is enough to confirm it. Do not cut retakes by hand with splitElement, trimElement, or rippleDelete. Do not copy the words back into apply_captions. ' +
     'Review abandonedText before cutting. Needs captions with word timings. Call ensure_transcript first.',
   remove_ranges: removeRangesDescription,
   ensure_transcript:
@@ -215,7 +215,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
     'The transcript is in source-media time. With elementId, one call captions every piece on that track that plays the same audio, each piece at its timeline position, ' +
     'and replaces the old captions over those pieces in one undo step. A multicam uses its audio source. ' +
-    'After cuts, pass elementId and omit transcript. The server reuses the word-timed transcript it stored for that audio from ensure_transcript, find_retakes, or an earlier apply_captions. ' +
+    'After cuts, pass elementId and omit transcript. Call it on its own after remove_ranges, never inside a transact, which rejects it. The server reuses the word-timed transcript it stored for that audio from ensure_transcript, find_retakes, or an earlier apply_captions. ' +
     'An explicit transcript must be the full one, never a slice. ' +
     'styleId picks a caption style preset. Returns the updated project summary. ' +
     'An explicit transcript comes from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +

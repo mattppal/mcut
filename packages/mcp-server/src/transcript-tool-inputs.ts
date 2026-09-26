@@ -52,4 +52,5 @@ export const removeRangesDescription =
   'Pass find_retakes candidates as they are, in timeline ms. With time "source" and elementId, ranges are source-media ms of that clip\'s audio, ' +
   'mapped through every piece on its track that plays it, so they stay valid after earlier cuts. ' +
   'Use this to cut retakes and any list of spans instead of splitElement, trimElement, and rippleDelete. ' +
-  'After it, call apply_captions with elementId set to any remaining piece, replace true, and no transcript to rebuild captions from the stored transcript.'
+  'After it, call apply_captions on its own with elementId set to any remaining piece, replace true, and no transcript to rebuild captions from the stored transcript. ' +
+  'Never put apply_captions in a transact, which rejects it. One find_retakes call after the cut is enough to confirm it.'
