@@ -127,6 +127,7 @@ async function sessionAt<P extends TimedPacket>(startS: number, timing: SourceTi
 }
 
 export function timedSink<P extends TimedPacket>(sink: Pick<AudioBufferSink, 'buffers'>, timing: SourceTiming<P>): Pick<AudioBufferSink, 'buffers'> {
+  if (timing.rule === 'lead' && timing.leadFrames === 0) return sink
   const { sampleRate } = timing
   return {
     async *buffers(startS = 0, endS = Infinity) {
