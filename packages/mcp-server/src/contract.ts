@@ -260,7 +260,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   transact:
     'When one user request needs more than one edit call, send them all in one transact, for example "make it square and fill the frame" or a fade in plus a fade out. ' +
     'Applies 1 to 100 tool calls as one undo step, so "undo that" removes the whole request. If any call fails, nothing stays applied. ' +
-    'Each call is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.',
+    'Each call is a timeline command, an operator_* tool, run_operator, run_action, apply_commands, or remove_ranges with timeline ranges only.',
   undo: 'Undo the most recent edit. One undo step is one tool call or one whole transact, so a request made of separate calls outside transact only loses its last call.',
   redo: 'Redo the most recently undone edit.',
   export_video:

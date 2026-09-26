@@ -63,7 +63,8 @@ A fade in and a fade out are one intent. Send them together.
 
 `undo` then removes both presets. Two separate `applyAnimationPreset` calls
 undo one preset at a time. Each call is a timeline command, an `operator_*`
-tool, `run_operator`, `run_action`, or `apply_commands`.
+tool, `run_operator`, `run_action`, `apply_commands`, or `remove_ranges` with
+timeline ranges.
 
 Import local recordings with `import_media` and absolute paths. `file.import`
 opens a dialog for a person and imports nothing. `addAsset` cannot load a
