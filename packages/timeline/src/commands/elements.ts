@@ -20,7 +20,7 @@ import { defineCommand, insertSorted, mintElementId, mustGetTrack, mustLocate, r
 
 const editModeSchema = z.enum(['normal', 'overwrite', 'insert']).default('normal')
 
-function mintRightPiece(project: Project, piece: TimelineElement, id: ElementId): TimelineElement {
+export function mintRightPiece(project: Project, piece: TimelineElement, id: ElementId): TimelineElement {
   const minted = { ...piece, id }
   if ('zooms' in minted && minted.zooms) minted.zooms = renameSplitCopies(minted.zooms, new Set(listZoomRegions(project).map((z) => z.id)))
   return minted
