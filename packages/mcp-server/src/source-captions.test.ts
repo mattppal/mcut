@@ -2,9 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { EditorEngine, createProject, getProjectTranscript, resolveElementAudioSource, type ElementId } from '@mcut/timeline'
+import { z } from 'zod'
 import { createMcutMcpServer } from './server'
 
-const words = Array.from({ length: 36 }, (_, i) => ({ text: `w${i}`, startMs: 2000 + i * 500, endMs: 2000 + i * 500 + 300 }))
+const words = Array.from({ length: 36 }, (_, i) => ({ text: `w${i}`, startMs: 2000 + i * 500, endMs: 2000 + i * 500 + (i === 6 ? 0 : 300) }))
 const transcript = { words }
 
 function multicam(): EditorEngine {
@@ -51,24 +52,28 @@ function expectedWords(engine: EditorEngine, pieceIds: readonly ElementId[]): Ma
   return expected
 }
 
-async function cutRetakes(): Promise<{ engine: EditorEngine; client: Client }> {
+const retakesReplySchema = z.object({ transcript: z.object({ words: z.array(z.object({ text: z.string(), startMs: z.number(), endMs: z.number() })) }) })
+
+async function cutRetakes(): Promise<{ engine: EditorEngine; client: Client; saved: z.infer<typeof retakesReplySchema>['transcript'] }> {
   const engine = multicam()
   const client = await connect(engine)
   await client.callTool({ name: 'apply_captions', arguments: { transcript, elementId: 'e-mc' } })
+  const saved = retakesReplySchema.parse(JSON.parse(textOf(await client.callTool({ name: 'find_retakes', arguments: { elementId: 'e-mc' } })))).transcript
   engine.dispatch({ type: 'splitElement', elementId: 'e-mc', atMs: 5000, rightElementId: 'e-cut-1' })
   engine.dispatch({ type: 'splitElement', elementId: 'e-cut-1', atMs: 7200, rightElementId: 'e-keep-2' })
   engine.dispatch({ type: 'splitElement', elementId: 'e-keep-2', atMs: 11000, rightElementId: 'e-cut-2' })
   engine.dispatch({ type: 'splitElement', elementId: 'e-cut-2', atMs: 13600, rightElementId: 'e-keep-3' })
   engine.dispatch({ type: 'rippleDelete', elementIds: ['e-cut-2', 'e-cut-1'] })
-  return { engine, client }
+  return { engine, client, saved }
 }
 
 describe('apply_captions with a source scope', () => {
-  test('one call re-captions every piece of a cut multicam, each kept word within 250 ms of its timeline position', async () => {
-    const { engine, client } = await cutRetakes()
+  test('one call with the find_retakes transcript re-captions every piece of a cut multicam, each kept word within 250 ms of its timeline position', async () => {
+    const { engine, client, saved } = await cutRetakes()
     const stale = captionWords(engine)
+    expect(saved.words).toHaveLength(words.length)
 
-    const result = await client.callTool({ name: 'apply_captions', arguments: { transcript, elementId: 'e-keep-2' } })
+    const result = await client.callTool({ name: 'apply_captions', arguments: { transcript: saved, elementId: 'e-keep-2' } })
     expect(result.isError).toBeFalsy()
     expect(textOf(result)).toContain('over 3 piece(s) of this source (e-mc, e-keep-2, e-keep-3)')
 
