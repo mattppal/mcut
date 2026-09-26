@@ -3,7 +3,7 @@ import { applyCommand, createProject, type LayoutSlot, type Project } from '@mcu
 import type { ImageQuad, LayerChrome, RenderBackend } from './backend'
 import { getElementDisplaySize, getElementNaturalSize } from './geometry'
 import { renderFrame, renderFrameWith } from './render-frame'
-import { FakeContext2D, type RecordedCall } from './test-utils'
+import { deviceRect, FakeContext2D, onCanvas } from './test-utils'
 import type { Canvas2D, FrameSource } from './types'
 import { COLOR_OP, planEffects } from './webgpu/effect-plan'
 
@@ -77,14 +77,6 @@ const frameCalls = (fake: FakeContext2D) =>
   fake.calls
     .filter((c) => c.method === 'roundRect' || c.method === 'clip' || c.method === 'fill' || c.method === 'stroke')
     .map((c) => (c.method === 'fill' ? { method: c.method, shadow: c.shadow } : { method: c.method, args: c.args }))
-
-const deviceRect = ({ args, transform: { a, b, c, d, e, f } }: RecordedCall) => {
-  const [x = 0, y = 0, w = 0, h = 0] = args.slice(-4).map(Number)
-  const at = (px: number, py: number) => ({ x: a * px + c * py + e, y: b * px + d * py + f })
-  const from = at(x, y)
-  const to = at(x + w, y + h)
-  return [from.x, from.y, to.x - from.x, to.y - from.y]
-}
 
 describe('frame style rendering', () => {
   test('crop draws the kept source region into the shrunken frame', () => {
@@ -213,25 +205,18 @@ describe('frame style rendering', () => {
     expect(drawAt({ x: 0, y: 0 })).toEqual([[320, 0, 160, 90, -960, -540, 1920, 1080]])
   })
 
-  test('a multicam zoom without a source scales the whole composite toward its focus inside the element crop and leaves slot framing alone', () => {
-    const zoomedAt = (focus: { x: number; y: number }, element: object = {}) => {
-      const base = projectWithMulticam({ width: 1920, height: 1080 }, {}, element)
-      const project = applyCommand(base, {
-        type: 'addZoomRegion',
-        elementId: 'e-mc',
-        zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus },
-      })
-      const { main, composed } = renderComposed(project, 1500)
-      return {
-        slots: composed.callsTo('drawImage').map((c) => c.args.slice(1)),
-        frame: main.callsTo('drawImage').map((c) => [c.args[0] === composed.canvas, ...c.args.slice(1)]),
-      }
-    }
-    expect(zoomedAt({ x: 1, y: 1 })).toEqual({
-      slots: [[0, 0, 640, 360, -960, -540, 1920, 1080]],
-      frame: [[true, 960, 540, 960, 540, -960, -540, 1920, 1080]],
+  test('a multicam zoom without a source scales the whole composite toward its focus and leaves slot framing alone', () => {
+    const base = projectWithMulticam({ width: 1920, height: 1080 }, {})
+    const project = applyCommand(base, {
+      type: 'addZoomRegion',
+      elementId: 'e-mc',
+      zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus: { x: 1, y: 1 } },
     })
-    expect(zoomedAt({ x: 0, y: 0 }, { crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } }).frame).toEqual([[true, 960, 540, 480, 270, -480, -270, 960, 540]])
+    const { main, composed } = renderComposed(project, 1500)
+    expect(composed.callsTo('scale').at(-1)?.args).toEqual([2, 2])
+    expect(composed.callsTo('translate').at(-1)?.args).toEqual([-960, -540])
+    expect(composed.callsTo('drawImage').map((c) => c.args.slice(1))).toEqual([[0, 0, 640, 360, -960, -540, 1920, 1080]])
+    expect(onCanvas(main, composed, 'drawImage')).toEqual([[-1920, -1080, 3840, 2160]])
   })
 
   test('a whole-composite zoom mid ramp crops the anchored window around a picture-in-picture slot', () => {
@@ -243,10 +228,12 @@ describe('frame style rendering', () => {
     })
     const { main, composed } = renderComposed(project, 500)
     const rounded = (args: unknown[]) => args.map((v) => Math.round(Number(v) * 1e6) / 1e6)
-    expect(composed.callsTo('drawImage').map((c) => rounded(c.args.slice(1)))).toEqual([[0, 0, 640, 360, 384, 205.2, 528, 297]])
-    expect(main.callsTo('drawImage').map((c) => [c.args[0] === composed.canvas, ...rounded(c.args.slice(1))])).toEqual([
-      [true, 288, 162, 1536, 864, -960, -540, 1920, 1080],
-    ])
+    const last = (method: string) => rounded(composed.callsTo(method).at(-1)?.args ?? [])
+    expect(last('rect')).toEqual([-960, -540, 1920, 1080])
+    expect(last('translate')).toEqual([-120, -67.5])
+    expect(last('scale')).toEqual([1.25, 1.25])
+    expect(last('drawImage').slice(1)).toEqual([0, 0, 640, 360, 384, 205.2, 528, 297])
+    expect(onCanvas(main, composed, 'drawImage').map(rounded)).toEqual([[1320, 729, 660, 371.25]])
   })
 
   test('a reframe track slides a slot crop onto the subject, and the fitted part keeps following once the crop meets the frame edge', () => {
@@ -276,9 +263,7 @@ describe('frame style rendering', () => {
       { method: 'roundRect', args: [-480, -270, 960, 540, 54] },
       { method: 'clip', args: [] },
     ])
-    expect(main.callsTo('drawImage').map((c) => [c.args[0] === composed.canvas, ...c.args.slice(1)])).toEqual([
-      [true, 960, 540, 960, 540, -480, -270, 960, 540],
-    ])
+    expect(main.callsTo('drawImage').map((c) => [c.args[0] === composed.canvas, ...c.args.slice(1)])).toEqual([[true, 0, 0, 960, 540, -480, -270, 960, 540]])
   })
 
   test('crop shrinks natural and display size for layout/handles', () => {
@@ -382,7 +367,9 @@ describe('multicam composite', () => {
     }
     expect(clip.quads.map((q) => q.chrome)).toEqual([chrome])
     expect(multicam.quads.map((q) => q.chrome)).toEqual([chrome])
-    expect(multicam.quads.map(({ quad }) => [quad.image === composed.canvas, quad.src, quad.dw, quad.dh])).toEqual([[true, null, 1920, 1080]])
+    expect(multicam.quads.map(({ quad }) => [quad.image === composed.canvas, quad.src, quad.dw, quad.dh])).toEqual([
+      [true, { sx: 0, sy: 0, sw: 1920, sh: 1080 }, 1920, 1080],
+    ])
     expect(multicam.raster.calls).toEqual([])
     expect(composed.callsTo('drawImage')).toHaveLength(2)
 

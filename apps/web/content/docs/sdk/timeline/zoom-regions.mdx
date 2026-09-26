@@ -112,7 +112,7 @@ Explicit fields override the preset. A `rect` aims the zoom at its center and fi
 
 ### getZoomedRect
 
-`getZoomedRect(view, rect)` maps a normalized frame rect through a whole-composite `ContentView`. It returns where the rect lands on the canvas when the composite shows the view's `getZoomWindow` window. `flattenMulticam` bakes it into each flattened clip's transform keyframes. The multicam renderer composes its slots unzoomed and draws that window of the composed frame, the way a clip draws its `getClipView` window, so a flattened clip follows its slot exactly.
+`getZoomedRect(view, rect)` maps a normalized frame rect through a whole-composite `ContentView`. It returns where the rect lands on the canvas when the composite shows the view's `getZoomWindow` window. The multicam renderer maps its whole composite through it before the crop, and `flattenMulticam` bakes it into each flattened clip's transform keyframes, so a flattened clip follows its slot exactly.
 
 ### getZoomShutterMs
 

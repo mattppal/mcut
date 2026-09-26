@@ -1,10 +1,12 @@
 import {
   getActiveLayout,
   getAngleTransitionAt,
+  getClipView,
   getLayout,
   getMulticamGroupTimeMs,
   getMulticamSourceTimeMs,
   getTransitionCompletion,
+  getZoomedRect,
   isAudioOnlySource,
   resolveAnimatedElement,
   type Layout,
@@ -13,11 +15,12 @@ import {
   type MulticamSource,
   type Project,
 } from '@mcut/timeline'
-import { drawFramedMedia, type FrameBox } from './framed-media'
+import type { LayerChrome } from './backend'
+import { drawFramedMedia, type FrameBox, type SourceRect } from './framed-media'
 import { degToRad, toCanvasPoint, type OBB } from './geometry'
 import { reframedSlot } from './reframe-views'
 import { transitionRenderers } from './transition-renderers'
-import type { Canvas2D, ElementRenderContext, FrameSource } from './types'
+import type { ElementRenderContext, FrameSource } from './types'
 
 interface PlacedSlot {
   slot: LayoutSlot
@@ -67,51 +70,59 @@ export function getSlotBoxes(project: Project, element: MulticamElement, timelin
   })
 }
 
+const WHOLE_FRAME = { x: 0, y: 0, w: 1, h: 1 }
+
 const MAX_COMPOSE_SIDE_PX = 8192
 
-const roundUpToQuarterOctave = (scale: number): number => 2 ** (Math.ceil(Math.log2(scale) * 4) / 4)
+const ROUNDING_SLACK = 1e-9
 
-function sourceDensity(project: Project, { slot, source, box }: PlacedSlot): number {
-  const asset = project.assets[source.assetId]
-  if (!asset?.width || !asset.height) return Number.POSITIVE_INFINITY
-  const across = (asset.width * (slot.crop?.w ?? 1)) / box.w
-  const down = (asset.height * (slot.crop?.h ?? 1)) / box.h
-  return slot.fit === 'cover' ? Math.min(across, down) : Math.max(across, down)
+const ceilTolerant = (value: number): number => Math.ceil(value - ROUNDING_SLACK)
+
+const roundUpToQuarterOctave = (ratio: number): number => 2 ** (ceilTolerant(Math.log2(ratio) * 4) / 4)
+
+function composeAxis(length: number, density: number, frame: number): { pixels: number; density: number } {
+  if (!(density > 0 && frame > 0)) return { pixels: 1, density: 1 / length }
+  const pixels = Math.min(MAX_COMPOSE_SIDE_PX, Math.max(1, ceilTolerant(frame * roundUpToQuarterOctave((length * density) / frame))))
+  return { pixels, density: Math.min(density, pixels / length) }
 }
 
-function composeSize(
-  project: Project,
+export function composeMulticam(
   element: MulticamElement,
-  slots: readonly PlacedSlot[],
-  renderScale: number,
-  zoom: number,
-): { width: number; height: number } {
-  const cap = Math.max(renderScale, ...slots.map((placed) => sourceDensity(project, placed)))
-  const side = (length: number, scale: number) => {
-    const density = Math.min(roundUpToQuarterOctave(Math.abs(scale) * zoom) * renderScale, cap)
-    return Math.max(1, Math.min(MAX_COMPOSE_SIDE_PX, Math.ceil(length * density)))
-  }
-  return { width: side(project.width, element.transform.scaleX), height: side(project.height, element.transform.scaleY) }
-}
-
-export function composeMulticam(element: MulticamElement, context: ElementRenderContext, frames: FrameSource, zoom: number): Canvas2D | null {
+  context: ElementRenderContext,
+  frames: FrameSource,
+  chrome: LayerChrome,
+): { image: CanvasImageSource; src: SourceRect } | null {
   const { project } = context
+  const { width, height } = project
   const groupMs = getMulticamGroupTimeMs(element, context.timeMs)
   const transition = getAngleTransitionAt(element, groupMs)
   const layouts = transition
     ? [getLayout(project.layouts, transition.fromLayoutId), getLayout(project.layouts, transition.toLayoutId)]
     : [getActiveLayout(project, element, context.timeMs)]
   const placed = layouts.map((layout) => (layout ? placeSlots(project, element, layout) : []))
-  const { width, height } = composeSize(project, element, placed.flat(), context.backend.renderScale, zoom)
-  const surface = context.acquireScratch(width, height)
+  const crop = element.crop ?? WHOLE_FRAME
+  const { renderScale } = context.backend
+  const across = composeAxis(crop.w * width, Math.abs(chrome.scaleX) * renderScale, width * renderScale)
+  const down = composeAxis(crop.h * height, Math.abs(chrome.scaleY) * renderScale, height * renderScale)
+  const surface = context.acquireScratch(across.pixels, down.pixels)
   if (!surface) return null
-  surface.setTransform(width / project.width, 0, 0, height / project.height, 0, 0)
-  surface.clearRect(0, 0, project.width, project.height)
+  surface.setTransform(1, 0, 0, 1, 0, 0)
+  surface.clearRect(0, 0, across.pixels, down.pixels)
+  surface.setTransform(across.density, 0, 0, down.density, -across.density * crop.x * width, -down.density * crop.y * height)
+  const view = getClipView(element, context.viewTimeMs)
 
   const drawSlots = (slots: readonly PlacedSlot[] = []) => {
     if (slots.length === 0) return
     surface.save()
-    surface.translate(project.width / 2, project.height / 2)
+    surface.translate(width / 2, height / 2)
+    if (view.scale > 1) {
+      const zoomed = getZoomedRect(view, WHOLE_FRAME)
+      surface.beginPath()
+      surface.rect(-width / 2, -height / 2, width, height)
+      surface.clip()
+      surface.translate((zoomed.x + zoomed.w / 2 - 0.5) * width, (zoomed.y + zoomed.h / 2 - 0.5) * height)
+      surface.scale(zoomed.w, zoomed.h)
+    }
     for (const { slot, source, box } of slots) {
       const frame = frames.getFrame(source.assetId, getMulticamSourceTimeMs(element, source, context.timeMs))
       if (!frame) continue
@@ -138,9 +149,8 @@ export function composeMulticam(element: MulticamElement, context: ElementRender
       drawLeft: () => drawSlots(placed[0]),
       drawRight: () => drawSlots(placed[1]),
     })
-    return surface
+  } else {
+    drawSlots(placed[0])
   }
-
-  drawSlots(placed[0])
-  return surface
+  return { image: surface.canvas, src: { sx: 0, sy: 0, sw: across.density * crop.w * width, sh: down.density * crop.h * height } }
 }

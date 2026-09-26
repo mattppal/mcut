@@ -164,3 +164,22 @@ export class FakeContext2D {
     return this.calls.filter((c) => c.method === method)
   }
 }
+
+export function deviceRect({ args, transform: { a, b, c, d, e, f } }: Pick<RecordedCall, 'args' | 'transform'>): number[] {
+  const [x = 0, y = 0, w = 0, h = 0] = args.slice(-4).map(Number)
+  const at = (px: number, py: number) => ({ x: a * px + c * py + e, y: b * px + d * py + f })
+  const from = at(x, y)
+  const to = at(x + w, y + h)
+  return [from.x, from.y, to.x - from.x, to.y - from.y]
+}
+
+export function onCanvas(main: FakeContext2D, scratch: FakeContext2D, method: string): number[][] {
+  const frames = main.callsTo('drawImage').filter(({ args }) => args[0] === scratch.canvas)
+  return frames.flatMap(({ args, transform }) => {
+    const [sx = 0, sy = 0, sw = 1, sh = 1, dx = 0, dy = 0, dw = 0, dh = 0] = args.slice(1).map(Number)
+    return scratch.callsTo(method).map((call) => {
+      const [x = 0, y = 0, w = 0, h = 0] = deviceRect(call)
+      return deviceRect({ transform, args: [dx + ((x - sx) * dw) / sw, dy + ((y - sy) * dh) / sh, (w * dw) / sw, (h * dh) / sh] })
+    })
+  })
+}

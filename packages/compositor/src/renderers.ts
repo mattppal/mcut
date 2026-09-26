@@ -248,12 +248,10 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
 const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
   const frames = context.source
   if (!frames) return
-  const view = getClipView(element, context.viewTimeMs)
-  const surface = composeMulticam(element, context, frames, view.scale)
-  if (!surface) return
+  const composed = composeMulticam(element, context, frames, chromeOf(context, element))
+  if (!composed) return
   const { width, height } = context.project
-  const src = viewSourceRect(element.crop, surface.canvas, view)
-  drawMediaFrame(context, element, surface.canvas, width * (element.crop?.w ?? 1), height * (element.crop?.h ?? 1), src)
+  drawMediaFrame(context, element, composed.image, width * (element.crop?.w ?? 1), height * (element.crop?.h ?? 1), composed.src)
 }
 
 export const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> } = {
