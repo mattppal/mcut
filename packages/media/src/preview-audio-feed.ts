@@ -40,6 +40,7 @@ class ForwardReader implements SourceReader {
   static async open(sink: Sink, startS: number, spanS: number, keepAll: boolean, signal: AbortSignal): Promise<ForwardReader | null> {
     const iterator = sink.buffers(await leadStart(sink, startS, spanS, signal), startS + spanS)[Symbol.asyncIterator]()
     const first = await iterator.next()
+    if (signal.aborted) await iterator.return?.()
     signal.throwIfAborted()
     if (first.done) return null
     const { buffer } = first.value
