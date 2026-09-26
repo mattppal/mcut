@@ -34,10 +34,12 @@ export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = 
       const elapsedMs = previousFrameMs === null ? 0 : frameTimeMs - previousFrameMs
       previousFrameMs = frameTimeMs
       const playback = engine.playback.state
-      if (playback.isPlaying) {
+      const displayTimeMs = frameTimeMs + Math.min(elapsedMs, MAX_DISPLAY_LEAD_MS)
+      const clockMs = playback.currentTimeMs === knownMs ? latest.current.clock?.(displayTimeMs) : null
+      if (!playback.isPlaying) {
+        if (clockMs != null && clockMs !== playback.currentTimeMs) engine.seek(clockMs)
+      } else {
         const durationMs = getProjectDurationMs(engine.project)
-        const displayTimeMs = frameTimeMs + Math.min(elapsedMs, MAX_DISPLAY_LEAD_MS)
-        const clockMs = playback.currentTimeMs === knownMs ? latest.current.clock?.(displayTimeMs) : null
         const next = clockMs ?? playback.currentTimeMs + elapsedMs * playback.playbackRate
         if (durationMs > 0 && next >= durationMs && playback.playbackRate > 0) {
           engine.seek(durationMs)
