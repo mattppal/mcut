@@ -44,6 +44,11 @@ function forwardSourceKey(project: Project, elementId: ElementId): string {
   return `${source.assetId}\n${source.asset.src}`
 }
 
+function isForward(project: Project, elementId: ElementId): boolean {
+  const source = resolveElementAudioSource(project, elementId)
+  return source !== null && !source.timeMap && !source.reversed
+}
+
 function isCut(project: Project, elementId: ElementId): boolean {
   const assetId = resolveElementAudioSource(project, elementId)?.assetId
   const pieces = project.tracks.flatMap((track) =>
@@ -56,13 +61,13 @@ export class StoredTranscripts {
   readonly #bySource = new Map<string, SourceWord[]>()
 
   remember(project: Project, elementId: ElementId, words: readonly SourceWord[]): void {
-    const source = resolveElementAudioSource(project, elementId)
-    if (!source || source.timeMap || source.reversed || words.length === 0) return
+    if (!isForward(project, elementId) || words.length === 0) return
     const key = forwardSourceKey(project, elementId)
     this.#bySource.set(key, spliced(this.#bySource.get(key) ?? [], words))
   }
 
   captureCaptions(project: Project, options: { elementId: ElementId; replace: boolean }): void {
+    if (!isForward(project, options.elementId)) return
     const key = forwardSourceKey(project, options.elementId)
     if (!options.replace && (this.#bySource.has(key) || isCut(project, options.elementId))) return
     const placed = getProjectTranscript(project, { includeWords: true }).captions.flatMap((caption) => caption.words ?? [])
