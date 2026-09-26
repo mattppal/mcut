@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { AudioBufferSink } from 'mediabunny'
 import { decodeCompositeRange } from './export-audio-composite'
-import { buildSourceTiming, timedSink, type PacketIndex, type TimingFacts } from './source-timing'
+import { buildSourceTiming, sourceStartLabelS, timedSink, type PacketIndex, type TimingFacts } from './source-timing'
 import { valueAt } from './value-at'
 
 interface FakePacket {
@@ -21,6 +21,8 @@ interface FakeSource {
 const MID_S = 0.5
 const SPAN_S = 0.0625
 const CELT_20_MS = new Uint8Array([0xfc])
+const COLD_START_FRAMES = 2048
+const CONVERTED_FRAMES = 4096
 
 function facts(known: Pick<TimingFacts, 'container' | 'codec'> & Partial<TimingFacts>): TimingFacts {
   return { sampleRate: 48_000, resolution: 48_000, leadFrames: 0, preSkip: 0, vorbisShortBlock: 0, ...known }
@@ -103,6 +105,19 @@ async function decodedRuns(fake: FakeSource, startS: number): Promise<[number, n
   const timing = await buildSourceTiming(fake.facts, packetIndex(fake.packets), valueAt(fake.packets, 0))
   const decoded = await decodeCompositeRange(timedSink(decoderSink(fake), timing), startS, SPAN_S, 'all')
   return decoded.status === 'ready' ? runs(valueAt(decoded.audio.channels, 0)) : decoded.status
+}
+
+async function convertedRuns(fake: FakeSource): Promise<[number, number][]> {
+  const timing = await buildSourceTiming(fake.facts, packetIndex(fake.packets), valueAt(fake.packets, 0))
+  const trimS = await sourceStartLabelS(timing)
+  const written: number[] = []
+  for await (const { buffer, timestamp } of decoderSink(fake).buffers(trimS)) {
+    const skip = Math.round((trimS - timestamp) * fake.facts.sampleRate)
+    if (written.length === 0 && skip < 0) written.push(...Array.from({ length: -skip }, () => Number.NaN))
+    written.push(...buffer.getChannelData(0).subarray(Math.max(0, skip)))
+    if (written.length >= CONVERTED_FRAMES) break
+  }
+  return runs(Float32Array.from(written.slice(COLD_START_FRAMES, CONVERTED_FRAMES)))
 }
 
 const SOURCES: [string, FakeSource][] = [
@@ -228,5 +243,11 @@ describe('timedSink', () => {
       { discardFrames: 312 },
     )
     expect(await decodedRuns(recorded, MID_S)).toEqual([[23_760, 3000]])
+  })
+})
+
+describe('sourceStartLabelS', () => {
+  test.each(SOURCES)('%s trims a conversion so its first frame is source time zero', async (_, fake) => {
+    expect(await convertedRuns(fake)).toEqual([[COLD_START_FRAMES, CONVERTED_FRAMES - COLD_START_FRAMES]])
   })
 })

@@ -34,3 +34,7 @@ export async function buildSourceTiming<P extends TimedPacket>(facts: TimingFact
 export function timedSink<P extends TimedPacket>(sink: Pick<AudioBufferSink, 'buffers'>, _timing: SourceTiming<P>): Pick<AudioBufferSink, 'buffers'> {
   return sink
 }
+
+export async function sourceStartLabelS<P extends TimedPacket>(_timing: SourceTiming<P>): Promise<number> {
+  return 0
+}
