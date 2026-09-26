@@ -52,6 +52,11 @@ function keyed(segment: AudibleSegment): KeyedSegment {
   }
 }
 
+function dueSegments(segments: KeyedSegment[], timelineMs: number, rate: number): KeyedSegment[] {
+  const horizonMs = timelineMs + LOOKAHEAD_S * 1000 * rate
+  return segments.filter(({ segment }) => segment.startMs < horizonMs && segment.startMs + segment.durationMs > timelineMs)
+}
+
 function outputStarted(context: AudioContext): boolean {
   return (context.getOutputTimestamp().performanceTime ?? 0) > 0
 }
@@ -136,13 +141,17 @@ export class PreviewAudio {
     }
     const { context, master } = this.ensureContext()
     master.gain.value = playback.muted ? 0 : playback.volume
-    this.outputRendered ||= outputStarted(context)
-    if (context.state !== 'running' || !this.outputRendered) {
+    if (context.state !== 'running') {
       this.flush()
       if (context.state === 'suspended') void context.resume()
       return
     }
     const segments = this.segmentsOf(project)
+    this.outputRendered ||= outputStarted(context)
+    if (!this.outputRendered && dueSegments(segments, playback.currentTimeMs, rate).length === 0) {
+      this.flush()
+      return
+    }
     const epoch = this.ensureEpoch(context, master, playback, segments)
     const sinkOf: SinkOf = (src) => this.sourceOf(src).then((opened) => opened?.sink ?? null)
     this.settleOutgoing(context, sinkOf)
@@ -189,10 +198,7 @@ export class PreviewAudio {
       reportedMs: timelineMs,
     }
     this.epoch = epoch
-    const horizonMs = timelineMs + LOOKAHEAD_S * 1000 * playback.playbackRate
-    const opening = segments
-      .filter(({ segment }) => segment.startMs < horizonMs && segment.startMs + segment.durationMs > timelineMs)
-      .map(({ segment }) => this.sourceOf(segment.src))
+    const opening = dueSegments(segments, timelineMs, playback.playbackRate).map(({ segment }) => this.sourceOf(segment.src))
     void Promise.all(opening).then(() => {
       if (this.epoch !== epoch || !this.context) return
       const outgoing = this.outgoing
