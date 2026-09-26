@@ -32,8 +32,9 @@ function spliced(stored: readonly SourceWord[], incoming: readonly SourceWord[])
   if (incoming.length === 0) return [...stored]
   const fromMs = incoming.reduce((min, word) => Math.min(min, word.startMs), Number.POSITIVE_INFINITY)
   const toMs = incoming.reduce((max, word) => Math.max(max, word.endMs), Number.NEGATIVE_INFINITY)
-  const outside = stored.filter((word) => midMs(word) < fromMs || midMs(word) > toMs)
-  return [...outside, ...incoming.map(({ text, startMs, endMs }) => ({ text, startMs, endMs }))].sort((a, b) => a.startMs - b.startMs)
+  const before = stored.filter((word) => midMs(word) < fromMs)
+  const after = stored.filter((word) => midMs(word) > toMs)
+  return [...before, ...incoming.map(({ text, startMs, endMs }) => ({ text, startMs, endMs })), ...after]
 }
 
 function forwardSourceKey(project: Project, elementId: ElementId): string {
