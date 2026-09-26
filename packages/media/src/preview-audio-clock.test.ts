@@ -161,6 +161,14 @@ describe('preview audio clock around the output start', () => {
     expect(audio.clockTimeMs(176)).toBe(1000)
   })
 
+  test('a play with every due source already open anchors on the frame it starts', () => {
+    renderedS = 0.5
+    output.contextTime = 0.49
+    output.performanceTime = 100
+    audio.sync(createProject(), playing(1000))
+    expect(audio.clockTimeMs(160)).toBeCloseTo(1025, 6)
+  })
+
   test('a second rate change before the first handoff sounds keeps the sounding epoch and hands off from it', async () => {
     const project = toneProject()
     renderedS = 0.5
