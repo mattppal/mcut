@@ -234,6 +234,21 @@ describe('frame style rendering', () => {
     expect(zoomedAt({ x: 0, y: 0 }, { crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } }).frame).toEqual([[true, 960, 540, 480, 270, -480, -270, 960, 540]])
   })
 
+  test('a whole-composite zoom mid ramp crops the anchored window around a picture-in-picture slot', () => {
+    const base = projectWithMulticam({ width: 1920, height: 1080 }, { rect: { x: 0.7, y: 0.69, w: 0.275, h: 0.275 } })
+    const project = applyCommand(base, {
+      type: 'addZoomRegion',
+      elementId: 'e-mc',
+      zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 1.5, focus: { x: 0.84, y: 0.83 }, easing: 'linear', motionBlur: 0 },
+    })
+    const { main, composed } = renderComposed(project, 500)
+    const rounded = (args: unknown[]) => args.map((v) => Math.round(Number(v) * 1e6) / 1e6)
+    expect(composed.callsTo('drawImage').map((c) => rounded(c.args.slice(1)))).toEqual([[0, 0, 640, 360, 384, 205.2, 528, 297]])
+    expect(main.callsTo('drawImage').map((c) => [c.args[0] === composed.canvas, ...rounded(c.args.slice(1))])).toEqual([
+      [true, 288, 162, 1536, 864, -960, -540, 1920, 1080],
+    ])
+  })
+
   test('a reframe track slides a slot crop onto the subject, and the fitted part keeps following once the crop meets the frame edge', () => {
     const cropped = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
     const project = applyCommand(cropped, {

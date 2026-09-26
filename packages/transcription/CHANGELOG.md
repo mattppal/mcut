@@ -1,5 +1,26 @@
 # @mcut/transcription
 
+## 0.1.0-alpha.19
+
+### Patch Changes
+
+- Updated dependencies [[`5620a72`](https://github.com/mattppal/mcut/commit/5620a723c6dd3e6ed05c412dae468b9b21f2eae1), [`5620a72`](https://github.com/mattppal/mcut/commit/5620a723c6dd3e6ed05c412dae468b9b21f2eae1)]:
+  - @mcut/timeline@0.1.0-alpha.16
+
+## 0.1.0-alpha.18
+
+### Minor Changes
+
+- [#188](https://github.com/mattppal/mcut/pull/188) [`937941c`](https://github.com/mattppal/mcut/commit/937941cdcb8aef0b4425a91ba2ab94bc92537150) Thanks [@mattppal](https://github.com/mattppal)! - Silence cuts, captions scoped to a clip, and audio activity read the clip's audio source, so a multicam uses its `audioSource` instead of being rejected as the wrong element type. A multicam with no audio source fails until `setMulticamAudio`. Reverse and trim-to-playhead treat a multicam as a media clip.
+
+## 0.1.0-alpha.17
+
+### Patch Changes
+
+- [#201](https://github.com/mattppal/mcut/pull/201) [`3f2951b`](https://github.com/mattppal/mcut/commit/3f2951b3db1b9b21b8ac254b6ae638f01769b366) Thanks [@mattppal](https://github.com/mattppal)! - `findRetakes` tolerates one dropped or inserted word inside a matched opening, so "hopefully take this as an example" still matches its retake "hopefully you take this as an example". Only matched words count toward `minMatchWords`.
+
+- [#201](https://github.com/mattppal/mcut/pull/201) [`3f2951b`](https://github.com/mattppal/mcut/commit/3f2951b3db1b9b21b8ac254b6ae638f01769b366) Thanks [@mattppal](https://github.com/mattppal)! - The on-device Whisper provider now returns word timings. `WHISPER_MODELS` point at the `_timestamped` onnx-community exports, the worker asks for `return_timestamps: 'word'`, merges words across chunk overlaps, and derives `segments` from the words. Captions built from a transcript keep zero-length words instead of dropping them. `find_retakes` says when captions carry segment timing only.
+
 ## 0.1.0-alpha.16
 
 ### Patch Changes

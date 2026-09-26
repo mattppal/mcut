@@ -1,5 +1,26 @@
 # @mcut/transcription-ai-sdk
 
+## 1.0.0-alpha.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.19
+
+## 1.0.0-alpha.18
+
+### Patch Changes
+
+- Updated dependencies [[`937941c`](https://github.com/mattppal/mcut/commit/937941cdcb8aef0b4425a91ba2ab94bc92537150)]:
+  - @mcut/transcription@0.1.0-alpha.18
+
+## 1.0.0-alpha.17
+
+### Patch Changes
+
+- Updated dependencies [[`3f2951b`](https://github.com/mattppal/mcut/commit/3f2951b3db1b9b21b8ac254b6ae638f01769b366), [`3f2951b`](https://github.com/mattppal/mcut/commit/3f2951b3db1b9b21b8ac254b6ae638f01769b366)]:
+  - @mcut/transcription@0.1.0-alpha.17
+
 ## 1.0.0-alpha.16
 
 ### Patch Changes

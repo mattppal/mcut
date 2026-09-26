@@ -11,16 +11,13 @@ import {
   getProjectCaptions,
   getProjectMediaContext,
   getProjectTranscript,
-  getSourceSpanMs,
   listToolDefinitions,
   parseCommand,
-  type AssetRef,
-  type AudioElement,
   type BuiltinCommand,
   type EditorEngine,
+  type ElementAudioSource,
   type Project,
   type Track,
-  type VideoElement,
 } from '@mcut/timeline'
 import { searchCaptions } from '@mcut/transcription'
 import { toast } from 'sonner'
@@ -36,13 +33,19 @@ import { useEditorUI } from './editor-ui'
 import { handleExportRequest } from './live-mcp-export'
 import { ensureTranscriptForBridge } from './live-mcp-transcript'
 import { clamp } from './math'
-import { applyTransact, MCP_AGENT_TOOL_NAMES, MCP_TOOL_INPUTS, operatorToolName, type TransactSubRequest } from '@mcut/mcp-server/contract'
+import {
+  applyTransact,
+  MCP_AGENT_TOOL_NAMES,
+  MCP_TOOL_INPUTS,
+  operatorToolName,
+  pickAudioActivitySource,
+  type TransactSubRequest,
+} from '@mcut/mcp-server/contract'
 
 type AudioActivityPayload = z.infer<typeof MCP_TOOL_INPUTS.get_audio_activity>
 
 interface AudioActivitySource {
-  asset: AssetRef
-  element: VideoElement | AudioElement
+  source: ElementAudioSource
   track: Track
 }
 
@@ -87,43 +90,17 @@ function searchProjectTranscript(project: Project, query: string): unknown {
   return { query, count: matches.length, matches }
 }
 
-function isAudioActivityElement(element: unknown): element is VideoElement | AudioElement {
-  return typeof element === 'object' && element !== null && 'type' in element && (element.type === 'video' || element.type === 'audio')
+function locateAudioActivitySource(engine: EditorEngine, payload: AudioActivityPayload): AudioActivitySource {
+  const source = pickAudioActivitySource(engine.project, engine.selection.elementIds, payload.elementId)
+  const location = getElementLocation(engine.project, source.elementId)
+  if (!location) throw new Error(`Element "${source.elementId}" is not in the project.`)
+  return { source, track: location.track }
 }
 
-function pickAudioActivitySource(engine: EditorEngine, payload: AudioActivityPayload): AudioActivitySource {
-  const project = engine.project
-  if (payload.elementId) {
-    const location = getElementLocation(project, payload.elementId)
-    if (!location || !isAudioActivityElement(location.element)) {
-      throw new Error(`Element "${payload.elementId}" is not a video or audio clip.`)
-    }
-    const asset = project.assets[location.element.assetId]
-    if (!asset) throw new Error(`Element "${payload.elementId}" has no asset.`)
-    return { asset, element: location.element, track: location.track }
-  }
-
-  for (const elementId of engine.selection.elementIds) {
-    const location = getElementLocation(project, elementId)
-    if (!location || !isAudioActivityElement(location.element)) continue
-    const asset = project.assets[location.element.assetId]
-    if (asset) return { asset, element: location.element, track: location.track }
-  }
-
-  const candidates = project.tracks.flatMap((track) =>
-    track.elements
-      .filter((element): element is VideoElement | AudioElement => isAudioActivityElement(element) && !!project.assets[element.assetId])
-      .map((element) => ({ asset: project.assets[element.assetId]!, element, track })),
-  )
-  const source = candidates.find((candidate) => candidate.element.type === 'video') ?? candidates.find((candidate) => candidate.element.type === 'audio')
-  if (!source) throw new Error('Add a video or audio clip to the timeline first.')
-  return source
-}
-
-function audioActivityRange(source: AudioActivitySource, payload: AudioActivityPayload): SourceRange {
-  const elementStartMs = source.element.trimStartMs
-  const elementEndMs = elementStartMs + getSourceSpanMs(source.element)
-  const assetEndMs = source.asset.durationMs ?? elementEndMs
+function audioActivityRange(picked: AudioActivitySource, payload: AudioActivityPayload): SourceRange {
+  const elementStartMs = picked.source.sourceStartMs
+  const elementEndMs = picked.source.sourceEndMs
+  const assetEndMs = picked.source.asset.durationMs ?? elementEndMs
   const maxEndMs = Math.min(assetEndMs, elementEndMs)
   const startMs = clamp(payload.startMs ?? elementStartMs, elementStartMs, maxEndMs)
   const endMs = clamp(payload.endMs ?? maxEndMs, startMs, maxEndMs)
@@ -157,8 +134,8 @@ export async function handleGetAudioActivity(
   payload: AudioActivityPayload,
   analyzer: AudioActivityAnalyzer = analyzeAudioActivity,
 ): Promise<unknown> {
-  const source = pickAudioActivitySource(engine, payload)
-  const range = audioActivityRange(source, payload)
+  const picked = locateAudioActivitySource(engine, payload)
+  const range = audioActivityRange(picked, payload)
   const waveformBuckets = payload.includeWaveform === true ? Math.max(1, Math.floor(payload.waveformBuckets ?? 128)) : undefined
   const options: AudioActivityOptions = {
     startMs: range.startMs,
@@ -170,30 +147,30 @@ export async function handleGetAudioActivity(
     ...(payload.paddingMs !== undefined ? { paddingMs: payload.paddingMs } : {}),
     ...(waveformBuckets !== undefined ? { waveformBuckets } : {}),
   }
-  const activity = await analyzer(source.asset.src, options)
+  const activity = await analyzer(picked.source.asset.src, options)
   const base = {
-    elementId: source.element.id,
-    trackId: source.track.id,
-    trackName: source.track.name,
+    elementId: picked.source.elementId,
+    trackId: picked.track.id,
+    trackName: picked.track.name,
     asset: {
-      id: source.asset.id,
-      kind: source.asset.kind,
-      ...(source.asset.name ? { name: source.asset.name } : {}),
-      ...(source.asset.durationMs !== undefined ? { durationMs: source.asset.durationMs } : {}),
-      ...(source.asset.mimeType ? { mimeType: source.asset.mimeType } : {}),
-      ...(source.asset.width !== undefined ? { width: source.asset.width } : {}),
-      ...(source.asset.height !== undefined ? { height: source.asset.height } : {}),
+      id: picked.source.asset.id,
+      kind: picked.source.asset.kind,
+      ...(picked.source.asset.name ? { name: picked.source.asset.name } : {}),
+      ...(picked.source.asset.durationMs !== undefined ? { durationMs: picked.source.asset.durationMs } : {}),
+      ...(picked.source.asset.mimeType ? { mimeType: picked.source.asset.mimeType } : {}),
+      ...(picked.source.asset.width !== undefined ? { width: picked.source.asset.width } : {}),
+      ...(picked.source.asset.height !== undefined ? { height: picked.source.asset.height } : {}),
     },
     source: {
       startMs: range.startMs,
       endMs: range.endMs,
       durationMs: range.durationMs,
-      elementStartMs: source.element.startMs,
-      elementEndMs: source.element.startMs + source.element.durationMs,
-      elementSourceStartMs: source.element.trimStartMs,
-      elementSourceEndMs: source.element.trimStartMs + getSourceSpanMs(source.element),
-      hasTimeMap: !!source.element.timeMap,
-      reversed: !!source.element.reversed,
+      elementStartMs: picked.source.timelineStartMs,
+      elementEndMs: picked.source.timelineStartMs + picked.source.timelineDurationMs,
+      elementSourceStartMs: picked.source.sourceStartMs,
+      elementSourceEndMs: picked.source.sourceEndMs,
+      hasTimeMap: picked.source.timeMap !== undefined,
+      reversed: picked.source.reversed,
       timeBasis: 'source-ms',
     },
   }

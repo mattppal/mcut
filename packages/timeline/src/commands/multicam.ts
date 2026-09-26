@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { flattenSlotMotion } from '../composite-zoom'
 import { CommandError } from '../errors'
 import { createElementId, createTrackId, type AssetId, type ElementId } from '../id'
 import { elementIdSchema, MIN_ELEMENT_DURATION_MS, validateElement, type Project, type TimelineElement, type Track } from '../model'
@@ -221,7 +222,9 @@ export const flattenMulticam = defineCommand({
     'layout slot per visible cut span on new tracks (layout geometry baked into transforms, approximate, ' +
     'no crop primitive) plus one audio element from the audio source. The multicam, its angle schedule, ' +
     'and its effects are gone afterwards; only undo restores them. Zooms and the reframe track on a source ' +
-    'move onto the clips cut from that source. Requires 1x forward playback (no timeMap, not reversed).',
+    'move onto the clips cut from that source. A whole-composite zoom becomes position and scale keyframes on ' +
+    'every clip it covers, so each box moves as its slot did, with motion blur on when the zoom had it. ' +
+    'Requires 1x forward playback (no timeMap, not reversed).',
   payloadSchema: z.object({ elementId: elementIdSchema }),
   reduce: (project, payload) => {
     const { track, element } = mustLocate(project, payload.elementId)
@@ -273,7 +276,7 @@ export const flattenMulticam = defineCommand({
         const rh = slot.rect.h * project.height
         const aw = W(source.assetId)
         const ah = H(source.assetId)
-        const scale = slot.fit === 'cover' ? Math.max(rw / aw, rh / ah) : Math.min(rw / aw, rh / ah)
+        const fitScale = slot.fit === 'cover' ? Math.max(rw / aw, rh / ah) : Math.min(rw / aw, rh / ah)
         slotTrack.elements.push({
           id: createElementId(),
           type: 'video',
@@ -281,13 +284,7 @@ export const flattenMulticam = defineCommand({
           durationMs: span.toMs - span.fromMs,
           assetId: source.assetId,
           trimStartMs: source.offsetMs + element.trimStartMs + span.fromMs,
-          transform: {
-            x: (slot.rect.x + slot.rect.w / 2 - 0.5) * project.width,
-            y: (slot.rect.y + slot.rect.h / 2 - 0.5) * project.height,
-            scaleX: scale,
-            scaleY: scale,
-            rotation: 0,
-          },
+          ...flattenSlotMotion(project, { element, fromMs: span.fromMs, toMs: span.toMs, rect: slot.rect, fitScale, size: { width: aw, height: ah } }),
           opacity: 1,
           volume: 1,
           muted: true,

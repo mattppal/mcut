@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { MIN_OVERLAP_PAUSE_MS, mergeChunkSegments, mergeChunkWords, planChunks } from './chunking'
+import { MIN_OVERLAP_PAUSE_MS, mergeChunkSegments, mergeChunkWords, planChunks, segmentsFromWords } from './chunking'
 import type { TranscriptSegment, TranscriptWord } from '@mcut/transcription'
 
 const word = (text: string, startMs: number, endMs: number): TranscriptWord => ({
@@ -75,6 +75,20 @@ describe('mergeChunkWords', () => {
     expect(merged[2]!.startMs).toBe(28_010)
   })
 
+  test('keeps zero-length words on both sides of the cut', () => {
+    const merged = mergeChunkWords([
+      {
+        chunk: { startS: 0, endS: 30 },
+        words: [word('before', 26_000, 26_000), word('gap', 26_200, 26_500), word('edge', 29_990, 29_990)],
+      },
+      {
+        chunk: { startS: 25, endS: 55 },
+        words: [word('gap', 26_210, 26_510), word('after', 28_000, 28_000), word('later', 31_000, 31_400)],
+      },
+    ])
+    expect(merged.map((w) => w.text)).toEqual(['before', 'gap', 'after', 'later'])
+  })
+
   test('skips empty chunks (VAD-suppressed windows)', () => {
     const merged = mergeChunkWords([
       { chunk: { startS: 0, endS: 30 }, words: [word('hello', 1000, 1400)] },
@@ -82,6 +96,22 @@ describe('mergeChunkWords', () => {
       { chunk: { startS: 50, endS: 80 }, words: [word('again', 60_000, 60_400)] },
     ])
     expect(merged.map((w) => w.text)).toEqual(['hello', 'again'])
+  })
+})
+
+describe('segmentsFromWords', () => {
+  test('splits at sentence ends, long pauses, and the length cap', () => {
+    const words = [
+      word('Hi', 0, 200),
+      word('there.', 250, 500),
+      word('Next', 600, 800),
+      word('one', 2000, 2200),
+      ...Array.from({ length: 12 }, (_, i) => word(`w${i}`, 3000 + i * 1000, 3500 + i * 1000)),
+    ]
+    const segments = segmentsFromWords(words)
+    expect(segments.map((s) => s.text.split(' ')[0])).toEqual(['Hi', 'Next', 'one', 'w9'])
+    expect(segments[0]).toEqual({ text: 'Hi there.', startMs: 0, endMs: 500 })
+    expect(segments.every((s) => s.endMs - s.startMs <= 10_000)).toBe(true)
   })
 })
 

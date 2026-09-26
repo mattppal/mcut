@@ -118,6 +118,30 @@ function sourceResult(source: ElementAudioSource): EnsureTranscriptResult['sourc
   }
 }
 
+async function transcribeSource(source: ElementAudioSource, language: string | undefined, deps: EnsureTranscriptDeps): Promise<TranscriptResult> {
+  const wav = await extractSourceAudio(source, deps)
+  if (!wav) {
+    throw new Error(`"${source.asset.name ?? source.asset.id}" has no audio track.`)
+  }
+  return deps.transcribeOnDevice(wav, language ? { language } : undefined)
+}
+
+const inFlight = new WeakMap<EnsureTranscriptDeps, Map<string, Promise<TranscriptResult>>>()
+
+function sharedTranscription(source: ElementAudioSource, language: string | undefined, deps: EnsureTranscriptDeps): Promise<TranscriptResult> {
+  const key = `${source.asset.id}|${source.sourceStartMs}|${source.sourceEndMs}|${language ?? ''}`
+  let running = inFlight.get(deps)
+  if (!running) {
+    running = new Map()
+    inFlight.set(deps, running)
+  }
+  const pending = running.get(key)
+  if (pending) return pending
+  const started = transcribeSource(source, language, deps).finally(() => running.delete(key))
+  running.set(key, started)
+  return started
+}
+
 export async function ensureTranscriptForBridge(
   engine: EditorEngine,
   payload: EnsureTranscriptPayload,
@@ -125,29 +149,27 @@ export async function ensureTranscriptForBridge(
 ): Promise<EnsureTranscriptResult> {
   const source = pickTranscriptionSource(engine, payload)
   const sourceInfo = sourceResult(source)
-  const existing = overlappingCaptions(engine, source)
+  const existingTranscript = (): EnsureTranscriptResult | null =>
+    !payload.replace && overlappingCaptions(engine, source).length > 0
+      ? {
+          applied: false,
+          reason: 'Transcript captions already overlap the target clip.',
+          source: sourceInfo,
+          transcript: getProjectTranscript(engine.project, { includeWords: true }),
+        }
+      : null
 
-  if (!payload.replace && existing.length > 0) {
-    return {
-      applied: false,
-      reason: 'Transcript captions already overlap the target clip.',
-      source: sourceInfo,
-      transcript: getProjectTranscript(engine.project, { includeWords: true }),
-    }
-  }
+  const before = existingTranscript()
+  if (before) return before
 
   assertBridgeTranscriptionSupported(source)
   if (!deps.isLocalTranscriptionSupported()) {
     throw new Error('Local Whisper transcription is not supported in this browser. Use a WebGPU-capable browser with enough memory.')
   }
 
-  const wav = await extractSourceAudio(source, deps)
-  if (!wav) {
-    throw new Error(`"${source.asset.name ?? source.asset.id}" has no audio track.`)
-  }
-
-  const options = payload.language ? { language: payload.language } : undefined
-  const result = await deps.transcribeOnDevice(wav, options)
+  const result = await sharedTranscription(source, payload.language, deps)
+  const meanwhile = existingTranscript()
+  if (meanwhile) return meanwhile
   const command = buildApplyCaptionsCommand(result, {
     replace: false,
     timeOffsetMs: source.timelineStartMs,

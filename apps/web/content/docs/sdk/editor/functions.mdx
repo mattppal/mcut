@@ -376,7 +376,7 @@ function planSilenceCuts(
 ): SilenceCutPlan
 ```
 
-Cuts the silences between transcript words out of one clip playing at 1x, applying splits and ripple deletes last to first, and returns the commands and resulting project.
+Cuts the silences between transcript words out of one clip with source audio, playing forward at 1x, applying splits and ripple deletes last to first, and returns the commands and resulting project. A multicam is cut on its audio source before volume, fades, and mute. A time remap or reverse playback is rejected. A multicam with no audio source fails until `setMulticamAudio`.
 
 ### planCenterPerson
 

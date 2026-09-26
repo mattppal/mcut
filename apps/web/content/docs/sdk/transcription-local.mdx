@@ -184,12 +184,12 @@ The sample rate Whisper models expect, 16000 Hz.
 
 ```ts
 const WHISPER_MODELS = {
-  base: 'onnx-community/whisper-base',
-  'tiny.en': 'onnx-community/whisper-tiny.en',
+  base: 'onnx-community/whisper-base_timestamped',
+  'tiny.en': 'onnx-community/whisper-tiny.en_timestamped',
 } as const
 ```
 
-Built-in model ids, ONNX community builds of Whisper base and Whisper tiny English.
+Built-in model ids, ONNX community builds of Whisper base and Whisper tiny English with the cross-attention outputs that word-level timestamps need. A custom `model` needs a `_timestamped` export too, because the worker asks for word timestamps.
 
 ## Functions
 
@@ -293,4 +293,4 @@ function createLocalWhisperProvider(
 ): TranscriptionProvider
 ```
 
-Returns a `TranscriptionProvider` that decodes audio to 16 kHz mono and transcribes it in a dedicated Whisper worker that is reused across calls.
+Returns a `TranscriptionProvider` that decodes audio to 16 kHz mono and transcribes it in a dedicated Whisper worker that is reused across calls. The result carries word timings in `words`, merged across 30 second windows, and `segments` grouped from those words at sentence ends and pauses.

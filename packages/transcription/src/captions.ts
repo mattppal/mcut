@@ -4,6 +4,8 @@ import {
   MIN_ELEMENT_DURATION_MS,
   elementIdSchema,
   getElementLocation,
+  isMediaClip,
+  resolveElementAudioSource,
   type CommandOfType,
   type CaptionStyle,
   type CaptionWord,
@@ -106,7 +108,7 @@ export function toCaptionElements(result: TranscriptResult, options: ToCaptionEl
         startMs: mapSourceTimeToCaptionTime(word.startMs, sourceStartMs, sourceEndMs, timeOffsetMs),
         endMs: mapSourceTimeToCaptionTime(word.endMs, sourceStartMs, sourceEndMs, timeOffsetMs),
       }))
-      .filter((word) => word.endMs > word.startMs)
+      .filter((word) => word.endMs >= word.startMs)
     groups = groupWords(words, options)
   } else if (result.segments.length > 0) {
     groups = result.segments
@@ -178,8 +180,9 @@ export const captionsCommandOptionsSchema = z.object({
   elementId: elementIdSchema
     .optional()
     .describe(
-      'Scope the transcript to one video/audio element: caption only the source span the clip ' +
-        'plays, positioned at its timeline location. Without it the transcript starts at timeline 0.',
+      'Scope the transcript to one clip with source audio, including a multicam audio source. ' +
+        'Caption only the source span that clip plays, positioned at its timeline location. ' +
+        'Without it the transcript starts at timeline 0.',
     ),
   styleId: z.string().optional().describe('A preset id from CAPTION_STYLE_PRESETS (classic, karaoke, spotlight, ...).'),
   maxChars: z.number().int().positive().optional().describe('Soft maximum characters per caption. Default 36.'),
@@ -188,18 +191,6 @@ export const captionsCommandOptionsSchema = z.object({
 })
 
 export type CaptionsCommandOptions = z.infer<typeof captionsCommandOptionsSchema>
-
-function sourceWindowForClip(element: { startMs: number; trimStartMs: number; durationMs: number }): {
-  timeOffsetMs: number
-  sourceStartMs: number
-  sourceEndMs: number
-} {
-  return {
-    timeOffsetMs: element.startMs,
-    sourceStartMs: element.trimStartMs,
-    sourceEndMs: element.trimStartMs + element.durationMs,
-  }
-}
 
 export function buildCaptionsCommand(project: Project, transcript: TranscriptResult, options: CaptionsCommandOptions = {}): CommandOfType<'applyCaptions'> {
   let style
@@ -216,14 +207,27 @@ export function buildCaptionsCommand(project: Project, transcript: TranscriptRes
   if (options.elementId) {
     const location = getElementLocation(project, options.elementId)
     if (!location) throw new Error(`no element "${options.elementId}" in project`)
-    const element = location.element
-    if (element.type !== 'video' && element.type !== 'audio') {
-      throw new Error(`captions scope to video/audio elements, not "${element.type}"`)
+    const source = resolveElementAudioSource(project, options.elementId)
+    if (!source) {
+      if (location.element.type === 'multicam') {
+        throw new Error(`element "${options.elementId}" has no audio source; set one with setMulticamAudio`)
+      }
+      if (!isMediaClip(location.element)) {
+        throw new Error(`captions scope to a clip with source audio, not "${location.element.type}"`)
+      }
+      throw new Error(`element "${options.elementId}" has no audio asset`)
     }
-    if (element.timeMap) {
+    if (source.timeMap) {
       throw new Error(`element "${options.elementId}" has a time remap; transcript times will not line up`)
     }
-    scope = sourceWindowForClip(element)
+    if (source.reversed) {
+      throw new Error(`element "${options.elementId}" is reversed; captions require forward playback`)
+    }
+    scope = {
+      timeOffsetMs: source.timelineStartMs,
+      sourceStartMs: source.sourceStartMs,
+      sourceEndMs: source.sourceEndMs,
+    }
   }
 
   return buildApplyCaptionsCommand(transcript, {
