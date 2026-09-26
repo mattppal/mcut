@@ -1,5 +1,16 @@
 # @mcut/react
 
+## 0.1.0-alpha.34
+
+### Minor Changes
+
+- [#214](https://github.com/mattppal/mcut/pull/214) [`2c9dd9c`](https://github.com/mattppal/mcut/commit/2c9dd9ccafa04d84f1f640c3f55127f74d16aed9) Thanks [@mattppal](https://github.com/mattppal)! - Preview plays audio from the same timed decode and segment mixer as export, on one `AudioContext`, so preview and export are heard at the same source time for every container. `PlayerCanvas` advances playback by that audio clock. A clip at a constant speed plays from one continuous decode and one time stretcher, so stretched and reversed clips have no seams, and a clip played from its start matches export's decoded and stretched samples. A play that starts inside a clip can sit from export by the container's timestamp rounding, about a millisecond in WebM. A clip on a speed curve plays in crossfaded half-second windows. A playback rate change crossfades into the new rate instead of cutting to silence. While the audio output starts or its context resumes, the playhead waits at the play position only when a clip is due, and a silent stretch plays on the wall clock. A pause keeps the audio context running and fades the sound out at a stop 50 ms ahead, and a play from pause starts where that stop landed, so nothing is skipped or heard twice. `PreviewAudio` is exported as a type. Breaking changes: `PreviewMediaPool` now shows picture only and its sound lives on `pool.audio`, a `PreviewAudio`. `setAudioSources` and `getAudioSources` moved to `pool.audio`. `getActiveMediaItems` takes no `audioSources` and returns only video feeds, `ActiveMediaItem` drops `kind`, `volume`, and `audioSrc`, and `PreviewSyncOptions` drops `masterVolume` and `muted`.
+
+### Patch Changes
+
+- Updated dependencies [[`2c9dd9c`](https://github.com/mattppal/mcut/commit/2c9dd9ccafa04d84f1f640c3f55127f74d16aed9)]:
+  - @mcut/media@0.1.0-alpha.33
+
 ## 0.1.0-alpha.33
 
 ### Patch Changes
