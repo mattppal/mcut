@@ -62,7 +62,7 @@ export function decoderLeadStart(startS: number, leadFrames: number, sampleRate:
   return Math.max(0, startS - leadFrames / sampleRate)
 }
 
-async function leadStart(sink: AudioBufferSink, startS: number, spanS: number, leadFrames: number, signal?: AbortSignal): Promise<number> {
+async function leadStart(sink: Pick<AudioBufferSink, 'buffers'>, startS: number, spanS: number, leadFrames: number, signal?: AbortSignal): Promise<number> {
   if (leadFrames <= 0 || startS <= 0) return startS
   let sampleRate = 0
   for await (const { buffer } of sink.buffers(startS, startS + spanS)) {
@@ -74,7 +74,7 @@ async function leadStart(sink: AudioBufferSink, startS: number, spanS: number, l
 }
 
 export async function decodeCompositeRange(
-  sink: AudioBufferSink,
+  sink: Pick<AudioBufferSink, 'buffers'>,
   startS: number,
   spanS: number,
   keep: CompositeChannels,
