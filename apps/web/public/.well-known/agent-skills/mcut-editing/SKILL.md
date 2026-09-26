@@ -105,8 +105,8 @@ each with a split at both ends and a ripple delete on the clip only. Do not cut
 the caption track the same way, because a ripple delete keeps the gaps between
 captions and leaves every later word late. Rebuild captions with one
 `apply_captions` call per remaining clip. Pass the full, unchanged transcript
-each time, never a slice. Pass `replace` true on the first call and false after
-it, because the first call clears the caption track. When another clip shares
+each time, never a slice. Pass `replace` true until a call reports OK and false
+after it, because that call clears the caption track. When another clip shares
 that caption track, keep its full transcript too and rebuild it the same way.
 Pass a lower `minMatchWords` only when a short restart was missed, and check
 each extra candidate, since lower values match spoken lists.
