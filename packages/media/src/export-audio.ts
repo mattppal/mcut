@@ -1,4 +1,3 @@
-import type { AudioBufferSink } from 'mediabunny'
 import {
   getEffectiveVolume,
   hasFades,
@@ -10,22 +9,11 @@ import {
   type Project,
   type TimeMap,
 } from '@mcut/timeline'
-import { inputFor } from './probe'
-import { constantSpeedOf, stretchStereo, type ConstantSpeed } from './time-stretch'
+import { decodeCompositeRange, scheduleComposite, scheduleReversedSegment, scheduleStretchedSegment, type AudibleSegment } from './export-audio-composite'
 import { AUDIO_SAMPLE_RATE, type MixedAudioData } from './export-types'
+import { inputFor } from './probe'
+import { constantSpeedOf } from './time-stretch'
 import { valueAt } from './value-at'
-
-interface AudibleSegment {
-  src: string
-  startMs: number
-  durationMs: number
-  trimStartMs: number
-  sourceSpanMs: number
-  timeMap?: TimeMap
-  reversed?: boolean
-  volume: number
-  volumeCurve?: Float32Array
-}
 
 interface RemapPlan {
   grid: Float64Array
@@ -84,6 +72,7 @@ function collectAudibleSegments(project: Project, audioSources?: ReadonlyMap<Ele
       const source = resolveElementAudioSource(project, element.id)
       if (!source) continue
       segments.push({
+        elementId: element.id,
         src: audioSources?.get(element.id) ?? source.asset.src,
         startMs: source.timelineStartMs,
         durationMs: source.timelineDurationMs,
@@ -158,8 +147,8 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
       const plan = segment.timeMap ? buildRemapPlan(segment.timeMap, segment.durationMs) : null
       if (!plan) {
         const composite = await decodeCompositeRange(sink, trimS, segment.sourceSpanMs / 1000, 'all', signal)
-        if (composite) {
-          scheduleComposite(offline, gain, segment, composite.channels, composite.sampleRate)
+        if (composite.status === 'ready') {
+          scheduleComposite(offline, gain, segment, composite.audio.channels, composite.audio.sampleRate)
           continue
         }
       }
@@ -195,123 +184,4 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
   }
 
   return offline.startRendering()
-}
-
-const MAX_STRETCH_SOURCE_FRAMES = 32_000_000
-
-interface CompositeAudio {
-  channels: Float32Array[]
-  sampleRate: number
-}
-
-interface StereoComposite {
-  left: Float32Array
-  right: Float32Array
-  sampleRate: number
-}
-
-function stereoOf(composite: CompositeAudio): StereoComposite {
-  const [left = new Float32Array(0), second] = composite.channels
-  return { left, right: second ?? left.slice(), sampleRate: composite.sampleRate }
-}
-
-type CompositeChannels = 'all' | 'stereo'
-
-async function decodeCompositeRange(
-  sink: AudioBufferSink,
-  startS: number,
-  spanS: number,
-  keep: CompositeChannels,
-  signal?: AbortSignal,
-): Promise<CompositeAudio | null> {
-  let composite: CompositeAudio | null = null
-  for await (const { buffer, timestamp } of sink.buffers(startS, startS + spanS)) {
-    signal?.throwIfAborted()
-    if (!composite) {
-      const sampleRate = buffer.sampleRate
-      const frames = Math.ceil(spanS * sampleRate)
-      const sourceChannels = Math.max(1, buffer.numberOfChannels)
-      const channelCount = keep === 'all' ? sourceChannels : Math.min(2, sourceChannels)
-      const frameBudget = keep === 'all' ? (MAX_STRETCH_SOURCE_FRAMES * 2) / channelCount : MAX_STRETCH_SOURCE_FRAMES
-      if (frames > frameBudget) return null
-      composite = {
-        channels: Array.from({ length: channelCount }, () => new Float32Array(frames)),
-        sampleRate,
-      }
-    }
-    const origin = Math.round((timestamp - startS) * composite.sampleRate)
-    const skip = Math.max(0, -origin)
-    const offset = Math.max(0, origin)
-    const frames = composite.channels[0]?.length ?? 0
-    if (offset >= frames || skip >= buffer.length) continue
-    const count = Math.min(buffer.length - skip, frames - offset)
-    for (const [channel, target] of composite.channels.entries()) {
-      if (channel >= buffer.numberOfChannels) break
-      target.set(buffer.getChannelData(channel).subarray(skip, skip + count), offset)
-    }
-  }
-  return composite
-}
-
-function scheduleComposite(offline: OfflineAudioContext, gain: GainNode, segment: AudibleSegment, channels: readonly Float32Array[], sampleRate: number): void {
-  const out = offline.createBuffer(channels.length, channels[0]?.length ?? 0, sampleRate)
-  for (const [channel, data] of channels.entries()) out.getChannelData(channel).set(data)
-  const node = offline.createBufferSource()
-  node.buffer = out
-  node.connect(gain)
-  node.start(segment.startMs / 1000, 0, Math.min(out.duration, segment.durationMs / 1000))
-}
-
-async function scheduleStretchedSegment(
-  offline: OfflineAudioContext,
-  gain: GainNode,
-  sink: AudioBufferSink,
-  segment: AudibleSegment,
-  constant: ConstantSpeed,
-  signal?: AbortSignal,
-): Promise<boolean> {
-  try {
-    const startS = (segment.trimStartMs + constant.sourceStartOffsetMs) / 1000
-    const composite = await decodeCompositeRange(sink, startS, constant.sourceSpanMs / 1000, 'stereo', signal)
-    if (!composite) return false
-
-    const stretched = await stretchStereo(stereoOf(composite), constant.rate)
-    if (stretched.left.length === 0) return false
-
-    scheduleComposite(offline, gain, segment, [stretched.left, stretched.right], composite.sampleRate)
-    return true
-  } catch (error) {
-    if (signal?.aborted) throw error
-    return false
-  }
-}
-
-async function scheduleReversedSegment(
-  offline: OfflineAudioContext,
-  gain: GainNode,
-  sink: AudioBufferSink,
-  segment: AudibleSegment,
-  signal?: AbortSignal,
-): Promise<boolean> {
-  try {
-    const decoded = await decodeCompositeRange(sink, segment.trimStartMs / 1000, segment.sourceSpanMs / 1000, 'stereo', signal)
-    if (!decoded) return false
-    const composite = stereoOf(decoded)
-    composite.left.reverse()
-    composite.right.reverse()
-
-    const rate = segment.sourceSpanMs / Math.max(1, segment.durationMs)
-    let { left, right } = composite
-    if (Math.abs(rate - 1) > 1e-6) {
-      const stretched = await stretchStereo(composite, rate)
-      if (stretched.left.length === 0) return false
-      left = stretched.left
-      right = stretched.right
-    }
-    scheduleComposite(offline, gain, segment, [left, right], composite.sampleRate)
-    return true
-  } catch (error) {
-    if (signal?.aborted) throw error
-    return false
-  }
 }
