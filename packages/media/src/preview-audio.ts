@@ -1,21 +1,15 @@
 import type { AudioBufferSink, Input } from 'mediabunny'
 import type { ElementId, PlaybackState, Project } from '@mcut/timeline'
-import { collectAudibleSegments, scheduleSegmentSources } from './export-audio'
+import { collectAudibleSegments } from './export-audio'
 import type { AudibleSegment } from './export-audio-composite'
 import { AUDIO_SAMPLE_RATE } from './export-types'
 import { inputFor } from './probe'
-import { contextAt, heardContextS, planWindow, timelineAt, type AudioAnchor, type PlannedWindow, type WindowGate } from './preview-audio-plan'
+import { contextAt, heardContextS, timelineAt, type AudioAnchor } from './preview-audio-plan'
+import { createVoice, dropVoice, LOOKAHEAD_S, pumpVoice, retuneVoice, START_LEAD_S, type Voice } from './preview-audio-voice'
 import { sourceAudioSink } from './source-timing'
 
-const START_LEAD_S = 0.04
-const WINDOW_S = 0.5
-const LOOKAHEAD_S = 1
-const RETRY_S = 1
 const MAX_AUDIBLE_RATE = 4
 const REANCHOR_TOLERANCE_MS = 1
-const VOLUME_SMOOTHING_S = 0.01
-const CURVE_STEP_S = 0.05
-const MAX_CURVE_STEPS = 2000
 
 interface OpenSource {
   input: Input
@@ -26,23 +20,6 @@ interface KeyedSegment {
   key: string
   volumeKey: string
   segment: AudibleSegment
-}
-
-interface ScheduledGate {
-  node: GainNode
-  endS: number
-}
-
-interface Voice {
-  segment: AudibleSegment
-  volumeKey: string
-  gain: GainNode
-  nextS: number
-  planned: number
-  busy: boolean
-  retryAtS: number
-  gates: ScheduledGate[]
-  controller: AbortController
 }
 
 interface Epoch {
@@ -66,46 +43,6 @@ function keyed(segment: AudibleSegment): KeyedSegment {
     volumeKey: segment.volumeCurve ? Array.from(segment.volumeCurve).join(',') : String(segment.volume),
     segment,
   }
-}
-
-function curveValue(curve: Float32Array, fraction: number): number {
-  const position = Math.min(1, Math.max(0, fraction)) * (curve.length - 1)
-  const index = Math.floor(position)
-  const low = curve[index] ?? 0
-  const high = curve[Math.min(curve.length - 1, index + 1)] ?? low
-  return low + (high - low) * (position - index)
-}
-
-function programVolume(param: AudioParam, anchor: AudioAnchor, segment: AudibleSegment, nowS: number): void {
-  param.cancelAndHoldAtTime(nowS)
-  const curve = segment.volumeCurve
-  if (!curve) {
-    param.setTargetAtTime(segment.volume, nowS, VOLUME_SMOOTHING_S)
-    return
-  }
-  const fromS = Math.max(nowS + VOLUME_SMOOTHING_S, contextAt(anchor, segment.startMs))
-  const toS = contextAt(anchor, segment.startMs + segment.durationMs)
-  if (toS <= fromS) return
-  const steps = Math.min(MAX_CURVE_STEPS, Math.max(2, Math.ceil((toS - fromS) / CURVE_STEP_S) + 1))
-  const values = new Float32Array(steps)
-  for (let step = 0; step < steps; step++) {
-    const localMs = timelineAt(anchor, fromS + ((toS - fromS) * step) / (steps - 1)) - segment.startMs
-    values[step] = curveValue(curve, localMs / segment.durationMs)
-  }
-  param.setValueCurveAtTime(values, fromS, toS - fromS)
-}
-
-function programGate(param: AudioParam, gate: WindowGate): void {
-  param.value = 0
-  if (gate.fadeInS > 0) {
-    param.setValueAtTime(0, gate.openS)
-    param.linearRampToValueAtTime(1, gate.openS + gate.fadeInS)
-  } else {
-    param.setValueAtTime(1, gate.openS)
-  }
-  if (gate.closeS === null) return
-  param.setValueAtTime(1, gate.closeS)
-  param.linearRampToValueAtTime(0, gate.closeS + gate.fadeOutS)
 }
 
 async function openSource(src: string): Promise<OpenSource | null> {
@@ -172,7 +109,8 @@ export class PreviewAudio {
     const epoch = this.ensureEpoch(context, master, playback, segments)
     if (!epoch.primed) return
     this.reconcile(context, epoch, segments)
-    for (const voice of epoch.voices.values()) this.pump(context, epoch, voice)
+    const sinkOf = (src: string) => this.sourceOf(src).then((opened) => opened?.sink ?? null)
+    for (const voice of epoch.voices.values()) pumpVoice(context, epoch.anchor, voice, sinkOf)
   }
 
   dispose(): void {
@@ -248,71 +186,19 @@ export class PreviewAudio {
       wanted.add(key)
       const voice = epoch.voices.get(key)
       if (!voice) {
-        epoch.voices.set(key, this.createVoice(context, epoch, segment, volumeKey, Math.max(startS, nowS + START_LEAD_S, epoch.anchor.contextS)))
+        epoch.voices.set(
+          key,
+          createVoice(context, epoch.anchor, epoch.output, segment, volumeKey, Math.max(startS, nowS + START_LEAD_S, epoch.anchor.contextS)),
+        )
         continue
       }
-      if (voice.volumeKey === volumeKey) continue
-      voice.segment = segment
-      voice.volumeKey = volumeKey
-      programVolume(voice.gain.gain, epoch.anchor, segment, nowS)
+      if (voice.volumeKey !== volumeKey) retuneVoice(voice, epoch.anchor, segment, volumeKey, nowS)
     }
     for (const [key, voice] of epoch.voices) {
       if (wanted.has(key)) continue
-      this.dropVoice(voice)
+      dropVoice(voice)
       epoch.voices.delete(key)
     }
-  }
-
-  private createVoice(context: AudioContext, epoch: Epoch, segment: AudibleSegment, volumeKey: string, nextS: number): Voice {
-    const gain = context.createGain()
-    gain.gain.value = segment.volumeCurve ? 0 : segment.volume
-    programVolume(gain.gain, epoch.anchor, segment, context.currentTime)
-    gain.connect(epoch.output)
-    return { segment, volumeKey, gain, nextS, planned: 0, busy: false, retryAtS: 0, gates: [], controller: new AbortController() }
-  }
-
-  private dropVoice(voice: Voice): void {
-    voice.controller.abort()
-    voice.gain.disconnect()
-    for (const gate of voice.gates) gate.node.disconnect()
-    voice.gates = []
-  }
-
-  private pump(context: AudioContext, epoch: Epoch, voice: Voice): void {
-    const nowS = context.currentTime
-    voice.gates = voice.gates.filter((gate) => {
-      if (gate.endS >= nowS) return true
-      gate.node.disconnect()
-      return false
-    })
-    if (voice.busy || nowS < voice.retryAtS || voice.nextS > nowS + LOOKAHEAD_S) return
-    const endS = contextAt(epoch.anchor, voice.segment.startMs + voice.segment.durationMs)
-    if (voice.nextS >= endS - 1e-6) return
-    const fromS = voice.nextS
-    const toS = Math.min(fromS + WINDOW_S, endS)
-    voice.nextS = toS
-    const planned = planWindow(voice.segment, epoch.anchor, fromS, toS, voice.planned > 0)
-    if (!planned) return
-    voice.planned++
-    voice.busy = true
-    this.render(context, voice, planned)
-      .catch(() => {
-        if (!voice.controller.signal.aborted) voice.retryAtS = context.currentTime + RETRY_S
-      })
-      .finally(() => {
-        voice.busy = false
-      })
-  }
-
-  private async render(context: AudioContext, voice: Voice, planned: PlannedWindow): Promise<void> {
-    const source = await this.sourceOf(planned.segment.src)
-    const signal = voice.controller.signal
-    if (!source || signal.aborted) return
-    const gate = context.createGain()
-    programGate(gate.gain, planned.gate)
-    gate.connect(voice.gain)
-    voice.gates.push({ node: gate, endS: planned.endS })
-    await scheduleSegmentSources(context, gate, source.sink, planned.segment, signal)
   }
 
   private sourceOf(src: string): Promise<OpenSource | null> {
@@ -329,7 +215,7 @@ export class PreviewAudio {
   private flush(): void {
     const epoch = this.epoch
     if (!epoch) return
-    for (const voice of epoch.voices.values()) this.dropVoice(voice)
+    for (const voice of epoch.voices.values()) dropVoice(voice)
     epoch.output.disconnect()
     this.epoch = null
   }

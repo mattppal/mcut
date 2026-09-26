@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import type { AudioBufferSink, WrappedAudioBuffer } from 'mediabunny'
 import { decodeCompositeRange, type AudibleSegment } from './export-audio-composite'
-import { contextAt, planWindow, type AudioAnchor, type WindowGate } from './preview-audio-plan'
-import { constantSpeedOf, stretchStereo } from './time-stretch'
+import { stretchStereo } from './time-stretch'
+import { VoiceFeed } from './preview-audio-feed'
+import { planFeed, sourceMapOf, type AudioAnchor } from './preview-audio-plan'
 
 const SAMPLE_RATE = 48_000
 const PACKET_FRAMES = 960
@@ -53,35 +54,20 @@ function fakeSink(packets: FakePacket[]): Pick<AudioBufferSink, 'buffers'> {
   }
 }
 
-function gateAt(gate: WindowGate, timeS: number): number {
-  if (timeS < gate.openS) return 0
-  const opened = gate.fadeInS > 0 ? Math.min(1, (timeS - gate.openS) / gate.fadeInS) : 1
-  if (gate.closeS === null || timeS < gate.closeS) return opened
-  return gate.fadeOutS > 0 ? opened * Math.max(0, 1 - (timeS - gate.closeS) / gate.fadeOutS) : 0
-}
-
 async function previewOf(sink: Pick<AudioBufferSink, 'buffers'>, segment: AudibleSegment, anchor: AudioAnchor): Promise<Float32Array> {
-  const startS = contextAt(anchor, Math.max(segment.startMs, anchor.timelineMs))
-  const endS = contextAt(anchor, segment.startMs + segment.durationMs)
-  const out = new Float32Array(Math.round((endS - startS) * SAMPLE_RATE))
-  for (let fromS = startS, index = 0; fromS < endS - 1e-9; fromS += 0.5, index++) {
-    const planned = planWindow(segment, anchor, fromS, Math.min(fromS + 0.5, endS), index > 0)
-    if (!planned) continue
-    const window = planned.segment
-    const constant = constantSpeedOf(window.timeMap)
-    const decodeFromS = (window.trimStartMs + (constant?.sourceStartOffsetMs ?? 0)) / 1000
-    const decoded = await decodeCompositeRange(sink, decodeFromS, (constant?.sourceSpanMs ?? window.sourceSpanMs) / 1000, 'stereo')
-    if (decoded.status !== 'ready') throw new Error(`window ${index} decoded ${decoded.status}`)
-    const [left = new Float32Array(0), right = left] = decoded.audio.channels
-    const heard = constant && Math.abs(constant.rate - 1) > 1e-6 ? (await stretchStereo({ left, right, sampleRate: SAMPLE_RATE }, constant.rate)).left : left
-    const originFrame = Math.round((window.startMs / 1000 - startS) * SAMPLE_RATE)
-    const frames = Math.min(heard.length, Math.round((window.durationMs / 1000) * SAMPLE_RATE))
-    for (let frame = 0; frame < frames; frame++) {
-      const at = originFrame + frame
-      if (at < 0 || at >= out.length) continue
-      out[at] = (out[at] ?? 0) + (heard[frame] ?? 0) * gateAt(planned.gate, startS + at / SAMPLE_RATE)
-    }
+  const map = sourceMapOf(segment)
+  if (map.kind !== 'linear') throw new Error('a speed curve plays through windows, not a feed')
+  const planned = planFeed(segment, map, anchor, anchor.contextS)
+  if (!planned) throw new Error('the clip is already over')
+  const feed = await VoiceFeed.open(sink, planned.plan, new AbortController().signal)
+  if (!feed) throw new Error('the source decoded nothing')
+  const out = new Float32Array(Math.round((planned.endS - planned.startS) * SAMPLE_RATE))
+  for (let untilS = 0.5; ; untilS += 0.5) {
+    const chunk = await feed.take(Math.min(untilS, planned.endS - planned.startS), new AbortController().signal)
+    out.set(chunk.channels[0] ?? new Float32Array(0), Math.round(chunk.offsetS * SAMPLE_RATE))
+    if (untilS >= planned.endS - planned.startS) break
   }
+  feed.close()
   return out
 }
 
@@ -125,6 +111,33 @@ describe('preview audio window seams', () => {
       const segment = { ...clip, durationMs: 2000 * rate, sourceSpanMs: 2000 * rate }
       const heard = await previewOf(sink, segment, { timelineMs: 300 * rate, contextS: 0, rate })
       expect(envelopeFloor(heard, 0.1, heard.length / SAMPLE_RATE - 0.1)).toBeGreaterThan(0.95)
+    }, 20_000)
+  }
+
+  test('a reversed 440 Hz tone played at 2x keeps a steady envelope across window seams', async () => {
+    const sink = fakeSink(packetsOf(tone(10, 440), () => 0))
+    const heard = await previewOf(sink, { ...clip, reversed: true }, { timelineMs: 600, contextS: 0, rate: 2 })
+    expect(envelopeFloor(heard, 0.1, heard.length / SAMPLE_RATE - 0.1)).toBeGreaterThan(0.95)
+  }, 20_000)
+
+  for (const speed of [0.5, 1.5, 2]) {
+    test(`a clip at speed ${speed} played from its start is the samples export stretches`, async () => {
+      const sink = fakeSink(packetsOf(noise(8), () => 0))
+      const spanMs = 3000 * speed
+      const segment: AudibleSegment = {
+        ...clip,
+        durationMs: 3000,
+        sourceSpanMs: spanMs,
+        timeMap: [
+          { timeMs: 0, value: 0 },
+          { timeMs: 3000, value: spanMs },
+        ],
+      }
+      const exported = await decodeCompositeRange(sink, 0, spanMs / 1000, 'stereo')
+      if (exported.status !== 'ready') throw new Error(`export decoded ${exported.status}`)
+      const [left = new Float32Array(0), right = left] = exported.audio.channels
+      const truth = await stretchStereo({ left, right, sampleRate: SAMPLE_RATE }, speed)
+      expect(await previewOf(sink, segment, { timelineMs: 0, contextS: 0, rate: 1 })).toEqual(truth.left)
     }, 20_000)
   }
 

@@ -1,5 +1,6 @@
 import { interpolateTrack, type TimeMap } from '@mcut/timeline'
 import type { AudibleSegment } from './export-audio-composite'
+import type { FeedPlan } from './preview-audio-feed'
 import { constantSpeedOf } from './time-stretch'
 
 export interface AudioAnchor {
@@ -42,71 +43,79 @@ export interface PlannedWindow {
   endS: number
 }
 
-type SourceMap = { kind: 'linear'; offsetMs: number; speed: number } | { kind: 'curve'; timeMap: TimeMap }
+export interface PlannedFeed {
+  plan: FeedPlan
+  startS: number
+  endS: number
+}
 
-function sourceMapOf(segment: AudibleSegment): SourceMap {
+export interface LinearMap {
+  kind: 'linear'
+  offsetMs: number
+  speed: number
+}
+
+type SourceMap = LinearMap | { kind: 'curve'; timeMap: TimeMap }
+
+export function sourceMapOf(segment: AudibleSegment): SourceMap {
   if (segment.reversed) return { kind: 'linear', offsetMs: 0, speed: segment.sourceSpanMs / Math.max(1, segment.durationMs) }
   if (!segment.timeMap) return { kind: 'linear', offsetMs: 0, speed: 1 }
   const constant = constantSpeedOf(segment.timeMap)
   return constant ? { kind: 'linear', offsetMs: constant.sourceStartOffsetMs, speed: constant.rate } : { kind: 'curve', timeMap: segment.timeMap }
 }
 
-type SourceRange = Pick<AudibleSegment, 'trimStartMs' | 'sourceSpanMs' | 'timeMap' | 'reversed'>
-
-function sourceRange(segment: AudibleSegment, map: SourceMap, fromMs: number, toMs: number, rate: number, stretched: boolean): SourceRange {
-  switch (map.kind) {
-    case 'linear': {
-      const sourceSpanMs = map.speed * (toMs - fromMs)
-      if (segment.reversed) return { trimStartMs: segment.trimStartMs + segment.sourceSpanMs - map.speed * toMs, sourceSpanMs, reversed: true }
-      const trimStartMs = segment.trimStartMs + map.offsetMs + map.speed * fromMs
-      if (!stretched) return { trimStartMs, sourceSpanMs }
-      return {
-        trimStartMs,
-        sourceSpanMs,
-        timeMap: [
-          { timeMs: 0, value: 0 },
-          { timeMs: (toMs - fromMs) / rate, value: sourceSpanMs },
-        ],
-      }
-    }
-    case 'curve': {
-      const origin = interpolateTrack(map.timeMap, fromMs)
-      const timeMap: TimeMap = []
-      for (let localMs = fromMs; localMs < toMs; localMs += REMAP_STEP_MS) {
-        timeMap.push({ timeMs: (localMs - fromMs) / rate, value: interpolateTrack(map.timeMap, localMs) - origin })
-      }
-      const sourceSpanMs = interpolateTrack(map.timeMap, toMs) - origin
-      timeMap.push({ timeMs: (toMs - fromMs) / rate, value: sourceSpanMs })
-      return { trimStartMs: segment.trimStartMs + origin, sourceSpanMs, timeMap }
-    }
-    default: {
-      const unhandled: never = map
-      throw new Error(`Unknown source map ${JSON.stringify(unhandled)}`)
-    }
+export function planFeed(segment: AudibleSegment, { speed, offsetMs }: LinearMap, anchor: AudioAnchor, fromS: number): PlannedFeed | null {
+  const headMs = Math.max(0, timelineAt(anchor, fromS) - segment.startMs)
+  if (segment.durationMs - headMs <= 1e-6) return null
+  const tempo = speed * anchor.rate
+  const prerollMs = Math.abs(tempo - 1) > 1e-6 ? Math.min(headMs, STRETCH_PREROLL_MS * anchor.rate) : 0
+  const sourceMs = segment.reversed ? segment.trimStartMs + segment.sourceSpanMs - speed * headMs : segment.trimStartMs + offsetMs + speed * headMs
+  return {
+    plan: {
+      reversed: segment.reversed === true,
+      sourceS: sourceMs / 1000,
+      spanS: (speed * (segment.durationMs - headMs)) / 1000,
+      prerollS: (speed * prerollMs) / 1000,
+      tempo,
+    },
+    startS: contextAt(anchor, segment.startMs + headMs),
+    endS: contextAt(anchor, segment.startMs + segment.durationMs),
   }
 }
 
-export function planWindow(segment: AudibleSegment, anchor: AudioAnchor, fromS: number, toS: number, crossfade: boolean): PlannedWindow | null {
+function curveRange(
+  segment: AudibleSegment,
+  curve: TimeMap,
+  fromMs: number,
+  toMs: number,
+  rate: number,
+): Pick<AudibleSegment, 'trimStartMs' | 'sourceSpanMs' | 'timeMap'> {
+  const origin = interpolateTrack(curve, fromMs)
+  const timeMap: TimeMap = []
+  for (let localMs = fromMs; localMs < toMs; localMs += REMAP_STEP_MS) {
+    timeMap.push({ timeMs: (localMs - fromMs) / rate, value: interpolateTrack(curve, localMs) - origin })
+  }
+  const sourceSpanMs = interpolateTrack(curve, toMs) - origin
+  timeMap.push({ timeMs: (toMs - fromMs) / rate, value: sourceSpanMs })
+  return { trimStartMs: segment.trimStartMs + origin, sourceSpanMs, timeMap }
+}
+
+export function planWindow(segment: AudibleSegment, curve: TimeMap, anchor: AudioAnchor, fromS: number, toS: number, crossfade: boolean): PlannedWindow | null {
   const rate = anchor.rate
   const headMs = Math.max(0, timelineAt(anchor, fromS) - segment.startMs)
   const tailMs = Math.min(segment.durationMs, timelineAt(anchor, toS) - segment.startMs)
   if (tailMs - headMs <= 1e-6) return null
-  const map = sourceMapOf(segment)
-  const stretched = map.kind === 'linear' && Math.abs(map.speed * rate - 1) > 1e-6
-  const prerollMs = stretched ? Math.min(headMs, STRETCH_PREROLL_MS * rate) : 0
   const overhangMs = tailMs < segment.durationMs ? Math.min(segment.durationMs - tailMs, CROSSFADE_MS * rate) : 0
-  const fromMs = headMs - prerollMs
   const toMs = tailMs + overhangMs
   const openS = contextAt(anchor, segment.startMs + headMs)
-  const startMs = openS * 1000 - prerollMs / rate
-  const durationMs = (toMs - fromMs) / rate
+  const durationMs = (toMs - headMs) / rate
   return {
     segment: {
       elementId: segment.elementId,
       src: segment.src,
-      startMs,
+      startMs: openS * 1000,
       durationMs,
-      ...sourceRange(segment, map, fromMs, toMs, rate, stretched),
+      ...curveRange(segment, curve, headMs, toMs, rate),
       volume: 1,
     },
     gate: {
@@ -115,6 +124,6 @@ export function planWindow(segment: AudibleSegment, anchor: AudioAnchor, fromS: 
       closeS: overhangMs > 0 ? openS + (tailMs - headMs) / rate / 1000 : null,
       fadeOutS: overhangMs / rate / 1000,
     },
-    endS: (startMs + durationMs) / 1000,
+    endS: openS + durationMs / 1000,
   }
 }
