@@ -343,7 +343,8 @@ export class PreviewAudio {
 
   private stop(context: AudioContext, sounding: Sounding, atMs: number): void {
     const stopS = context.currentTime + STOP_LEAD_S
-    this.paused = { stoppedMs: Math.max(atMs, heardTimelineMs(sounding.anchor, sounding.outgoing, stopS)), reportedMs: atMs, sounding }
+    const fadeMidMs = Math.round(heardTimelineMs(sounding.anchor, sounding.outgoing, stopS + STOP_FADE_S / 2))
+    this.paused = { stoppedMs: Math.max(atMs, fadeMidMs), reportedMs: atMs, sounding }
     const epochs = [this.epoch, this.outgoing?.epoch ?? null].flatMap((epoch) => (epoch ? [epoch] : []))
     for (const epoch of epochs) {
       epoch.output.gain.cancelAndHoldAtTime(stopS)
