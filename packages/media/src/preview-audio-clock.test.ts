@@ -184,6 +184,26 @@ describe('preview audio clock around the output start', () => {
     expect(audio.clockTimeMs(116)).toBe(1500)
   })
 
+  test('paused frames keep the fading sound until its stop, and the first frame of a play holds there', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, playing(1000))
+    const sounding = gains[1]
+    renderedS = 0.975
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    renderedS = 0.991
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    expect(sounding?.disconnected).toBe(false)
+    expect(audio.clockTimeMs(116)).toBe(1500)
+    renderedS = 1.1
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    expect(sounding?.disconnected).toBe(true)
+  })
+
   test('a seek during a pause starts the next play where the seek landed', async () => {
     const project = toneProject()
     renderedS = 0.5
