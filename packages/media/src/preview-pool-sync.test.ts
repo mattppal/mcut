@@ -71,6 +71,21 @@ test('a paused seek and its seeked event each move the frame version, and an idl
   expect(pool.frameVersion).toBe(afterSeek + 1)
 })
 
+test('a playing picture 20 ms behind the audio clock speeds up and one 20 ms ahead slows down', () => {
+  const asset: AssetRef = { id: 'a-cam', kind: 'video', src: 'blob:cam', nativePreview: true }
+  const pool = new PreviewMediaPool(() => asset)
+  const playing = { isPlaying: true, playbackRate: 1 }
+  pool.sync([{ assetId: asset.id, sourceTimeMs: 1000, rate: 1 }], playing)
+  const video = created.at(-1)
+  if (!video) throw new Error('no video element')
+  video.currentTime = 1.98
+  pool.sync([{ assetId: asset.id, sourceTimeMs: 2000, rate: 1 }], playing)
+  const behind = video.playbackRate
+  video.currentTime = 2.02
+  pool.sync([{ assetId: asset.id, sourceTimeMs: 2000, rate: 1 }], playing)
+  expect([behind > 1, video.playbackRate < 1]).toEqual([true, true])
+})
+
 test('a playing video element stays muted so its sound comes only from the preview audio graph', () => {
   const asset: AssetRef = { id: 'a-talk', kind: 'video', src: 'blob:talk', nativePreview: true }
   const pool = new PreviewMediaPool(() => asset)
