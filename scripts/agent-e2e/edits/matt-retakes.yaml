@@ -7,4 +7,7 @@ edits:
     transcript: matt-transcript.json
     ask: Find the retakes and remove them, keeping the good take each time. Cut them in the order find_retakes returns, then re-caption what remains so the captions stay in sync with the speech.
     checks: [duration shorter by at most 60s, retakes removed, captions in sync]
-    note: The runner applies the transcript with apply_captions first, as a transcription provider would. Whisper can't download on this VM.
+    note: The runner applies the transcript with apply_captions first, as a transcription provider would.
+  - id: 03-export
+    ask: Export the video.
+    checks: [export job done]
