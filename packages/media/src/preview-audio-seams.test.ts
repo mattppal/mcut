@@ -152,3 +152,23 @@ describe('preview audio window seams', () => {
     expect(worst).toBeLessThan(1e-4)
   })
 })
+
+describe('preview audio feed lifetime', () => {
+  test('an abort that lands while the first buffer decodes closes the source decode', async () => {
+    const controller = new AbortController()
+    let closed = false
+    const sink: Pick<AudioBufferSink, 'buffers'> = {
+      async *buffers() {
+        try {
+          controller.abort()
+          yield wrapped(new Float32Array(PACKET_FRAMES), 0)
+          yield wrapped(new Float32Array(PACKET_FRAMES), PACKET_FRAMES / SAMPLE_RATE)
+        } finally {
+          closed = true
+        }
+      },
+    }
+    await expect(VoiceFeed.open(sink, { reversed: false, sourceS: 0, spanS: 1, prerollS: 0, tempo: 1 }, controller.signal)).rejects.toThrow()
+    expect(closed).toBe(true)
+  })
+})
