@@ -7,6 +7,8 @@ import type { Canvas2D } from './types'
 
 const measure = (text: string, font: string) => text.length * (font.includes('700') ? 20 : 10)
 
+const asCtx = (fake: FakeContext2D): Canvas2D => fake as unknown as Canvas2D
+
 const style = {
   fontFamily: 'sans-serif',
   fontSize: 64,
@@ -77,11 +79,11 @@ describe('skipElementIds', () => {
   test('a skipped element paints nothing', () => {
     const project = projectWithText()
     const drawn = new FakeContext2D()
-    renderFrame(drawn as unknown as Canvas2D, project, 1000, {})
+    renderFrame(asCtx(drawn), project, 1000, {})
     expect(drawn.callsTo('fillText').length).toBeGreaterThan(0)
 
     const skipped = new FakeContext2D()
-    renderFrame(skipped as unknown as Canvas2D, project, 1000, {
+    renderFrame(asCtx(skipped), project, 1000, {
       skipElementIds: new Set(['e-t']),
     })
     expect(skipped.callsTo('fillText')).toHaveLength(0)
@@ -97,7 +99,7 @@ describe('runs render with per-segment fill', () => {
       patch: { runs: [{ start: 0, end: 2, style: { color: '#ff0000' } }] },
     })
     const ctx = new FakeContext2D()
-    renderFrame(ctx as unknown as Canvas2D, project, 1000, {})
+    renderFrame(asCtx(ctx), project, 1000, {})
     const fills = ctx.callsTo('fillText')
     expect(fills).toHaveLength(2)
     expect(fills[0]!.fillStyle).toBe('#ff0000')

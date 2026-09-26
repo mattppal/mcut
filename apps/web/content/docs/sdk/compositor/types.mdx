@@ -82,6 +82,17 @@ interface SizeHelpers {
 
 Optional callbacks that report an asset's pixel size and measure text, used to size elements.
 
+### SlotBox
+
+```ts
+interface SlotBox {
+  sourceKey: string
+  obb: OBB
+}
+```
+
+Where a multicam shows one slot, as the key of the slot's source and the oriented box of the part the renderer shows, in canvas pixels.
+
 ### ImageQuad
 
 ```ts
@@ -120,6 +131,7 @@ interface RenderBackend {
   readonly kind: 'canvas2d' | 'webgpu' | (string & {})
   readonly width: number
   readonly height: number
+  pixelGrid(): PixelGrid
   beginFrame(backgroundColor: string): void
   endFrame(): void
   acquireRaster(): Canvas2D
@@ -129,7 +141,19 @@ interface RenderBackend {
 }
 ```
 
-The interface a compositing backend implements, with frame begin and end, raster access, image quad drawing, and raster scopes.
+The interface a compositing backend implements, with its pixel grid, frame begin and end, raster access, image quad drawing, and raster scopes. `pixelGrid` answers for the moment it is called, so it carries a transform a transition has set on the raster.
+
+### PixelGrid
+
+```ts
+interface PixelGrid {
+  transform: { a: number; b: number; c: number; d: number; e: number; f: number }
+  width: number
+  height: number
+}
+```
+
+The pixels a backend's raster lands on, as the raster's current transform from project units to pixels and the raster's size in pixels. A multicam composes on this grid, so its slots land on the pixels a direct draw would hit.
 
 ### WebGPUBackendOptions
 
@@ -274,11 +298,13 @@ interface ElementRenderContext {
   project: Project
   track: Track
   timeMs: number
+  viewTimeMs: number
   source: FrameSource | undefined
+  acquireScratch: (width: number, height: number) => Canvas2D
 }
 ```
 
-What an element renderer receives, the 2D context, backend, project, track, time, and frame source.
+What an element renderer receives, the 2D context, backend, project, track, time, frame source, and a scratch surface. `viewTimeMs` is the time zoom views read. `acquireScratch` returns an off screen 2D context that is reused across frames. A renderer composes into it and draws it straight away, because the next renderer that asks gets the same surface. `acquireScratch` throws `ScratchContextError` where `OffscreenCanvas` is missing and no `createScratchContext` is given, and when `createScratchContext` returns `null`.
 
 ### ElementRenderer
 
@@ -314,4 +340,4 @@ interface RenderFrameOptions {
 }
 ```
 
-Options for rendering a frame, the frame source, background color, elements to skip, motion blur samples, the motion blur render scale, and a scratch context factory. `renderScale` renders motion blur samples at that fraction of the project resolution, for a preview drawn below full size. It defaults to 1.
+Options for rendering a frame, the frame source, background color, elements to skip, motion blur samples, the motion blur render scale, and a scratch context factory. `renderScale` renders motion blur samples at that fraction of the project resolution, for a preview drawn below full size. It defaults to 1. The renderer calls `createScratchContext` each time it needs a scratch surface, for a motion blur pass or a multicam composite. Without it the renderer keeps one `OffscreenCanvas` per purpose and reuses it across frames. No scratch surface is available where `OffscreenCanvas` is missing and no `createScratchContext` is given, or when `createScratchContext` returns `null`. Then motion blur is skipped, and a multicam throws `ScratchContextError`.

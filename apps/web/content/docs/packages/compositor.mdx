@@ -19,6 +19,31 @@ import { renderFrame } from "@mcut/compositor"
 renderFrame(ctx, project, 1000)
 ```
 
+## Render outside a browser
+
+A multicam composes its layout on a scratch 2D context before it draws. In a
+browser the renderer makes that context from `OffscreenCanvas`. Node and Bun
+have no `OffscreenCanvas`, so pass `createScratchContext` in the render options.
+Without it, rendering a multicam throws `ScratchContextError`.
+
+With [node-canvas](https://github.com/Automattic/node-canvas), make the scratch
+the same way you make the canvas you render to:
+
+```ts
+import { createCanvas } from "canvas"
+import { renderFrame, type Canvas2D } from "@mcut/compositor"
+
+const context2d = (width: number, height: number) =>
+  createCanvas(width, height).getContext("2d") as unknown as Canvas2D
+
+const ctx = context2d(project.width, project.height)
+renderFrame(ctx, project, 1000, { source, createScratchContext: context2d })
+```
+
+node-canvas types its context apart from the DOM context, so `context2d` casts
+it to `Canvas2D`. The frames `source` returns must be node-canvas images or
+canvases.
+
 Read next:
 
 - [Render and export](/docs/recipes/render-and-export)

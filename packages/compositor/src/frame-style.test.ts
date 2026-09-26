@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, createProject, type LayoutSlot, type Project } from '@mcut/timeline'
+import type { ImageQuad, LayerChrome, PixelGrid, RenderBackend } from './backend'
 import { getElementDisplaySize, getElementNaturalSize } from './geometry'
-import { renderFrame } from './render-frame'
-import { FakeContext2D } from './test-utils'
+import { renderFrame, renderFrameWith } from './render-frame'
+import { deviceRect, FakeContext2D, onCanvas } from './test-utils'
 import type { Canvas2D, FrameSource } from './types'
+import { COLOR_OP, planEffects } from './webgpu/effect-plan'
 
 class FakeSource implements FrameSource {
   getFrame(): CanvasImageSource | null {
@@ -49,6 +51,26 @@ function projectWithMulticam(size: { width: number; height: number }, slot: Part
       ...element,
     },
   })
+}
+
+function screenWithCamera(): Project {
+  const sources = [
+    { key: 'screen', assetId: 'a-cam' },
+    { key: 'camera', assetId: 'a-cam' },
+  ]
+  const slots = [
+    { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 } },
+    { source: 'camera', rect: { x: 0.75, y: 0.75, w: 0.25, h: 0.25 } },
+  ]
+  const project = projectWithMulticam({ width: 1920, height: 1080 }, {}, { sources })
+  return applyCommand(project, { type: 'saveLayout', layout: { id: 'l-cam', name: 'Screen + Cam', slots } })
+}
+
+function renderComposed(project: Project, timeMs = 1000): { main: FakeContext2D; composed: FakeContext2D } {
+  const main = new FakeContext2D()
+  const composed = new FakeContext2D(project.width, project.height)
+  renderFrame(asCtx(main), project, timeMs, { source: new FakeSource(), createScratchContext: () => asCtx(composed) })
+  return { main, composed }
 }
 
 const frameCalls = (fake: FakeContext2D) =>
@@ -146,8 +168,7 @@ describe('frame style rendering', () => {
     }
     const clip = new FakeContext2D()
     renderFrame(asCtx(clip), projectWithVideo(style), 1000, { source: new FakeSource() })
-    const slot = new FakeContext2D()
-    renderFrame(asCtx(slot), projectWithMulticam({ width: 1280, height: 720 }, style), 1000, { source: new FakeSource() })
+    const slot = renderComposed(projectWithMulticam({ width: 1280, height: 720 }, style)).composed
     const box = [-640, -360, 1280, 720, 72]
     expect(frameCalls(slot)).toEqual([
       { method: 'roundRect', args: box },
@@ -164,9 +185,8 @@ describe('frame style rendering', () => {
 
   test('a slot crop picks the source region that covers the slot', () => {
     const project = projectWithMulticam({ width: 1920, height: 1080 }, { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } })
-    const ctx = new FakeContext2D()
-    renderFrame(asCtx(ctx), project, 1000, { source: new FakeSource() })
-    expect(ctx.callsTo('drawImage').map((c) => c.args.slice(1))).toEqual([[320, 90, 320, 180, -960, -540, 1920, 1080]])
+    const { composed } = renderComposed(project)
+    expect(composed.callsTo('drawImage').map((c) => c.args.slice(1))).toEqual([[320, 90, 320, 180, -960, -540, 1920, 1080]])
   })
 
   test('a slot zoom frames its target inside the slot crop, out to the crop edges', () => {
@@ -177,9 +197,9 @@ describe('frame style rendering', () => {
         elementId: 'e-mc',
         zoom: { source: 'camera', atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus },
       })
-      const ctx = new FakeContext2D()
-      renderFrame(asCtx(ctx), project, 1500, { source: new FakeSource() })
-      return ctx.callsTo('drawImage').map((c) => c.args.slice(1))
+      return renderComposed(project, 1500)
+        .composed.callsTo('drawImage')
+        .map((c) => c.args.slice(1))
     }
     expect(drawAt({ x: 1, y: 1 })).toEqual([[480, 270, 160, 90, -960, -540, 1920, 1080]])
     expect(drawAt({ x: 0, y: 0 })).toEqual([[320, 0, 160, 90, -960, -540, 1920, 1080]])
@@ -192,11 +212,11 @@ describe('frame style rendering', () => {
       elementId: 'e-mc',
       zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus: { x: 1, y: 1 } },
     })
-    const ctx = new FakeContext2D()
-    renderFrame(asCtx(ctx), project, 1500, { source: new FakeSource() })
-    expect(ctx.callsTo('scale').at(-1)?.args).toEqual([2, 2])
-    expect(ctx.callsTo('translate').at(-1)?.args).toEqual([-960, -540])
-    expect(ctx.callsTo('drawImage').map((c) => c.args.slice(1))).toEqual([[0, 0, 640, 360, -960, -540, 1920, 1080]])
+    const { main, composed } = renderComposed(project, 1500)
+    expect(composed.callsTo('scale').at(-1)?.args).toEqual([2, 2])
+    expect(composed.callsTo('translate').at(-1)?.args).toEqual([-960, -540])
+    expect(composed.callsTo('drawImage').map((c) => c.args.slice(1))).toEqual([[0, 0, 640, 360, -960, -540, 1920, 1080]])
+    expect(onCanvas(main, composed, 'drawImage')).toEqual([[-1920, -1080, 3840, 2160]])
   })
 
   test('a whole-composite zoom mid ramp crops the anchored window around a picture-in-picture slot', () => {
@@ -204,15 +224,16 @@ describe('frame style rendering', () => {
     const project = applyCommand(base, {
       type: 'addZoomRegion',
       elementId: 'e-mc',
-      zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 1.5, focus: { x: 0.84, y: 0.83 }, easing: 'linear' },
+      zoom: { atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 1.5, focus: { x: 0.84, y: 0.83 }, easing: 'linear', motionBlur: 0 },
     })
-    const ctx = new FakeContext2D()
-    renderFrame(asCtx(ctx), project, 500, { source: new FakeSource() })
-    const last = (method: string) => (ctx.callsTo(method).at(-1)?.args ?? []).map((v) => Math.round(Number(v) * 1e6) / 1e6)
+    const { main, composed } = renderComposed(project, 500)
+    const rounded = (args: unknown[]) => args.map((v) => Math.round(Number(v) * 1e6) / 1e6)
+    const last = (method: string) => rounded(composed.callsTo(method).at(-1)?.args ?? [])
     expect(last('rect')).toEqual([-960, -540, 1920, 1080])
     expect(last('translate')).toEqual([-120, -67.5])
     expect(last('scale')).toEqual([1.25, 1.25])
     expect(last('drawImage').slice(1)).toEqual([0, 0, 640, 360, 384, 205.2, 528, 297])
+    expect(onCanvas(main, composed, 'drawImage').map(rounded)).toEqual([[1320, 729, 660, 371.25]])
   })
 
   test('a reframe track slides a slot crop onto the subject, and the fitted part keeps following once the crop meets the frame edge', () => {
@@ -226,23 +247,31 @@ describe('frame style rendering', () => {
         { sourceMs: 4000, x: 0.375, y: 0.1 },
       ],
     })
-    const sourceRectsAt = (timeMs: number) => {
-      const ctx = new FakeContext2D()
-      renderFrame(asCtx(ctx), project, timeMs, { source: new FakeSource() })
-      return ctx.callsTo('drawImage').map((c) => c.args.slice(1, 5))
-    }
+    const sourceRectsAt = (timeMs: number) =>
+      renderComposed(project, timeMs)
+        .composed.callsTo('drawImage')
+        .map((c) => c.args.slice(1, 5))
     expect(sourceRectsAt(0)).toEqual([[80, 90, 320, 180]])
     expect(sourceRectsAt(4000)).toEqual([[80, 0, 320, 180]])
   })
 
-  test('a multicam draws its own crop and corner radius around the composite', () => {
-    const project = projectWithMulticam({ width: 1920, height: 1080 }, {}, { cornerRadius: 0.1, crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } })
-    const ctx = new FakeContext2D()
-    renderFrame(asCtx(ctx), project, 1000, { source: new FakeSource() })
-    expect(ctx.callsTo('roundRect').map((c) => c.args)).toEqual([[-480, -270, 960, 540, 54]])
-    expect(ctx.callsTo('rect').map((c) => c.args)).toEqual([[-480, -270, 960, 540]])
-    expect(ctx.callsTo('translate').at(-1)?.args).toEqual([-480, -270])
-    expect(ctx.callsTo('drawImage').map((c) => c.args.slice(5))).toEqual([[-960, -540, 1920, 1080]])
+  test('a multicam crop and corner radius cut and round the composed frame on the canvas pixels where they cut and round a clip', () => {
+    const framing = { cornerRadius: 0.1, crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } }
+    const clip = new FakeContext2D()
+    renderFrame(asCtx(clip), projectWithVideo({ ...framing, transform: { x: 0, y: 0, scaleX: 1.5, scaleY: 1.5, rotation: 0 } }), 1000, {
+      source: new FakeSource(),
+    })
+    const { main, composed } = renderComposed(projectWithMulticam({ width: 1920, height: 1080 }, {}, framing))
+    const rounded = (fake: FakeContext2D) =>
+      fake
+        .callsTo('roundRect')
+        .map(({ args, transform }) => [...deviceRect({ args: args.slice(0, 4), transform }), Number(args[4]) * Math.hypot(transform.a, transform.b)])
+    expect(rounded(clip)).toEqual([[480, 270, 960, 540, 54]])
+    expect(rounded(composed)).toEqual([[480, 270, 960, 540, 54]])
+    expect(composed.callsTo('drawImage').map(deviceRect)).toEqual([[-480, -270, 1920, 1080]])
+    expect(main.callsTo('drawImage').map((c) => [c.args[0] === composed.canvas, ...c.args.slice(1, 5), ...deviceRect(c)])).toEqual([
+      [true, 480, 270, 960, 540, 480, 270, 960, 540],
+    ])
   })
 
   test('crop shrinks natural and display size for layout/handles', () => {
@@ -251,7 +280,115 @@ describe('frame style rendering', () => {
     const helpers = {
       getAssetSize: () => ({ width: 1280, height: 720 }),
     }
-    expect(getElementNaturalSize(element, helpers)).toEqual({ width: 640, height: 180 })
-    expect(getElementDisplaySize(element, helpers)).toEqual({ width: 640, height: 180 })
+    expect(getElementNaturalSize(project, element, helpers)).toEqual({ width: 640, height: 180 })
+    expect(getElementDisplaySize(project, element, helpers)).toEqual({ width: 640, height: 180 })
+  })
+})
+
+class RecordingBackend implements RenderBackend {
+  readonly kind = 'recording'
+  readonly width = 1920
+  readonly height = 1080
+  readonly raster = new FakeContext2D()
+  readonly quads: Array<{ quad: ImageQuad; chrome: LayerChrome }> = []
+  pixelGrid(): PixelGrid {
+    return { transform: this.raster.getTransform(), width: this.width, height: this.height }
+  }
+  beginFrame(): void {}
+  endFrame(): void {}
+  acquireRaster(): Canvas2D {
+    return asCtx(this.raster)
+  }
+  drawImageQuad(quad: ImageQuad, chrome: LayerChrome): void {
+    this.quads.push({ quad, chrome })
+  }
+  pushRasterScope(): void {}
+  popRasterScope(): void {}
+}
+
+describe('multicam composite', () => {
+  const multiply = (project: Project, elementId: string) => applyCommand(project, { type: 'setBlendMode', elementId, blendMode: 'multiply' })
+
+  test('a multicam blends its composed frame once, the way a clip with the same blend does', () => {
+    const clip = new FakeContext2D()
+    renderFrame(asCtx(clip), multiply(projectWithVideo(), 'e-vid'), 1000, { source: new FakeSource() })
+    const { main, composed } = renderComposed(multiply(screenWithCamera(), 'e-mc'))
+    const modes = (fake: FakeContext2D) => fake.callsTo('drawImage').map((c) => c.globalCompositeOperation)
+    expect(modes(clip)).toEqual(['multiply'])
+    expect(modes(main)).toEqual(['multiply'])
+    expect(modes(composed)).toEqual(['source-over', 'source-over'])
+  })
+
+  test('a multicam composes on a scratch the size of its target, at the target pixels each slot lands on', () => {
+    const composeAt = (scale: number) => {
+      const main = new FakeContext2D(1920 * scale, 1080 * scale)
+      main.setTransform(scale, 0, 0, scale, 0, 0)
+      const scratches: FakeContext2D[] = []
+      renderFrame(asCtx(main), screenWithCamera(), 1000, {
+        source: new FakeSource(),
+        createScratchContext: (width, height) => {
+          const scratch = new FakeContext2D(width, height)
+          scratches.push(scratch)
+          return asCtx(scratch)
+        },
+      })
+      return {
+        scratches: scratches.map(({ canvas }) => [canvas.width, canvas.height]),
+        slots: scratches.flatMap((scratch) => scratch.callsTo('drawImage').map(deviceRect)),
+        frame: main.callsTo('drawImage').map((c) => [scratches.some(({ canvas }) => c.args[0] === canvas), ...deviceRect(c)]),
+      }
+    }
+    expect(composeAt(2)).toEqual({
+      scratches: [[3840, 2160]],
+      slots: [
+        [0, 0, 3840, 2160],
+        [2880, 1620, 960, 540],
+      ],
+      frame: [[true, 0, 0, 3840, 2160]],
+    })
+    expect(composeAt(0.5)).toEqual({
+      scratches: [[960, 540]],
+      slots: [
+        [0, 0, 960, 540],
+        [720, 405, 240, 135],
+      ],
+      frame: [[true, 0, 0, 960, 540]],
+    })
+    expect(composeAt(0)).toEqual({ scratches: [], slots: [], frame: [] })
+  })
+
+  test('a keyed multicam reaches the backend as one image quad with the chrome of a keyed clip, off the raster', () => {
+    const keyed = (project: Project, elementId: string) =>
+      multiply(applyCommand(project, { type: 'addEffect', elementId, effect: { type: 'chroma-key' } }), elementId)
+    const clip = new RecordingBackend()
+    renderFrameWith(clip, keyed(projectWithVideo(), 'e-vid'), 1000, { source: new FakeSource() })
+    const multicam = new RecordingBackend()
+    const composed = new FakeContext2D()
+    renderFrameWith(multicam, keyed(screenWithCamera(), 'e-mc'), 1000, { source: new FakeSource(), createScratchContext: () => asCtx(composed) })
+
+    const chrome: LayerChrome = {
+      centerX: 960,
+      centerY: 540,
+      rotationDeg: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      blendMode: 'multiply',
+      effects: [{ type: 'chroma-key', enabled: true, keyColor: '#00ff00', tolerance: 0.25, softness: 0.1, spillSuppression: 0.5 }],
+    }
+    expect(clip.quads.map((q) => q.chrome)).toEqual([chrome])
+    expect(multicam.quads.map((q) => q.chrome)).toEqual([chrome])
+    expect(multicam.quads.map(({ quad }) => [quad.image === composed.canvas, quad.src, quad.dw, quad.dh])).toEqual([
+      [true, { sx: 0, sy: 0, sw: 1920, sh: 1080 }, 1920, 1080],
+    ])
+    expect(multicam.raster.calls).toEqual([])
+    expect(composed.callsTo('drawImage')).toHaveLength(2)
+
+    const plan = planEffects(multicam.quads[0]?.chrome.effects)
+    const pass = plan.passes[0]
+    if (pass?.kind !== 'color') throw new Error('expected color pass')
+    expect(plan.unsupported).toBe(false)
+    expect(pass.ops[0]?.kind).toBe(COLOR_OP.chromaKey)
+    expect(pass.ops[0]?.params.slice(0, 6)).toEqual([0, 1, 0, 0.25, 0.1, 0.5])
   })
 })

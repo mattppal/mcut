@@ -77,6 +77,7 @@ export {
   getSlotView,
   getZoomedRect,
   getZoomShutterMs,
+  getZoomWindow,
   isZoomable,
   listZoomRegions,
   ZOOM_REGION_PRESETS,
