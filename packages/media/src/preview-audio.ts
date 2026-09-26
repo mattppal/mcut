@@ -28,7 +28,7 @@ interface KeyedSegment {
 
 interface Epoch {
   anchor: AudioAnchor
-  primed: boolean
+  stage: 'opening' | 'opened' | 'primed'
   output: GainNode
   voices: Map<string, Voice>
   reportedMs: number
@@ -180,9 +180,10 @@ export class PreviewAudio {
       return
     }
     const epoch = this.ensureEpoch(context, master, playback, segments)
+    if (epoch.stage === 'opened') this.prime(context, epoch)
     const sinkOf: SinkOf = (src) => this.sourceOf(src).then((opened) => opened?.sink ?? null)
     this.settleOutgoing(context, sinkOf)
-    if (!epoch.primed) return
+    if (epoch.stage !== 'primed') return
     this.reconcile(context, epoch, segments)
     for (const voice of epoch.voices.values()) pumpVoice(context, epoch.anchor, voice, sinkOf)
   }
@@ -210,7 +211,8 @@ export class PreviewAudio {
   private ensureEpoch(context: AudioContext, master: GainNode, playback: PlaybackState, segments: KeyedSegment[]): Epoch {
     const current = this.epoch
     const change =
-      current && epochChange({ rate: current.anchor.rate, reportedMs: current.reportedMs, sounding: current.primed || this.outgoing !== null }, playback)
+      current &&
+      epochChange({ rate: current.anchor.rate, reportedMs: current.reportedMs, sounding: current.stage === 'primed' || this.outgoing !== null }, playback)
     if (current && change === 'keep') return current
     if (current && change === 'handoff') this.beginHandoff(context, current)
     else this.flush()
@@ -219,7 +221,7 @@ export class PreviewAudio {
     const timelineMs = current && change === 'handoff' ? current.reportedMs : Math.round(playback.currentTimeMs)
     const epoch: Epoch = {
       anchor: { timelineMs, contextS: 0, rate: playback.playbackRate },
-      primed: false,
+      stage: 'opening',
       output,
       voices: new Map(),
       reportedMs: timelineMs,
@@ -227,20 +229,23 @@ export class PreviewAudio {
     this.epoch = epoch
     const opening = dueSegments(segments, timelineMs, playback.playbackRate).map(({ segment }) => this.sourceOf(segment.src))
     void Promise.all(opening).then(() => {
-      if (this.epoch !== epoch || !this.context) return
-      const outgoing = this.outgoing
-      const leadS = outgoing ? HANDOFF_LEAD_S : START_LEAD_S
-      const atS = (Math.round(this.context.currentTime * this.context.sampleRate) + Math.round(leadS * this.context.sampleRate)) / this.context.sampleRate
-      if (outgoing) {
-        epoch.anchor = handoffAnchor(outgoing.epoch.anchor, atS, epoch.anchor.rate)
-        crossfade(outgoing.epoch.output, epoch.output, atS)
-        outgoing.untilS = atS + HANDOFF_FADE_S
-      } else {
-        epoch.anchor.contextS = atS
-      }
-      epoch.primed = true
+      if (this.epoch === epoch) epoch.stage = 'opened'
     })
     return epoch
+  }
+
+  private prime(context: AudioContext, epoch: Epoch): void {
+    const outgoing = this.outgoing
+    const leadS = outgoing ? HANDOFF_LEAD_S : START_LEAD_S
+    const atS = (Math.round(context.currentTime * context.sampleRate) + Math.round(leadS * context.sampleRate)) / context.sampleRate
+    if (outgoing) {
+      epoch.anchor = handoffAnchor(outgoing.epoch.anchor, atS, epoch.anchor.rate)
+      crossfade(outgoing.epoch.output, epoch.output, atS)
+      outgoing.untilS = atS + HANDOFF_FADE_S
+    } else {
+      epoch.anchor.contextS = atS
+    }
+    epoch.stage = 'primed'
   }
 
   private segmentsOf(project: Project): KeyedSegment[] {
@@ -293,7 +298,7 @@ export class PreviewAudio {
   private beginHandoff(context: AudioContext, current: Epoch): void {
     this.epoch = null
     const outgoing = this.outgoing
-    if (!current.primed || (outgoing && context.currentTime < current.anchor.contextS)) {
+    if (current.stage !== 'primed' || (outgoing && context.currentTime < current.anchor.contextS)) {
       dropEpoch(current)
       if (outgoing && outgoing.untilS !== null) {
         outgoing.untilS = null
@@ -308,7 +313,7 @@ export class PreviewAudio {
 
   private soundingAnchors(): Sounding | null {
     const outgoing = this.outgoing?.epoch.anchor ?? null
-    const anchor = this.epoch?.primed ? this.epoch.anchor : outgoing
+    const anchor = this.epoch?.stage === 'primed' ? this.epoch.anchor : outgoing
     return anchor ? { anchor, outgoing } : null
   }
 
