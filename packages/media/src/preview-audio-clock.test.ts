@@ -175,7 +175,7 @@ describe('preview audio clock around the output start', () => {
     audio.sync(project, playing(1000))
     await settle()
     audio.sync(project, playing(1000))
-    renderedS = 1.5
+    renderedS = 1.025
     audio.sync(project, { ...playing(1500), isPlaying: false })
     await settle()
     audio.sync(project, playing(1500))

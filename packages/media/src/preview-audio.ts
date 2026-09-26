@@ -107,6 +107,7 @@ export class PreviewAudio {
   private memo: SegmentMemo | null = null
   private outputRendered = false
   private heldMs: number | null = null
+  private paused: { atMs: number; stoppedMs: number } | null = null
   private disposed = false
 
   setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
@@ -120,25 +121,26 @@ export class PreviewAudio {
   clockTimeMs(displayTimeMs: number): number | null {
     const { context, epoch } = this
     if (!context || !epoch || context.state !== 'running') return this.heldMs
-    const outgoing = this.outgoing?.epoch.anchor ?? null
-    const anchor = epoch.primed ? epoch.anchor : outgoing
-    if (!anchor) return epoch.reportedMs
+    const sounding = this.soundingAnchors()
+    if (!sounding) return epoch.reportedMs
     const stamp = context.getOutputTimestamp()
     const heardS =
       stamp.contextTime !== undefined && stamp.performanceTime !== undefined && stamp.performanceTime > 0
         ? heardContextS({ contextTime: stamp.contextTime, performanceTime: stamp.performanceTime }, displayTimeMs)
-        : anchor.contextS
-    epoch.reportedMs = Math.max(epoch.reportedMs, heardTimelineMs(anchor, outgoing, heardS))
+        : sounding.anchor.contextS
+    epoch.reportedMs = Math.max(epoch.reportedMs, heardTimelineMs(sounding.anchor, sounding.outgoing, heardS))
     return epoch.reportedMs
   }
 
-  sync(project: Project, playback: PlaybackState): void {
+  sync(project: Project, requested: PlaybackState): void {
     if (this.disposed) return
-    const rate = playback.playbackRate
-    if (!playback.isPlaying || rate <= 0 || rate > MAX_AUDIBLE_RATE) {
+    const rate = requested.playbackRate
+    if (!requested.isPlaying || rate <= 0 || rate > MAX_AUDIBLE_RATE) {
+      if (!requested.isPlaying) this.notePause(requested.currentTimeMs)
       this.flush()
       return
     }
+    const playback = { ...requested, currentTimeMs: this.resumePoint(requested.currentTimeMs) }
     const { context, master } = this.ensureContext()
     master.gain.value = playback.muted ? 0 : playback.volume
     const segments = this.segmentsOf(project)
@@ -281,6 +283,25 @@ export class PreviewAudio {
     }
     this.dropOutgoing()
     this.outgoing = { epoch: current, untilS: null }
+  }
+
+  private soundingAnchors(): { anchor: AudioAnchor; outgoing: AudioAnchor | null } | null {
+    const outgoing = this.outgoing?.epoch.anchor ?? null
+    const anchor = this.epoch?.primed ? this.epoch.anchor : outgoing
+    return anchor ? { anchor, outgoing } : null
+  }
+
+  private notePause(atMs: number): void {
+    const sounding = this.soundingAnchors()
+    if (!this.context || !sounding) return
+    this.paused = { atMs, stoppedMs: Math.max(atMs, heardTimelineMs(sounding.anchor, sounding.outgoing, this.context.currentTime)) }
+  }
+
+  private resumePoint(requestedMs: number): number {
+    const paused = this.paused
+    if (paused && Math.abs(requestedMs - paused.atMs) <= 1) return paused.stoppedMs
+    this.paused = null
+    return requestedMs
   }
 
   private settleOutgoing(context: AudioContext, sinkOf: SinkOf): void {
