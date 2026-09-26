@@ -1,5 +1,13 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.16
+
+### Patch Changes
+
+- [#202](https://github.com/mattppal/mcut/pull/202) [`5620a72`](https://github.com/mattppal/mcut/commit/5620a723c6dd3e6ed05c412dae468b9b21f2eae1) Thanks [@mattppal](https://github.com/mattppal)! - `flattenMulticam` keeps a whole-composite zoom. Each flattened clip gets position and scale keyframes that move its box where its slot's box was under the zoom, and motion blur when the zoom had it.
+
+- [#202](https://github.com/mattppal/mcut/pull/202) [`5620a72`](https://github.com/mattppal/mcut/commit/5620a723c6dd3e6ed05c412dae468b9b21f2eae1) Thanks [@mattppal](https://github.com/mattppal)! - `getZoomedRect` maps a rect through a zoom view. The compositor crops a whole-composite zoom through it and `flattenMulticam` bakes clip boxes through it, so the two cannot drift.
+
 ## 0.1.0-alpha.15
 
 ### Patch Changes

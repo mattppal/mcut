@@ -1,5 +1,14 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.28
+
+### Patch Changes
+
+- Updated dependencies [[`5620a72`](https://github.com/mattppal/mcut/commit/5620a723c6dd3e6ed05c412dae468b9b21f2eae1), [`5620a72`](https://github.com/mattppal/mcut/commit/5620a723c6dd3e6ed05c412dae468b9b21f2eae1)]:
+  - @mcut/timeline@0.1.0-alpha.16
+  - @mcut/editor@0.1.0-alpha.17
+  - @mcut/transcription@0.1.0-alpha.19
+
 ## 0.1.0-alpha.27
 
 ### Minor Changes

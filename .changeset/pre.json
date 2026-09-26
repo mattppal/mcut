@@ -52,6 +52,7 @@
     "find-retakes-time-remap",
     "find-retakes",
     "find-scene-changes",
+    "flatten-composite-zoom",
     "flatten-multicam-reframe",
     "flatten-multicam-zooms",
     "get-frame-end-frame",
@@ -140,6 +141,7 @@
     "zoom-rect-cap",
     "zoom-region-gestures",
     "zoom-regions",
-    "zoom-split-ids"
+    "zoom-split-ids",
+    "zoomed-rect-one-source"
   ]
 }
