@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { applyCommand, createProject, type LayoutSlot, type Project } from '@mcut/timeline'
 import { renderFrame } from './render-frame'
 import { deviceRect, FakeContext2D, onCanvas } from './test-utils'
-import type { Canvas2D } from './types'
+import type { Canvas2D, RenderFrameOptions } from './types'
 
 type Camera = { rect: LayoutSlot['rect']; fit?: LayoutSlot['fit'] }
 
@@ -111,6 +111,19 @@ describe('multicam compose grid', () => {
       landed: [[960, 0, 960, 1080]],
     })
     expect(composed(multicam(placed(3000, 0, 1)))).toEqual({ scratch: [], cleared: [], slots: [], copied: [], landed: [] })
+  })
+
+  test('a multicam with no scratch to compose on throws a ScratchContextError that says how to pass createScratchContext', () => {
+    const noScratch = expect.objectContaining({
+      name: 'ScratchContextError',
+      message:
+        "Composing an element needs a 1920x1080 scratch 2D context, and none is available. Where OffscreenCanvas is missing, pass createScratchContext in the render options. With node-canvas, that is (width, height) => createCanvas(width, height).getContext('2d').",
+    })
+    const render = (options: RenderFrameOptions) => () =>
+      renderFrame(asCtx(new FakeContext2D(1920, 1080)), multicam({}), 1000, { source: { getFrame: () => frame }, ...options })
+    expect(typeof OffscreenCanvas).toBe('undefined')
+    expect(render({})).toThrow(noScratch)
+    expect(render({ createScratchContext: () => null })).toThrow(noScratch)
   })
 
   test('a held 2x zoom draws each slot at the canvas pixels main draws it at', () => {
