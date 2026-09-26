@@ -31,7 +31,7 @@ edits:
     checks:
       [
         opens on head only,
-        opening punch-in on camera at a pause,
+        opening punch-in on camera at a clause end,
         head shot at 18s 26s,
         screen shot at 37s 57s 190s,
         subtle zoom,

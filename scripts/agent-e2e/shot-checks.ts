@@ -2,8 +2,8 @@ import type { LayoutSlot, MulticamElement, Project } from '@mcut/timeline'
 import { type CheckRule, elements, outcome } from './check-kit'
 
 const OPENING_HOLD_MIN_MS = 8_000
-const PAUSE_MIN_MS = 250
-const WORD_EDGE_TOLERANCE_MS = 120
+const BOUNDARY_BEFORE_MS = 150
+const BOUNDARY_AFTER_MS = 400
 
 type Shot = 'head' | 'screen' | 'other'
 
@@ -32,32 +32,37 @@ function shotAtSource(project: Project, sourceMs: number): Shot | undefined {
   return angle === undefined ? undefined : shotOf(project, piece, angle.layoutId)
 }
 
+const ordered = (project: Project): MulticamElement[] => [...multicams(project)].sort((a, b) => a.startMs - b.startMs)
+
 function openingHeadMs(project: Project): number {
-  const first = [...multicams(project)].sort((a, b) => a.startMs - b.startMs)[0]
-  if (first === undefined) return 0
-  const cuts = [...first.angles].sort((a, b) => a.atMs - b.atMs)
-  const opening = cuts.filter((cut) => cut.atMs <= first.trimStartMs).at(-1) ?? cuts[0]
-  if (opening === undefined || shotOf(project, first, opening.layoutId) !== 'head') return 0
-  const next = cuts.find((cut) => cut.atMs > first.trimStartMs && shotOf(project, first, cut.layoutId) !== 'head')
-  return (next?.atMs ?? first.trimStartMs + first.durationMs) - first.trimStartMs
+  for (const piece of ordered(project)) {
+    const end = piece.trimStartMs + piece.durationMs
+    const cuts = [...piece.angles].sort((a, b) => a.atMs - b.atMs)
+    const starts = [piece.trimStartMs, ...cuts.map((cut) => cut.atMs).filter((atMs) => atMs > piece.trimStartMs && atMs < end)]
+    for (const clockMs of starts) {
+      const cut = cuts.filter((candidate) => candidate.atMs <= clockMs).at(-1)
+      if (cut === undefined || shotOf(project, piece, cut.layoutId) !== 'head') return piece.startMs + (clockMs - piece.trimStartMs)
+    }
+  }
+  const last = ordered(project).at(-1)
+  return last === undefined ? 0 : last.startMs + last.durationMs
 }
 
-function spokenWords(project: Project): { startMs: number; endMs: number }[] {
+function spokenWords(project: Project): { text: string; startMs: number; endMs: number }[] {
   return elements(project)
     .flatMap((element) =>
-      element.type === 'caption' ? (element.words ?? []).map((word) => ({ startMs: element.startMs + word.startMs, endMs: element.startMs + word.endMs })) : [],
+      element.type === 'caption'
+        ? (element.words ?? []).map((word) => ({ text: word.text, startMs: element.startMs + word.startMs, endMs: element.startMs + word.endMs }))
+        : [],
     )
     .sort((a, b) => a.startMs - b.startMs)
 }
 
-function pauseAt(project: Project, timeMs: number): number | undefined {
-  const words = spokenWords(project)
-  const after = words.findIndex((word) => word.startMs >= timeMs - WORD_EDGE_TOLERANCE_MS)
-  if (after <= 0) return undefined
-  const before = words[after - 1]
-  const next = words[after]
-  if (before === undefined || next === undefined || before.endMs > timeMs + WORD_EDGE_TOLERANCE_MS) return undefined
-  return next.startMs - before.endMs
+function clauseEndAt(project: Project, timeMs: number): string | undefined {
+  const word = spokenWords(project)
+    .filter((candidate) => candidate.endMs >= timeMs - BOUNDARY_AFTER_MS && candidate.endMs <= timeMs + BOUNDARY_BEFORE_MS)
+    .at(-1)
+  return word !== undefined && /[.,!?;]$/.test(word.text) ? word.text : undefined
 }
 
 const seconds = (text: string): number[] => [...text.matchAll(/(\d+(?:\.\d+)?)s/g)].map((match) => Number(match[1]) * 1000)
@@ -72,21 +77,26 @@ export const SHOT_RULES: CheckRule[] = [
     },
   ],
   [
-    /^opening punch-in on camera at a pause$/,
+    /^opening punch-in on camera at a clause end$/,
     ({ after }) => {
-      const first = [...multicams(after)].sort((a, b) => a.startMs - b.startMs)[0]
-      if (first === undefined) return { pass: false, detail: 'no multicam' }
       const held = openingHeadMs(after)
-      const punches = (first.zooms ?? []).filter((zoom) => zoom.source === 'camera' && zoom.scale > 1 && zoom.atMs < held)
+      const punches = ordered(after).flatMap((piece) =>
+        (piece.zooms ?? [])
+          .filter((zoom) => zoom.source === 'camera' && zoom.scale > 1)
+          .map((zoom) => ({ zoom, timeMs: piece.startMs + zoom.atMs }))
+          .filter((entry) => entry.timeMs < held),
+      )
       if (punches.length === 0) return { pass: false, detail: `no camera zoom inside the ${(held / 1000).toFixed(1)}s head-only opening` }
-      const described = punches.map((zoom) => {
-        const timeMs = first.startMs + zoom.atMs
-        const gap = pauseAt(after, timeMs)
-        return { zoom, gap, text: `${(timeMs / 1000).toFixed(2)}s ${zoom.scale}x ${gap === undefined ? 'inside a word' : `in a ${gap} ms gap`}` }
+      const described = punches.map(({ zoom, timeMs }) => {
+        const word = clauseEndAt(after, timeMs)
+        return { word, text: `${(timeMs / 1000).toFixed(2)}s ${zoom.scale}x ${word === undefined ? 'not at a clause end' : `after "${word}"`}` }
       })
-      const good = described.filter((entry) => entry.gap !== undefined && entry.gap >= PAUSE_MIN_MS)
       const detail = described.map((entry) => entry.text).join('; ')
-      return outcome(good.length > 0, detail, detail)
+      return outcome(
+        described.some((entry) => entry.word !== undefined),
+        detail,
+        detail,
+      )
     },
   ],
   [
