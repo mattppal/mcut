@@ -124,17 +124,26 @@ export function isActionEnabled(action: EditorAction, context: ActionContext): b
   }
 }
 
+function reportActionFailure(error: unknown, context: ActionContext): void {
+  if (context.throwOnError) throw error
+  toast.error(error instanceof Error ? error.message : 'Action failed')
+}
+
+function settleAction(result: unknown, context: ActionContext): unknown {
+  if (!(result instanceof Promise)) return result
+  return result.catch((error: unknown) => {
+    reportActionFailure(error, context)
+  })
+}
+
 export function runEditorAction(idOrAction: string | EditorAction, context: ActionContext): unknown {
   const action = typeof idOrAction === 'string' ? registry.get(idOrAction) : idOrAction
   if (!action || !isActionEnabled(action, context)) return
   try {
-    if (action.run) return action.run(context)
-    else if (action.operator) {
-      void runOperator(action.operator.id, { engine: context.engine }, operatorInput(action, context))
-    }
+    if (action.run) return settleAction(action.run(context), context)
+    if (action.operator) return settleAction(runOperator(action.operator.id, { engine: context.engine }, operatorInput(action, context)), context)
   } catch (error) {
-    if (context.throwOnError) throw error
-    toast.error(error instanceof Error ? error.message : 'Action failed')
+    reportActionFailure(error, context)
   }
 }
 
