@@ -114,6 +114,7 @@ export class PreviewAudio {
   private epoch: Epoch | null = null
   private outgoing: Outgoing | null = null
   private sources = new Map<string, Promise<OpenSource | null>>()
+  private settled = new WeakSet<Promise<OpenSource | null>>()
   private audioSources: ReadonlyMap<ElementId, string> | undefined
   private memo: SegmentMemo | null = null
   private outputRendered = false
@@ -219,17 +220,17 @@ export class PreviewAudio {
     const output = context.createGain()
     output.connect(master)
     const timelineMs = current && change === 'handoff' ? current.reportedMs : Math.round(playback.currentTimeMs)
+    const opening = dueSegments(segments, timelineMs, playback.playbackRate).map(({ segment }) => this.sourceOf(segment.src))
     const epoch: Epoch = {
       anchor: { timelineMs, contextS: 0, rate: playback.playbackRate },
-      stage: 'opening',
+      stage: opening.every((source) => this.settled.has(source)) ? 'opened' : 'opening',
       output,
       voices: new Map(),
       reportedMs: timelineMs,
     }
     this.epoch = epoch
-    const opening = dueSegments(segments, timelineMs, playback.playbackRate).map(({ segment }) => this.sourceOf(segment.src))
     void Promise.all(opening).then(() => {
-      if (this.epoch === epoch) epoch.stage = 'opened'
+      if (this.epoch === epoch && epoch.stage === 'opening') epoch.stage = 'opened'
     })
     return epoch
   }
@@ -292,6 +293,7 @@ export class PreviewAudio {
       return null
     })
     this.sources.set(src, opening)
+    void opening.then(() => this.settled.add(opening))
     return opening
   }
 
