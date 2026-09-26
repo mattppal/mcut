@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.31
+
+### Patch Changes
+
+- [#206](https://github.com/mattppal/mcut/pull/206) [`b57daea`](https://github.com/mattppal/mcut/commit/b57daea9c55e044f93a00d90c5f18cf2c86365b5) Thanks [@mattppal](https://github.com/mattppal)! - The stored transcript keeps the word order it was given instead of sorting by start time. Whisper can start a word a little before the one ahead of it, and the sorted copy stopped matching the captions made from it, so `apply_captions { elementId }` after a cut refused it.
+
 ## 0.1.0-alpha.30
 
 ### Patch Changes

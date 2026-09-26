@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { centerPersonOptionsSchema, operatorIds, operators, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
 import { retakeOptionsSchema } from '@mcut/transcription'
-import { applyCaptionsInputSchema, applySilenceCutsInputSchema } from './transcript-tool-inputs'
+import { applyCaptionsInputSchema, applySilenceCutsInputSchema, removeRangesDescription, removeRangesInputSchema } from './transcript-tool-inputs'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
 import { PICTURE_TOOL_DESCRIPTIONS, PICTURE_TOOL_INPUTS } from './picture-tools'
 import { commandBatchSchema } from './transact-shape'
@@ -57,6 +57,7 @@ export const MCP_AGENT_TOOL_NAMES = [
   'get_transcript',
   'search_transcript',
   'find_retakes',
+  'remove_ranges',
   'ensure_transcript',
   'list_commands',
   'apply_commands',
@@ -119,6 +120,7 @@ export const MCP_TOOL_INPUTS = {
         .optional(),
     })
     .strict(),
+  remove_ranges: removeRangesInputSchema,
   ensure_transcript: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
     replace: z.boolean().describe('When true, replace captions overlapping the target clip. Defaults to false.').optional(),
@@ -230,12 +232,12 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   find_retakes:
     'Find retakes in the word-timed transcript. A phrase whose opening words are spoken again within maxLookaheadMs. ' +
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
-    'Candidates come last to first. Cut them in that order so no ripple delete shifts a range still to cut. ' +
     'Pass elementId for a clip with source audio, including a multicam and each piece left after the cuts. ' +
-    'Call it before cutting. It stores the word-timed transcript of that audio in source time, and with elementId the reply also lists those words. ' +
-    'Cut the clip, not the caption track. Then make one apply_captions call with elementId set to any remaining piece and no transcript. ' +
-    'It reuses the stored transcript, re-captions every piece, and replaces their old captions. Do not copy the words back into apply_captions. ' +
+    'It stores the word-timed transcript of that audio in source time, and with elementId the reply also lists those words. ' +
+    'The retake flow is find_retakes, then one remove_ranges call with the candidates you keep, then one apply_captions call with elementId set to any remaining piece, replace true, and no transcript. ' +
+    'Do not cut retakes by hand with splitElement, trimElement, or rippleDelete. Do not copy the words back into apply_captions. ' +
     'Review abandonedText before cutting. Needs captions with word timings. Call ensure_transcript first.',
+  remove_ranges: removeRangesDescription,
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline and store that transcript for apply_captions to reuse after cuts. Explicit tool only; get_transcript never auto-transcribes. ' +
@@ -335,6 +337,7 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('get_transcript'),
   staticToolCall('search_transcript'),
   staticToolCall('find_retakes'),
+  staticToolCall('remove_ranges'),
   staticToolCall('ensure_transcript'),
   staticToolCall('get_audio_activity'),
   staticToolCall('apply_captions'),

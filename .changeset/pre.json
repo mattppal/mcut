@@ -111,6 +111,7 @@
     "secure-bridge-daemon",
     "sequential-video-collage",
     "silent-multicam-no-fallback",
+    "stored-transcript-word-order",
     "strict-transform",
     "thumbnail-track-per-layer",
     "transact-history-and-target",
