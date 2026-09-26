@@ -69,6 +69,29 @@ export function mergeChunkSegments(results: ChunkSegmentResult[]): TranscriptSeg
   return merged.sort((a, b) => a.startMs - b.startMs)
 }
 
+const SEGMENT_PAUSE_MS = 1000
+const SEGMENT_MAX_MS = 10_000
+
+export function segmentsFromWords(words: TranscriptWord[]): TranscriptSegment[] {
+  const segments: TranscriptSegment[] = []
+  let current: TranscriptWord[] = []
+  const flush = () => {
+    const first = current[0]
+    const last = current.at(-1)
+    if (first && last) segments.push({ text: current.map((w) => w.text).join(' '), startMs: first.startMs, endMs: last.endMs })
+    current = []
+  }
+  for (const word of words) {
+    const first = current[0]
+    const last = current.at(-1)
+    if (first && last && (word.startMs - last.endMs > SEGMENT_PAUSE_MS || word.endMs - first.startMs > SEGMENT_MAX_MS)) flush()
+    current.push(word)
+    if (/[.?!]["')\]]*$/.test(word.text)) flush()
+  }
+  flush()
+  return segments
+}
+
 function cutAtLargestPauseOrOverlapMidpoint<T extends { startMs: number; endMs: number }>(words: T[], overlapStartMs: number, overlapEndMs: number): number {
   let bestGap = 0
   let bestCut = (overlapStartMs + overlapEndMs) / 2
