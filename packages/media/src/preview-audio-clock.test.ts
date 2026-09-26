@@ -75,4 +75,19 @@ describe('preview audio clock before the output renders', () => {
     audio.sync(project, playing(1400))
     expect(audio.clockTimeMs(116)).toBe(1400)
   })
+
+  test('a resume after the output has rendered once anchors without waiting for a fresh output timestamp', async () => {
+    const project = createProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, { ...playing(2000), isPlaying: false })
+    output.performanceTime = 0
+    audio.sync(project, playing(2000))
+    await settle()
+    audio.sync(project, playing(2000))
+    expect(audio.clockTimeMs(116)).toBe(2000)
+  })
 })
