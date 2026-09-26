@@ -171,6 +171,18 @@ describe('usePlaybackLoop', () => {
     expect(seen).toEqual([0, 40, 90, 106])
   })
 
+  test('a seek between frames wins over a clock still reporting the old position', () => {
+    const engine = engineWithClip(10_000)
+    engine.play()
+    const frames = fakeFrames()
+    renderHook(() => usePlaybackLoop(engine, { onFrame: () => {}, requestFrame: frames.requestFrame, clock: (frameTimeMs) => 1000 + frameTimeMs }))
+    frames.step(0)
+    frames.step(16)
+    engine.seek(5000)
+    frames.step(32)
+    expect(engine.playback.state.currentTimeMs).toBe(5016)
+  })
+
   test('the clock is not asked while paused', () => {
     const engine = engineWithClip(10_000)
     engine.seek(500)
