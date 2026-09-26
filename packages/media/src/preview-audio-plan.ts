@@ -23,7 +23,7 @@ export function contextAt(anchor: AudioAnchor, timelineMs: number): number {
 }
 
 export function voiceStartS(anchor: AudioAnchor, segmentStartS: number, nowS: number, leadS: number): number {
-  return Math.max(segmentStartS, nowS + leadS, anchor.contextS)
+  return Math.max(segmentStartS, anchor.contextS > nowS ? anchor.contextS : nowS + leadS)
 }
 
 export function heardContextS(stamp: OutputStamp, perfMs: number): number {
