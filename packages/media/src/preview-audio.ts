@@ -136,7 +136,6 @@ export class PreviewAudio {
     const rate = playback.playbackRate
     if (!playback.isPlaying || rate <= 0 || rate > MAX_AUDIBLE_RATE) {
       this.flush()
-      if (this.context?.state === 'running') void this.context.suspend()
       return
     }
     const { context, master } = this.ensureContext()
