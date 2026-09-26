@@ -1,5 +1,28 @@
 # @mcut/compositor
 
+## 0.1.0-alpha.21
+
+### Minor Changes
+
+- [#196](https://github.com/mattppal/mcut/pull/196) [`46f3ce3`](https://github.com/mattppal/mcut/commit/46f3ce34f1a9284df47e6de48958011f46c829a4) Thanks [@mattppal](https://github.com/mattppal)! - `createElementContext` takes the render options in place of the frame source. The render context gains `acquireScratch`, an off screen 2D surface that is reused across frames. A renderer composes into it and draws it straight away. Motion blur passes draw from the same scratch cache, and `createScratchContext` in the render options still overrides it.
+
+- [#196](https://github.com/mattppal/mcut/pull/196) [`46f3ce3`](https://github.com/mattppal/mcut/commit/46f3ce34f1a9284df47e6de48958011f46c829a4) Thanks [@mattppal](https://github.com/mattppal)! - A multicam composes its layout into the compose scratch, then draws that frame through the same image quad as a video clip. On the WebGPU backend its effects run on the GPU, chroma key, curves, and 3D LUTs included, and its blend mode applies against the layers below. Its opacity, blend mode, and effects apply once to the composed frame instead of to each slot. Its crop, corner radius, stroke, and shadow frame the composed frame the way they frame a clip, and an angle transition plays inside that frame. A slot that reaches past the frame is cut at the frame. A zoom region without `source` still scales the whole composite before the crop cuts it.
+
+- [#196](https://github.com/mattppal/mcut/pull/196) [`46f3ce3`](https://github.com/mattppal/mcut/commit/46f3ce34f1a9284df47e6de48958011f46c829a4) Thanks [@mattppal](https://github.com/mattppal)! - `getElementNaturalSize` and `getElementDisplaySize` take the project first, the way `getElementOBB` does. A multicam's natural size is the project frame reduced to its crop, and `getElementOBB` returns that box under the multicam's transform. The player hit tests, selects, and resizes a multicam the way it does a clip, and the frame size fields of an editor can show it.
+
+- [#196](https://github.com/mattppal/mcut/pull/196) [`46f3ce3`](https://github.com/mattppal/mcut/commit/46f3ce34f1a9284df47e6de48958011f46c829a4) Thanks [@mattppal](https://github.com/mattppal)! - `RenderBackend` now exposes `pixelGrid()`, the pixels its raster lands on, as the raster's current transform and its size in pixels. `Canvas2DBackend` reads it from its context and `WebGPUBackend` from its raster. A custom backend must add the method. A multicam composes on that grid and copies the composed pixels onto the target one to one, so an element crop, a zoom region, a transform, and a preview drawn below full size put every slot on the pixels a direct draw would, and the composed frame is no softer than slots drawn straight onto the target. A multicam magnified by its transform, by a keyframed punch-in, or by a zoom region without `source` stays as sharp as a video clip at the same scale, and a still rendered at 2x or 4x keeps the detail of sources larger than the project. A multicam magnified past the canvas composes only the canvas's pixels. An effect that reads neighboring pixels, as blur, drop shadow, and CSS filters do, composes past the canvas edge, up to 8192 pixels a side.
+
+- [#196](https://github.com/mattppal/mcut/pull/196) [`46f3ce3`](https://github.com/mattppal/mcut/commit/46f3ce34f1a9284df47e6de48958011f46c829a4) Thanks [@mattppal](https://github.com/mattppal)! - `getSlotBoxes` returns where a multicam shows each slot of its active layout at a timeline time, as the slot's source key and an oriented box in canvas pixels. Each box goes through the placement the renderer composes with, including the crop, a zoom region without `source`, and the transform. The box is cut where the renderer cuts the slot, so a hit test or an overlay lines up with the composed frame. A slot the frame shows none of has no box.
+
+- [#196](https://github.com/mattppal/mcut/pull/196) [`46f3ce3`](https://github.com/mattppal/mcut/commit/46f3ce34f1a9284df47e6de48958011f46c829a4) Thanks [@mattppal](https://github.com/mattppal)! - A multicam needs a scratch 2D context to compose its layout on. Where none is available, rendering the multicam throws `ScratchContextError`. No context is available where `OffscreenCanvas` is missing and no `createScratchContext` is given, or when `createScratchContext` returns `null`. The message names the size and shows a node-canvas factory to pass as `createScratchContext`. `ElementRenderContext.acquireScratch` returns a 2D context or throws that error, so a renderer never gets `null`.
+
+### Patch Changes
+
+- [#196](https://github.com/mattppal/mcut/pull/196) [`46f3ce3`](https://github.com/mattppal/mcut/commit/46f3ce34f1a9284df47e6de48958011f46c829a4) Thanks [@mattppal](https://github.com/mattppal)! - `getZoomWindow(view, visible)` returns the part of the content a zoom view shows, as a normalized rect anchored at the view's focus. `getZoomedRect` maps a rect through that window, and the compositor draws a clip's zoom and a slot's zoom from it, so the renderer and `flattenMulticam` read one zoom formula.
+
+- Updated dependencies [[`46f3ce3`](https://github.com/mattppal/mcut/commit/46f3ce34f1a9284df47e6de48958011f46c829a4)]:
+  - @mcut/timeline@0.1.0-alpha.20
+
 ## 0.1.0-alpha.20
 
 ### Patch Changes
