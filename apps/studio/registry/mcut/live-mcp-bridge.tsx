@@ -325,7 +325,9 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
       if (!isActionEnabled(action, context)) {
         throw new Error(`Editor action "${actionId}" is disabled.`)
       }
-      return runEditorAction(action, { ...context, input, throwOnError: true }) ?? null
+      const result = await runEditorAction(action, { ...context, input, throwOnError: true })
+      if (!action.run) return null
+      return result ?? null
     }
     case 'transact':
       return applyTransact(engine, request.payload.requests, (sub) => handleLiveMcpRequest(engine, ui, bridgeRequestFor(request.id, sub)))
