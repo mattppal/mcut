@@ -7,10 +7,12 @@ let browser: Browser
 let page: Page
 
 beforeAll(async () => {
-  const bundle = await Bun.build({ entrypoints: [`${import.meta.dir}/zoom-blur-probe.ts`], target: 'browser' })
-  const script = await bundle.outputs[0]?.text()
-  if (!bundle.success || script === undefined) throw new Error(bundle.logs.join('\n'))
-  server = Bun.serve({ port: 0, fetch: () => new Response(`<script type="module">${script}</script>`, { headers: { 'content-type': 'text/html' } }) })
+  const probes = ['zoom-blur-probe'].map((name) => `${import.meta.dir}/${name}.ts`)
+  const bundle = await Bun.build({ entrypoints: probes, target: 'browser' })
+  if (!bundle.success) throw new Error(bundle.logs.join('\n'))
+  const scripts = await Promise.all(bundle.outputs.map((output) => output.text()))
+  const html = scripts.map((script) => `<script type="module">${script}</script>`).join('')
+  server = Bun.serve({ port: 0, fetch: () => new Response(html, { headers: { 'content-type': 'text/html' } }) })
   browser = await chromium.launch()
   page = await browser.newPage()
   await page.goto(server.url.href)
