@@ -117,18 +117,20 @@ describe('planWindow', () => {
         { timeMs: 4000, value: 6000 },
       ],
     }
-    expect(planWindow(ramp, anchor, 10, 10.02, false)?.segment).toEqual({
+    expect(planWindow(ramp, anchor, 10, 10.03125, false)?.segment).toEqual({
       elementId: 'e1',
       src: 'blob:a',
       startMs: 10000,
-      durationMs: 30,
+      durationMs: 41.25,
       trimStartMs: 2500,
-      sourceSpanMs: 30,
+      sourceSpanMs: 41.25,
       timeMap: [
         { timeMs: 0, value: 0 },
         { timeMs: 10, value: 10 },
         { timeMs: 20, value: 20 },
         { timeMs: 30, value: 30 },
+        { timeMs: 40, value: 40 },
+        { timeMs: 41.25, value: 41.25 },
       ],
       volume: 1,
     })
