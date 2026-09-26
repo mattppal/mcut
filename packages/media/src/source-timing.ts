@@ -155,7 +155,6 @@ function byteReader(src: MediaSourceLike): ByteReader {
   return async (start, end) => {
     const response = await fetch(src, { headers: { Range: `bytes=${start}-${end - 1}` } })
     if (response.status === 206) return new Uint8Array(await response.arrayBuffer())
-    if (response.status === 416) return new Uint8Array(0)
     if (!response.ok) throw new Error(`Reading bytes ${start}-${end - 1} of ${src} failed with HTTP ${response.status}.`)
     const reader = response.body?.getReader()
     const chunks: Uint8Array[] = []
@@ -228,7 +227,9 @@ export async function trackTiming(src: MediaSourceLike, input: Input, track: Inp
   const { EncodedPacketSink } = await import('mediabunny')
   const packets = new EncodedPacketSink(track)
   const first = await packets.getFirstPacket()
-  return first ? buildSourceTiming(await readTimingFacts(src, input, track, first.timestamp), packets, first) : null
+  if (!first) return null
+  const facts = await readTimingFacts(src, input, track, first.timestamp).catch(() => null)
+  return facts ? buildSourceTiming(facts, packets, first) : null
 }
 
 export async function sourceAudioSink(src: MediaSourceLike, input: Input, track: InputAudioTrack): Promise<Pick<AudioBufferSink, 'buffers'>> {
