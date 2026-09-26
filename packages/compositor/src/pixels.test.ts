@@ -30,11 +30,12 @@ test.each([8, 16])('a zoom ramp blurred over %i samples keeps flat grey at 100 a
   expect(reading.cameraMaxShift).toBeLessThanOrEqual(1)
 })
 
-test('a multicam magnified 2x keeps a checkerboard as crisp as a video clip magnified 2x, at export, in a half-scale preview, and cropped', async () => {
+test('a multicam magnified 2x keeps a checkerboard as crisp as a video clip magnified 2x, at export, in a half-scale preview, cropped, and by a zoom region', async () => {
   const reading: MagnifiedReading = await page.evaluate(() => magnifiedMulticamProbe())
   expect(reading).toEqual({
     export: { video: 128, multicam: 128 },
     halfPreview: { video: 128, multicam: 128 },
     cropped: { video: 128, multicam: 128 },
+    zoomed: { video: 128, multicam: 128 },
   })
 })

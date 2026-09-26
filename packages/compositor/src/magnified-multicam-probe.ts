@@ -14,6 +14,12 @@ export interface MagnifiedReading {
   export: Sharpness
   halfPreview: Sharpness
   cropped: Sharpness
+  zoomed: Sharpness
+}
+
+interface Framing {
+  crop?: Crop
+  scale?: number
 }
 
 function checkerboard(square: number): OffscreenCanvas {
@@ -41,15 +47,17 @@ function withSource(): Project {
   })
 }
 
-function video(crop?: Crop): Project {
+const transform = (scale: number) => ({ x: 0, y: 0, scaleX: scale, scaleY: scale, rotation: 0 })
+
+function video({ crop, scale = 1 }: Framing = {}): Project {
   return applyCommand(withSource(), {
     type: 'addElement',
     trackId: 't-default',
-    element: { id: 'e-v', type: 'video', assetId: 'a-cam', startMs: 0, durationMs: 5000, ...(crop ? { crop } : {}) },
+    element: { id: 'e-v', type: 'video', assetId: 'a-cam', startMs: 0, durationMs: 5000, transform: transform(scale), ...(crop ? { crop } : {}) },
   })
 }
 
-function multicam(crop?: Crop): Project {
+function multicam({ crop, scale = 2 }: Framing = {}): Project {
   const project = applyCommand(withSource(), {
     type: 'saveLayout',
     layout: { id: 'l-cam', name: 'Camera', slots: [{ source: 'camera', rect: { x: 0, y: 0, w: 1, h: 1 } }] },
@@ -64,11 +72,18 @@ function multicam(crop?: Crop): Project {
       durationMs: 5000,
       sources: [{ key: 'camera', assetId: 'a-cam' }],
       angles: [{ atMs: 0, layoutId: 'l-cam' }],
-      transform: { x: 0, y: 0, scaleX: 2, scaleY: 2, rotation: 0 },
+      transform: transform(scale),
       ...(crop ? { crop } : {}),
     },
   })
 }
+
+const zoomed2x = (project: Project, elementId: string): Project =>
+  applyCommand(project, {
+    type: 'addZoomRegion',
+    elementId,
+    zoom: { atMs: 0, inMs: 500, holdMs: 1000, outMs: 500, scale: 2, focus: { x: 0.5, y: 0.5 }, motionBlur: 0 },
+  })
 
 function spread(project: Project, renderScale: number, square: 1 | 2): number {
   const ctx = new OffscreenCanvas(WIDTH * renderScale, HEIGHT * renderScale).getContext('2d')
@@ -86,7 +101,8 @@ function magnifiedMulticamProbe(): MagnifiedReading {
   return {
     export: { video: spread(video(), 1, 1), multicam: spread(multicam(), 1, 1) },
     halfPreview: { video: spread(video(), 0.5, 2), multicam: spread(multicam(), 0.5, 2) },
-    cropped: { video: spread(video(center), 1, 1), multicam: spread(multicam(center), 1, 1) },
+    cropped: { video: spread(video({ crop: center }), 1, 1), multicam: spread(multicam({ crop: center }), 1, 1) },
+    zoomed: { video: spread(zoomed2x(video({ scale: 0.5 }), 'e-v'), 1, 1), multicam: spread(zoomed2x(multicam({ scale: 1 }), 'e-mc'), 1, 1) },
   }
 }
 
