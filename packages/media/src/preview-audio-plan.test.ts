@@ -26,12 +26,12 @@ describe('audio clock anchor', () => {
 })
 
 describe('planWindow', () => {
-  const clip: AudibleSegment = { elementId: 'e1', src: 'blob:a', startMs: 1000, durationMs: 4000, trimStartMs: 2000, sourceSpanMs: 4000, volume: 0.5 }
+  const clip: AudibleSegment = { elementId: 'e-1', src: 'blob:a', startMs: 1000, durationMs: 4000, trimStartMs: 2000, sourceSpanMs: 4000, volume: 0.5 }
   const anchor = { timelineMs: 1500, contextS: 10, rate: 1 }
 
   test('a plain window starts at its heard time and overhangs by the crossfade', () => {
     expect(planWindow(clip, anchor, 10, 10.5, false)).toEqual({
-      segment: { elementId: 'e1', src: 'blob:a', startMs: 10000, durationMs: 510, trimStartMs: 2500, sourceSpanMs: 510, volume: 1 },
+      segment: { elementId: 'e-1', src: 'blob:a', startMs: 10000, durationMs: 510, trimStartMs: 2500, sourceSpanMs: 510, volume: 1 },
       gate: { openS: 10, fadeInS: 0, closeS: 10.5, fadeOutS: 0.01 },
       endS: 10.51,
     })
@@ -39,7 +39,7 @@ describe('planWindow', () => {
 
   test('the window that reaches the clip end fades in and never closes', () => {
     expect(planWindow(clip, anchor, 13, 13.5, true)).toEqual({
-      segment: { elementId: 'e1', src: 'blob:a', startMs: 13000, durationMs: 500, trimStartMs: 5500, sourceSpanMs: 500, volume: 1 },
+      segment: { elementId: 'e-1', src: 'blob:a', startMs: 13000, durationMs: 500, trimStartMs: 5500, sourceSpanMs: 500, volume: 1 },
       gate: { openS: 13, fadeInS: 0.01, closeS: null, fadeOutS: 0 },
       endS: 13.5,
     })
@@ -53,7 +53,7 @@ describe('planWindow', () => {
   test('a transport rate stretches the window with a pre-roll the gate hides', () => {
     expect(planWindow(clip, { ...anchor, rate: 2 }, 10, 10.5, false)).toEqual({
       segment: {
-        elementId: 'e1',
+        elementId: 'e-1',
         src: 'blob:a',
         startMs: 9750,
         durationMs: 760,
@@ -72,7 +72,7 @@ describe('planWindow', () => {
 
   test('a reversed clip reads its source range from the end', () => {
     expect(planWindow({ ...clip, reversed: true }, anchor, 10, 10.5, false)?.segment).toEqual({
-      elementId: 'e1',
+      elementId: 'e-1',
       src: 'blob:a',
       startMs: 10000,
       durationMs: 510,
@@ -93,7 +93,7 @@ describe('planWindow', () => {
       ],
     }
     expect(planWindow(fast, anchor, 10, 10.5, false)?.segment).toEqual({
-      elementId: 'e1',
+      elementId: 'e-1',
       src: 'blob:a',
       startMs: 9750,
       durationMs: 760,
@@ -118,7 +118,7 @@ describe('planWindow', () => {
       ],
     }
     expect(planWindow(ramp, anchor, 10, 10.03125, false)?.segment).toEqual({
-      elementId: 'e1',
+      elementId: 'e-1',
       src: 'blob:a',
       startMs: 10000,
       durationMs: 41.25,
