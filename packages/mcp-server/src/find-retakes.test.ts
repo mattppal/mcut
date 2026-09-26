@@ -141,6 +141,16 @@ describe('find_retakes on a cut multicam', () => {
     ])
   })
 
+  test('a reversed multicam is rejected', async () => {
+    const engine = multicamWithOffsetMic()
+    const client = await connect(engine)
+    await client.callTool({ name: 'apply_captions', arguments: { transcript: fullTranscript, elementId: 'e-mc' } })
+    engine.dispatch({ type: 'updateElement', elementId: 'e-mc', patch: { reversed: true } })
+
+    const result = await client.callTool({ name: 'find_retakes', arguments: { elementId: 'e-mc' } })
+    expect(textOf(result)).toBe('CommandError (invalid-payload): clip "e-mc" plays reversed, so its captions have no forward source time')
+  })
+
   test('a multicam with no audio source points at setMulticamAudio', async () => {
     const engine = multicamWithOffsetMic()
     const client = await connect(engine)

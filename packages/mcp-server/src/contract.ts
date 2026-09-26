@@ -126,7 +126,7 @@ export const MCP_TOOL_INPUTS = {
     .extend({
       elementId: elementIdSchema
         .describe(
-          'The video or audio clip the captions came from. The reply then includes transcript, its words in source ms, ready to pass to apply_captions per remaining piece of that clip after the cuts.',
+          "A clip with source audio, including a multicam and each piece left after cuts. The reply then includes that piece's words in audio-asset time.",
         )
         .optional(),
     })
@@ -240,13 +240,14 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   search_transcript:
     'Search the caption-derived transcript and return timeline times for matches. ' + 'Use this to locate spoken words/phrases before cutting or annotating.',
   find_retakes:
-    'Find retakes in the word-timed transcript: a phrase whose opening words are spoken again within maxLookaheadMs. ' +
+    'Find retakes in the word-timed transcript. A phrase whose opening words are spoken again within maxLookaheadMs. ' +
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
-    'Candidates come last to first; cut them in that order so no ripple delete shifts a range still to cut. ' +
-    'Pass elementId to get transcript back in source ms. Cut the clip only, then call apply_captions once per remaining piece of that clip with that transcript and the piece elementId, passing replace true until a call reports OK and false after. ' +
-    'That call clears the caption track, so before cutting also call find_retakes for each other captioned clip on it, and rebuild its pieces from its own transcript. ' +
+    'Candidates come last to first. Cut them in that order so no ripple delete shifts a range still to cut. ' +
+    'Pass elementId for a clip with source audio, including a multicam and each piece left after the cuts. ' +
+    'After the cuts, pass the full, unchanged transcript to apply_captions once per remaining clip, never a slice. ' +
+    'Pass replace true on the first call and false after, because the first call clears the caption track. ' +
     'Cutting the caption track instead leaves later words late. ' +
-    'Review abandonedText before cutting. Needs captions with word timings; call ensure_transcript first.',
+    'Review abandonedText before cutting. Needs captions with word timings. Call ensure_transcript first.',
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
@@ -261,7 +262,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'styleId picks a caption style preset. Returns the updated project summary. ' +
     'Pass a timed transcript from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
     'Never invent a transcript when transcription fails. ' +
-    'The result warns when the transcript matches no transcript in the project.',
+    'The result warns when the transcript matches no transcript in the project. Caption words left in order after cuts still match.',
   apply_silence_cuts: applySilenceCutsDescription,
   lint_project:
     'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
