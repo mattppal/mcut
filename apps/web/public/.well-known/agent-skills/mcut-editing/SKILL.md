@@ -96,7 +96,7 @@ no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 
 ### Remove retakes
 
-The flow is three steps: `find_retakes`, cut, then one `apply_captions` call.
+The flow is `find_retakes`, then the cut, then one `apply_captions` call.
 
 1. After `ensure_transcript`, call `find_retakes` with the captioned clip's
    `elementId`. A multicam works. Keep the returned `transcript`, which is in

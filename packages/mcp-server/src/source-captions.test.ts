@@ -98,6 +98,16 @@ describe('apply_captions with a source scope', () => {
     expect(captionWords(engine)).toEqual(expectedWords(engine, ['e-mc', 'e-keep-2', 'e-keep-3']))
   })
 
+  test('captions on another caption track stay', async () => {
+    const { engine, client, saved } = await cutRetakes()
+    engine.dispatch({ type: 'addTrack', id: 't-guest' })
+    engine.dispatch({ type: 'addElement', trackId: 't-guest', element: { id: 'e-guest', type: 'caption', startMs: 2000, durationMs: 1000, text: 'guest' } })
+
+    await client.callTool({ name: 'apply_captions', arguments: { transcript: saved, elementId: 'e-mc' } })
+    expect(engine.project.tracks.find((track) => track.id === 't-guest')?.elements.map((element) => element.id)).toEqual(['e-guest'])
+    expect(captionWords(engine)).toEqual(expectedWords(engine, ['e-mc', 'e-keep-2', 'e-keep-3']))
+  })
+
   test('scope clip captions only the named piece', async () => {
     const { engine, client } = await cutRetakes()
     await client.callTool({ name: 'apply_captions', arguments: { transcript, elementId: 'e-keep-2', scope: 'clip' } })

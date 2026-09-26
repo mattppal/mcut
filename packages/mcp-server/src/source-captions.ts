@@ -57,17 +57,16 @@ function withoutOverlaps(captions: Caption[]): Caption[] {
 }
 
 function staleCaptionIds(project: Project, pieces: readonly ElementAudioSource[]): ElementId[] {
+  const captionTrack = project.tracks.find((track) => track.elements.length > 0 && track.elements.every((element) => element.type === 'caption'))
   const audible = project.tracks.flatMap((track) => track.elements.filter((element) => resolveElementAudioSource(project, element.id) !== null))
-  const ids: ElementId[] = []
-  for (const track of project.tracks) {
-    for (const element of track.elements) {
-      if (element.type !== 'caption') continue
-      const overPiece = pieces.some((piece) => rangesOverlap(element.startMs, element.durationMs, piece.timelineStartMs, piece.timelineDurationMs))
-      const overAudio = audible.some((clip) => rangesOverlap(element.startMs, element.durationMs, clip.startMs, clip.durationMs))
-      if (overPiece || !overAudio) ids.push(element.id)
-    }
-  }
-  return ids
+  return (captionTrack?.elements ?? [])
+    .filter((caption) => {
+      const midMs = caption.startMs + caption.durationMs / 2
+      const overPiece = pieces.some((piece) => midMs >= piece.timelineStartMs && midMs < piece.timelineStartMs + piece.timelineDurationMs)
+      const overAudio = audible.some((clip) => midMs >= clip.startMs && midMs < clip.startMs + clip.durationMs)
+      return overPiece || !overAudio
+    })
+    .map((caption) => caption.id)
 }
 
 export function sourceCaptionsNote(plan: SourceCaptionsPlan): string {
