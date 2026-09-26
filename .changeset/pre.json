@@ -49,6 +49,7 @@
     "export-frame-rgba",
     "export-job-socket-races",
     "export-job",
+    "export-reverse-long-audio",
     "find-retakes-time-remap",
     "find-retakes",
     "find-scene-changes",
