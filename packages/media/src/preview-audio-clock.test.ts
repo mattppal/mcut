@@ -27,10 +27,17 @@ class RecordingGain {
 }
 
 let gains: RecordingGain[] = []
+let startState: AudioContextState = 'running'
+let resumeLands = true
+let contexts: StalledAudioContext[] = []
 
 class StalledAudioContext {
-  state = 'running'
+  state = startState
   sampleRate = 48_000
+
+  constructor() {
+    contexts.push(this)
+  }
   destination = {}
 
   get currentTime(): number {
@@ -48,10 +55,13 @@ class StalledAudioContext {
   }
 
   resume() {
-    return Promise.resolve()
+    return Promise.resolve().then(() => {
+      if (resumeLands) this.state = 'running'
+    })
   }
 
   suspend() {
+    this.state = 'suspended'
     return Promise.resolve()
   }
 
@@ -82,6 +92,9 @@ describe('preview audio clock around the output start', () => {
     output.performanceTime = 0
     renderedS = 0.013
     gains = []
+    startState = 'running'
+    resumeLands = true
+    contexts = []
     audio = new PreviewAudio()
   })
 
@@ -152,5 +165,20 @@ describe('preview audio clock around the output start', () => {
     audio.sync(project, playing(1000, 4))
     expect(sounding?.disconnected).toBe(false)
     expect(sounding?.curveStarts.at(-1)).toBeCloseTo(1.25, 3)
+  })
+
+  test('a play after a pause anchors where the pause left the playhead', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, playing(1000))
+    renderedS = 1.5
+    audio.sync(project, { ...playing(1500), isPlaying: false })
+    await settle()
+    audio.sync(project, playing(1500))
+    expect(audio.clockTimeMs(116)).toBe(1500)
   })
 })
