@@ -23,6 +23,7 @@ import {
 import { applyChrome, type LayerChrome } from './backend'
 import { drawFramedComposite, drawFramedMedia, frameRadius, getImageSize, viewSourceRect } from './framed-media'
 import { toCanvasPoint } from './geometry'
+import { getCaptionLane } from './caption-lane'
 import { reframedCrop, reframedSlot } from './reframe-views'
 import { transitionRenderers } from './transition-renderers'
 import { buildFont, layoutCaption, layoutTextBlock, type MeasureFn } from './text'
@@ -197,8 +198,9 @@ const renderText: ElementRenderer<TextElement> = (element, context) => {
 const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
   const { ctx, project, timeMs } = context
   const style = element.style
-  const maxWidth = project.width * 0.85
-  const layout = layoutCaption(measureWith(ctx), element, style, maxWidth)
+  const padX = style.fontSize * 0.4
+  const lane = getCaptionLane(project, timeMs, style.position, padX)
+  const layout = layoutCaption(measureWith(ctx), element, style, lane.maxWidth)
   if (layout.lines.length === 0) return
 
   const blockHeight = layout.lines.length * layout.lineHeight
@@ -212,7 +214,6 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
   }
 
   const relativeMs = timeMs - element.startMs
-  const padX = style.fontSize * 0.4
   const padY = style.fontSize * 0.18
 
   ctx.save()
@@ -221,7 +222,7 @@ const renderCaption: ElementRenderer<CaptionElement> = (element, context) => {
   ctx.textAlign = 'left'
 
   for (const [i, line] of layout.lines.entries()) {
-    const lineLeft = project.width / 2 - line.width / 2
+    const lineLeft = lane.centerX - line.width / 2
     const lineCenterY = blockTop + layout.lineHeight * (i + 0.5)
 
     if (style.backgroundColor) {
