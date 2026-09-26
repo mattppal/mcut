@@ -50,7 +50,11 @@ export const zoomRegionInputSchema = z
   .object({
     id: z.string().min(1).optional(),
     preset: presetSchema.default('subtlePunchIn').describe('subtlePunchIn is 1.15x, detailZoom is 1.3x. Explicit fields override it.'),
-    source: z.string().min(1).describe('Multicam only: the source key whose slots zoom, e.g. "screen". Other slots stay put.').optional(),
+    source: z
+      .string()
+      .min(1)
+      .describe('Multicam only: the source key whose slots zoom, e.g. "screen". Other slots stay put. Omit it to zoom the whole composite.')
+      .optional(),
     atMs: z.number().int().nonnegative().describe('Element-local time the zoom-in starts.'),
     inMs: z.number().int().min(1).optional(),
     holdMs: z.number().int().nonnegative().optional(),
@@ -186,7 +190,7 @@ export function getSlotView(
   return zoomViewAt(element.zooms, slot.source, timelineMs - element.startMs, visible, rest)
 }
 
-export function getClipView(element: VideoElement | ImageElement, timelineMs: number): ContentView {
+export function getClipView(element: ZoomableElement, timelineMs: number): ContentView {
   return zoomViewAt(element.zooms, undefined, timelineMs - element.startMs, FULL_FRAME, CENTER)
 }
 

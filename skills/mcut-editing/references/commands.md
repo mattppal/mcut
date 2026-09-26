@@ -416,7 +416,7 @@ Detach the audio of a video or multicam element onto its own audio element; a mu
 
 ## addZoomRegion
 
-Add a zoom region to a video, image, or multicam element. Zoom in over inMs, hold, zoom out over outMs, with easing and motion blur. Defaults to the subtlePunchIn preset (1.15x, easeOutExpo, motion blur 0.5). On a multicam, source names the angle whose slots zoom, so the screen zooms while a camera overlay stays put.
+Add a zoom region to a video, image, or multicam element. Zoom in over inMs, hold, zoom out over outMs, with easing and motion blur. Defaults to the subtlePunchIn preset (1.15x, easeOutExpo, motion blur 0.5). On a multicam, source names the angle whose slots zoom, so the screen zooms while a camera overlay stays put. A multicam zoom without source zooms the whole composite, overlays included.
 
 - `elementId` (string, required)
 - `zoom` (object, required)
