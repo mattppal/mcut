@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { AudibleSegment } from './export-audio-composite'
-import { contextAt, heardContextS, planFeed, planWindow, sourceMapOf, timelineAt } from './preview-audio-plan'
+import { contextAt, epochChange, heardContextS, planFeed, planWindow, sourceMapOf, timelineAt } from './preview-audio-plan'
 
 describe('audio clock anchor', () => {
   const anchor = { timelineMs: 1000, contextS: 2, rate: 1 }
@@ -22,6 +22,27 @@ describe('audio clock anchor', () => {
 
   test('extrapolates the output timestamp to the frame time', () => {
     expect(heardContextS({ contextTime: 10, performanceTime: 5000 }, 5016)).toBeCloseTo(10.016, 9)
+  })
+})
+
+describe('epochChange', () => {
+  const playing = { rate: 1, reportedMs: 5000, sounding: true }
+
+  test('the same rate at the reported position keeps the epoch', () => {
+    expect(epochChange(playing, { currentTimeMs: 5000.5, playbackRate: 1 })).toBe('keep')
+  })
+
+  test('a seek restarts the epoch', () => {
+    expect(epochChange(playing, { currentTimeMs: 7000, playbackRate: 1 })).toBe('restart')
+    expect(epochChange(null, { currentTimeMs: 0, playbackRate: 1 })).toBe('restart')
+  })
+
+  test('a rate change while sounding hands the timeline to a new epoch instead of cutting the sound', () => {
+    expect(epochChange(playing, { currentTimeMs: 5000, playbackRate: 2 })).toBe('handoff')
+  })
+
+  test('a rate change before anything sounds restarts', () => {
+    expect(epochChange({ ...playing, sounding: false }, { currentTimeMs: 5000, playbackRate: 2 })).toBe('restart')
   })
 })
 
