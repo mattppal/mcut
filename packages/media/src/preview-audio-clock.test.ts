@@ -228,6 +228,20 @@ describe('preview audio clock around the output start', () => {
     expect(audio.clockTimeMs(698)).toBe(1500)
   })
 
+  test('a play above the audible rate from a paused stop leaves the playhead on the wall clock', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, playing(1000))
+    renderedS = 0.975
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    audio.sync(project, playing(1420, 8))
+    expect(audio.clockTimeMs(116)).toBeNull()
+  })
+
   test('a seek during a pause starts the next play where the seek landed', async () => {
     const project = toneProject()
     renderedS = 0.5
