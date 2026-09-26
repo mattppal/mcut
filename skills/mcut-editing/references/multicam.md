@@ -102,13 +102,46 @@ the part of the frame its fit shows. Each slot rect keeps its size and aspect an
 keeps its size, so only the framing inside the slot follows the face. `setReframe` with a
 null `track` stops the follow and puts each crop back where the layout saved it.
 
-## Switching rhythm (the editorial part)
+## Choosing shots (the editorial part)
+
+A multicam edit is a shot list. Plan it from what the speaker says and what the screen
+shows, then apply it in one pass. Never alternate angles on a fixed rhythm.
+
+### Talking head with a screen recording
+
+1. Read the words. Call `get_transcript` with `includeWords` set to true, after
+   `ensure_transcript` if there is none. Cut retakes first with `find_retakes` and
+   `remove_ranges`, then plan on the cut timeline.
+2. Read the screen. `find_scene_changes` on the `screen` source returns the spans where
+   the picture holds still. `get_contact_sheet` over a span shows what it holds.
+3. Write the shot list before you change anything, one line per span with its start,
+   its layout, and the reason.
+   - Open on the head-only layout. The intro is the speaker talking to the viewer.
+     Hold it until they turn to the screen.
+   - Put the opening punch-in on the camera at the first pause after the first
+     sentence or two, not at 0s. A pause is a gap of about 300ms or more between
+     words. Keep it subtle, about 1.1x, with an expo ease and motion blur.
+   - Cut to the screen layout, the screen full frame with the head overlay, when the
+     speaker starts talking about what is on screen. Cues are words that point at it,
+     such as "this", "here", "look at", "you can see", "my screen", "my computer", or
+     the name of the app or page, spoken while a matching screen span is up. Cut in the
+     word gap before that sentence starts, not on the cue word.
+   - Cut back to the head-only layout when the speaker turns back to the viewer, for a
+     story, an opinion, a summary, or the sign-off.
+   - Hold each shot at least 2s. Merge a shorter span into its neighbor.
+4. Apply the whole list in one `transact`. Save any layout you need with `saveLayout`,
+   add one `addAngleCut` per span on the source clock, and add the zoom regions with
+   `source` set. Cut only in word gaps.
+5. Check the result. Call `get_contact_sheet` with one time per shot, and compare the
+   cut list in the summary with your shot list.
+
+When the words and the screen disagree, ask the user instead of guessing.
+
+### Other multicam edits
 
 - Cut on speaker changes and beats of the screen content, never mid-word.
 - Hold every angle at least 2s. Favor the layout that shows what the audience needs
   (screen while demoing, camera for reactions, side-by-side for banter).
-- Open on the establishing layout (screen plus PiP) so both sources register, then
-  tighten.
 
 ## Flattening
 
