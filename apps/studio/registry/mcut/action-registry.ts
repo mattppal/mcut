@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import { toast } from 'sonner'
 import { enabledStatus, operators, runOperator, type OperatorId } from '@mcut/editor'
 import type { EditorEngine } from '@mcut/timeline'
 import type { EditorUIValue } from './editor-ui'
@@ -133,6 +134,7 @@ export function runEditorAction(idOrAction: string | EditorAction, context: Acti
     }
   } catch (error) {
     if (context.throwOnError) throw error
+    toast.error(error instanceof Error ? error.message : 'Action failed')
   }
 }
 
