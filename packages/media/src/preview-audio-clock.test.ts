@@ -182,6 +182,27 @@ describe('preview audio clock around the output start', () => {
     expect(audio.clockTimeMs(116)).toBe(1500)
   })
 
+  test('a play from pause starts where the paused sound stopped, and a seek during the pause starts where it landed', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, playing(1000))
+    renderedS = 0.975
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    audio.sync(project, playing(1420))
+    expect(audio.clockTimeMs(116)).toBe(1450)
+    await settle()
+    audio.sync(project, playing(1450))
+    renderedS = 1.2
+    audio.sync(project, { ...playing(1600), isPlaying: false })
+    audio.sync(project, { ...playing(3000), isPlaying: false })
+    audio.sync(project, playing(3000))
+    expect(audio.clockTimeMs(132)).toBe(3000)
+  })
+
   test('a context that starts suspended holds the playhead at the play position while sound is due until it anchors', async () => {
     const project = toneProject()
     startState = 'suspended'
