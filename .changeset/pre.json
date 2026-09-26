@@ -26,6 +26,7 @@
   "changesets": [
     "agent-tool-descriptions",
     "animation-preset-at-playhead",
+    "apply-captions-all-pieces",
     "audio-activity-mcp",
     "bridge-catch-all",
     "bridge-malformed-host",

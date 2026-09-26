@@ -6,7 +6,12 @@ import { captionsCommandOptionsSchema, transcriptInputSchema } from '@mcut/trans
 const transcriptInput = transcriptInputSchema.describe('Transcript JSON with word timings in source-media milliseconds, the same shape `mcut captions` reads.')
 
 export const applyCaptionsInputSchema = captionsCommandOptionsSchema.extend({
-  transcript: transcriptInput,
+  transcript: transcriptInputSchema
+    .describe(
+      'Transcript JSON with word timings in source-media milliseconds. Omit it with elementId to reuse the transcript stored for that audio, ' +
+        'which ensure_transcript, find_retakes, and an earlier apply_captions keep.',
+    )
+    .optional(),
   scope: z
     .enum(['source', 'clip'])
     .describe(

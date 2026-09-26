@@ -99,17 +99,18 @@ no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 The flow is `find_retakes`, then the cut, then one `apply_captions` call.
 
 1. After `ensure_transcript`, call `find_retakes` with the captioned clip's
-   `elementId`. A multicam works. Keep the returned `transcript`, which is in
-   source time.
+   `elementId` before any cut. A multicam works. The server stores that
+   audio's word-timed transcript in source time.
 2. Each candidate is a timeline range from the abandoned take to the start of
    the kept take. Read `abandonedText` and skip any candidate that is a
    deliberate repetition. Candidates come last to first, so cut them in the
    returned order in one `transact`, each with a split at both ends and a
    ripple delete on the clip only. Leave the caption track alone.
-3. Call `apply_captions` once with `elementId` set to any remaining piece and
-   the full `transcript` from step 1, never a slice. That call captions every
-   piece on the track that plays the same audio at its new timeline position
-   and replaces the old captions over those pieces, as one undo step.
+3. Call `apply_captions` once with only `elementId` set to any remaining
+   piece. Do not pass `transcript`. The call reuses the stored transcript,
+   captions every piece on the track that plays the same audio at its new
+   timeline position, and replaces the old captions over those pieces, as one
+   undo step. Writing the words back out is slow and never needed here.
 
 Pass a lower `minMatchWords` only when a short restart was missed, and check
 each extra candidate, since lower values match spoken lists.
