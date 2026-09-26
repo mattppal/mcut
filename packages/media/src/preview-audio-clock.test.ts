@@ -167,7 +167,7 @@ describe('preview audio clock around the output start', () => {
     expect(sounding?.curveStarts.at(-1)).toBeCloseTo(1.25, 3)
   })
 
-  test('a play after a pause anchors where the pause left the playhead', async () => {
+  test('a pause fades the sound out at a scheduled stop, and a play from the same spot starts there', async () => {
     const project = toneProject()
     renderedS = 0.5
     output.contextTime = 0.5
@@ -175,14 +175,16 @@ describe('preview audio clock around the output start', () => {
     audio.sync(project, playing(1000))
     await settle()
     audio.sync(project, playing(1000))
-    renderedS = 1.025
-    audio.sync(project, { ...playing(1500), isPlaying: false })
-    await settle()
-    audio.sync(project, playing(1500))
+    const sounding = gains[1]
+    renderedS = 0.975
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    expect(sounding?.disconnected).toBe(false)
+    expect(sounding?.curveStarts.at(-1)).toBeCloseTo(1.025, 3)
+    audio.sync(project, playing(1420))
     expect(audio.clockTimeMs(116)).toBe(1500)
   })
 
-  test('a play from pause starts where the paused sound stopped, and a seek during the pause starts where it landed', async () => {
+  test('a seek during a pause starts the next play where the seek landed', async () => {
     const project = toneProject()
     renderedS = 0.5
     output.contextTime = 0.5
@@ -192,15 +194,9 @@ describe('preview audio clock around the output start', () => {
     audio.sync(project, playing(1000))
     renderedS = 0.975
     audio.sync(project, { ...playing(1420), isPlaying: false })
-    audio.sync(project, playing(1420))
-    expect(audio.clockTimeMs(116)).toBe(1450)
-    await settle()
-    audio.sync(project, playing(1450))
-    renderedS = 1.2
-    audio.sync(project, { ...playing(1600), isPlaying: false })
     audio.sync(project, { ...playing(3000), isPlaying: false })
     audio.sync(project, playing(3000))
-    expect(audio.clockTimeMs(132)).toBe(3000)
+    expect(audio.clockTimeMs(116)).toBe(3000)
   })
 
   test('a context that starts suspended holds the playhead at the play position while sound is due until it anchors', async () => {
