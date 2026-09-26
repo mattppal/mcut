@@ -11,6 +11,8 @@ import { sourceAudioSink } from './source-timing'
 const MAX_AUDIBLE_RATE = 4
 const HANDOFF_LEAD_S = 0.2
 const HANDOFF_FADE_S = 0.02
+const STOP_LEAD_S = 0.05
+const STOP_FADE_S = 0.005
 const FADE_STEPS = 32
 
 interface OpenSource {
@@ -108,6 +110,7 @@ export class PreviewAudio {
   private outputRendered = false
   private heldMs: number | null = null
   private paused: { atMs: number; stoppedMs: number } | null = null
+  private stopping: Epoch[] = []
   private disposed = false
 
   setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
@@ -136,7 +139,7 @@ export class PreviewAudio {
     if (this.disposed) return
     const rate = requested.playbackRate
     if (!requested.isPlaying || rate <= 0 || rate > MAX_AUDIBLE_RATE) {
-      if (!requested.isPlaying) this.notePause(requested.currentTimeMs)
+      if (!requested.isPlaying && this.stop(requested.currentTimeMs)) return
       this.flush()
       return
     }
@@ -291,10 +294,22 @@ export class PreviewAudio {
     return anchor ? { anchor, outgoing } : null
   }
 
-  private notePause(atMs: number): void {
+  private stop(atMs: number): boolean {
+    const { context } = this
     const sounding = this.soundingAnchors()
-    if (!this.context || !sounding) return
-    this.paused = { atMs, stoppedMs: Math.max(atMs, heardTimelineMs(sounding.anchor, sounding.outgoing, this.context.currentTime)) }
+    if (!context || !sounding) return false
+    const stopS = context.currentTime + STOP_LEAD_S
+    this.paused = { atMs, stoppedMs: Math.max(atMs, heardTimelineMs(sounding.anchor, sounding.outgoing, stopS)) }
+    for (const epoch of [this.epoch, this.outgoing?.epoch]) {
+      if (!epoch) continue
+      epoch.output.gain.cancelAndHoldAtTime(stopS)
+      epoch.output.gain.setValueCurveAtTime(equalPower(false), stopS + 1e-6, STOP_FADE_S)
+      this.stopping.push(epoch)
+    }
+    this.epoch = null
+    this.outgoing = null
+    this.heldMs = null
+    return true
   }
 
   private resumePoint(requestedMs: number): number {
@@ -321,6 +336,8 @@ export class PreviewAudio {
 
   private flush(): void {
     this.heldMs = null
+    for (const epoch of this.stopping) dropEpoch(epoch)
+    this.stopping = []
     this.dropOutgoing()
     if (this.epoch) dropEpoch(this.epoch)
     this.epoch = null
