@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { createProject, type PlaybackState } from '@mcut/timeline'
+import { applyCommand, createProject, type PlaybackState } from '@mcut/timeline'
 import { PreviewAudio } from './preview-audio'
 
 const output = { contextTime: 0, performanceTime: 0 }
@@ -61,6 +61,15 @@ describe('preview audio clock around the output start', () => {
     await settle()
     audio.sync(project, playing(1016))
     expect(audio.clockTimeMs(116)).toBeNull()
+  })
+
+  test('a running context whose output has not started holds the playhead at the play position while sound is due', async () => {
+    let project = applyCommand(createProject(), { type: 'addAsset', asset: { id: 'a-tone', kind: 'audio', src: 'blob:tone', durationMs: 60_000 } })
+    project = applyCommand(project, { type: 'addElement', trackId: 't-default', element: { type: 'audio', id: 'e-tone', assetId: 'a-tone', startMs: 0, durationMs: 5000 } })
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, playing(1000))
+    expect(audio.clockTimeMs(116)).toBe(1000)
   })
 
   test('the clock anchors where the playhead is once the output starts', async () => {
