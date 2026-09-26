@@ -69,15 +69,14 @@ function sharedRun(tokens: readonly Token[], a: number, b: number): { matched: n
       i++
       j++
       matched++
-    } else if (!skipped && matched > 0 && a + i + 1 < b && norm(a + i + 1) === norm(b + j)) {
-      i++
-      skipped = true
-    } else if (!skipped && matched > 0 && norm(a + i) === norm(b + j + 1)) {
-      j++
-      skipped = true
-    } else {
-      break
+      continue
     }
+    const droppedFromKept = a + i + 1 < b && norm(a + i + 1) === norm(b + j)
+    const insertedInKept = norm(a + i) === norm(b + j + 1)
+    if (skipped || matched === 0 || !(droppedFromKept || insertedInKept)) break
+    skipped = true
+    if (droppedFromKept) i++
+    if (!droppedFromKept) j++
   }
   return { matched, keptLength: j }
 }

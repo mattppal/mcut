@@ -88,7 +88,7 @@ describe('toCaptionElements', () => {
     }
     const elements = toCaptionElements(zero)
     expect(elements.map((element) => element.text)).toEqual(['an example here'])
-    expect(elements[0]!.words![1]).toEqual({ text: 'example', startMs: 300, endMs: 300 })
+    expect(elements[0]?.words?.[1]).toEqual({ text: 'example', startMs: 300, endMs: 300 })
   })
 
   test('falls back to a single caption when only text is available', () => {
