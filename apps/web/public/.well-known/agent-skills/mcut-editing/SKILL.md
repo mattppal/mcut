@@ -106,8 +106,11 @@ the caption track the same way, because a ripple delete keeps the gaps between
 captions and leaves every later word late. Rebuild captions with one
 `apply_captions` call per remaining clip. Pass the full, unchanged transcript
 each time, never a slice. Pass `replace` true until a call reports OK and false
-after it, because that call clears the caption track. When another clip shares
-that caption track, keep its full transcript too and rebuild it the same way.
+after it, because that call clears the caption track. So when another clip has
+captions on that track, call `find_retakes` with that clip's `elementId` before
+cutting, and rebuild its pieces the same way from its own full `transcript`.
+Expect the calls for that other clip to warn that the transcript matches none
+in the project, since the first call replaced those captions.
 Pass a lower `minMatchWords` only when a short restart was missed, and check
 each extra candidate, since lower values match spoken lists.
 

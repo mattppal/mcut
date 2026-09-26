@@ -245,7 +245,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Candidates come last to first. Cut them in that order so no ripple delete shifts a range still to cut. ' +
     'Pass elementId for a clip with source audio, including a multicam and each piece left after the cuts. ' +
     'After the cuts, pass the full, unchanged transcript to apply_captions once per remaining clip, never a slice. ' +
-    'Pass replace true until a call reports OK and false after; that call clears the caption track, so first also rebuild every other captioned clip on it from its own find_retakes transcript. ' +
+    'Pass replace true until a call reports OK and false after; that call clears the caption track, so before cutting call find_retakes for every other captioned clip on it and rebuild each from that saved transcript. ' +
     'Cutting the caption track instead leaves later words late. ' +
     'Review abandonedText before cutting. Needs captions with word timings. Call ensure_transcript first.',
   ensure_transcript:
