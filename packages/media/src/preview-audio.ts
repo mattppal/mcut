@@ -100,6 +100,7 @@ export class PreviewAudio {
   private sources = new Map<string, Promise<OpenSource | null>>()
   private audioSources: ReadonlyMap<ElementId, string> | undefined
   private memo: SegmentMemo | null = null
+  private outputRendered = false
   private disposed = false
 
   setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
@@ -135,7 +136,8 @@ export class PreviewAudio {
     }
     const { context, master } = this.ensureContext()
     master.gain.value = playback.muted ? 0 : playback.volume
-    if (context.state !== 'running' || !outputStarted(context)) {
+    this.outputRendered ||= outputStarted(context)
+    if (context.state !== 'running' || !this.outputRendered) {
       this.flush()
       if (context.state === 'suspended') void context.resume()
       return

@@ -39,7 +39,7 @@ const playing = (currentTimeMs: number): PlaybackState => ({ currentTimeMs, isPl
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-describe('preview audio clock before the output renders', () => {
+describe('preview audio clock around the output start', () => {
   let audio: PreviewAudio
 
   beforeEach(() => {
