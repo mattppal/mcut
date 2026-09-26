@@ -163,6 +163,7 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
       const decodeStartS = await leadStart(sink, trimS, segment.sourceSpanMs / 1000, signal)
       for await (const { buffer, timestamp } of sink.buffers(decodeStartS, trimS + segment.sourceSpanMs / 1000)) {
         signal?.throwIfAborted()
+        if (Math.round((trimS - timestamp) * buffer.sampleRate) >= buffer.length) continue
         let rate = 1
         let when: number
         if (plan) {
