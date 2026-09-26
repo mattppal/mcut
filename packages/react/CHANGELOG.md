@@ -1,5 +1,14 @@
 # @mcut/react
 
+## 0.1.0-alpha.24
+
+### Patch Changes
+
+- Updated dependencies [[`d9c79e8`](https://github.com/mattppal/mcut/commit/d9c79e82e236119e64192b02ece2529e1cac6a38)]:
+  - @mcut/timeline@0.1.0-alpha.15
+  - @mcut/compositor@0.1.0-alpha.15
+  - @mcut/media@0.1.0-alpha.23
+
 ## 0.1.0-alpha.23
 
 ### Patch Changes

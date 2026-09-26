@@ -78,6 +78,7 @@
     "media-thumbnail-decode-fallback",
     "motion-blur-render-scale",
     "multicam-audio-source",
+    "multicam-composite-zoom",
     "multicam-editor-media-clip",
     "multicam-group-clock-render",
     "multicam-media-clip",
