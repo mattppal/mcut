@@ -112,6 +112,42 @@ describe('remove_ranges', () => {
     expect(engine.toJSON()).toEqual(before)
   })
 
+  test('inside transact, remove_ranges cuts the same spans and the whole transact undoes in one step', async () => {
+    const engine = multicamWithMusic()
+    const client = await connect(engine)
+    const before = engine.toJSON()
+
+    const result = await client.callTool({
+      name: 'transact',
+      arguments: {
+        calls: [
+          { name: 'remove_ranges', arguments: { ranges: [retakes[1], retakes[3], retakes[0], retakes[2]] } },
+          { name: 'addMarker', arguments: { id: 'm-cut', timeMs: 500 } },
+        ],
+      },
+    })
+    expect(result.isError).toBeFalsy()
+    expect(spans(engine.project, 'a-mic')).toEqual(keptMicSpans)
+    expect(engine.project.markers.map((marker) => marker.id)).toEqual(['m-cut'])
+
+    expect(engine.undo()).toBe(true)
+    expect(engine.toJSON()).toEqual(before)
+  })
+
+  test('inside transact, remove_ranges with source time fails before anything changes', async () => {
+    const engine = multicamWithMusic()
+    const before = engine.toJSON()
+    const result = await (
+      await connect(engine)
+    ).callTool({
+      name: 'transact',
+      arguments: { calls: [{ name: 'remove_ranges', arguments: { time: 'source', elementId: 'e-mc', ranges: [retakes[0]] } }] },
+    })
+    expect(result.isError).toBe(true)
+    expect(textOf(result)).toContain('timeline ranges only')
+    expect(engine.toJSON()).toEqual(before)
+  })
+
   test('source ranges map through every piece that plays them after an earlier cut', async () => {
     const engine = multicamWithMusic()
     const client = await connect(engine)
