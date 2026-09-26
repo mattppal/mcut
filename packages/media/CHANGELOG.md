@@ -1,5 +1,11 @@
 # @mcut/media
 
+## 0.1.0-alpha.30
+
+### Patch Changes
+
+- [#209](https://github.com/mattppal/mcut/pull/209) [`a7d54c8`](https://github.com/mattppal/mcut/commit/a7d54c87e636ef5c431c07a7f051887dc33f0a17) Thanks [@mattppal](https://github.com/mattppal)! - A clip whose audio starts partway into its source, such as the second clip of a split, a clip trimmed at its start, or the take after a removed retake, no longer clicks or drops out at its first frame in the export. A forward or time-stretched decode now begins up to 8192 frames before the clip's first frame and drops that lead-in, as reversed decodes already did, so an AAC, MP3, or Opus decoder is warm by that frame. A clip that starts at the beginning of its source exports the same audio as before.
+
 ## 0.1.0-alpha.29
 
 ### Patch Changes
