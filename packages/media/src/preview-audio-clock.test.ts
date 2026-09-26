@@ -147,6 +147,20 @@ describe('preview audio clock around the output start', () => {
     expect(audio.clockTimeMs(116)).toBe(2000)
   })
 
+  test('a context that moves past the start lead before the next frame anchors the sound on that frame instead of trimming it', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    renderedS = 0.56
+    audio.sync(project, playing(1000))
+    output.contextTime = 0.56
+    output.performanceTime = 160
+    expect(audio.clockTimeMs(176)).toBe(1000)
+  })
+
   test('a second rate change before the first handoff sounds keeps the sounding epoch and hands off from it', async () => {
     const project = toneProject()
     renderedS = 0.5
