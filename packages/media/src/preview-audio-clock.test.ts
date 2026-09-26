@@ -184,7 +184,7 @@ describe('preview audio clock around the output start', () => {
     expect(audio.clockTimeMs(116)).toBe(1500)
   })
 
-  test('paused frames keep the fading sound until its stop, and the first frame of a play holds there', async () => {
+  test('paused frames keep the fading sound until its stop, and the paused clock holds at the playhead until the sound passes it', async () => {
     const project = toneProject()
     renderedS = 0.5
     output.contextTime = 0.5
@@ -198,7 +198,7 @@ describe('preview audio clock around the output start', () => {
     renderedS = 0.991
     audio.sync(project, { ...playing(1420), isPlaying: false })
     expect(sounding?.disconnected).toBe(false)
-    expect(audio.clockTimeMs(116)).toBe(1500)
+    expect(audio.clockTimeMs(116)).toBe(1420)
     renderedS = 1.1
     audio.sync(project, { ...playing(1420), isPlaying: false })
     expect(sounding?.disconnected).toBe(true)

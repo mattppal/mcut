@@ -39,6 +39,17 @@ interface Outgoing {
   untilS: number | null
 }
 
+interface Sounding {
+  anchor: AudioAnchor
+  outgoing: AudioAnchor | null
+}
+
+interface Pause {
+  stoppedMs: number
+  reportedMs: number
+  sounding: Sounding
+}
+
 interface SegmentMemo {
   project: Project
   audioSources: ReadonlyMap<ElementId, string> | undefined
@@ -61,6 +72,13 @@ function dueSegments(segments: KeyedSegment[], timelineMs: number, rate: number)
 
 function outputStarted(context: AudioContext): boolean {
   return (context.getOutputTimestamp().performanceTime ?? 0) > 0
+}
+
+function heardAt(context: AudioContext, displayTimeMs: number): number | null {
+  const { contextTime, performanceTime } = context.getOutputTimestamp()
+  return contextTime !== undefined && performanceTime !== undefined && performanceTime > 0
+    ? heardContextS({ contextTime, performanceTime }, displayTimeMs)
+    : null
 }
 
 function equalPower(rising: boolean): Float32Array {
@@ -109,7 +127,7 @@ export class PreviewAudio {
   private memo: SegmentMemo | null = null
   private outputRendered = false
   private heldMs: number | null = null
-  private paused: { atMs: number; stoppedMs: number } | null = null
+  private paused: Pause | null = null
   private stopping: { epochs: Epoch[]; untilS: number } | null = null
   private disposed = false
 
@@ -123,16 +141,23 @@ export class PreviewAudio {
 
   clockTimeMs(displayTimeMs: number): number | null {
     const { context, epoch } = this
-    if (!context || !epoch || context.state !== 'running') return this.heldMs
+    if (!context || context.state !== 'running') return this.heldMs
+    if (!epoch) return this.pausedTimeMs(context, displayTimeMs)
     const sounding = this.soundingAnchors()
     if (!sounding) return epoch.reportedMs
-    const stamp = context.getOutputTimestamp()
-    const heardS =
-      stamp.contextTime !== undefined && stamp.performanceTime !== undefined && stamp.performanceTime > 0
-        ? heardContextS({ contextTime: stamp.contextTime, performanceTime: stamp.performanceTime }, displayTimeMs)
-        : sounding.anchor.contextS
+    const heardS = heardAt(context, displayTimeMs) ?? sounding.anchor.contextS
     epoch.reportedMs = Math.max(epoch.reportedMs, heardTimelineMs(sounding.anchor, sounding.outgoing, heardS))
     return epoch.reportedMs
+  }
+
+  private pausedTimeMs(context: AudioContext, displayTimeMs: number): number | null {
+    const paused = this.paused
+    if (!paused) return this.heldMs
+    const heardS = heardAt(context, displayTimeMs)
+    if (heardS === null) return paused.reportedMs
+    const heardMs = heardTimelineMs(paused.sounding.anchor, paused.sounding.outgoing, heardS)
+    paused.reportedMs = Math.min(paused.stoppedMs, Math.max(paused.reportedMs, heardMs))
+    return paused.reportedMs
   }
 
   sync(project: Project, requested: PlaybackState): void {
@@ -288,7 +313,7 @@ export class PreviewAudio {
     this.outgoing = { epoch: current, untilS: null }
   }
 
-  private soundingAnchors(): { anchor: AudioAnchor; outgoing: AudioAnchor | null } | null {
+  private soundingAnchors(): Sounding | null {
     const outgoing = this.outgoing?.epoch.anchor ?? null
     const anchor = this.epoch?.primed ? this.epoch.anchor : outgoing
     return anchor ? { anchor, outgoing } : null
@@ -306,9 +331,9 @@ export class PreviewAudio {
     this.heldMs = audible ? atMs : null
   }
 
-  private stop(context: AudioContext, sounding: { anchor: AudioAnchor; outgoing: AudioAnchor | null }, atMs: number): void {
+  private stop(context: AudioContext, sounding: Sounding, atMs: number): void {
     const stopS = context.currentTime + STOP_LEAD_S
-    this.paused = { atMs, stoppedMs: Math.max(atMs, heardTimelineMs(sounding.anchor, sounding.outgoing, stopS)) }
+    this.paused = { stoppedMs: Math.max(atMs, heardTimelineMs(sounding.anchor, sounding.outgoing, stopS)), reportedMs: atMs, sounding }
     const epochs = [this.epoch, this.outgoing?.epoch ?? null].flatMap((epoch) => (epoch ? [epoch] : []))
     for (const epoch of epochs) {
       epoch.output.gain.cancelAndHoldAtTime(stopS)
@@ -322,7 +347,7 @@ export class PreviewAudio {
 
   private resumePoint(requestedMs: number): number {
     const paused = this.paused
-    if (paused && Math.abs(requestedMs - paused.atMs) <= 1) return paused.stoppedMs
+    if (paused && Math.abs(requestedMs - paused.reportedMs) <= 1) return paused.stoppedMs
     this.paused = null
     return requestedMs
   }
