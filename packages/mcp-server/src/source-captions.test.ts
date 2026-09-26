@@ -164,7 +164,10 @@ describe('apply_captions with a source scope', () => {
     cutTwoRetakes(engine)
     await client.callTool({ name: 'apply_captions', arguments: { transcript, elementId: 'e-mc' } })
     const lastPiece = expectedWords(engine, ['e-keep-3'])
-    const slice = await client.callTool({ name: 'apply_captions', arguments: { transcript: { words: words.filter((word) => lastPiece.has(word.text)) }, elementId: 'e-keep-3' } })
+    const slice = await client.callTool({
+      name: 'apply_captions',
+      arguments: { transcript: { words: words.filter((word) => lastPiece.has(word.text)) }, elementId: 'e-keep-3' },
+    })
     expect(slice.isError).toBeFalsy()
     for (const { caption } of getProjectCaptions(engine.project)) engine.dispatch({ type: 'removeElement', elementId: caption.id })
 
