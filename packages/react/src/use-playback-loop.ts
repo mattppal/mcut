@@ -5,9 +5,12 @@ import { getProjectDurationMs, type EditorEngine, type PlaybackState, type Proje
 
 export type RequestFrame = (callback: (frameTimeMs: number) => void) => () => void
 
+export type PlaybackClock = (frameTimeMs: number) => number | null
+
 export interface PlaybackLoopOptions {
   onFrame: (project: Project, playback: PlaybackState) => void
   requestFrame?: RequestFrame
+  clock?: PlaybackClock
 }
 
 const requestAnimationFrameOnce: RequestFrame = (callback) => {
@@ -15,10 +18,12 @@ const requestAnimationFrameOnce: RequestFrame = (callback) => {
   return () => cancelAnimationFrame(handle)
 }
 
-export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = requestAnimationFrameOnce }: PlaybackLoopOptions): void {
+export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = requestAnimationFrameOnce, clock }: PlaybackLoopOptions): void {
   const onFrameRef = useRef(onFrame)
+  const clockRef = useRef(clock)
   useLayoutEffect(() => {
     onFrameRef.current = onFrame
+    clockRef.current = clock
   })
 
   useEffect(() => {
@@ -30,7 +35,7 @@ export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = 
       const playback = engine.playback.state
       if (playback.isPlaying) {
         const durationMs = getProjectDurationMs(engine.project)
-        const next = playback.currentTimeMs + elapsedMs * playback.playbackRate
+        const next = clockRef.current?.(frameTimeMs) ?? playback.currentTimeMs + elapsedMs * playback.playbackRate
         if (durationMs > 0 && next >= durationMs && playback.playbackRate > 0) {
           engine.seek(durationMs)
           engine.pause()
