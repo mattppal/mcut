@@ -120,6 +120,27 @@ describe('createMulticam from placed clips', () => {
     expect(element(project, 'e-mc')).toMatchObject({ startMs: 0, durationMs: 20_000, audioSource: 'camera' })
   })
 
+  test('names the overlap requirement when the selected clips do not share time', () => {
+    let project = createProject({ fps: 30 })
+    project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'blob:s', durationMs: 60_000 } })
+    project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000 } })
+    const trackId = mustFind(project.tracks[0]?.id, 'track')
+    project = applyCommand(project, {
+      type: 'addElement',
+      trackId,
+      element: { id: 'e-screen', type: 'video', assetId: 'a-screen', startMs: 0, durationMs: 1_000 },
+    })
+    project = applyCommand(project, {
+      type: 'addElement',
+      trackId,
+      element: { id: 'e-cam', type: 'video', assetId: 'a-cam', startMs: 2_000, durationMs: 1_000 },
+    })
+    expect(thrownBy(() => applyCommand(project, { type: 'createMulticam', sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }] }))).toMatchObject({
+      code: 'out-of-bounds',
+      message: "the selected clips don't overlap in time; stack clips recorded together on separate tracks so they overlap",
+    })
+  })
+
   test('rejects an audio-only group, a shared key, an unknown audio source, and a sped-up clip', () => {
     const project = recordings()
     const create = (payload: object) => thrownBy(() => applyCommand(project, { type: 'createMulticam', ...payload }))

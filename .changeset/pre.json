@@ -82,6 +82,7 @@
     "multicam-group-clock-render",
     "multicam-media-clip",
     "multicam-media-path",
+    "multicam-overlap-error",
     "multicam-slot-zoom-crop",
     "native-video-thumbnails",
     "nested-cancel-transaction",
