@@ -165,7 +165,7 @@ export class StretchStream {
   }
 
   render(frames: number): Float32Array[] {
-    this.load()
+    this.reloadAsOneBuffer()
     const out = this.block.map(() => new Float32Array(Math.max(0, frames)))
     let written = 0
     const fromLeftover = Math.min(frames, this.leftoverFrames())
@@ -185,8 +185,7 @@ export class StretchStream {
     return out
   }
 
-  // signalsmith-stretch 1.3.2 misreads an input window that spans two added buffers, per its process() in https://unpkg.com/signalsmith-stretch@1.3.2/SignalsmithStretch.mjs
-  private load(): void {
+  private reloadAsOneBuffer(): void {
     const keepFrom = Math.max(this.inputStart, Math.floor(this.rendered * this.tempo) - this.sampleRate)
     if (keepFrom === this.loadedStart && this.inputFrames === this.loadedFrames) return
     this.input = this.input.map((lane) => lane.slice(keepFrom - this.inputStart))
