@@ -217,7 +217,7 @@ export const createMulticam = defineCommand({
     const coverageMs = getMediaSourceDurationMs(project, element)
     if (coverageMs !== undefined) element.durationMs = Math.min(element.durationMs, coverageMs - trimStartMs)
     if (element.durationMs < MIN_ELEMENT_DURATION_MS) {
-      throw new CommandError('out-of-bounds', `the sources share less than ${MIN_ELEMENT_DURATION_MS}ms of media`)
+      throw new CommandError('out-of-bounds', "the selected clips don't overlap in time; stack clips recorded together on separate tracks so they overlap")
     }
     validateElement(project, element)
 

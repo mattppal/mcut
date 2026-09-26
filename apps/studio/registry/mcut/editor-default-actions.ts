@@ -19,7 +19,7 @@ import { defineAction, type ActionContext } from './action-registry'
 import { ASPECT_PRESETS } from './aspect-presets'
 import { openCommandPalette } from './command-palette-events'
 import { clearEditorLayoutStorage } from './editor-layout'
-import { trackOfSelection } from './editor-actions'
+import { dispatchSafe, trackOfSelection } from './editor-actions'
 import { copySelection, cutSelection, pasteAtPlayheadFromAnywhere } from './editor-clipboard'
 import { MEDIA_FILE_ACCEPT, importMediaFiles, pickFiles } from './media-import'
 import { clearSavedSession, saveAssetBlob } from './persistence'
@@ -607,11 +607,17 @@ defineAction({
   category: 'multicam',
   enabled: ({ engine }) =>
     engine.selection.elementIds.some((id) => engine.project.tracks.some((t) => t.elements.some((e) => e.id === id && e.type === 'video'))),
-  run: ({ engine, ui }) => {
-    try {
-      engine.dispatch({ type: 'createMulticam', sources: multicamSourcesInSelection(engine.project, engine.selection.elementIds) })
+  run: ({ engine, ui, throwOnError }) => {
+    const command = {
+      type: 'createMulticam' as const,
+      sources: multicamSourcesInSelection(engine.project, engine.selection.elementIds),
+    }
+    if (throwOnError) {
+      engine.dispatch(command)
       ui.setMode('multicam')
-    } catch {}
+      return
+    }
+    if (dispatchSafe(engine, command)) ui.setMode('multicam')
   },
 })
 
