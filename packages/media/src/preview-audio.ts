@@ -7,7 +7,7 @@ import { inputFor } from './probe'
 import { contextAt, heardContextS, planWindow, timelineAt, type AudioAnchor, type PlannedWindow, type WindowGate } from './preview-audio-plan'
 import { sourceAudioSink } from './source-timing'
 
-const START_LEAD_S = 0.1
+const START_LEAD_S = 0.04
 const WINDOW_S = 0.5
 const LOOKAHEAD_S = 1
 const RETRY_S = 1
