@@ -20,7 +20,7 @@ export interface SourceCaptionsPlan {
   cleared: number
 }
 
-function sourcePieces(project: Project, elementId: ElementId): { pieces: ElementAudioSource[]; skipped: ElementId[] } {
+export function sourcePieces(project: Project, elementId: ElementId): { pieces: ElementAudioSource[]; skipped: ElementId[] } {
   const location = getElementLocation(project, elementId)
   const anchor = resolveElementAudioSource(project, elementId)
   if (!location || !anchor) return { pieces: [], skipped: [] }

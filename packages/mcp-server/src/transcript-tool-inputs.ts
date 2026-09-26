@@ -26,3 +26,30 @@ export const applySilenceCutsInputSchema = silenceCutOptionsSchema.extend({
   ),
   transcript: transcriptInput,
 })
+
+export const removeRangesInputSchema = z.strictObject({
+  ranges: z
+    .array(z.object({ startMs: z.number().min(0), endMs: z.number().positive() }))
+    .min(1)
+    .max(500)
+    .describe('Ranges to remove, in any order. Extra fields are ignored, so find_retakes candidates can be passed as they are.'),
+  time: z
+    .enum(['timeline', 'source'])
+    .describe(
+      '"timeline" (the default) reads ranges as timeline ms, like find_retakes candidates. "source" reads them as source-media ms of elementId\'s audio.',
+    )
+    .optional(),
+  elementId: elementIdSchema
+    .describe(
+      'With time "source", a clip with source audio, including a multicam. Every piece on its track that plays that audio maps the ranges to the timeline.',
+    )
+    .optional(),
+})
+
+export const removeRangesDescription =
+  'Remove a list of time ranges from the whole timeline as one undo step. Every unlocked track loses the span, so video, multicam, audio, and captions stay in sync, ' +
+  'and everything after each range shifts left. Ranges can come in any order and may overlap. A clip spanning a range becomes two pieces. ' +
+  'Pass find_retakes candidates as they are, in timeline ms. With time "source" and elementId, ranges are source-media ms of that clip\'s audio, ' +
+  'mapped through every piece on its track that plays it, so they stay valid after earlier cuts. ' +
+  'Use this to cut retakes and any list of spans instead of splitElement, trimElement, and rippleDelete. ' +
+  'After it, call apply_captions with elementId set to any remaining piece, replace true, and no transcript to rebuild captions from the stored transcript.'
