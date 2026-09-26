@@ -22,6 +22,7 @@ const RETRY_S = 1
 const VOLUME_SMOOTHING_S = 0.01
 const CURVE_STEP_S = 0.05
 const MAX_CURVE_STEPS = 2000
+const FADE_STEPS = 32
 
 type Sink = Pick<AudioBufferSink, 'buffers'>
 
@@ -95,6 +96,15 @@ function programGate(param: AudioParam, gate: WindowGate): void {
   if (gate.closeS === null) return
   param.setValueAtTime(1, gate.closeS)
   param.linearRampToValueAtTime(0, gate.closeS + gate.fadeOutS)
+}
+
+export function equalPower(rising: boolean): Float32Array {
+  const curve = new Float32Array(FADE_STEPS)
+  for (let step = 0; step < FADE_STEPS; step++) {
+    const angle = ((step / (FADE_STEPS - 1)) * Math.PI) / 2
+    curve[step] = rising ? Math.sin(angle) : Math.cos(angle)
+  }
+  return curve
 }
 
 export function createVoice(context: AudioContext, anchor: AudioAnchor, output: AudioNode, segment: AudibleSegment, volumeKey: string, nextS: number): Voice {

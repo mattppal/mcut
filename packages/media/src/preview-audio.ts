@@ -5,7 +5,7 @@ import type { AudibleSegment } from './export-audio-composite'
 import { AUDIO_SAMPLE_RATE } from './export-types'
 import { inputFor } from './probe'
 import { contextAt, epochChange, handoffAnchor, heardContextS, heardTimelineMs, voiceStartS, type AudioAnchor } from './preview-audio-plan'
-import { createVoice, dropVoice, LOOKAHEAD_S, pumpVoice, retuneVoice, START_LEAD_S, type SinkOf, type Voice } from './preview-audio-voice'
+import { createVoice, dropVoice, equalPower, LOOKAHEAD_S, pumpVoice, retuneVoice, START_LEAD_S, type SinkOf, type Voice } from './preview-audio-voice'
 import { sourceAudioSink } from './source-timing'
 
 const MAX_AUDIBLE_RATE = 4
@@ -14,7 +14,6 @@ const HANDOFF_FADE_S = 0.02
 const STOP_LEAD_S = 0.05
 const STOP_FADE_S = 0.005
 const SUSPEND_IDLE_S = 2
-const FADE_STEPS = 32
 
 interface OpenSource {
   input: Input
@@ -80,15 +79,6 @@ function heardAt(context: AudioContext, displayTimeMs: number): number | null {
   return contextTime !== undefined && performanceTime !== undefined && performanceTime > 0
     ? heardContextS({ contextTime, performanceTime }, displayTimeMs)
     : null
-}
-
-function equalPower(rising: boolean): Float32Array {
-  const curve = new Float32Array(FADE_STEPS)
-  for (let step = 0; step < FADE_STEPS; step++) {
-    const angle = ((step / (FADE_STEPS - 1)) * Math.PI) / 2
-    curve[step] = rising ? Math.sin(angle) : Math.cos(angle)
-  }
-  return curve
 }
 
 function crossfade(from: GainNode, to: GainNode, atS: number): void {
