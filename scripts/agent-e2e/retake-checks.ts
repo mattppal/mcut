@@ -77,8 +77,12 @@ export const RETAKE_RULES: CheckRule[] = [
         return sourceMs !== undefined && truth.some((spoken) => spoken.text === word.text && Math.abs(spoken.sourceMs - sourceMs) <= SYNC_TOLERANCE_MS)
       })
       const share = synced.length / words.length
-      const detail = `${synced.length}/${words.length} caption words land within ${SYNC_TOLERANCE_MS} ms of where they are spoken, ${orphans.length} over no clip`
-      return outcome(share >= SYNC_MIN_SHARE && orphans.length === 0, detail, detail)
+      const played = truth.filter((spoken) =>
+        afterClips.some((clip) => spoken.sourceMs >= clip.trimStartMs && spoken.sourceMs < clip.trimStartMs + (clip.endMs - clip.startMs)),
+      )
+      const coverage = played.length === 0 ? 1 : Math.min(1, synced.length / played.length)
+      const detail = `${synced.length}/${words.length} caption words land within ${SYNC_TOLERANCE_MS} ms of where they are spoken, ${orphans.length} over no clip, captions cover ${synced.length} of ${played.length} words still played`
+      return outcome(share >= SYNC_MIN_SHARE && coverage >= SYNC_MIN_SHARE && orphans.length === 0, detail, detail)
     },
   ],
 ]
