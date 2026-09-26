@@ -45,6 +45,7 @@ import { transcriptOriginNote } from './caption-transcript-match'
 import { toClipSourceWords } from './clip-source-words'
 import { frameContent, frameGrabSchema } from './frame-content'
 import { contactSheetContent } from './picture-tools'
+import { removeRangesOn } from './remove-ranges'
 import { planSourceCaptions, sourceCaptionsNote } from './source-captions'
 import { StoredTranscripts, ensuredCapture } from './stored-transcripts'
 import { severeZoomNote } from './zoom-warnings'
@@ -229,6 +230,8 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       transcripts.captureCaptions(project, { elementId, replace: false })
       return text(JSON.stringify({ wordCount: words.length, candidates, transcript: { words: clipWords } }, null, 2))
     }
+    case 'remove_ranges':
+      return text(await removeRangesOn(target, call.arguments))
     case 'ensure_transcript': {
       if (!target.ensureTranscript) return failure('ensure_transcript is not available on this target.')
       const result = await target.ensureTranscript(call.arguments)

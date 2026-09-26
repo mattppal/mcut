@@ -19,6 +19,7 @@ import {
 } from './commands/multicam'
 import { addAsset, removeAsset, removePreset, savePreset, updateAsset, updateProject } from './commands/project'
 import { setReframe } from './commands/reframe'
+import { removeRanges } from './commands/remove-ranges'
 import { rippleTrim, rollEdit, setElementSpeed, setTimeMap, slideElement, slipElement, trimEdge } from './commands/timing'
 import { addTrack, compactTimelineGaps, compactTrackGaps, removeTrack, renameTrack, reorderTrack, setTrackFlags } from './commands/tracks'
 import { addZoomRegion, removeZoomRegion, updateZoomRegion } from './commands/zooms'
@@ -94,6 +95,7 @@ const commandDefinitions = commandTable({
   updateMarker,
   removeMarker,
   rippleDelete,
+  removeRanges,
 })
 
 type CommandDefinitions = typeof commandDefinitions

@@ -96,21 +96,31 @@ no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 
 ### Remove retakes
 
-The flow is `find_retakes`, then the cut, then one `apply_captions` call.
+The flow is `find_retakes`, then one `remove_ranges` call, then one
+`apply_captions` call.
 
 1. After `ensure_transcript`, call `find_retakes` with the captioned clip's
    `elementId` before any cut. A multicam works. The server stores that
    audio's word-timed transcript in source time.
 2. Each candidate is a timeline range from the abandoned take to the start of
    the kept take. Read `abandonedText` and skip any candidate that is a
-   deliberate repetition. Candidates come last to first, so cut them in the
-   returned order in one `transact`, each with a split at both ends and a
-   ripple delete on the clip only. Leave the caption track alone.
-3. Call `apply_captions` once with only `elementId` set to any remaining
-   piece. Do not pass `transcript`. The call reuses the stored transcript,
-   captions every piece on the track that plays the same audio at its new
-   timeline position, and replaces the old captions over those pieces, as one
-   undo step. Writing the words back out is slow and never needed here.
+   deliberate repetition. Pass the rest to one `remove_ranges` call as they
+   are, in any order. It cuts every range from the clip and from every track
+   under it, closes the gaps, and is one undo step. Do not cut retakes with
+   `splitElement`, `trimElement`, or `rippleDelete`.
+3. Call `apply_captions` once with `elementId` set to any remaining piece and
+   `replace: true`. Do not pass `transcript`. The call reuses the stored
+   transcript, captions every piece on the track that plays the same audio at
+   its new timeline position, and replaces the old captions over those pieces,
+   as one undo step. Writing the words back out is slow and never needed here.
+
+```json
+{ "name": "remove_ranges", "arguments": { "ranges": [{ "startMs": 325720, "endMs": 333580 }, { "startMs": 1080, "endMs": 15120 }] } }
+```
+
+With `time: "source"` and `elementId`, `remove_ranges` reads ranges in the
+clip's source-media time instead, so a range from the transcript stays valid
+after earlier cuts.
 
 Pass a lower `minMatchWords` only when a short restart was missed, and check
 each extra candidate, since lower values match spoken lists.
@@ -232,7 +242,8 @@ with ffmpeg.
   uses its `audioSource`. They convert back to that asset's media time for forward
   1x clips.
 - `trimStartMs` is source-media time.
-- `rippleDelete` closes gaps. `removeElement` leaves gaps.
+- `rippleDelete` closes gaps on its own track. `removeRanges` closes them on every
+  unlocked track. `removeElement` leaves gaps.
 - Tracks render bottom-up. Later tracks appear on top.
 
 ## When to use raw commands
