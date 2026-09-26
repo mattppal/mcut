@@ -47,6 +47,7 @@ interface Voice {
 
 interface Epoch {
   anchor: AudioAnchor
+  primed: boolean
   output: GainNode
   voices: Map<string, Voice>
   reportedMs: number
@@ -142,6 +143,7 @@ export class PreviewAudio {
   clockTimeMs(frameTimeMs: number): number | null {
     const { context, epoch } = this
     if (!context || !epoch || context.state !== 'running') return null
+    if (!epoch.primed) return epoch.reportedMs
     const stamp = context.getOutputTimestamp()
     const heardS =
       stamp.contextTime !== undefined && stamp.performanceTime !== undefined && stamp.performanceTime > 0
@@ -166,8 +168,10 @@ export class PreviewAudio {
       if (context.state === 'suspended') void context.resume()
       return
     }
-    const epoch = this.ensureEpoch(context, master, playback)
-    this.reconcile(context, epoch, this.segmentsOf(project))
+    const segments = this.segmentsOf(project)
+    const epoch = this.ensureEpoch(context, master, playback, segments)
+    if (!epoch.primed) return
+    this.reconcile(context, epoch, segments)
     for (const voice of epoch.voices.values()) this.pump(context, epoch, voice)
   }
 
@@ -191,19 +195,31 @@ export class PreviewAudio {
     return { context, master }
   }
 
-  private ensureEpoch(context: AudioContext, master: GainNode, playback: PlaybackState): Epoch {
+  private ensureEpoch(context: AudioContext, master: GainNode, playback: PlaybackState, segments: KeyedSegment[]): Epoch {
     const current = this.epoch
     if (current && current.anchor.rate === playback.playbackRate && Math.abs(playback.currentTimeMs - current.reportedMs) <= REANCHOR_TOLERANCE_MS) return current
     this.flush()
     const output = context.createGain()
     output.connect(master)
+    const timelineMs = Math.round(playback.currentTimeMs)
     const epoch: Epoch = {
-      anchor: { timelineMs: playback.currentTimeMs, contextS: context.currentTime + START_LEAD_S, rate: playback.playbackRate },
+      anchor: { timelineMs, contextS: 0, rate: playback.playbackRate },
+      primed: false,
       output,
       voices: new Map(),
-      reportedMs: playback.currentTimeMs,
+      reportedMs: timelineMs,
     }
     this.epoch = epoch
+    const horizonMs = timelineMs + LOOKAHEAD_S * 1000 * playback.playbackRate
+    const opening = segments
+      .filter(({ segment }) => segment.startMs < horizonMs && segment.startMs + segment.durationMs > timelineMs)
+      .map(({ segment }) => this.sourceOf(segment.src))
+    void Promise.all(opening).then(() => {
+      if (this.epoch !== epoch || !this.context) return
+      const frames = Math.round(this.context.currentTime * this.context.sampleRate) + Math.round(START_LEAD_S * this.context.sampleRate)
+      epoch.anchor.contextS = frames / this.context.sampleRate
+      epoch.primed = true
+    })
     return epoch
   }
 
