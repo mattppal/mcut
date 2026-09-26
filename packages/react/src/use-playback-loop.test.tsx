@@ -202,24 +202,19 @@ describe('usePlaybackLoop', () => {
     expect(engine.playback.state.currentTimeMs).toBe(5016)
   })
 
-  test('the clock is not asked while paused', () => {
+  test('a paused playhead follows the clock while it reports a time, and a seek between frames wins over it', () => {
     const engine = engineWithClip(10_000)
     engine.seek(500)
+    const reports: (number | null)[] = [520, 540, null]
     const frames = fakeFrames()
-    let asked = 0
-    renderHook(() =>
-      usePlaybackLoop(engine, {
-        onFrame: () => {},
-        requestFrame: frames.requestFrame,
-        clock: () => {
-          asked++
-          return 9000
-        },
-      }),
-    )
-    frames.step(0)
-    frames.step(16)
-    expect([asked, engine.playback.state.currentTimeMs]).toEqual([0, 500])
+    renderHook(() => usePlaybackLoop(engine, { onFrame: () => {}, requestFrame: frames.requestFrame, clock: () => reports.shift() ?? null }))
+    const seen: number[] = []
+    for (const frameTimeMs of [0, 16, 32, 48]) {
+      if (frameTimeMs === 32) engine.seek(100)
+      frames.step(frameTimeMs)
+      seen.push(engine.playback.state.currentTimeMs)
+    }
+    expect(seen).toEqual([520, 540, 100, 100])
   })
 
   test('unmount cancels the pending frame', () => {
