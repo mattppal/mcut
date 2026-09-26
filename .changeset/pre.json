@@ -117,6 +117,8 @@
     "strict-transform",
     "thumbnail-track-per-layer",
     "transact-history-and-target",
+    "transact-remove-ranges-text",
+    "transact-remove-ranges",
     "transact-rollback",
     "transact-tool",
     "transcription-assemblyai-signal",
