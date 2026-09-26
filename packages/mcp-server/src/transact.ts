@@ -2,9 +2,10 @@ import { applyCommands, operatorIds, parseOperatorId, runOperator, summarizeEngi
 import { EditorEngine, listToolDefinitions, parseCommand } from '@mcut/timeline'
 import { z } from 'zod'
 import { MCP_TOOL_INPUTS, operatorToolName } from './contract'
+import { timelineRangeRemoval } from './remove-ranges'
 import { applyTransact, transactCallError, type TransactSubRequest } from './transact-shape'
 
-const PASS_THROUGH = ['run_operator', 'run_action', 'apply_commands'] as const
+const PASS_THROUGH = ['run_operator', 'run_action', 'apply_commands', 'remove_ranges'] as const
 
 type PassThroughName = (typeof PASS_THROUGH)[number]
 
@@ -26,6 +27,14 @@ function passThrough(name: PassThroughName, args: unknown): TransactSubRequest {
   if (name === 'run_action') {
     const parsed = MCP_TOOL_INPUTS.run_action.parse(args)
     return { type: 'run_action', actionId: parsed.actionId, input: parsed.input }
+  }
+  if (name === 'remove_ranges') {
+    const parsed = MCP_TOOL_INPUTS.remove_ranges.parse(args)
+    if (parsed.time === 'source') {
+      throw new Error('inside transact, remove_ranges takes timeline ranges only. Call it on its own for time "source". It is already one undo step')
+    }
+    const { type, ranges } = timelineRangeRemoval(parsed)
+    return { type: 'dispatch_command', commandName: type, input: { ranges } }
   }
   const parsed = MCP_TOOL_INPUTS.apply_commands.parse(args)
   return { type: 'apply_commands', commands: parsed.commands }

@@ -47,7 +47,7 @@ export const removeRangesInputSchema = z.strictObject({
 })
 
 export const removeRangesDescription =
-  'Remove a list of time ranges from the whole timeline as one undo step. Every unlocked track loses the span, so video, multicam, audio, and captions stay in sync, ' +
+  'Remove a list of time ranges from the whole timeline as one undo step, so it needs no transact. Inside a transact it takes timeline ranges only. Every unlocked track loses the span, so video, multicam, audio, and captions stay in sync, ' +
   'and everything after each range shifts left. Ranges can come in any order and may overlap. A clip spanning a range becomes two pieces. ' +
   'Pass find_retakes candidates as they are, in timeline ms. With time "source" and elementId, ranges are source-media ms of that clip\'s audio, ' +
   'mapped through every piece on its track that plays it, so they stay valid after earlier cuts. ' +

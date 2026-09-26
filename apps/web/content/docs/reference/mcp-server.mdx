@@ -48,7 +48,7 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `get_transcript` | Caption-derived transcript. Never starts transcription. |
 | `search_transcript` | Find spoken words or phrases with timeline times. |
 | `find_retakes` | Retake candidates from the word-timed transcript, last to first, each a timeline range that keeps the last take. With `elementId`, a multicam is included. It stores that audio's word-timed transcript. The retake flow is `find_retakes`, then `remove_ranges` with the kept candidates, then `apply_captions` with `elementId`, `replace: true`, and no transcript. |
-| `remove_ranges` | Remove a list of time ranges from every unlocked track as one undo step and close the gaps, so video, multicam, audio, and captions stay in sync. Ranges come in any order. Timeline ms by default, so `find_retakes` candidates pass as they are. With `time: "source"` and `elementId`, ranges are source-media ms of that clip's audio, mapped through every piece that plays it. |
+| `remove_ranges` | Remove a list of time ranges from every unlocked track as one undo step and close the gaps, so video, multicam, audio, and captions stay in sync. Ranges come in any order. Timeline ms by default, so `find_retakes` candidates pass as they are. With `time: "source"` and `elementId`, ranges are source-media ms of that clip's audio, mapped through every piece that plays it. It is already one undo step, so it needs no `transact`. |
 | `ensure_transcript` | Live bridge only. Transcribe the target clip in the editor and apply word-timed captions. |
 | `list_commands` | Live bridge only. Every raw timeline command schema. |
 | `apply_commands` | Live bridge only. Apply several commands in one undoable transaction. A failed command leaves the project unchanged. |
@@ -64,7 +64,7 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `list_actions` | Live bridge only. List editor actions. |
 | `run_action` | Live bridge only. Run an editor action by id. Human-only actions are rejected. |
 | `import_media` | Live bridge only. Import local media by absolute path. Studio probes each file, registers the asset, and stores the bytes. |
-| `transact` | Apply 1 to 100 command, operator, `run_operator`, `run_action`, or `apply_commands` calls as one undo step. A failed call leaves the project and the undo stack unchanged. Undo and redo are rejected before any call runs. |
+| `transact` | Apply 1 to 100 command, operator, `run_operator`, `run_action`, `apply_commands`, or `remove_ranges` calls as one undo step. `remove_ranges` inside it takes timeline ranges only. A failed call leaves the project and the undo stack unchanged. Undo and redo are rejected before any call runs. |
 | `undo` | Undo the most recent edit. One undo step is one tool call or one whole `transact`. |
 | `redo` | Redo the most recently undone edit. |
 | `export_video` | Live bridge only. Start rendering the whole timeline to a video file and return its `jobId`. |
