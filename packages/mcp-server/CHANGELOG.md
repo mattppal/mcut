@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.30
+
+### Patch Changes
+
+- [#205](https://github.com/mattppal/mcut/pull/205) [`6827027`](https://github.com/mattppal/mcut/commit/682702705212c4cdd007e59c6a9ae2ec2ecd7f83) Thanks [@mattppal](https://github.com/mattppal)! - `apply_captions` accepts `elementId` without a `transcript` and reuses the word-timed transcript the server stored for that audio from `ensure_transcript`, `find_retakes`, or an earlier `apply_captions`. After retake cuts, the agent re-captions every piece without writing the transcript back out.
+
 ## 0.1.0-alpha.29
 
 ### Minor Changes
