@@ -242,6 +242,30 @@ describe('preview audio clock around the output start', () => {
     expect(audio.clockTimeMs(116)).toBeNull()
   })
 
+  test('a pause suspends the context once its faded stop has been heard for the idle period, and a play then holds at the stop while it resumes', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, playing(1000))
+    renderedS = 0.975
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    renderedS = 5
+    output.contextTime = 3.02
+    output.performanceTime = 2600
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    const running = contexts[0]?.state
+    output.contextTime = 3.04
+    output.performanceTime = 2620
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    const idle = contexts[0]?.state
+    resumeLands = false
+    audio.sync(project, playing(1420))
+    expect([running, idle, audio.clockTimeMs(2636)]).toEqual(['running', 'suspended', 1500])
+  })
+
   test('a seek during a pause starts the next play where the seek landed', async () => {
     const project = toneProject()
     renderedS = 0.5
