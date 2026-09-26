@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { applyEdgeTrim } from '../edge-trim'
 import { CommandError } from '../errors'
 import { createElementId } from '../id'
+import { animatablePropertySchema, splitKeyframes, type KeyframeMap } from '../keyframes'
 import { MIN_ELEMENT_DURATION_MS, type Project, type TimelineElement } from '../model'
 import { compactTimelineIfMagnetic, placementFor } from '../placement'
 import { mintRightPiece } from './elements'
@@ -31,13 +32,30 @@ function timelineEndMs(project: Project): number {
   return Math.max(0, ...project.tracks.flatMap((track) => track.elements.map((element) => element.startMs + element.durationMs)))
 }
 
+function withoutSpan(element: TimelineElement, cutMs: number, resumeMs: number): TimelineElement {
+  const next = { ...element, durationMs: element.durationMs - (resumeMs - cutMs) }
+  if (!element.keyframes) return next
+  const head = splitKeyframes(element.keyframes, cutMs).left ?? {}
+  const tail = splitKeyframes(element.keyframes, resumeMs).right ?? {}
+  const keyframes: KeyframeMap = {}
+  for (const property of animatablePropertySchema.options) {
+    const track = [...(head[property] ?? []).filter((k) => k.timeMs < cutMs), ...(tail[property] ?? []).map((k) => ({ ...k, timeMs: k.timeMs + cutMs }))]
+    if (track.length > 0) keyframes[property] = track
+  }
+  if (Object.keys(keyframes).length > 0) next.keyframes = keyframes
+  else delete next.keyframes
+  return next
+}
+
 function carve(project: Project, element: TimelineElement, { startMs, endMs }: TimelineRange): TimelineElement[] {
   const elementEndMs = element.startMs + element.durationMs
   if (elementEndMs <= startMs) return [element]
   if (element.startMs >= endMs) return [{ ...element, startMs: element.startMs - (endMs - startMs) }]
   const keepHead = startMs - element.startMs >= MIN_ELEMENT_DURATION_MS
   const keepTail = elementEndMs - endMs >= MIN_ELEMENT_DURATION_MS
-  if (keepHead && keepTail && (element.type === 'text' || element.type === 'image')) return [applyEdgeTrim(element, 'end', startMs - endMs)]
+  if (keepHead && keepTail && (element.type === 'text' || element.type === 'image')) {
+    return [withoutSpan(element, startMs - element.startMs, endMs - element.startMs)]
+  }
   const pieces: TimelineElement[] = []
   if (keepHead) {
     const left = applyEdgeTrim(element, 'end', startMs - elementEndMs)

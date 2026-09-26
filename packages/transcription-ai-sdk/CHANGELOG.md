@@ -1,5 +1,19 @@
 # @mcut/transcription-ai-sdk
 
+## 1.0.0-alpha.22
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.22
+
+## 1.0.0-alpha.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.21
+
 ## 1.0.0-alpha.20
 
 ### Patch Changes

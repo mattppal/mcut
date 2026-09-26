@@ -1,5 +1,29 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.33
+
+### Patch Changes
+
+- [#208](https://github.com/mattppal/mcut/pull/208) [`1fab6ca`](https://github.com/mattppal/mcut/commit/1fab6cada1e1310f196b7f05e49cf15145cad849) Thanks [@mattppal](https://github.com/mattppal)! - `removeRanges` keeps the keyframes of a text or image element that spans a removed range. Keyframes after the range shift left with the content and keyframes inside it are dropped, so a title's fade-out survives a retake cut. The MCP server's import media schemas and transcript search move to their own modules, with the same exports from `@mcut/mcp-server/contract`.
+
+- Updated dependencies [[`1fab6ca`](https://github.com/mattppal/mcut/commit/1fab6cada1e1310f196b7f05e49cf15145cad849)]:
+  - @mcut/timeline@0.1.0-alpha.19
+  - @mcut/editor@0.1.0-alpha.20
+  - @mcut/transcription@0.1.0-alpha.22
+
+## 0.1.0-alpha.32
+
+### Minor Changes
+
+- [#207](https://github.com/mattppal/mcut/pull/207) [`ec1f719`](https://github.com/mattppal/mcut/commit/ec1f719b9a09f82dd95d548ec4a44f989895e8de) Thanks [@mattppal](https://github.com/mattppal)! - New `removeRanges` command and `remove_ranges` MCP tool. One call removes a list of time ranges, in any order, from every unlocked track and closes the gaps as one undo step, so a multicam, its audio, and its captions stay in sync. `remove_ranges` takes timeline ranges such as `find_retakes` candidates, or source-media ranges of a clip's audio with `time: "source"`. The retake flow is `find_retakes`, then `remove_ranges`, then `apply_captions { elementId, replace: true }`.
+
+### Patch Changes
+
+- Updated dependencies [[`ec1f719`](https://github.com/mattppal/mcut/commit/ec1f719b9a09f82dd95d548ec4a44f989895e8de)]:
+  - @mcut/timeline@0.1.0-alpha.18
+  - @mcut/editor@0.1.0-alpha.19
+  - @mcut/transcription@0.1.0-alpha.21
+
 ## 0.1.0-alpha.31
 
 ### Patch Changes
