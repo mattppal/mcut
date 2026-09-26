@@ -68,7 +68,8 @@ export const RECIPES: Recipe[] = [
       'The CLI finds word gaps in the transcript and pads each cut by 120ms so speech never clips. ' +
       'It turns silences into split plus rippleDelete, and trailing silence into a trim. ' +
       'It applies cuts last-to-first so timeline positions stay valid. Add `--dry-run` to print the plan ' +
-      'as commands JSON without writing. The element must play at 1x, with no timeMap. ' +
+      'as commands JSON without writing. The clip must play forward at 1x, with no timeMap. ' +
+      'A multicam is cut on its audio source, and one with none fails until setMulticamAudio. ' +
       'Transcript times are source-media times, so trims and offsets are handled for you. Cutting ' +
       'leading silence replaces the element id with a fresh one. Re-read the summary after.',
     apply: (project) => planSilenceCuts(project, 'e-camera', SAMPLE_TRANSCRIPT, { minGapMs: 600, paddingMs: 120 }).project,

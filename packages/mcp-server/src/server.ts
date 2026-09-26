@@ -36,13 +36,16 @@ import {
   listServerToolDefinitions,
   mediaImportReportSchema,
   operatorToolName,
+  MCP_TOOL_INPUTS,
   type McpServerStaticToolCall,
   type TransactSubRequest,
 } from './contract'
+import { liveBridgeAudioActivityMessage, pickAudioActivitySource } from './audio-activity-target'
+import { captionTranscriptsMatch } from './caption-transcript-match'
 import { toClipSourceWords } from './clip-source-words'
-import { severeZoomNote } from './zoom-warnings'
 import { frameContent, frameGrabSchema } from './frame-content'
 import { contactSheetContent } from './picture-tools'
+import { severeZoomNote } from './zoom-warnings'
 import { runEngineTransact, translateTransactCalls } from './transact'
 
 export interface McutMcpTarget {
@@ -107,14 +110,6 @@ type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure> | ReturnT
 
 const withResult = (lead: string, result: unknown) => (result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`)
 
-const spokenWords = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s']/gu, '')
-    .split(/\s+/)
-    .filter(Boolean)
-    .join(' ')
-
 function searchProjectTranscript(project: Project, query: string): unknown {
   const captionRefs = getProjectCaptions(project)
   const captions = captionRefs.map((ref) => ref.caption)
@@ -152,8 +147,10 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
     centerPerson: async () => {
       throw new Error('center_person requires a live browser bridge connected to an editor tab.')
     },
-    getAudioActivity: async () => {
-      throw new Error('get_audio_activity requires a live browser bridge connected to an editor tab.')
+    getAudioActivity: async (input) => {
+      const payload = MCP_TOOL_INPUTS.get_audio_activity.parse(input ?? {})
+      const source = pickAudioActivitySource(engine.project, engine.selection.elementIds, payload.elementId)
+      throw new Error(liveBridgeAudioActivityMessage(source))
     },
     listActions: () => [],
     listOperators: () =>
@@ -273,18 +270,15 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
             'Pass words or segments with startMs and endMs in source-media time.',
         )
       }
-      const incoming = spokenWords(transcript.words.length > 0 ? transcript.words.map((w) => w.text).join(' ') : transcript.text)
-      const transcribed = spokenWords(
-        getProjectCaptions(project)
-          .map(({ caption }) => caption.text)
-          .join(' '),
-      )
+      const incomingText = transcript.words.length > 0 ? transcript.words.map((word) => word.text).join(' ') : transcript.text
+      const projectText = getProjectCaptions(project)
+        .map(({ caption }) => caption.text)
+        .join(' ')
       await target.applyCommands([command])
-      const origin =
-        incoming.length > 0 && ` ${transcribed} `.includes(` ${incoming} `)
-          ? 'The transcript matches captions already in the project.'
-          : 'Warning: this transcript does not match any transcript in the project, so ensure_transcript did not produce it. ' +
-            'If it did not come from a transcription provider either, undo and run ensure_transcript.'
+      const origin = captionTranscriptsMatch(incomingText, projectText)
+        ? 'The transcript matches captions already in the project.'
+        : 'Warning: this transcript does not match any transcript in the project, so ensure_transcript did not produce it. ' +
+          'If it did not come from a transcription provider either, undo and run ensure_transcript.'
       return text(`OK: ${command.captions.length} caption(s) applied. ${origin}\n\n${await target.getSummary()}`)
     }
     case 'apply_silence_cuts': {

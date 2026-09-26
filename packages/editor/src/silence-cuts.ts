@@ -5,13 +5,13 @@ import {
   createElementId,
   elementIdSchema,
   getElementLocation,
+  isMediaClip,
+  resolveElementAudioSource,
   type BuiltinCommand,
+  type ElementAudioSource,
   type Project,
-  type TimelineElement,
 } from '@mcut/timeline'
 import { OperatorError } from './operators'
-
-type ClipElement = TimelineElement & { type: 'video' | 'audio' }
 
 interface WordTiming {
   startMs: number
@@ -43,29 +43,42 @@ export interface SilenceCutPlan {
   project: Project
 }
 
+function requireSilenceSource(project: Project, elementId: string): ElementAudioSource {
+  const parsedId = elementIdSchema.safeParse(elementId)
+  const location = parsedId.success ? getElementLocation(project, parsedId.data) : undefined
+  if (!location) throw new OperatorError('unknown-element', `no element "${elementId}" in project`)
+  const source = resolveElementAudioSource(project, location.element.id)
+  if (!source) {
+    if (location.element.type === 'multicam') {
+      throw new OperatorError('invalid-payload', `element "${location.element.id}" has no audio source; set one with setMulticamAudio`)
+    }
+    if (!isMediaClip(location.element)) {
+      throw new OperatorError('invalid-payload', `silence cuts apply to a clip with source audio, not "${location.element.type}"`)
+    }
+    throw new OperatorError('invalid-payload', `element "${location.element.id}" has no audio asset`)
+  }
+  if (source.timeMap) {
+    throw new OperatorError(
+      'unsupported',
+      `element "${elementId}" has a time remap; silence cuts require 1x playback ` + '(clear it with setTimeMap null first)',
+    )
+  }
+  if (source.reversed) {
+    throw new OperatorError('unsupported', `element "${elementId}" is reversed; silence cuts require forward playback`)
+  }
+  return source
+}
+
 export function planSilenceCuts(project: Project, elementId: string, transcript: SilenceCutTranscript, options: SilenceCutOptions = {}): SilenceCutPlan {
   const minGapMs = options.minGapMs ?? 600
   const paddingMs = options.paddingMs ?? 120
   const minKeepMs = Math.max(options.minKeepMs ?? 250, MIN_ELEMENT_DURATION_MS)
   const trimEnds = options.trimEnds ?? true
 
-  const parsedId = elementIdSchema.safeParse(elementId)
-  const location = parsedId.success ? getElementLocation(project, parsedId.data) : undefined
-  if (!location) throw new OperatorError('unknown-element', `no element "${elementId}" in project`)
-  const element = location.element
-  const id = element.id
-  if (element.type !== 'video' && element.type !== 'audio') {
-    throw new OperatorError('invalid-payload', `silence cuts apply to video/audio elements, not "${element.type}"`)
-  }
-  if (element.timeMap) {
-    throw new OperatorError(
-      'unsupported',
-      `element "${elementId}" has a time remap; silence cuts require 1x playback ` + '(clear it with setTimeMap null first)',
-    )
-  }
-
-  const windowStart = element.trimStartMs
-  const windowEnd = element.trimStartMs + element.durationMs
+  const source = requireSilenceSource(project, elementId)
+  const id = source.elementId
+  const windowStart = source.sourceStartMs
+  const windowEnd = source.sourceEndMs
 
   const [firstWord, ...restWords] = transcript.words
     .filter((word) => word.endMs > windowStart && word.startMs < windowEnd)
@@ -90,22 +103,20 @@ export function planSilenceCuts(project: Project, elementId: string, transcript:
     engine.dispatch(command)
     commands.push(command)
   }
-  const current = (): ClipElement => {
-    const found = getElementLocation(engine.project, id)
-    if (!found || (found.element.type !== 'video' && found.element.type !== 'audio')) {
-      throw new Error(`element "${id}" disappeared mid-plan`)
-    }
-    return found.element
+  const current = (): ElementAudioSource => {
+    const found = resolveElementAudioSource(engine.project, id)
+    if (!found) throw new Error(`element "${id}" disappeared mid-plan`)
+    return found
   }
 
   for (const silence of [...silences].reverse()) {
     const el = current()
-    const toTimeline = (sourceMs: number) => el.startMs + (sourceMs - el.trimStartMs)
+    const toTimeline = (assetMs: number) => el.timelineStartMs + (assetMs - el.sourceStartMs)
     if (silence.endMs >= windowEnd) {
       dispatch({
         type: 'trimElement',
         elementId: id,
-        durationMs: toTimeline(silence.startMs) - el.startMs,
+        durationMs: toTimeline(silence.startMs) - el.timelineStartMs,
       })
     } else if (silence.startMs <= windowStart) {
       const rightElementId = createElementId()

@@ -41,7 +41,7 @@ Two splits isolate the bad take. Then `rippleDelete` removes it and closes the g
 **When the user says:** "cut the silences" or "tighten this up" or "remove the pauses"
 **Template:** `talking-head`
 
-The CLI finds word gaps in the transcript and pads each cut by 120ms so speech never clips. It turns silences into split plus rippleDelete, and trailing silence into a trim. It applies cuts last-to-first so timeline positions stay valid. Add `--dry-run` to print the plan as commands JSON without writing. The element must play at 1x, with no timeMap. Transcript times are source-media times, so trims and offsets are handled for you. Cutting leading silence replaces the element id with a fresh one. Re-read the summary after.
+The CLI finds word gaps in the transcript and pads each cut by 120ms so speech never clips. It turns silences into split plus rippleDelete, and trailing silence into a trim. It applies cuts last-to-first so timeline positions stay valid. Add `--dry-run` to print the plan as commands JSON without writing. The clip must play forward at 1x, with no timeMap. A multicam is cut on its audio source, and one with none fails until setMulticamAudio. Transcript times are source-media times, so trims and offsets are handled for you. Cutting leading silence replaces the element id with a fresh one. Re-read the summary after.
 
 Use the CLI:
 

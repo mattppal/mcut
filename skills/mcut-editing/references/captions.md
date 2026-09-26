@@ -37,11 +37,12 @@ from `@mcut/cli`, or `buildApplyCaptionsCommand(transcript, options)` from
 A transcript covers the whole source file. A clip plays a slice of it, somewhere on
 the timeline. Three options align them:
 
-- `sourceStartMs` / `sourceEndMs` keep only words inside the clip's source span
-  (use the element's `trimStartMs` through `trimStartMs + durationMs`).
+- `sourceStartMs` / `sourceEndMs` keep only words inside the clip's audio window.
+  That window is the resolved audio asset, `trimStartMs` for a video or audio clip
+  and the audio source offset plus `trimStartMs` for a multicam.
 - `timeOffsetMs` is where that span sits on the timeline (the element's `startMs`).
 
-`--element` (CLI) and `elementId` (programmatic) derive all three from the element.
+`--element` (CLI) and `elementId` (programmatic) derive all three from the clip, including a multicam.
 If you cut the clip after captioning, captions do not follow. Caption after
 picture-lock, or re-run with `replace` set to `true`.
 
