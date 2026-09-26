@@ -1,5 +1,11 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.14
+
+### Patch Changes
+
+- [#198](https://github.com/mattppal/mcut/pull/198) [`8e23a05`](https://github.com/mattppal/mcut/commit/8e23a054f987d7cdb3deef7866517164c63c351e) Thanks [@mattppal](https://github.com/mattppal)! - Say when selected clips do not overlap in time, and tell the caller to stack clips recorded together on separate tracks.
+
 ## 0.1.0-alpha.13
 
 ### Patch Changes
