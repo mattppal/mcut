@@ -105,13 +105,13 @@ describe('getElementOBB', () => {
   })
 })
 
-function screenAndCamera(frame: Partial<Pick<MulticamElement, 'transform' | 'crop'>> = {}): Project {
+function screenAndCamera(frame: Partial<Pick<MulticamElement, 'transform' | 'crop'>> = {}, camera = { x: 0.75, y: 0.75, w: 0.25, h: 0.25 }): Project {
   let project = createProject({ width: 1920, height: 1080 })
   project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-screen', kind: 'video', src: 'blob:s', durationMs: 60_000 } })
   project = applyCommand(project, { type: 'addAsset', asset: { id: 'a-cam', kind: 'video', src: 'blob:c', durationMs: 60_000 } })
   const slots = [
     { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 } },
-    { source: 'camera', rect: { x: 0.75, y: 0.75, w: 0.25, h: 0.25 } },
+    { source: 'camera', rect: camera },
   ]
   project = applyCommand(project, { type: 'saveLayout', layout: { id: 'l-pip', name: 'Screen + Cam', slots } })
   const sources = [
@@ -151,12 +151,25 @@ describe('multicam geometry', () => {
     ])
   })
 
-  test('slot boxes follow the crop, scale, rotation, and position of the multicam', () => {
+  test('slot boxes follow the scale, rotation, and position of the multicam, cut by its crop', () => {
     const project = screenAndCamera({ transform: { x: 100, y: -50, scaleX: 0.5, scaleY: 0.5, rotation: 90 }, crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } })
     expect(rounded(getSlotBoxes(project, multicamIn(project), 1000))).toEqual([
-      { sourceKey: 'screen', obb: { cx: 1195, cy: 250, width: 960, height: 540, rotation: 90 } },
+      { sourceKey: 'screen', obb: { cx: 1060, cy: 490, width: 480, height: 270, rotation: 90 } },
       { sourceKey: 'camera', obb: { cx: 992.5, cy: 610, width: 240, height: 135, rotation: 90 } },
     ])
+  })
+
+  test('slot boxes follow a held zoom without source, cut at the frame, and leave out a slot the zoom moves off it', () => {
+    const zoom = { inMs: 100, holdMs: 2000, outMs: 100, scale: 2, motionBlur: 0 }
+    const pip = screenAndCamera({}, { x: 0.65, y: 0.6, w: 0.25, h: 0.3 })
+    const right = applyCommand(pip, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { ...zoom, atMs: 0, focus: { x: 0.75, y: 0.5 } } })
+    const project = applyCommand(right, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { ...zoom, atMs: 2500, focus: { x: 0.25, y: 0.25 } } })
+    const screen = { sourceKey: 'screen', obb: { cx: 960, cy: 540, width: 1920, height: 1080, rotation: 0 } }
+    expect(rounded(getSlotBoxes(project, multicamIn(project), 1000))).toEqual([
+      screen,
+      { sourceKey: 'camera', obb: { cx: 1056, cy: 918, width: 960, height: 324, rotation: 0 } },
+    ])
+    expect(rounded(getSlotBoxes(project, multicamIn(project), 3000))).toEqual([screen])
   })
 })
 
