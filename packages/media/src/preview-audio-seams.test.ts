@@ -36,7 +36,7 @@ function wrapped(data: Float32Array<ArrayBuffer>, timestamp: number): WrappedAud
   return { buffer, timestamp, duration: buffer.duration }
 }
 
-function fakeSink(packets: FakePacket[]): Pick<AudioBufferSink, 'buffers'> {
+function accumulatingSink(packets: FakePacket[]): Pick<AudioBufferSink, 'buffers'> {
   return {
     async *buffers(startS = 0, endS = Infinity) {
       let clockS: number | null = null
@@ -44,7 +44,6 @@ function fakeSink(packets: FakePacket[]): Pick<AudioBufferSink, 'buffers'> {
         const durationS = packet.data.length / SAMPLE_RATE
         if (packet.nominalS + durationS <= startS) continue
         if (packet.nominalS >= endS) return
-        // mediabunny times decoded audio from the first sample and accumulates durations, per https://github.com/Vanilagy/mediabunny/blob/main/src/media-sink.ts
         if (clockS === null || Math.abs(packet.stampS - clockS) >= durationS) clockS = packet.stampS
         const stampS = Math.round(clockS * SAMPLE_RATE) / SAMPLE_RATE
         clockS += durationS
@@ -107,7 +106,7 @@ describe('preview audio window seams', () => {
 
   for (const rate of [1.5, 2, 4]) {
     test(`a 440 Hz tone played at ${rate}x keeps a steady envelope across window seams`, async () => {
-      const sink = fakeSink(packetsOf(tone(10, 440), () => 0))
+      const sink = accumulatingSink(packetsOf(tone(10, 440), () => 0))
       const segment = { ...clip, durationMs: 2000 * rate, sourceSpanMs: 2000 * rate }
       const heard = await previewOf(sink, segment, { timelineMs: 300 * rate, contextS: 0, rate })
       expect(envelopeFloor(heard, 0.1, heard.length / SAMPLE_RATE - 0.1)).toBeGreaterThan(0.95)
@@ -115,14 +114,14 @@ describe('preview audio window seams', () => {
   }
 
   test('a reversed 440 Hz tone played at 2x keeps a steady envelope across window seams', async () => {
-    const sink = fakeSink(packetsOf(tone(10, 440), () => 0))
+    const sink = accumulatingSink(packetsOf(tone(10, 440), () => 0))
     const heard = await previewOf(sink, { ...clip, reversed: true }, { timelineMs: 600, contextS: 0, rate: 2 })
     expect(envelopeFloor(heard, 0.1, heard.length / SAMPLE_RATE - 0.1)).toBeGreaterThan(0.95)
   }, 20_000)
 
   for (const speed of [0.5, 1.5, 2]) {
     test(`a clip at speed ${speed} played from its start is the samples export stretches`, async () => {
-      const sink = fakeSink(packetsOf(noise(8), () => 0))
+      const sink = accumulatingSink(packetsOf(noise(8), () => 0))
       const spanMs = 3000 * speed
       const segment: AudibleSegment = {
         ...clip,
@@ -143,7 +142,7 @@ describe('preview audio window seams', () => {
 
   test('a source with jittered packet timestamps plays the samples a single export decode places', async () => {
     const signal = noise(4)
-    const sink = fakeSink(packetsOf(signal, (index) => (index === 0 ? 0 : 0.008 * Math.sin(index * 2.3))))
+    const sink = accumulatingSink(packetsOf(signal, (index) => (index === 0 ? 0 : 0.008 * Math.sin(index * 2.3))))
     const exported = await decodeCompositeRange(sink, 0, clip.durationMs / 1000, 'stereo')
     if (exported.status !== 'ready') throw new Error(`export decoded ${exported.status}`)
     const truth = exported.audio.channels[0] ?? new Float32Array(0)
