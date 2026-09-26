@@ -5,6 +5,29 @@ import { PreviewAudio } from './preview-audio'
 const output = { contextTime: 0, performanceTime: 0 }
 let renderedS = 0.013
 
+class RecordingGain {
+  disconnected = false
+  curveStarts: number[] = []
+  gain = {
+    value: 1,
+    cancelAndHoldAtTime() {},
+    cancelScheduledValues() {},
+    setValueAtTime() {},
+    setTargetAtTime() {},
+    setValueCurveAtTime: (_values: Float32Array, startS: number) => {
+      this.curveStarts.push(startS)
+    },
+  }
+
+  connect() {}
+
+  disconnect() {
+    this.disconnected = true
+  }
+}
+
+let gains: RecordingGain[] = []
+
 class StalledAudioContext {
   state = 'running'
   sampleRate = 48_000
@@ -15,7 +38,9 @@ class StalledAudioContext {
   }
 
   createGain() {
-    return { gain: { value: 1, cancelAndHoldAtTime() {}, setTargetAtTime() {} }, connect() {}, disconnect() {} }
+    const gain = new RecordingGain()
+    gains.push(gain)
+    return gain
   }
 
   getOutputTimestamp() {
@@ -35,7 +60,16 @@ class StalledAudioContext {
   }
 }
 
-const playing = (currentTimeMs: number): PlaybackState => ({ currentTimeMs, isPlaying: true, playbackRate: 1, volume: 1, muted: false })
+const playing = (currentTimeMs: number, playbackRate = 1): PlaybackState => ({ currentTimeMs, isPlaying: true, playbackRate, volume: 1, muted: false })
+
+function toneProject() {
+  const project = applyCommand(createProject(), { type: 'addAsset', asset: { id: 'a-tone', kind: 'audio', src: 'data:,', durationMs: 60_000 } })
+  return applyCommand(project, {
+    type: 'addElement',
+    trackId: 't-default',
+    element: { type: 'audio', id: 'e-tone', assetId: 'a-tone', startMs: 0, durationMs: 5000 },
+  })
+}
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -47,6 +81,7 @@ describe('preview audio clock around the output start', () => {
     output.contextTime = 0
     output.performanceTime = 0
     renderedS = 0.013
+    gains = []
     audio = new PreviewAudio()
   })
 
@@ -64,12 +99,7 @@ describe('preview audio clock around the output start', () => {
   })
 
   test('a running context whose output has not started holds the playhead at the play position while sound is due', async () => {
-    let project = applyCommand(createProject(), { type: 'addAsset', asset: { id: 'a-tone', kind: 'audio', src: 'data:,', durationMs: 60_000 } })
-    project = applyCommand(project, {
-      type: 'addElement',
-      trackId: 't-default',
-      element: { type: 'audio', id: 'e-tone', assetId: 'a-tone', startMs: 0, durationMs: 5000 },
-    })
+    const project = toneProject()
     audio.sync(project, playing(1000))
     await settle()
     audio.sync(project, playing(1000))
@@ -102,5 +132,25 @@ describe('preview audio clock around the output start', () => {
     await settle()
     audio.sync(project, playing(2000))
     expect(audio.clockTimeMs(116)).toBe(2000)
+  })
+
+  test('a second rate change before the first handoff sounds keeps the sounding epoch and hands off from it', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, playing(1000))
+    const sounding = gains[1]
+    renderedS = 1
+    audio.sync(project, playing(1000, 2))
+    await settle()
+    renderedS = 1.05
+    audio.sync(project, playing(1000, 4))
+    await settle()
+    audio.sync(project, playing(1000, 4))
+    expect(sounding?.disconnected).toBe(false)
+    expect(sounding?.curveStarts.at(-1)).toBeCloseTo(1.25, 3)
   })
 })
