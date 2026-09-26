@@ -195,6 +195,14 @@ midpoint. It returns one PNG with a labelled thumbnail per time, so one look
 tells you which segments show the region. Place a detail zoom's in, hold, and
 out inside that segment, and end it before the next change.
 
+### Choose shots on a multicam
+
+Plan angle cuts from the transcript and the screen, never on a fixed rhythm. For a
+talking head with a screen recording, open on the head-only shot, cut to the screen
+when the speaker starts talking about what it shows, and cut back to the head when
+they talk to the viewer again. Follow the shot list steps in `references/multicam.md`
+before you add any angle cut.
+
 ### Punch-ins and detail zooms
 
 Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
@@ -203,14 +211,16 @@ Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
 ```json
 {
   "edits": [
-    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "subtlePunchIn", "source": "screen", "atMs": 0 } },
+    { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "subtlePunchIn", "source": "camera", "atMs": 11400 } },
     { "type": "addZoomRegion", "elementId": "e-...", "zoom": { "preset": "detailZoom", "source": "screen", "atMs": 42000, "holdMs": 4000, "focus": { "x": 0.75, "y": 0.3 } } }
   ]
 }
 ```
 
 Keep zooms subtle (1.1x to 1.35x), keep `easeOutExpo`, and keep `motionBlur` on.
-On a multicam, set `source` to the screen key so the camera overlay stays put.
+On a multicam, set `source` to the source the shot shows so the other slots stay
+put. Use `camera` for a punch-in on the head-only shot and the screen key for a
+detail on the screen. Put the opening punch-in at the first pause, not at 0s.
 Place a detail zoom over the words that discuss the region, found with
 `search_transcript`, and inside the `find_scene_changes` segment that shows the
 region. When asked to tone zooms down, lower `scale` rather than
@@ -276,6 +286,6 @@ Load only when needed:
 - `references/commands.md` for exact command payloads.
 - `references/animation.md` for presets, keyframes, and transitions.
 - `references/captions.md` for transcript and caption shaping.
-- `references/multicam.md` for multicam edits.
+- `references/multicam.md` for multicam edits and choosing shots.
 - `references/platforms.md` for delivery formats and safe areas.
 - `references/export.md` for containers, codecs, bitrates, and export outside Studio.
