@@ -1,12 +1,14 @@
 import { z } from 'zod'
-import { centerPersonOptionsSchema, operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinition, type OperatorId } from '@mcut/editor'
+import { centerPersonOptionsSchema, operatorIds, operators, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
-import { captionsCommandOptionsSchema, retakeOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
+import { retakeOptionsSchema } from '@mcut/transcription'
+import { applyCaptionsInputSchema, applySilenceCutsInputSchema, removeRangesDescription, removeRangesInputSchema } from './transcript-tool-inputs'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
 import { PICTURE_TOOL_DESCRIPTIONS, PICTURE_TOOL_INPUTS } from './picture-tools'
 import { commandBatchSchema } from './transact-shape'
 
 export * from './export-protocol'
+export * from './import-media-protocol'
 import { applySilenceCutsDescription, audioActivityDescription } from './audio-activity-target'
 export { pickAudioActivitySource } from './audio-activity-target'
 export { applyTransact, transactSubRequestSchema, type TransactSubRequest } from './transact-shape'
@@ -56,6 +58,7 @@ export const MCP_AGENT_TOOL_NAMES = [
   'get_transcript',
   'search_transcript',
   'find_retakes',
+  'remove_ranges',
   'ensure_transcript',
   'list_commands',
   'apply_commands',
@@ -80,19 +83,6 @@ export const MCP_AGENT_TOOL_NAMES = [
 ] as const
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
-
-const transcriptInput = transcriptInputSchema.describe('Transcript JSON with word timings in source-media milliseconds, the same shape `mcut captions` reads.')
-
-export const applyCaptionsInputSchema = captionsCommandOptionsSchema.extend({
-  transcript: transcriptInput,
-})
-
-export const applySilenceCutsInputSchema = silenceCutOptionsSchema.extend({
-  elementId: elementIdSchema.describe(
-    'The clip to cut. It must play forward at 1x, with no time remap. A multicam is cut on its audio source, and one with none fails until setMulticamAudio.',
-  ),
-  transcript: transcriptInput,
-})
 
 export const MCP_TOOL_INPUTS = {
   get_summary: EMPTY_INPUT,
@@ -131,6 +121,7 @@ export const MCP_TOOL_INPUTS = {
         .optional(),
     })
     .strict(),
+  remove_ranges: removeRangesInputSchema,
   ensure_transcript: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
     replace: z.boolean().describe('When true, replace captions overlapping the target clip. Defaults to false.').optional(),
@@ -181,42 +172,6 @@ export const MCP_TOOL_INPUTS = {
   }),
 } satisfies Record<McpAgentToolName, z.ZodType>
 
-const importMediaBridgeFileSchema = z.strictObject({
-  url: z.url(),
-  name: z.string().min(1),
-  mimeType: z.string().min(1),
-  size: z.int().nonnegative(),
-  path: z.string().min(1),
-})
-
-export const importMediaBridgePayloadSchema = z.strictObject({
-  files: z.array(importMediaBridgeFileSchema).min(1).max(50),
-})
-
-const importedMediaFileSchema = z.strictObject({
-  path: z.string(),
-  assetId: z.string(),
-  name: z.string(),
-  kind: z.enum(['video', 'audio', 'image']),
-  durationMs: z.int().nonnegative().optional(),
-  width: z.int().positive().optional(),
-  height: z.int().positive().optional(),
-})
-
-const mediaImportFailureSchema = z.strictObject({
-  path: z.string(),
-  error: z.string(),
-})
-
-export const mediaImportReportSchema = z.strictObject({
-  imported: z.array(importedMediaFileSchema),
-  failed: z.array(mediaImportFailureSchema),
-})
-
-export type MediaImportReport = z.infer<typeof mediaImportReportSchema>
-
-export type ImportMediaBridgeFile = z.infer<typeof importMediaBridgeFileSchema>
-
 const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   get_summary:
     'A compact textual rendering of the current project: tracks (topmost first), elements ' +
@@ -242,15 +197,15 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   find_retakes:
     'Find retakes in the word-timed transcript. A phrase whose opening words are spoken again within maxLookaheadMs. ' +
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
-    'Candidates come last to first. Cut them in that order so no ripple delete shifts a range still to cut. ' +
     'Pass elementId for a clip with source audio, including a multicam and each piece left after the cuts. ' +
-    'After the cuts, pass the full, unchanged transcript to apply_captions once per remaining clip, never a slice. ' +
-    'Pass replace true until a call reports OK and false after; that call clears the caption track, so before cutting call find_retakes for every other captioned clip on it and rebuild each from that saved transcript. ' +
-    'Cutting the caption track instead leaves later words late. ' +
+    'It stores the word-timed transcript of that audio in source time, and with elementId the reply also lists those words. ' +
+    'The retake flow is find_retakes, then one remove_ranges call with the candidates you keep, then one apply_captions call with elementId set to any remaining piece, replace true, and no transcript. ' +
+    'Do not cut retakes by hand with splitElement, trimElement, or rippleDelete. Do not copy the words back into apply_captions. ' +
     'Review abandonedText before cutting. Needs captions with word timings. Call ensure_transcript first.',
+  remove_ranges: removeRangesDescription,
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
-    'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
+    'then apply word-timed captions to the timeline and store that transcript for apply_captions to reuse after cuts. Explicit tool only; get_transcript never auto-transcribes. ' +
     'Required before transcript-based silence removal when captions are missing.',
   list_commands: 'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
   apply_commands:
@@ -258,9 +213,12 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'To mix commands with operators or actions in one undo step, use transact.',
   apply_captions:
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
-    'Pass elementId to caption only the source span one clip plays, at its timeline position. A multicam uses its audio source. ' +
+    'The transcript is in source-media time. With elementId, one call captions every piece on that track that plays the same audio, each piece at its timeline position, ' +
+    'and replaces the old captions over those pieces in one undo step. A multicam uses its audio source. ' +
+    'After cuts, pass elementId and omit transcript. The server reuses the word-timed transcript it stored for that audio from ensure_transcript, find_retakes, or an earlier apply_captions. ' +
+    'An explicit transcript must be the full one, never a slice. ' +
     'styleId picks a caption style preset. Returns the updated project summary. ' +
-    'Pass a timed transcript from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
+    'An explicit transcript comes from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
     'Never invent a transcript when transcription fails. ' +
     'The result warns when the transcript matches no transcript in the project. Caption words left in order after cuts still match.',
   apply_silence_cuts: applySilenceCutsDescription,
@@ -344,6 +302,7 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('get_transcript'),
   staticToolCall('search_transcript'),
   staticToolCall('find_retakes'),
+  staticToolCall('remove_ranges'),
   staticToolCall('ensure_transcript'),
   staticToolCall('get_audio_activity'),
   staticToolCall('apply_captions'),

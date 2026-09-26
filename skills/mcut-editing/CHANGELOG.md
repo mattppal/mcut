@@ -1,5 +1,32 @@
 # mcut-editing-skill
 
+## 0.0.1-alpha.21
+
+### Patch Changes
+
+- Updated dependencies [[`1fab6ca`](https://github.com/mattppal/mcut/commit/1fab6cada1e1310f196b7f05e49cf15145cad849)]:
+  - @mcut/timeline@0.1.0-alpha.19
+  - @mcut/cli@0.1.0-alpha.22
+  - @mcut/transcription@0.1.0-alpha.22
+
+## 0.0.1-alpha.20
+
+### Patch Changes
+
+- Updated dependencies [[`ec1f719`](https://github.com/mattppal/mcut/commit/ec1f719b9a09f82dd95d548ec4a44f989895e8de)]:
+  - @mcut/timeline@0.1.0-alpha.18
+  - @mcut/cli@0.1.0-alpha.21
+  - @mcut/transcription@0.1.0-alpha.21
+
+## 0.0.1-alpha.19
+
+### Patch Changes
+
+- Updated dependencies [[`74b5c22`](https://github.com/mattppal/mcut/commit/74b5c22a2c48244113e77ca5f3e03a1c23b80774)]:
+  - @mcut/timeline@0.1.0-alpha.17
+  - @mcut/cli@0.1.0-alpha.20
+  - @mcut/transcription@0.1.0-alpha.20
+
 ## 0.0.1-alpha.18
 
 ### Patch Changes

@@ -13,6 +13,7 @@ const AGENT_TOOL_NAMES = [
   'get_transcript',
   'search_transcript',
   'find_retakes',
+  'remove_ranges',
   'ensure_transcript',
   'list_commands',
   'apply_commands',

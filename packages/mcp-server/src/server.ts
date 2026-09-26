@@ -18,7 +18,6 @@ import {
   EditorEngine,
   ProjectFormatError,
   describeLayoutChange,
-  getProjectCaptions,
   getProjectMediaContext,
   getProjectTranscript,
   listZoomRegions,
@@ -28,7 +27,7 @@ import {
   type Project,
   type ProjectTranscriptOptions,
 } from '@mcut/timeline'
-import { buildCaptionsCommand, findRetakes, searchCaptions } from '@mcut/transcription'
+import { buildCaptionsCommand, findRetakes } from '@mcut/transcription'
 import { z } from 'zod'
 import {
   MCP_SERVER_STATIC_TOOL_CALL_SCHEMA,
@@ -41,10 +40,14 @@ import {
   type TransactSubRequest,
 } from './contract'
 import { liveBridgeAudioActivityMessage, pickAudioActivitySource } from './audio-activity-target'
-import { captionTranscriptsMatch } from './caption-transcript-match'
+import { transcriptOriginNote } from './caption-transcript-match'
 import { toClipSourceWords } from './clip-source-words'
 import { frameContent, frameGrabSchema } from './frame-content'
 import { contactSheetContent } from './picture-tools'
+import { removeRangesOn } from './remove-ranges'
+import { searchProjectTranscript } from './search-transcript'
+import { planSourceCaptions, sourceCaptionsNote } from './source-captions'
+import { StoredTranscripts, ensuredCapture } from './stored-transcripts'
 import { severeZoomNote } from './zoom-warnings'
 import { runEngineTransact, translateTransactCalls } from './transact'
 
@@ -84,6 +87,7 @@ export interface McutMcpServerOptions {
 
 export interface McutMcpServerForTargetOptions {
   target: McutMcpTarget
+  transcripts?: StoredTranscripts
   name?: string
   version?: string
 }
@@ -109,26 +113,6 @@ function changedLayoutId(name: string, args: unknown): string | undefined {
 type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure> | ReturnType<typeof frameContent>
 
 const withResult = (lead: string, result: unknown) => (result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`)
-
-function searchProjectTranscript(project: Project, query: string): unknown {
-  const captionRefs = getProjectCaptions(project)
-  const captions = captionRefs.map((ref) => ref.caption)
-  const byId = new Map<string, (typeof captionRefs)[number]>(captionRefs.map((ref) => [ref.caption.id, ref]))
-  const matches = searchCaptions(captions, query).map((match) => {
-    const ref = byId.get(match.captionId)
-    const text = ref?.caption.text ?? ''
-    return {
-      ...match,
-      text: text.slice(match.startChar, match.endChar),
-      captionText: text,
-      trackId: ref?.trackId,
-      trackName: ref?.trackName,
-      startMs: match.timeMs,
-      endMs: match.endTimeMs,
-    }
-  })
-  return { query, count: matches.length, matches }
-}
 
 function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise<void>): McutMcpTarget {
   return {
@@ -196,7 +180,7 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
   }
 }
 
-async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCall): Promise<ToolResult> {
+async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCall, transcripts: StoredTranscripts): Promise<ToolResult> {
   switch (call.name) {
     case 'get_summary':
       return text(await target.getSummary())
@@ -222,11 +206,17 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       const { elementId, ...options } = call.arguments
       const candidates = findRetakes(words, options)
       if (elementId === undefined) return text(JSON.stringify({ wordCount: words.length, candidates }, null, 2))
-      return text(JSON.stringify({ wordCount: words.length, candidates, transcript: { words: toClipSourceWords(project, elementId, words) } }, null, 2))
+      const clipWords = toClipSourceWords(project, elementId, words)
+      transcripts.captureCaptions(project, { elementId, replace: false })
+      return text(JSON.stringify({ wordCount: words.length, candidates, transcript: { words: clipWords } }, null, 2))
     }
+    case 'remove_ranges':
+      return text(await removeRangesOn(target, call.arguments))
     case 'ensure_transcript': {
       if (!target.ensureTranscript) return failure('ensure_transcript is not available on this target.')
       const result = await target.ensureTranscript(call.arguments)
+      const ensured = ensuredCapture(result)
+      if (ensured) transcripts.captureCaptions(await targetProject(target), ensured)
       return text(`${withResult('OK: transcript ensured.', result)}\n\n${await target.getSummary()}`)
     }
     case 'get_audio_activity':
@@ -261,25 +251,22 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'list_presets':
       return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
     case 'apply_captions': {
-      const { transcript, ...options } = call.arguments
+      const { transcript: given, scope, elementId, ...options } = call.arguments
       const project = await targetProject(target)
-      const command = buildCaptionsCommand(project, transcript, options)
+      const transcript = given ?? (elementId ? transcripts.recall(project, elementId) : undefined)
+      if (!transcript) return failure('apply_captions needs a transcript, or an elementId to reuse the transcript stored for that audio.')
+      const plan = elementId && scope !== 'clip' ? planSourceCaptions(project, transcript, { ...options, elementId }) : undefined
+      const command = plan?.command ?? buildCaptionsCommand(project, transcript, { ...options, ...(elementId ? { elementId } : {}) })
       if (command.captions.length === 0) {
         return failure(
           'No captions were applied. The transcript has no timed words or segments, or with elementId none fall inside the source span that clip plays. ' +
             'Pass words or segments with startMs and endMs in source-media time.',
         )
       }
-      const incomingText = transcript.words.length > 0 ? transcript.words.map((word) => word.text).join(' ') : transcript.text
-      const projectText = getProjectCaptions(project)
-        .map(({ caption }) => caption.text)
-        .join(' ')
+      const origin = transcriptOriginNote(given, project)
       await target.applyCommands([command])
-      const origin = captionTranscriptsMatch(incomingText, projectText)
-        ? 'The transcript matches captions already in the project.'
-        : 'Warning: this transcript does not match any transcript in the project, so ensure_transcript did not produce it. ' +
-          'If it did not come from a transcription provider either, undo and run ensure_transcript.'
-      return text(`OK: ${command.captions.length} caption(s) applied. ${origin}\n\n${await target.getSummary()}`)
+      if (given && elementId) transcripts.remember(project, elementId, given.words)
+      return text(`OK: ${command.captions.length} caption(s) applied${plan ? sourceCaptionsNote(plan) : '.'} ${origin}\n\n${await target.getSummary()}`)
     }
     case 'apply_silence_cuts': {
       const { elementId, transcript, ...options } = call.arguments
@@ -347,6 +334,7 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
   const { target } = options
   const tools = listServerToolDefinitions()
   const operatorIdsByTool = new Map(operatorIds.map((id) => [operatorToolName(id), id]))
+  const transcripts = options.transcripts ?? new StoredTranscripts()
 
   const server = new Server(
     { name: options.name ?? 'mcut', version: options.version ?? '0.1.0' },
@@ -363,7 +351,7 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
       if (isMcpServerStaticToolName(name)) {
         const call = MCP_SERVER_STATIC_TOOL_CALL_SCHEMA.safeParse({ name, arguments: args ?? {} })
         if (!call.success) return failure(`${name}: ${z.prettifyError(call.error)}`)
-        return await callStaticTool(target, call.data)
+        return await callStaticTool(target, call.data, transcripts)
       }
       const operatorId = operatorIdsByTool.get(name)
       if (operatorId) {
