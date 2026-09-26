@@ -96,21 +96,21 @@ no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 
 ### Remove retakes
 
-After `ensure_transcript`, call `find_retakes` with the captioned clip's
-`elementId`. A multicam is included, and so is each piece left after the cuts.
-Each candidate is a timeline range from the abandoned take to the start of the
-kept take. Read `abandonedText` and skip any candidate that is a deliberate
-repetition. Candidates come last to first, so cut them in the returned order,
-each with a split at both ends and a ripple delete on the clip only. Do not cut
-the caption track the same way, because a ripple delete keeps the gaps between
-captions and leaves every later word late. Rebuild captions with one
-`apply_captions` call per remaining clip. Pass the full, unchanged transcript
-each time, never a slice. Pass `replace` true until a call reports OK and false
-after it, because that call clears the caption track. So when another clip has
-captions on that track, call `find_retakes` with that clip's `elementId` before
-cutting, and rebuild its pieces the same way from its own full `transcript`.
-Expect the calls for that other clip to warn that the transcript matches none
-in the project, since the first call replaced those captions.
+The flow is `find_retakes`, then the cut, then one `apply_captions` call.
+
+1. After `ensure_transcript`, call `find_retakes` with the captioned clip's
+   `elementId`. A multicam works. Keep the returned `transcript`, which is in
+   source time.
+2. Each candidate is a timeline range from the abandoned take to the start of
+   the kept take. Read `abandonedText` and skip any candidate that is a
+   deliberate repetition. Candidates come last to first, so cut them in the
+   returned order in one `transact`, each with a split at both ends and a
+   ripple delete on the clip only. Leave the caption track alone.
+3. Call `apply_captions` once with `elementId` set to any remaining piece and
+   the full `transcript` from step 1, never a slice. That call captions every
+   piece on the track that plays the same audio at its new timeline position
+   and replaces the old captions over those pieces, as one undo step.
+
 Pass a lower `minMatchWords` only when a short restart was missed, and check
 each extra candidate, since lower values match spoken lists.
 

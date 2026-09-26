@@ -132,8 +132,7 @@ describe('find_retakes on a cut multicam', () => {
     ])
     expect(right.transcript.words).toEqual([{ text: 'world', startMs: 12000, endMs: 12300 }])
 
-    await client.callTool({ name: 'apply_captions', arguments: { transcript: fullTranscript, elementId: 'e-mc', replace: true } })
-    await client.callTool({ name: 'apply_captions', arguments: { transcript: fullTranscript, elementId: 'e-right', replace: false } })
+    await client.callTool({ name: 'apply_captions', arguments: { transcript: fullTranscript, elementId: 'e-mc' } })
     expect(wordTimes(engine)).toEqual([
       ['hello', 1200, 1500],
       ['there', 2200, 2500],

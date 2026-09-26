@@ -45,6 +45,7 @@ import { captionTranscriptsMatch } from './caption-transcript-match'
 import { toClipSourceWords } from './clip-source-words'
 import { frameContent, frameGrabSchema } from './frame-content'
 import { contactSheetContent } from './picture-tools'
+import { planSourceCaptions, sourceCaptionsNote } from './source-captions'
 import { severeZoomNote } from './zoom-warnings'
 import { runEngineTransact, translateTransactCalls } from './transact'
 
@@ -261,9 +262,10 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'list_presets':
       return text(JSON.stringify(PLATFORM_PRESETS, null, 2))
     case 'apply_captions': {
-      const { transcript, ...options } = call.arguments
+      const { transcript, scope, elementId, ...options } = call.arguments
       const project = await targetProject(target)
-      const command = buildCaptionsCommand(project, transcript, options)
+      const plan = elementId && scope !== 'clip' ? planSourceCaptions(project, transcript, { ...options, elementId }) : undefined
+      const command = plan?.command ?? buildCaptionsCommand(project, transcript, { ...options, ...(elementId ? { elementId } : {}) })
       if (command.captions.length === 0) {
         return failure(
           'No captions were applied. The transcript has no timed words or segments, or with elementId none fall inside the source span that clip plays. ' +
@@ -279,7 +281,7 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
         ? 'The transcript matches captions already in the project.'
         : 'Warning: this transcript does not match any transcript in the project, so ensure_transcript did not produce it. ' +
           'If it did not come from a transcription provider either, undo and run ensure_transcript.'
-      return text(`OK: ${command.captions.length} caption(s) applied. ${origin}\n\n${await target.getSummary()}`)
+      return text(`OK: ${command.captions.length} caption(s) applied${plan ? sourceCaptionsNote(plan) : '.'} ${origin}\n\n${await target.getSummary()}`)
     }
     case 'apply_silence_cuts': {
       const { elementId, transcript, ...options } = call.arguments

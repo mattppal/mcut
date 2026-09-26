@@ -1,7 +1,8 @@
 import { z } from 'zod'
-import { centerPersonOptionsSchema, operatorIds, operators, silenceCutOptionsSchema, type OperatorDefinition, type OperatorId } from '@mcut/editor'
+import { centerPersonOptionsSchema, operatorIds, operators, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
-import { captionsCommandOptionsSchema, retakeOptionsSchema, transcriptInputSchema } from '@mcut/transcription'
+import { retakeOptionsSchema } from '@mcut/transcription'
+import { applyCaptionsInputSchema, applySilenceCutsInputSchema } from './transcript-tool-inputs'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
 import { PICTURE_TOOL_DESCRIPTIONS, PICTURE_TOOL_INPUTS } from './picture-tools'
 import { commandBatchSchema } from './transact-shape'
@@ -80,19 +81,6 @@ export const MCP_AGENT_TOOL_NAMES = [
 ] as const
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
-
-const transcriptInput = transcriptInputSchema.describe('Transcript JSON with word timings in source-media milliseconds, the same shape `mcut captions` reads.')
-
-export const applyCaptionsInputSchema = captionsCommandOptionsSchema.extend({
-  transcript: transcriptInput,
-})
-
-export const applySilenceCutsInputSchema = silenceCutOptionsSchema.extend({
-  elementId: elementIdSchema.describe(
-    'The clip to cut. It must play forward at 1x, with no time remap. A multicam is cut on its audio source, and one with none fails until setMulticamAudio.',
-  ),
-  transcript: transcriptInput,
-})
 
 export const MCP_TOOL_INPUTS = {
   get_summary: EMPTY_INPUT,
@@ -243,10 +231,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Find retakes in the word-timed transcript. A phrase whose opening words are spoken again within maxLookaheadMs. ' +
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
     'Candidates come last to first. Cut them in that order so no ripple delete shifts a range still to cut. ' +
-    'Pass elementId for a clip with source audio, including a multicam and each piece left after the cuts. ' +
-    'After the cuts, pass the full, unchanged transcript to apply_captions once per remaining clip, never a slice. ' +
-    'Pass replace true until a call reports OK and false after; that call clears the caption track, so before cutting call find_retakes for every other captioned clip on it and rebuild each from that saved transcript. ' +
-    'Cutting the caption track instead leaves later words late. ' +
+    'Pass elementId for a clip with source audio, including a multicam and each piece left after the cuts. Save the returned words before cutting. ' +
+    'Cut the clip, not the caption track. Then make one apply_captions call with elementId set to any remaining piece and the full saved words as the transcript, never a slice. ' +
+    'That one call re-captions every piece and replaces their old captions. ' +
     'Review abandonedText before cutting. Needs captions with word timings. Call ensure_transcript first.',
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
@@ -258,7 +245,8 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'To mix commands with operators or actions in one undo step, use transact.',
   apply_captions:
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
-    'Pass elementId to caption only the source span one clip plays, at its timeline position. A multicam uses its audio source. ' +
+    'The transcript is in source-media time. With elementId, one call captions every piece on that track that plays the same audio, each piece at its timeline position, ' +
+    'and replaces the old captions over those pieces in one undo step. After cuts, call it once with the full transcript, never a slice. A multicam uses its audio source. ' +
     'styleId picks a caption style preset. Returns the updated project summary. ' +
     'Pass a timed transcript from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
     'Never invent a transcript when transcription fails. ' +
