@@ -107,9 +107,11 @@ of them in `transact`.
    audio's word-timed transcript in source time.
 2. Each candidate is a timeline range from the abandoned take to the start of
    the kept take. Read `abandonedText` and skip any candidate that is a
-   deliberate repetition. Pass the rest to one `remove_ranges` call as they
-   are, in any order. It cuts every range from the clip and from every track
-   under it, closes the gaps, and is one undo step. Do not cut retakes with
+   deliberate repetition. Pass all the rest together in the `ranges` list of a
+   single `remove_ranges` call, as they are, in any order. Never call
+   `remove_ranges` once per retake, since each call is its own undo step and
+   the whole cut should be one. It cuts every range from the clip and from
+   every track under it and closes the gaps. Do not cut retakes with
    `splitElement`, `trimElement`, or `rippleDelete`.
 3. Call `apply_captions` once with `elementId` set to any remaining piece and
    `replace: true`. Do not pass `transcript`. The call reuses the stored
