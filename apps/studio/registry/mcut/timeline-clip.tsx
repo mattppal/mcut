@@ -14,7 +14,6 @@ import {
   resolveElementAudioSource,
   TRANSITION_TYPES,
   type AssetRef,
-  type BuiltinCommand,
   type MulticamElement,
   type TimelineElement,
   type Track,
@@ -36,7 +35,7 @@ import { FadeOverlay } from './clip-fades'
 import { ZoomLane } from './clip-zooms'
 import { getElementUI } from './element-ui'
 import { KeyframeMarkers, VolumeBand } from './clip-keyframes'
-import { duplicateElement, removeSelection, splitSelectionAtPlayhead, unlinkElements } from './editor-actions'
+import { dispatchSafe, duplicateElement, removeSelection, splitSelectionAtPlayhead, unlinkElements } from './editor-actions'
 import { useEditorUI, WORKSPACE_LAYOUT } from './editor-ui'
 import { multicamSourcesInSelection } from './multicam-ui'
 import { TRACK_HEIGHT, useClipDrag, type ClipDragMode } from './timeline-drag'
@@ -217,11 +216,6 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
   const transition = 'transition' in element ? element.transition : undefined
   const speed = element.type === 'video' || element.type === 'audio' ? getAverageSpeed(element) : 1
   const isReversed = (element.type === 'video' || element.type === 'audio') && element.reversed === true
-  const dispatchSafe = (command: BuiltinCommand) => {
-    try {
-      engine.dispatch(command)
-    } catch {}
-  }
   const centeredSources = element.type === 'multicam' ? element.sources.flatMap((source) => (source.reframe ? [source.key] : [])) : []
   const centered = element.type === 'video' ? element.reframe !== undefined : centeredSources.length > 0
   const stopCentering = () =>
@@ -380,7 +374,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
             </ContextMenuItem>
           )}
           {element.type === 'video' && (
-            <ContextMenuItem disabled={element.muted} onClick={() => dispatchSafe({ type: 'detachAudio', elementId: element.id })}>
+            <ContextMenuItem disabled={element.muted} onClick={() => dispatchSafe(engine, { type: 'detachAudio', elementId: element.id })}>
               Detach audio
             </ContextMenuItem>
           )}
@@ -419,7 +413,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
             </ContextMenuSub>
           )}
           {element.type === 'multicam' && (
-            <ContextMenuItem onClick={() => dispatchSafe({ type: 'flattenMulticam', elementId: element.id })}>Flatten multicam</ContextMenuItem>
+            <ContextMenuItem onClick={() => dispatchSafe(engine, { type: 'flattenMulticam', elementId: element.id })}>Flatten multicam</ContextMenuItem>
           )}
           {(element.type === 'video' || element.type === 'multicam') && (
             <ContextMenuItem onClick={() => setCenterDraft(CENTER_PERSON_DEFAULTS)}>Center person…</ContextMenuItem>
@@ -427,14 +421,14 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
           {centered && <ContextMenuItem onClick={stopCentering}>Stop centering</ContextMenuItem>}
           {element.type === 'video' && multiSelected && (
             <ContextMenuItem
-              onClick={() => dispatchSafe({ type: 'createMulticam', sources: multicamSourcesInSelection(engine.project, engine.selection.elementIds) })}
+              onClick={() => dispatchSafe(engine, { type: 'createMulticam', sources: multicamSourcesInSelection(engine.project, engine.selection.elementIds) })}
             >
               Create multicam from selection
             </ContextMenuItem>
           )}
           {isVisual &&
             (transition ? (
-              <ContextMenuItem onClick={() => dispatchSafe({ type: 'setTransition', elementId: element.id, transition: null })}>
+              <ContextMenuItem onClick={() => dispatchSafe(engine, { type: 'setTransition', elementId: element.id, transition: null })}>
                 Remove transition
               </ContextMenuItem>
             ) : nextAdjacent ? (
@@ -446,7 +440,7 @@ export const Clip = memo(function Clip({ element, track, pxPerMs }: { element: T
                       key={type}
                       className="capitalize"
                       onClick={() =>
-                        dispatchSafe({
+                        dispatchSafe(engine, {
                           type: 'setTransition',
                           elementId: element.id,
                           transition: { type, durationMs: 500 },

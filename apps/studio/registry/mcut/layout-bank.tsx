@@ -6,6 +6,7 @@ import { useEditorContext, useEditorState, usePlayback, useSelection } from '@mc
 import { getActiveAngleIndex, type Layout, type MulticamElement, type Project } from '@mcut/timeline'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { dispatchSafe } from './editor-actions'
 import { PanelSectionLabel } from './editor-primitives'
 import { findTargetMulticam, multicamSourcesInSelection, switchToLayout } from './multicam-ui'
 import { useEditorUI } from './editor-ui'
@@ -107,9 +108,7 @@ export function LayoutBank({ className }: { className?: string }) {
           size="xs"
           disabled={count === 0}
           onClick={() => {
-            try {
-              engine.dispatch({ type: 'createMulticam', sources: multicamSourcesInSelection(project, selection.elementIds) })
-            } catch {}
+            dispatchSafe(engine, { type: 'createMulticam', sources: multicamSourcesInSelection(project, selection.elementIds) })
           }}
         >
           Create multicam
