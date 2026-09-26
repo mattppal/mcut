@@ -1,9 +1,7 @@
-import type { Input, VideoSampleSink } from 'mediabunny'
 import type { FrameSource } from '@mcut/compositor'
+import { DecodedVideoFrames } from './decoded-video-frames'
 import { PreviewAudio } from './preview-audio'
 import { ScrubFrameCache } from './scrub-cache'
-import { inputFor } from './probe'
-import { sampleCanvas } from './sample-bitmap'
 import { canUseNativeVideoPreview } from './video-capabilities'
 import {
   assertNever,
@@ -67,26 +65,9 @@ const CATCHUP_GAIN = 4
 const CATCHUP_RATE_MAX_BIAS = 1.5
 const CATCHUP_RATE_MIN_BIAS = 0.75
 const PAUSED_DRIFT_TOLERANCE_S = 0.04
-const DECODED_FRAME_STEP_MS = 100
-const DECODED_FRAME_NEARBY_MS = 750
 const MAX_SEEK_LEAD_S = 2
 const STUCK_SEEK_MS = 4000
 const RECOVERY_INTERVAL_MS = 3000
-const DECODED_INIT_RETRY_MS = 3000
-
-interface DecodedVideoState {
-  src: string | null
-  input: Input | null
-  sink: VideoSampleSink | null
-  frames: Map<number, CanvasImageSource>
-  pendingKey: number | null
-  failed: boolean
-  lastInitFailureAt: number
-}
-
-function decodedFrameKey(sourceTimeMs: number): number {
-  return Math.max(0, Math.round(sourceTimeMs / DECODED_FRAME_STEP_MS) * DECODED_FRAME_STEP_MS)
-}
 
 interface PooledMedia {
   el: HTMLVideoElement
@@ -100,10 +81,15 @@ export class PreviewMediaPool implements FrameSource {
   private media = new Map<AssetId, PooledMedia>()
   private images = new Map<AssetId, ImageBitmap | 'loading' | 'error'>()
   private scrubCaches = new Map<AssetId, ScrubFrameCache>()
-  private decodedVideos = new Map<AssetId, DecodedVideoState>()
   private disposed = false
   private playing = false
   private frameChanges = 0
+
+  private readonly markFrameChanged = (): void => {
+    this.frameChanges++
+  }
+
+  private readonly decoded = new DecodedVideoFrames(this.markFrameChanged)
 
   readonly audio = new PreviewAudio()
 
@@ -111,10 +97,6 @@ export class PreviewMediaPool implements FrameSource {
 
   get frameVersion(): number {
     return this.frameChanges
-  }
-
-  private readonly markFrameChanged = (): void => {
-    this.frameChanges++
   }
 
   getFrame(assetId: AssetId, sourceTimeMs: number): CanvasImageSource | null {
@@ -132,7 +114,7 @@ export class PreviewMediaPool implements FrameSource {
 
     if (asset.kind === 'video') {
       if (!canUseNativeVideoPreview(asset)) {
-        return this.getDecodedVideoFrame(assetId, asset, sourceTimeMs)
+        return this.decoded.getFrame(assetId, asset, sourceTimeMs)
       }
       const element = this.media.get(assetId)?.el
       if (!element) return null
@@ -253,13 +235,7 @@ export class PreviewMediaPool implements FrameSource {
       if (image instanceof ImageBitmap) image.close()
     }
     this.images.clear()
-    for (const state of this.decodedVideos.values()) {
-      state.input?.dispose()
-      for (const frame of state.frames.values()) {
-        if (typeof ImageBitmap !== 'undefined' && frame instanceof ImageBitmap) frame.close()
-      }
-    }
-    this.decodedVideos.clear()
+    this.decoded.dispose()
   }
 
   private ensureScrubCache(assetId: AssetId): ScrubFrameCache {
@@ -300,107 +276,6 @@ export class PreviewMediaPool implements FrameSource {
     }
     this.media.set(assetId, pooled)
     return pooled
-  }
-
-  private getDecodedVideoFrame(assetId: AssetId, asset: AssetRef, sourceTimeMs: number): CanvasImageSource | null {
-    const state = this.ensureDecodedVideoState(assetId, asset)
-    if (state.failed) return null
-
-    const key = decodedFrameKey(sourceTimeMs)
-    const exact = state.frames.get(key)
-    if (exact) return exact
-
-    this.requestDecodedVideoFrame(assetId, asset, key)
-
-    let nearest: { distance: number; frame: CanvasImageSource } | null = null
-    for (const [frameKey, frame] of state.frames) {
-      const distance = Math.abs(frameKey - sourceTimeMs)
-      if (distance > DECODED_FRAME_NEARBY_MS) continue
-      if (!nearest || distance < nearest.distance) nearest = { distance, frame }
-    }
-    return nearest?.frame ?? null
-  }
-
-  private ensureDecodedVideoState(assetId: AssetId, asset?: AssetRef): DecodedVideoState {
-    let state = this.decodedVideos.get(assetId)
-    if (state && asset && state.src !== null && state.src !== asset.src) {
-      state.input?.dispose()
-      for (const frame of state.frames.values()) {
-        if (typeof ImageBitmap !== 'undefined' && frame instanceof ImageBitmap) frame.close()
-      }
-      state = undefined
-    }
-    if (!state) {
-      state = {
-        src: asset?.src ?? null,
-        input: null,
-        sink: null,
-        frames: new Map(),
-        pendingKey: null,
-        failed: false,
-        lastInitFailureAt: Number.NEGATIVE_INFINITY,
-      }
-      this.decodedVideos.set(assetId, state)
-    }
-    return state
-  }
-
-  private requestDecodedVideoFrame(assetId: AssetId, asset: AssetRef, key: number): void {
-    const state = this.ensureDecodedVideoState(assetId, asset)
-    if (state.failed || state.pendingKey === key || state.frames.has(key)) return
-    if (!state.sink && performance.now() - state.lastInitFailureAt < DECODED_INIT_RETRY_MS) return
-    state.pendingKey = key
-
-    void this.decodeVideoFrame(asset, key)
-      .then((frame) => {
-        if (this.disposed) return
-        const current = this.decodedVideos.get(assetId)
-        if (!current) return
-        if (frame) {
-          current.frames.set(key, frame)
-          this.trimDecodedVideoFrames(current, key)
-          this.markFrameChanged()
-        }
-      })
-      .catch(() => {
-        if (!this.disposed) setTimeout(this.markFrameChanged, DECODED_INIT_RETRY_MS)
-      })
-      .finally(() => {
-        const current = this.decodedVideos.get(assetId)
-        if (current?.pendingKey === key) current.pendingKey = null
-      })
-  }
-
-  private async decodeVideoFrame(asset: AssetRef, sourceTimeMs: number): Promise<CanvasImageSource | null> {
-    const state = this.ensureDecodedVideoState(asset.id, asset)
-    if (!state.sink) {
-      const input = await inputFor(asset.src)
-      try {
-        const track = await input.getPrimaryVideoTrack()
-        if (!track || !(await track.canDecode())) {
-          state.failed = true
-          input.dispose()
-          return null
-        }
-        const { VideoSampleSink } = await import('mediabunny')
-        state.sink = new VideoSampleSink(track)
-        state.input = input
-      } catch (error) {
-        state.lastInitFailureAt = performance.now()
-        input.dispose()
-        throw error
-      }
-    }
-    const sample = await state.sink.getSample(sourceTimeMs / 1000)
-    return sample ? await sampleCanvas(sample, Math.min(1280, asset.width ?? 1280), 'contain') : null
-  }
-
-  private trimDecodedVideoFrames(state: DecodedVideoState, centerKey: number): void {
-    if (state.frames.size <= 80) return
-    const keep = new Set([...state.frames.keys()].sort((a, b) => Math.abs(a - centerKey) - Math.abs(b - centerKey)).slice(0, 60))
-    for (const key of state.frames.keys()) {
-      if (!keep.has(key)) state.frames.delete(key)
-    }
   }
 
   private loadImage(assetId: AssetId, src: string): void {
