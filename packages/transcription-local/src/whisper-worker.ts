@@ -120,6 +120,9 @@ async function transcribeWindow(
       ...baseOptions,
       ...(temperature > 0 ? { temperature, do_sample: true } : {}),
     })
+    if (output.text.trim() && !output.chunks) {
+      throw new Error('Whisper returned text without word timestamps. Use a _timestamped model export.')
+    }
     if (!textHasRepetitionLoop(output.text)) return output.chunks ?? []
   }
   return null
