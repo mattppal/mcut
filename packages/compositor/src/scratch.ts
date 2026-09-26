@@ -12,6 +12,15 @@ const SCRATCH_SETTINGS: Record<ScratchRole, ScratchSettings> = {
 
 const cachedScratch = new Map<ScratchRole, OffscreenCanvasRenderingContext2D>()
 
+export class ScratchContextError extends Error {
+  constructor(width: number, height: number) {
+    super(
+      `Composing an element needs a ${width}x${height} scratch 2D context, and none is available. Where OffscreenCanvas is missing, pass createScratchContext in the render options. With node-canvas, that is (width, height) => createCanvas(width, height).getContext('2d').`,
+    )
+    this.name = 'ScratchContextError'
+  }
+}
+
 export function acquireScratch(role: ScratchRole, width: number, height: number, options: RenderFrameOptions): Canvas2D | null {
   if (options.createScratchContext) return options.createScratchContext(width, height)
   if (typeof OffscreenCanvas === 'undefined') return null

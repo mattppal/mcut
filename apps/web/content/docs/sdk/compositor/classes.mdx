@@ -27,6 +27,16 @@ class Canvas2DBackend implements RenderBackend {
 
 The reference `RenderBackend` that draws directly into a 2D context. Its pixel grid is the context's current transform over its canvas.
 
+### ScratchContextError
+
+```ts
+class ScratchContextError extends Error {
+  constructor(width: number, height: number)
+}
+```
+
+Error thrown by a render when an element needs a scratch 2D context and none is available. A multicam needs one to compose its layout. The message names the size and says to pass `createScratchContext` in the render options, with a node-canvas factory as the example.
+
 ### WebGPUBackend
 
 ```ts

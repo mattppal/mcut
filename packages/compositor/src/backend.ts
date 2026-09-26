@@ -1,6 +1,6 @@
 import { buildFilterString, toCompositeOperation, type BlendMode, type Effect, type Project, type Track, type Transform } from '@mcut/timeline'
 import { toCanvasPoint } from './geometry'
-import { acquireScratch } from './scratch'
+import { acquireScratch, ScratchContextError } from './scratch'
 import type { Canvas2D, ElementRenderContext, RenderFrameOptions } from './types'
 
 export interface LayerChrome {
@@ -144,7 +144,11 @@ export function createElementContext(
     timeMs,
     viewTimeMs,
     source: options.source,
-    acquireScratch: (width, height) => acquireScratch('compose', width, height, options),
+    acquireScratch: (width, height) => {
+      const scratch = acquireScratch('compose', width, height, options)
+      if (!scratch) throw new ScratchContextError(width, height)
+      return scratch
+    },
     get ctx() {
       return backend.acquireRaster()
     },

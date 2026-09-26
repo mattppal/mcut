@@ -23,6 +23,8 @@ export { getSlotBoxes, type SlotBox } from './multicam'
 
 export { renderFrame, renderFrameWith } from './render-frame'
 
+export { ScratchContextError } from './scratch'
+
 export {
   applyChrome,
   Canvas2DBackend,

@@ -286,7 +286,6 @@ function drawLayer(context: ElementRenderContext, chrome: LayerChrome, bounds: F
   const originX = Math.min(0, layer.x)
   const originY = Math.min(0, layer.y)
   const surface = context.acquireScratch(Math.max(grid.width, layer.x + layer.w) - originX, Math.max(grid.height, layer.y + layer.h) - originY)
-  if (!surface) return
   const src = { sx: layer.x - originX, sy: layer.y - originY, sw: layer.w, sh: layer.h }
   const { a, b, c, d, e, f } = grid.transform
   surface.save()
