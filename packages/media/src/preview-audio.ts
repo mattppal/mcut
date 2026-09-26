@@ -110,7 +110,7 @@ export class PreviewAudio {
   private outputRendered = false
   private heldMs: number | null = null
   private paused: { atMs: number; stoppedMs: number } | null = null
-  private stopping: Epoch[] = []
+  private stopping: { epochs: Epoch[]; untilS: number } | null = null
   private disposed = false
 
   setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
@@ -138,8 +138,11 @@ export class PreviewAudio {
   sync(project: Project, requested: PlaybackState): void {
     if (this.disposed) return
     const rate = requested.playbackRate
-    if (!requested.isPlaying || rate <= 0 || rate > MAX_AUDIBLE_RATE) {
-      if (!requested.isPlaying && this.stop(requested.currentTimeMs)) return
+    if (!requested.isPlaying) {
+      this.pause(project, requested)
+      return
+    }
+    if (rate <= 0 || rate > MAX_AUDIBLE_RATE) {
       this.flush()
       return
     }
@@ -294,22 +297,30 @@ export class PreviewAudio {
     return anchor ? { anchor, outgoing } : null
   }
 
-  private stop(atMs: number): boolean {
+  private pause(project: Project, playback: PlaybackState): void {
     const { context } = this
     const sounding = this.soundingAnchors()
-    if (!context || !sounding) return false
+    if (context && sounding) this.stop(context, sounding, playback.currentTimeMs)
+    else this.dropCurrent()
+    if (this.stopping && (!context || context.currentTime > this.stopping.untilS)) this.dropStopping()
+    const atMs = this.resumePoint(playback.currentTimeMs)
+    const rate = playback.playbackRate
+    const audible = rate > 0 && rate <= MAX_AUDIBLE_RATE && dueSegments(this.segmentsOf(project), atMs, rate).length > 0
+    this.heldMs = audible ? atMs : null
+  }
+
+  private stop(context: AudioContext, sounding: { anchor: AudioAnchor; outgoing: AudioAnchor | null }, atMs: number): void {
     const stopS = context.currentTime + STOP_LEAD_S
     this.paused = { atMs, stoppedMs: Math.max(atMs, heardTimelineMs(sounding.anchor, sounding.outgoing, stopS)) }
-    for (const epoch of [this.epoch, this.outgoing?.epoch]) {
-      if (!epoch) continue
+    const epochs = [this.epoch, this.outgoing?.epoch ?? null].flatMap((epoch) => (epoch ? [epoch] : []))
+    for (const epoch of epochs) {
       epoch.output.gain.cancelAndHoldAtTime(stopS)
       epoch.output.gain.setValueCurveAtTime(equalPower(false), stopS + 1e-6, STOP_FADE_S)
-      this.stopping.push(epoch)
     }
+    this.dropStopping()
+    this.stopping = { epochs, untilS: stopS + STOP_FADE_S }
     this.epoch = null
     this.outgoing = null
-    this.heldMs = null
-    return true
   }
 
   private resumePoint(requestedMs: number): number {
@@ -334,12 +345,20 @@ export class PreviewAudio {
     this.outgoing = null
   }
 
-  private flush(): void {
-    this.heldMs = null
-    for (const epoch of this.stopping) dropEpoch(epoch)
-    this.stopping = []
+  private dropStopping(): void {
+    for (const epoch of this.stopping?.epochs ?? []) dropEpoch(epoch)
+    this.stopping = null
+  }
+
+  private dropCurrent(): void {
     this.dropOutgoing()
     if (this.epoch) dropEpoch(this.epoch)
     this.epoch = null
+  }
+
+  private flush(): void {
+    this.heldMs = null
+    this.dropStopping()
+    this.dropCurrent()
   }
 }
