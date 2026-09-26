@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, CommandError, type BuiltinCommand } from './commands'
+import type { Keyframe } from './keyframes'
 import { createProject, type Project } from './model'
 import { thrownBy } from './test-helpers'
 
@@ -39,6 +40,29 @@ describe('removeRanges', () => {
     expect(elementsOn(next, 't-title')).toEqual([[1000, 5000, null]])
     expect(elementsOn(next, 't-locked')).toEqual([[6000, 1000, null]])
     expect(next.markers.map((m) => [m.id, m.timeMs])).toEqual([['m-after', 5000]])
+  })
+
+  test('a title spanning a range keeps its fade-out, shifted left with the content, and drops keyframes inside the range', () => {
+    const fading: Keyframe[] = [
+      { timeMs: 0, value: 0 },
+      { timeMs: 500, value: 1 },
+      { timeMs: 2500, value: 0.5 },
+      { timeMs: 5500, value: 1 },
+      { timeMs: 6000, value: 0 },
+    ]
+    const withTitle = applyCommand(project(), {
+      type: 'updateElement',
+      elementId: 'e-title',
+      patch: { startMs: 3000, durationMs: 6000, keyframes: { opacity: fading } },
+    })
+    const next = applyCommand(withTitle, { type: 'removeRanges', ranges: [{ startMs: 5000, endMs: 6000 }] })
+    const title = next.tracks.find((track) => track.id === 't-title')?.elements[0]
+    expect(title?.durationMs).toBe(5000)
+    const opacity = title?.keyframes?.opacity ?? []
+    expect(opacity.map((k) => k.timeMs)).toEqual([0, 500, 2000, 4500, 5000])
+    expect(opacity.map((k) => k.value).slice(0, 2)).toEqual([0, 1])
+    expect(opacity.map((k) => k.value).slice(3)).toEqual([1, 0])
+    expect(opacity[2]?.value).toBeCloseTo(0.5 + 0.5 / 6)
   })
 
   test('a range starting at or after the timeline end is rejected', () => {
