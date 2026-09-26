@@ -141,7 +141,7 @@ Converts center-origin element coordinates to canvas pixels.
 function getSlotBoxes(project: Project, element: MulticamElement, timelineMs: number): SlotBox[]
 ```
 
-Resolves the multicam at `timelineMs` and returns one box per drawn slot of its active layout, in canvas pixels under the multicam's crop and transform. The boxes come from the same slot placement the renderer composes with, so a slot whose source is missing or audio only has no box. A box is not clipped to the crop, and the list is empty when no layout is active.
+Resolves the multicam at `timelineMs` and returns one box per shown slot of its active layout, in canvas pixels. Each box is the slot's frame carried through the placement the renderer composes with. It follows the multicam's crop, a zoom region without `source`, and the transform, and it is cut where the renderer cuts the slot, at the crop and at the edge of the frame. A zoom region with `source` moves the picture inside its slot and leaves the box in place. A slot the renderer shows none of has no box, and neither does a slot whose source is missing or audio only. During an angle transition the boxes are the active layout's at rest. The list is empty when no layout is active.
 
 ### renderFrame
 

@@ -29,7 +29,7 @@ import {
   type FrameBox,
   type SourceRect,
 } from './framed-media'
-import { degToRad, toCanvasPoint, type OBB } from './geometry'
+import { degToRad, type OBB } from './geometry'
 import { reframedSlot } from './reframe-views'
 import { transitionRenderers } from './transition-renderers'
 import type { Canvas2D, ElementRenderContext, ElementRenderer } from './types'
@@ -50,38 +50,6 @@ function placeSlots(project: Project, element: MulticamElement, layout: Layout):
   })
 }
 
-export interface SlotBox {
-  sourceKey: string
-  obb: OBB
-}
-
-export function getSlotBoxes(project: Project, element: MulticamElement, timelineMs: number): SlotBox[] {
-  const resolved = resolveAnimatedElement(element, timelineMs)
-  const layout = getActiveLayout(project, resolved, timelineMs)
-  if (!layout) return []
-  const { transform } = resolved
-  const kept = resolved.crop ?? { x: 0, y: 0, w: 1, h: 1 }
-  const keptX = (kept.x + kept.w / 2 - 0.5) * project.width
-  const keptY = (kept.y + kept.h / 2 - 0.5) * project.height
-  const center = toCanvasPoint(project, transform.x, transform.y)
-  const cos = Math.cos(degToRad(transform.rotation))
-  const sin = Math.sin(degToRad(transform.rotation))
-  return placeSlots(project, resolved, layout).map(({ slot, box }) => {
-    const x = (box.x + box.w / 2 - keptX) * transform.scaleX
-    const y = (box.y + box.h / 2 - keptY) * transform.scaleY
-    return {
-      sourceKey: slot.source,
-      obb: {
-        cx: center.x + x * cos - y * sin,
-        cy: center.y + x * sin + y * cos,
-        width: box.w * Math.abs(transform.scaleX),
-        height: box.h * Math.abs(transform.scaleY),
-        rotation: transform.rotation,
-      },
-    }
-  })
-}
-
 interface Point {
   x: number
   y: number
@@ -97,7 +65,7 @@ interface CompositePlacement {
   bounds: FrameBox
   radius: number
   frame: CompositeStep[]
-  layout: CompositeStep[]
+  zoom: CompositeStep[]
 }
 
 const WHOLE_FRAME = { x: 0, y: 0, w: 1, h: 1 }
@@ -126,14 +94,14 @@ function placeComposite(project: Project, element: MulticamElement, viewTimeMs: 
   const crop = element.crop ?? WHOLE_FRAME
   const bounds = { x: (-crop.w * width) / 2, y: (-crop.h * height) / 2, w: crop.w * width, h: crop.h * height }
   const radius = frameRadius(element, bounds)
-  const layout = zoomSteps(project, element, viewTimeMs)
-  const confined = radius > 0 || element.crop !== undefined || layout.length > 0
+  const zoom = zoomSteps(project, element, viewTimeMs)
+  const confined = radius > 0 || element.crop !== undefined || zoom.length > 0
   const frame = [
     ...(radius > 0 ? [clip(bounds, radius)] : []),
     ...(element.crop ? [clip(bounds), map({ x: (0.5 - crop.x - crop.w / 2) * width, y: (0.5 - crop.y - crop.h / 2) * height })] : []),
     ...(!confined && boxes.some((box) => leaves(box, bounds)) ? [clip(bounds)] : []),
   ]
-  return { bounds, radius, frame, layout }
+  return { bounds, radius, frame, zoom }
 }
 
 function applySteps(ctx: Canvas2D, steps: readonly CompositeStep[]): void {
@@ -157,35 +125,97 @@ function applySteps(ctx: Canvas2D, steps: readonly CompositeStep[]): void {
   }
 }
 
-interface Picture<P> {
-  image: P
+function intersect(a: FrameBox, b: FrameBox): FrameBox | null {
+  const x = Math.max(a.x, b.x)
+  const y = Math.max(a.y, b.y)
+  const w = Math.min(a.x + a.w, b.x + b.w) - x
+  const h = Math.min(a.y + a.h, b.y + b.h) - y
+  return w > 0 && h > 0 ? { x, y, w, h } : null
+}
+
+function shownThrough(steps: readonly CompositeStep[], box: FrameBox): FrameBox | null {
+  return steps.reduceRight<FrameBox | null>((shown, step) => {
+    if (!shown) return null
+    switch (step.kind) {
+      case 'clip':
+        return intersect(shown, step.box)
+      case 'map': {
+        const { shift, scale } = step
+        return { x: shift.x + scale.x * shown.x, y: shift.y + scale.y * shown.y, w: scale.x * shown.w, h: scale.y * shown.h }
+      }
+      default:
+        return assertNever(step)
+    }
+  }, box)
+}
+
+function onChrome(chrome: LayerChrome, x: number, y: number): Point {
+  const angle = degToRad(chrome.rotationDeg)
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  return {
+    x: chrome.centerX + cos * chrome.scaleX * x - sin * chrome.scaleY * y,
+    y: chrome.centerY + sin * chrome.scaleX * x + cos * chrome.scaleY * y,
+  }
+}
+
+export interface SlotBox {
+  sourceKey: string
+  obb: OBB
+}
+
+export function getSlotBoxes(project: Project, element: MulticamElement, timelineMs: number): SlotBox[] {
+  const resolved = resolveAnimatedElement(element, timelineMs)
+  const layout = getActiveLayout(project, resolved, timelineMs)
+  if (!layout) return []
+  const slots = placeSlots(project, resolved, layout)
+  const { frame, zoom } = placeComposite(
+    project,
+    resolved,
+    timelineMs,
+    slots.map(({ box }) => box),
+  )
+  const chrome = chromeOf(project, resolved)
+  return slots.flatMap(({ slot, box }) => {
+    const shown = shownThrough([...frame, ...zoom], box)
+    if (!shown) return []
+    const center = onChrome(chrome, shown.x + shown.w / 2, shown.y + shown.h / 2)
+    const obb = {
+      cx: center.x,
+      cy: center.y,
+      width: shown.w * Math.abs(chrome.scaleX),
+      height: shown.h * Math.abs(chrome.scaleY),
+      rotation: chrome.rotationDeg,
+    }
+    return [{ sourceKey: slot.source, obb }]
+  })
+}
+
+interface Picture {
+  image: CanvasImageSource
   width: number
   height: number
 }
 
-interface PlacedSlot<P> {
+interface PlacedSlot {
   style: LayoutSlot
   source: MulticamSource
   box: FrameBox
   src: SourceRect
   dest: FrameBox
-  image: P
+  image: CanvasImageSource
 }
 
-function placeLayout<P>(
+function placeLayout(
   project: Project,
   element: MulticamElement,
   layout: Layout,
   timeMs: number,
   viewTimeMs: number,
-  pictureOf: (source: MulticamSource, box: FrameBox) => Picture<P> | null,
-): PlacedSlot<P>[] {
-  const { width, height } = project
-  return layout.slots.flatMap((slot) => {
-    const source = element.sources.find((s) => s.key === slot.source)
-    if (!source || isAudioOnlySource(project, source)) return []
-    const box = { x: (slot.rect.x - 0.5) * width, y: (slot.rect.y - 0.5) * height, w: slot.rect.w * width, h: slot.rect.h * height }
-    const picture = pictureOf(source, box)
+  pictureOf: (source: MulticamSource) => Picture | null,
+): PlacedSlot[] {
+  return placeSlots(project, element, layout).flatMap(({ slot, source, box }) => {
+    const picture = pictureOf(source)
     if (!picture) return []
     const framing = reframedSlot(element, slot, timeMs, viewTimeMs)
     const base = cropSourceRect(framing.slot.crop, picture) ?? { sx: 0, sy: 0, sw: picture.width, sh: picture.height }
@@ -215,14 +245,10 @@ const READS_NEIGHBORS: Record<Effect['type'], boolean> = {
 }
 
 function layerRect({ transform: { a, b, c, d, e, f }, width, height }: PixelGrid, chrome: LayerChrome, bounds: FrameBox): FrameBox | null {
-  const angle = degToRad(chrome.rotationDeg)
-  const cos = Math.cos(angle)
-  const sin = Math.sin(angle)
   const corners = [bounds.x, bounds.x + bounds.w].flatMap((x) =>
     [bounds.y, bounds.y + bounds.h].map((y) => {
-      const px = chrome.centerX + cos * chrome.scaleX * x - sin * chrome.scaleY * y
-      const py = chrome.centerY + sin * chrome.scaleX * x + cos * chrome.scaleY * y
-      return { x: a * px + c * py + e, y: b * px + d * py + f }
+      const p = onChrome(chrome, x, y)
+      return { x: a * p.x + c * p.y + e, y: b * p.x + d * p.y + f }
     }),
   )
   const spills = chrome.effects?.some((effect) => effect.enabled && READS_NEIGHBORS[effect.type]) ?? false
@@ -283,7 +309,7 @@ export const renderMulticam: ElementRenderer<MulticamElement> = (element, contex
     ? [getLayout(project.layouts, transition.fromLayoutId), getLayout(project.layouts, transition.toLayoutId)]
     : [getActiveLayout(project, element, timeMs)]
   if (!layouts.some(Boolean)) return
-  const pictureOf = (source: MulticamSource): Picture<CanvasImageSource> | null => {
+  const pictureOf = (source: MulticamSource): Picture | null => {
     const image = frames.getFrame(source.assetId, getMulticamSourceTimeMs(element, source, timeMs))
     if (!image) return null
     const { width, height } = getImageSize(image)
@@ -304,8 +330,8 @@ export const renderMulticam: ElementRenderer<MulticamElement> = (element, contex
   const { shadow, stroke } = element
   if (shadow) drawFraming((ctx) => drawFrameShadow(ctx, shadow, composite.bounds, composite.radius))
   drawLayer(context, chrome, composite.bounds, (surface) => {
-    const drawLayout = (slots: readonly PlacedSlot<CanvasImageSource>[]) => {
-      applySteps(surface, composite.layout)
+    const drawLayout = (slots: readonly PlacedSlot[]) => {
+      applySteps(surface, composite.zoom)
       for (const { style, box, image, src, dest } of slots) {
         withFrameChrome(surface, style, box, () => surface.drawImage(image, src.sx, src.sy, src.sw, src.sh, dest.x, dest.y, dest.w, dest.h))
       }
@@ -316,7 +342,7 @@ export const renderMulticam: ElementRenderer<MulticamElement> = (element, contex
       return
     }
     const { width, height } = project
-    const centered = (slots: readonly PlacedSlot<CanvasImageSource>[]) => () => {
+    const centered = (slots: readonly PlacedSlot[]) => () => {
       surface.save()
       surface.translate(width / 2, height / 2)
       drawLayout(slots)
