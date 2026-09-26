@@ -67,16 +67,46 @@ export function getSlotBoxes(project: Project, element: MulticamElement, timelin
   })
 }
 
-export function composeMulticam(surface: Canvas2D, element: MulticamElement, context: ElementRenderContext, frames: FrameSource): void {
+const MAX_COMPOSE_SIDE_PX = 8192
+
+const roundUpToQuarterOctave = (scale: number): number => 2 ** (Math.ceil(Math.log2(scale) * 4) / 4)
+
+function sourceDensity(project: Project, { slot, source, box }: PlacedSlot): number {
+  const asset = project.assets[source.assetId]
+  if (!asset?.width || !asset.height) return Number.POSITIVE_INFINITY
+  const across = (asset.width * (slot.crop?.w ?? 1)) / box.w
+  const down = (asset.height * (slot.crop?.h ?? 1)) / box.h
+  return slot.fit === 'cover' ? Math.min(across, down) : Math.max(across, down)
+}
+
+function composeSize(project: Project, element: MulticamElement, slots: readonly PlacedSlot[], renderScale: number): { width: number; height: number } {
+  const cap = Math.max(renderScale, ...slots.map((placed) => sourceDensity(project, placed)))
+  const side = (length: number, scale: number) => {
+    const density = Math.min(roundUpToQuarterOctave(Math.abs(scale)) * renderScale, cap)
+    return Math.max(1, Math.min(MAX_COMPOSE_SIDE_PX, Math.ceil(length * density)))
+  }
+  return { width: side(project.width, element.transform.scaleX), height: side(project.height, element.transform.scaleY) }
+}
+
+export function composeMulticam(element: MulticamElement, context: ElementRenderContext, frames: FrameSource): Canvas2D | null {
   const { project } = context
-  surface.setTransform(surface.canvas.width / project.width, 0, 0, surface.canvas.height / project.height, 0, 0)
+  const groupMs = getMulticamGroupTimeMs(element, context.timeMs)
+  const transition = getAngleTransitionAt(element, groupMs)
+  const layouts = transition
+    ? [getLayout(project.layouts, transition.fromLayoutId), getLayout(project.layouts, transition.toLayoutId)]
+    : [getActiveLayout(project, element, context.timeMs)]
+  const placed = layouts.map((layout) => (layout ? placeSlots(project, element, layout) : []))
+  const { width, height } = composeSize(project, element, placed.flat(), context.backend.renderScale)
+  const surface = context.acquireScratch(width, height)
+  if (!surface) return null
+  surface.setTransform(width / project.width, 0, 0, height / project.height, 0, 0)
   surface.clearRect(0, 0, project.width, project.height)
 
-  const drawLayout = (layout: Layout | null) => {
-    if (!layout) return
+  const drawSlots = (slots: readonly PlacedSlot[] = []) => {
+    if (slots.length === 0) return
     surface.save()
     surface.translate(project.width / 2, project.height / 2)
-    for (const { slot, source, box } of placeSlots(project, element, layout)) {
+    for (const { slot, source, box } of slots) {
       const frame = frames.getFrame(source.assetId, getMulticamSourceTimeMs(element, source, context.timeMs))
       if (!frame) continue
       const framing = reframedSlot(element, slot, context.timeMs, context.viewTimeMs)
@@ -85,8 +115,6 @@ export function composeMulticam(surface: Canvas2D, element: MulticamElement, con
     surface.restore()
   }
 
-  const groupMs = getMulticamGroupTimeMs(element, context.timeMs)
-  const transition = getAngleTransitionAt(element, groupMs)
   if (transition) {
     const pair = {
       left: element,
@@ -101,11 +129,12 @@ export function composeMulticam(surface: Canvas2D, element: MulticamElement, con
       pair,
       timeMs: groupMs,
       completion: getTransitionCompletion(pair, groupMs),
-      drawLeft: () => drawLayout(getLayout(project.layouts, transition.fromLayoutId)),
-      drawRight: () => drawLayout(getLayout(project.layouts, transition.toLayoutId)),
+      drawLeft: () => drawSlots(placed[0]),
+      drawRight: () => drawSlots(placed[1]),
     })
-    return
+    return surface
   }
 
-  drawLayout(getActiveLayout(project, element, context.timeMs))
+  drawSlots(placed[0])
+  return surface
 }
