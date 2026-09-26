@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { AudibleSegment } from './export-audio-composite'
-import { contextAt, epochChange, heardContextS, planFeed, planWindow, sourceMapOf, timelineAt } from './preview-audio-plan'
+import { contextAt, epochChange, handoffAnchor, heardContextS, heardTimelineMs, planFeed, planWindow, sourceMapOf, timelineAt } from './preview-audio-plan'
 
 describe('audio clock anchor', () => {
   const anchor = { timelineMs: 1000, contextS: 2, rate: 1 }
@@ -43,6 +43,22 @@ describe('epochChange', () => {
 
   test('a rate change before anything sounds restarts', () => {
     expect(epochChange({ ...playing, sounding: false }, { currentTimeMs: 5000, playbackRate: 2 })).toBe('restart')
+  })
+
+  test('the heard timeline runs on through a handoff without a jump or a hold', () => {
+    const outgoing = { timelineMs: 5000, contextS: 10, rate: 1 }
+    const anchor = handoffAnchor(outgoing, 10.2, 2)
+    expect(anchor.timelineMs).toBeCloseTo(5200, 6)
+    expect(anchor.contextS).toBe(10.2)
+    expect(anchor.rate).toBe(2)
+    let previousMs = heardTimelineMs(anchor, outgoing, 10.1)
+    for (let heardS = 10.101; heardS < 10.3; heardS += 0.001) {
+      const heardMs = heardTimelineMs(anchor, outgoing, heardS)
+      const expectedStepMs = heardS < anchor.contextS ? 1 : 2
+      expect(heardMs - previousMs).toBeGreaterThan(0.5)
+      expect(heardMs - previousMs).toBeLessThanOrEqual(expectedStepMs + 1e-6)
+      previousMs = heardMs
+    }
   })
 })
 

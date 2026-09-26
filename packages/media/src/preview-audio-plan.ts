@@ -31,13 +31,23 @@ const REANCHOR_TOLERANCE_MS = 1
 export interface EpochView {
   rate: number
   reportedMs: number
+  sounding: boolean
 }
 
-export type EpochChange = 'keep' | 'restart'
+export type EpochChange = 'keep' | 'restart' | 'handoff'
 
 export function epochChange(current: EpochView | null, playback: { currentTimeMs: number; playbackRate: number }): EpochChange {
   if (!current || Math.abs(playback.currentTimeMs - current.reportedMs) > REANCHOR_TOLERANCE_MS) return 'restart'
-  return current.rate === playback.playbackRate ? 'keep' : 'restart'
+  if (current.rate === playback.playbackRate) return 'keep'
+  return current.sounding ? 'handoff' : 'restart'
+}
+
+export function handoffAnchor(outgoing: AudioAnchor, atS: number, rate: number): AudioAnchor {
+  return { timelineMs: timelineAt(outgoing, atS), contextS: atS, rate }
+}
+
+export function heardTimelineMs(anchor: AudioAnchor, outgoing: AudioAnchor | null, heardS: number): number {
+  return outgoing && heardS < anchor.contextS ? timelineAt(outgoing, heardS) : timelineAt(anchor, heardS)
 }
 
 const STRETCH_PREROLL_MS = 250

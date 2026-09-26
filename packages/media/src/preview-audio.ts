@@ -4,11 +4,14 @@ import { collectAudibleSegments } from './export-audio'
 import type { AudibleSegment } from './export-audio-composite'
 import { AUDIO_SAMPLE_RATE } from './export-types'
 import { inputFor } from './probe'
-import { contextAt, epochChange, heardContextS, timelineAt, type AudioAnchor } from './preview-audio-plan'
-import { createVoice, dropVoice, LOOKAHEAD_S, pumpVoice, retuneVoice, START_LEAD_S, type Voice } from './preview-audio-voice'
+import { contextAt, epochChange, handoffAnchor, heardContextS, heardTimelineMs, type AudioAnchor } from './preview-audio-plan'
+import { createVoice, dropVoice, LOOKAHEAD_S, pumpVoice, retuneVoice, START_LEAD_S, type SinkOf, type Voice } from './preview-audio-voice'
 import { sourceAudioSink } from './source-timing'
 
 const MAX_AUDIBLE_RATE = 4
+const HANDOFF_LEAD_S = 0.2
+const HANDOFF_FADE_S = 0.02
+const FADE_STEPS = 32
 
 interface OpenSource {
   input: Input
@@ -29,6 +32,11 @@ interface Epoch {
   reportedMs: number
 }
 
+interface Outgoing {
+  epoch: Epoch
+  untilS: number | null
+}
+
 interface SegmentMemo {
   project: Project
   audioSources: ReadonlyMap<ElementId, string> | undefined
@@ -42,6 +50,27 @@ function keyed(segment: AudibleSegment): KeyedSegment {
     volumeKey: segment.volumeCurve ? Array.from(segment.volumeCurve).join(',') : String(segment.volume),
     segment,
   }
+}
+
+function equalPower(rising: boolean): Float32Array {
+  const curve = new Float32Array(FADE_STEPS)
+  for (let step = 0; step < FADE_STEPS; step++) {
+    const angle = ((step / (FADE_STEPS - 1)) * Math.PI) / 2
+    curve[step] = rising ? Math.sin(angle) : Math.cos(angle)
+  }
+  return curve
+}
+
+function crossfade(from: GainNode, to: GainNode, atS: number): void {
+  to.gain.value = 0
+  to.gain.setValueCurveAtTime(equalPower(true), atS, HANDOFF_FADE_S)
+  from.gain.cancelAndHoldAtTime(atS)
+  from.gain.setValueCurveAtTime(equalPower(false), atS + 1e-6, HANDOFF_FADE_S)
+}
+
+function dropEpoch(epoch: Epoch): void {
+  for (const voice of epoch.voices.values()) dropVoice(voice)
+  epoch.output.disconnect()
 }
 
 async function openSource(src: string): Promise<OpenSource | null> {
@@ -63,6 +92,7 @@ export class PreviewAudio {
   private context: AudioContext | null = null
   private master: GainNode | null = null
   private epoch: Epoch | null = null
+  private outgoing: Outgoing | null = null
   private sources = new Map<string, Promise<OpenSource | null>>()
   private audioSources: ReadonlyMap<ElementId, string> | undefined
   private memo: SegmentMemo | null = null
@@ -79,13 +109,15 @@ export class PreviewAudio {
   clockTimeMs(displayTimeMs: number): number | null {
     const { context, epoch } = this
     if (!context || !epoch || context.state !== 'running') return null
-    if (!epoch.primed) return epoch.reportedMs
+    const outgoing = this.outgoing?.epoch.anchor ?? null
+    const anchor = epoch.primed ? epoch.anchor : outgoing
+    if (!anchor) return epoch.reportedMs
     const stamp = context.getOutputTimestamp()
     const heardS =
       stamp.contextTime !== undefined && stamp.performanceTime !== undefined && stamp.performanceTime > 0
         ? heardContextS({ contextTime: stamp.contextTime, performanceTime: stamp.performanceTime }, displayTimeMs)
-        : epoch.anchor.contextS
-    epoch.reportedMs = Math.max(epoch.reportedMs, timelineAt(epoch.anchor, heardS))
+        : anchor.contextS
+    epoch.reportedMs = Math.max(epoch.reportedMs, heardTimelineMs(anchor, outgoing, heardS))
     return epoch.reportedMs
   }
 
@@ -106,9 +138,10 @@ export class PreviewAudio {
     }
     const segments = this.segmentsOf(project)
     const epoch = this.ensureEpoch(context, master, playback, segments)
+    const sinkOf: SinkOf = (src) => this.sourceOf(src).then((opened) => opened?.sink ?? null)
+    this.settleOutgoing(context, sinkOf)
     if (!epoch.primed) return
     this.reconcile(context, epoch, segments)
-    const sinkOf = (src: string) => this.sourceOf(src).then((opened) => opened?.sink ?? null)
     for (const voice of epoch.voices.values()) pumpVoice(context, epoch.anchor, voice, sinkOf)
   }
 
@@ -134,11 +167,14 @@ export class PreviewAudio {
 
   private ensureEpoch(context: AudioContext, master: GainNode, playback: PlaybackState, segments: KeyedSegment[]): Epoch {
     const current = this.epoch
-    if (current && epochChange({ rate: current.anchor.rate, reportedMs: current.reportedMs }, playback) === 'keep') return current
-    this.flush()
+    const change =
+      current && epochChange({ rate: current.anchor.rate, reportedMs: current.reportedMs, sounding: current.primed || this.outgoing !== null }, playback)
+    if (current && change === 'keep') return current
+    if (current && change === 'handoff') this.beginHandoff(current)
+    else this.flush()
     const output = context.createGain()
     output.connect(master)
-    const timelineMs = Math.round(playback.currentTimeMs)
+    const timelineMs = current && change === 'handoff' ? current.reportedMs : Math.round(playback.currentTimeMs)
     const epoch: Epoch = {
       anchor: { timelineMs, contextS: 0, rate: playback.playbackRate },
       primed: false,
@@ -153,8 +189,16 @@ export class PreviewAudio {
       .map(({ segment }) => this.sourceOf(segment.src))
     void Promise.all(opening).then(() => {
       if (this.epoch !== epoch || !this.context) return
-      const frames = Math.round(this.context.currentTime * this.context.sampleRate) + Math.round(START_LEAD_S * this.context.sampleRate)
-      epoch.anchor.contextS = frames / this.context.sampleRate
+      const outgoing = this.outgoing
+      const leadS = outgoing ? HANDOFF_LEAD_S : START_LEAD_S
+      const atS = (Math.round(this.context.currentTime * this.context.sampleRate) + Math.round(leadS * this.context.sampleRate)) / this.context.sampleRate
+      if (outgoing) {
+        epoch.anchor = handoffAnchor(outgoing.epoch.anchor, atS, epoch.anchor.rate)
+        crossfade(outgoing.epoch.output, epoch.output, atS)
+        outgoing.untilS = atS + HANDOFF_FADE_S
+      } else {
+        epoch.anchor.contextS = atS
+      }
       epoch.primed = true
     })
     return epoch
@@ -210,11 +254,34 @@ export class PreviewAudio {
     return opening
   }
 
+  private beginHandoff(current: Epoch): void {
+    this.epoch = null
+    if (!current.primed) {
+      dropEpoch(current)
+      return
+    }
+    this.dropOutgoing()
+    this.outgoing = { epoch: current, untilS: null }
+  }
+
+  private settleOutgoing(context: AudioContext, sinkOf: SinkOf): void {
+    const outgoing = this.outgoing
+    if (!outgoing) return
+    if (outgoing.untilS === null) {
+      for (const voice of outgoing.epoch.voices.values()) pumpVoice(context, outgoing.epoch.anchor, voice, sinkOf)
+    } else if (context.currentTime > outgoing.untilS) {
+      this.dropOutgoing()
+    }
+  }
+
+  private dropOutgoing(): void {
+    if (this.outgoing) dropEpoch(this.outgoing.epoch)
+    this.outgoing = null
+  }
+
   private flush(): void {
-    const epoch = this.epoch
-    if (!epoch) return
-    for (const voice of epoch.voices.values()) dropVoice(voice)
-    epoch.output.disconnect()
+    this.dropOutgoing()
+    if (this.epoch) dropEpoch(this.epoch)
     this.epoch = null
   }
 }
