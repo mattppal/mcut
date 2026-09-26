@@ -380,6 +380,7 @@ export class PreviewAudio {
 
   private flush(): void {
     this.heldMs = null
+    this.paused = null
     this.dropStopping()
     this.dropCurrent()
   }
