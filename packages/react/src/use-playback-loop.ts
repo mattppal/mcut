@@ -28,6 +28,7 @@ export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = 
 
   useEffect(() => {
     let previousFrameMs: number | null = null
+    let knownMs = engine.playback.state.currentTimeMs
     let cancel = () => {}
     const tick = (frameTimeMs: number) => {
       const elapsedMs = previousFrameMs === null ? 0 : frameTimeMs - previousFrameMs
@@ -35,7 +36,8 @@ export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = 
       const playback = engine.playback.state
       if (playback.isPlaying) {
         const durationMs = getProjectDurationMs(engine.project)
-        const next = clockRef.current?.(frameTimeMs) ?? playback.currentTimeMs + elapsedMs * playback.playbackRate
+        const clockMs = playback.currentTimeMs === knownMs ? clockRef.current?.(frameTimeMs) : null
+        const next = clockMs ?? playback.currentTimeMs + elapsedMs * playback.playbackRate
         if (durationMs > 0 && next >= durationMs && playback.playbackRate > 0) {
           engine.seek(durationMs)
           engine.pause()
@@ -46,6 +48,7 @@ export function usePlaybackLoop(engine: EditorEngine, { onFrame, requestFrame = 
           engine.seek(next)
         }
       }
+      knownMs = engine.playback.state.currentTimeMs
       onFrameRef.current(engine.project, engine.playback.state)
       cancel = requestFrame(tick)
     }
