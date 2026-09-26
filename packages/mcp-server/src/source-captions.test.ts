@@ -49,12 +49,12 @@ function captionWords(engine: EditorEngine): Map<string, number> {
   return new Map(placed.map((word) => [word.text, word.startMs]))
 }
 
-function expectedWords(engine: EditorEngine, pieceIds: readonly ElementId[]): Map<string, number> {
+function expectedWords(engine: EditorEngine, pieceIds: readonly ElementId[], spoken: readonly (typeof words)[number][] = words): Map<string, number> {
   const expected = new Map<string, number>()
   for (const id of pieceIds) {
     const piece = resolveElementAudioSource(engine.project, id)
     if (!piece) throw new Error(`no audio source for ${id}`)
-    for (const word of words) {
+    for (const word of spoken) {
       if (word.startMs >= piece.sourceStartMs && word.startMs < piece.sourceEndMs) {
         expected.set(word.text, word.startMs - piece.sourceStartMs + piece.timelineStartMs)
       }
@@ -144,6 +144,28 @@ describe('apply_captions with a source scope', () => {
     expect(result.isError).toBeFalsy()
     expect(textOf(result)).toContain('over 3 piece(s) of this source (e-mc, e-keep-2, e-keep-3)')
     expectEveryPieceInSync(engine)
+  })
+
+  test('apply_captions with the full transcript, one retake cut, then apply_captions with only elementId, when a word starts before the one ahead of it', async () => {
+    const engine = multicam()
+    const client = await connect(engine)
+    const whisper = words.map((word, i) => (i === 20 ? { ...word, startMs: word.startMs - 600 } : word))
+    await client.callTool({ name: 'apply_captions', arguments: { transcript: { words: whisper }, elementId: 'e-mc' } })
+    engine.dispatch({ type: 'splitElement', elementId: 'e-mc', atMs: 5000, rightElementId: 'e-cut' })
+    engine.dispatch({ type: 'splitElement', elementId: 'e-cut', atMs: 7200, rightElementId: 'e-keep' })
+    engine.dispatch({ type: 'rippleDelete', elementIds: ['e-cut'] })
+
+    const result = await client.callTool({ name: 'apply_captions', arguments: { elementId: 'e-keep', replace: true } })
+    expect(textOf(result)).toContain('over 2 piece(s) of this source (e-mc, e-keep)')
+    const placed = captionWords(engine)
+    const expected = expectedWords(engine, ['e-mc', 'e-keep'], whisper)
+    const spokenOrder = getProjectTranscript(engine.project, { includeWords: true })
+      .captions.flatMap((caption) => caption.words ?? [])
+      .map((word) => word.text)
+    expect(spokenOrder).toEqual(whisper.map((word) => word.text).filter((text) => expected.has(text)))
+    for (const [text, timelineMs] of expected) {
+      expect(Math.abs((placed.get(text) ?? Number.NaN) - timelineMs)).toBeLessThanOrEqual(250)
+    }
   })
 
   test('the transcript ensure_transcript applied is reused after cuts', async () => {
