@@ -231,13 +231,14 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Find retakes in the word-timed transcript. A phrase whose opening words are spoken again within maxLookaheadMs. ' +
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
     'Candidates come last to first. Cut them in that order so no ripple delete shifts a range still to cut. ' +
-    'Pass elementId for a clip with source audio, including a multicam and each piece left after the cuts. Save the returned words before cutting. ' +
-    'Cut the clip, not the caption track. Then make one apply_captions call with elementId set to any remaining piece and the full saved words as the transcript, never a slice. ' +
-    'That one call re-captions every piece and replaces their old captions. ' +
+    'Pass elementId for a clip with source audio, including a multicam and each piece left after the cuts. ' +
+    'Call it before cutting. It stores the word-timed transcript of that audio in source time, and with elementId the reply also lists those words. ' +
+    'Cut the clip, not the caption track. Then make one apply_captions call with elementId set to any remaining piece and no transcript. ' +
+    'It reuses the stored transcript, re-captions every piece, and replaces their old captions. Do not copy the words back into apply_captions. ' +
     'Review abandonedText before cutting. Needs captions with word timings. Call ensure_transcript first.',
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
-    'then apply word-timed captions to the timeline. Explicit tool only; get_transcript never auto-transcribes. ' +
+    'then apply word-timed captions to the timeline and store that transcript for apply_captions to reuse after cuts. Explicit tool only; get_transcript never auto-transcribes. ' +
     'Required before transcript-based silence removal when captions are missing.',
   list_commands: 'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
   apply_commands:
@@ -246,9 +247,11 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   apply_captions:
     'Turn a transcript into word-timed caption elements and apply them as one undoable edit. ' +
     'The transcript is in source-media time. With elementId, one call captions every piece on that track that plays the same audio, each piece at its timeline position, ' +
-    'and replaces the old captions over those pieces in one undo step. After cuts, call it once with the full transcript, never a slice. A multicam uses its audio source. ' +
+    'and replaces the old captions over those pieces in one undo step. A multicam uses its audio source. ' +
+    'After cuts, pass elementId and omit transcript. The server reuses the word-timed transcript it stored for that audio from ensure_transcript, find_retakes, or an earlier apply_captions. ' +
+    'An explicit transcript must be the full one, never a slice. ' +
     'styleId picks a caption style preset. Returns the updated project summary. ' +
-    'Pass a timed transcript from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
+    'An explicit transcript comes from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
     'Never invent a transcript when transcription fails. ' +
     'The result warns when the transcript matches no transcript in the project. Caption words left in order after cuts still match.',
   apply_silence_cuts: applySilenceCutsDescription,

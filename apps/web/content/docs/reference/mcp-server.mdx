@@ -47,11 +47,11 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `get_audio_activity` | Live bridge only. Sound and silence windows for one clip with source audio, in audio-asset time. A multicam uses its audio source. A selected multicam with none fails until setMulticamAudio instead of falling through to another clip. |
 | `get_transcript` | Caption-derived transcript. Never starts transcription. |
 | `search_transcript` | Find spoken words or phrases with timeline times. |
-| `find_retakes` | Retake candidates from the word-timed transcript, last to first, each a timeline range that keeps the last take. With `elementId`, a multicam is included. After the cuts, one `apply_captions` call with the full unchanged transcript re-captions every piece. |
+| `find_retakes` | Retake candidates from the word-timed transcript, last to first, each a timeline range that keeps the last take. With `elementId`, a multicam is included. It stores that audio's word-timed transcript, so after the cuts one `apply_captions` call with `elementId` and no transcript re-captions every piece. |
 | `ensure_transcript` | Live bridge only. Transcribe the target clip in the editor and apply word-timed captions. |
 | `list_commands` | Live bridge only. Every raw timeline command schema. |
 | `apply_commands` | Live bridge only. Apply several commands in one undoable transaction. A failed command leaves the project unchanged. |
-| `apply_captions` | Turn a source-time transcript into caption elements as one undoable edit. With `elementId`, it captions every piece on that track that plays the same audio and replaces their old captions. `scope: "clip"` captions that clip alone. A multicam uses its audio source. The same transcript still matches after cuts remove words, and a different transcript warns. |
+| `apply_captions` | Turn a source-time transcript into caption elements as one undoable edit. With `elementId`, it captions every piece on that track that plays the same audio and replaces their old captions. `scope: "clip"` captions that clip alone. A multicam uses its audio source. Omit `transcript` with `elementId` to reuse the one the server stored for that audio from `ensure_transcript`, `find_retakes`, or an earlier `apply_captions`. The MCP server, or the live bridge in Studio, keeps it in memory until it restarts. The same transcript still matches after cuts remove words, and a different transcript warns. |
 | `apply_silence_cuts` | Cut transcript silence out of one clip as one undoable edit. |
 | `lint_project` | Cross-entity problems `parseProject` cannot reject, each with a severity and code. |
 | `list_zooms` | Every zoom region with its element, timing, target, easing, and motion blur. |
