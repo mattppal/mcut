@@ -18,7 +18,6 @@ import {
   EditorEngine,
   ProjectFormatError,
   describeLayoutChange,
-  getProjectCaptions,
   getProjectMediaContext,
   getProjectTranscript,
   listZoomRegions,
@@ -28,7 +27,7 @@ import {
   type Project,
   type ProjectTranscriptOptions,
 } from '@mcut/timeline'
-import { buildCaptionsCommand, findRetakes, searchCaptions } from '@mcut/transcription'
+import { buildCaptionsCommand, findRetakes } from '@mcut/transcription'
 import { z } from 'zod'
 import {
   MCP_SERVER_STATIC_TOOL_CALL_SCHEMA,
@@ -46,6 +45,7 @@ import { toClipSourceWords } from './clip-source-words'
 import { frameContent, frameGrabSchema } from './frame-content'
 import { contactSheetContent } from './picture-tools'
 import { removeRangesOn } from './remove-ranges'
+import { searchProjectTranscript } from './search-transcript'
 import { planSourceCaptions, sourceCaptionsNote } from './source-captions'
 import { StoredTranscripts, ensuredCapture } from './stored-transcripts'
 import { severeZoomNote } from './zoom-warnings'
@@ -113,26 +113,6 @@ function changedLayoutId(name: string, args: unknown): string | undefined {
 type ToolResult = ReturnType<typeof text> | ReturnType<typeof failure> | ReturnType<typeof frameContent>
 
 const withResult = (lead: string, result: unknown) => (result === undefined ? lead : `${lead}\n\nResult:\n${JSON.stringify(result, null, 2)}`)
-
-function searchProjectTranscript(project: Project, query: string): unknown {
-  const captionRefs = getProjectCaptions(project)
-  const captions = captionRefs.map((ref) => ref.caption)
-  const byId = new Map<string, (typeof captionRefs)[number]>(captionRefs.map((ref) => [ref.caption.id, ref]))
-  const matches = searchCaptions(captions, query).map((match) => {
-    const ref = byId.get(match.captionId)
-    const text = ref?.caption.text ?? ''
-    return {
-      ...match,
-      text: text.slice(match.startChar, match.endChar),
-      captionText: text,
-      trackId: ref?.trackId,
-      trackName: ref?.trackName,
-      startMs: match.timeMs,
-      endMs: match.endTimeMs,
-    }
-  })
-  return { query, count: matches.length, matches }
-}
 
 function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise<void>): McutMcpTarget {
   return {
