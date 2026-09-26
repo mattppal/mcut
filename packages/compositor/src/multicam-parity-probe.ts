@@ -1,4 +1,4 @@
-import { applyCommand, createProject, type Project } from '@mcut/timeline'
+import { applyCommand, createProject, type Crop, type Project, type Transform } from '@mcut/timeline'
 import { renderFrame } from './render-frame'
 
 const WIDTH = 320
@@ -6,10 +6,21 @@ const HEIGHT = 180
 const BACKGROUND = '#172033'
 const CROP = { x: 0.14, y: 0.12, w: 0.72, h: 0.74 }
 const CAMERA = { x: 0.6, y: 0.6, w: 0.3, h: 0.3 }
+const TILTED = { x: 12, y: -7, scaleX: 0.55, scaleY: 0.55, rotation: 15 }
+const UPRIGHT = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }
 
-export interface CropParity {
+export interface MulticamParity {
   cropped: number
   zoomed: number
+  rotated: number
+  preview: number
+}
+
+interface Scene {
+  crop?: Crop
+  zoomed?: boolean
+  transform?: Transform
+  renderScale?: number
 }
 
 function diagonals(color: string): OffscreenCanvas {
@@ -36,7 +47,7 @@ const sources = new Map([
   ['a-camera', camera],
 ])
 
-function croppedMulticam(zoomed: boolean): Project {
+function multicam(scene: Scene): Project {
   let project = createProject({ width: WIDTH, height: HEIGHT })
   for (const id of sources.keys()) {
     project = applyCommand(project, {
@@ -46,7 +57,7 @@ function croppedMulticam(zoomed: boolean): Project {
   }
   const slots = [
     { source: 'screen', rect: { x: 0, y: 0, w: 1, h: 1 } },
-    { source: 'camera', rect: CAMERA },
+    { source: 'camera', rect: CAMERA, cornerRadius: null, shadow: null, stroke: null },
   ]
   project = applyCommand(project, { type: 'saveLayout', layout: { id: 'l-pip', name: 'Screen and camera', slots } })
   const keyed = [
@@ -56,9 +67,18 @@ function croppedMulticam(zoomed: boolean): Project {
   project = applyCommand(project, {
     type: 'addElement',
     trackId: 't-default',
-    element: { id: 'e-mc', type: 'multicam', startMs: 0, durationMs: 5000, sources: keyed, angles: [{ atMs: 0, layoutId: 'l-pip' }], crop: CROP },
+    element: {
+      id: 'e-mc',
+      type: 'multicam',
+      startMs: 0,
+      durationMs: 5000,
+      sources: keyed,
+      angles: [{ atMs: 0, layoutId: 'l-pip' }],
+      transform: scene.transform ?? UPRIGHT,
+      ...(scene.crop ? { crop: scene.crop } : {}),
+    },
   })
-  if (!zoomed) return project
+  if (!scene.zoomed) return project
   return applyCommand(project, {
     type: 'addZoomRegion',
     elementId: 'e-mc',
@@ -66,29 +86,36 @@ function croppedMulticam(zoomed: boolean): Project {
   })
 }
 
-function surface(): OffscreenCanvasRenderingContext2D {
-  const ctx = new OffscreenCanvas(WIDTH, HEIGHT).getContext('2d')
+function surface(renderScale: number): OffscreenCanvasRenderingContext2D {
+  const ctx = new OffscreenCanvas(WIDTH * renderScale, HEIGHT * renderScale).getContext('2d')
   if (!ctx) throw new Error('no 2d context')
+  ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0)
   return ctx
 }
 
-function composited(zoomed: boolean): Uint8ClampedArray {
-  const ctx = surface()
-  renderFrame(ctx, croppedMulticam(zoomed), 1000, { source: { getFrame: (assetId) => sources.get(assetId) ?? null }, backgroundColor: BACKGROUND })
-  return ctx.getImageData(0, 0, WIDTH, HEIGHT).data
+function composited(scene: Scene): Uint8ClampedArray {
+  const renderScale = scene.renderScale ?? 1
+  const ctx = surface(renderScale)
+  renderFrame(ctx, multicam(scene), 1000, { source: { getFrame: (assetId) => sources.get(assetId) ?? null }, backgroundColor: BACKGROUND, renderScale })
+  return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height).data
 }
 
-function drawnDirectly(zoomed: boolean): Uint8ClampedArray {
-  const ctx = surface()
+function drawnDirectly(scene: Scene): Uint8ClampedArray {
+  const ctx = surface(scene.renderScale ?? 1)
   ctx.fillStyle = BACKGROUND
   ctx.fillRect(0, 0, WIDTH, HEIGHT)
-  const box = { w: CROP.w * WIDTH, h: CROP.h * HEIGHT }
-  ctx.translate(WIDTH / 2, HEIGHT / 2)
-  ctx.beginPath()
-  ctx.rect(-box.w / 2, -box.h / 2, box.w, box.h)
-  ctx.clip()
-  ctx.translate((0.5 - CROP.x - CROP.w / 2) * WIDTH, (0.5 - CROP.y - CROP.h / 2) * HEIGHT)
-  if (zoomed) {
+  const { x, y, scaleX, scaleY, rotation } = scene.transform ?? UPRIGHT
+  ctx.translate(WIDTH / 2 + x, HEIGHT / 2 + y)
+  if (rotation) ctx.rotate((rotation * Math.PI) / 180)
+  ctx.scale(scaleX, scaleY)
+  const { crop } = scene
+  if (crop) {
+    ctx.beginPath()
+    ctx.rect((-crop.w * WIDTH) / 2, (-crop.h * HEIGHT) / 2, crop.w * WIDTH, crop.h * HEIGHT)
+    ctx.clip()
+    ctx.translate((0.5 - crop.x - crop.w / 2) * WIDTH, (0.5 - crop.y - crop.h / 2) * HEIGHT)
+  }
+  if (scene.zoomed) {
     ctx.beginPath()
     ctx.rect(-WIDTH / 2, -HEIGHT / 2, WIDTH, HEIGHT)
     ctx.clip()
@@ -97,20 +124,24 @@ function drawnDirectly(zoomed: boolean): Uint8ClampedArray {
   }
   ctx.drawImage(screen, 0, 0, WIDTH * 2, HEIGHT * 2, -WIDTH / 2, -HEIGHT / 2, WIDTH, HEIGHT)
   ctx.drawImage(camera, 0, 0, WIDTH * 2, HEIGHT * 2, (CAMERA.x - 0.5) * WIDTH, (CAMERA.y - 0.5) * HEIGHT, CAMERA.w * WIDTH, CAMERA.h * HEIGHT)
-  return ctx.getImageData(0, 0, WIDTH, HEIGHT).data
+  return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height).data
 }
 
 const maxChannelDelta = (a: Uint8ClampedArray, b: Uint8ClampedArray): number => a.reduce((max, value, i) => Math.max(max, Math.abs(value - (b[i] ?? 0))), 0)
 
-function multicamParityProbe(): CropParity {
+const parity = (scene: Scene): number => maxChannelDelta(composited(scene), drawnDirectly(scene))
+
+function multicamParityProbe(): MulticamParity {
   return {
-    cropped: maxChannelDelta(composited(false), drawnDirectly(false)),
-    zoomed: maxChannelDelta(composited(true), drawnDirectly(true)),
+    cropped: parity({ crop: CROP }),
+    zoomed: parity({ crop: CROP, zoomed: true }),
+    rotated: parity({ transform: TILTED }),
+    preview: parity({ crop: CROP, renderScale: 0.6 }),
   }
 }
 
 declare global {
-  var multicamParityProbe: () => CropParity
+  var multicamParityProbe: () => MulticamParity
 }
 
 globalThis.multicamParityProbe = multicamParityProbe

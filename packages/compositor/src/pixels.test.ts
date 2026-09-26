@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test'
 import { chromium, type Browser, type Page } from '@playwright/test'
 import type { MagnifiedReading } from './magnified-multicam-probe'
-import type { CropParity } from './multicam-parity-probe'
+import type { MulticamParity } from './multicam-parity-probe'
 import type { ZoomBlurReading } from './zoom-blur-probe'
 
 let server: ReturnType<typeof Bun.serve>
@@ -41,8 +41,7 @@ test('a multicam magnified 2x keeps a checkerboard as crisp as a video clip magn
   })
 })
 
-test('a cropped multicam matches drawing its slots straight onto the canvas under a crop clip, within one level, with and without a zoom region', async () => {
-  const parity: CropParity = await page.evaluate(() => multicamParityProbe())
-  expect(parity.cropped).toBeLessThanOrEqual(1)
-  expect(parity.zoomed).toBeLessThanOrEqual(1)
+test('a multicam matches drawing its slots straight onto the canvas within one level, cropped, cropped under a zoom region, rotated, and cropped in a 0.6 preview', async () => {
+  const parity: MulticamParity = await page.evaluate(() => multicamParityProbe())
+  expect(Object.entries(parity).filter(([, delta]) => delta > 1)).toEqual([])
 })
