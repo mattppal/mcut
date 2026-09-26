@@ -1,5 +1,14 @@
 # mcut-editing-skill
 
+## 0.0.1-alpha.21
+
+### Patch Changes
+
+- Updated dependencies [[`1fab6ca`](https://github.com/mattppal/mcut/commit/1fab6cada1e1310f196b7f05e49cf15145cad849)]:
+  - @mcut/timeline@0.1.0-alpha.19
+  - @mcut/cli@0.1.0-alpha.22
+  - @mcut/transcription@0.1.0-alpha.22
+
 ## 0.0.1-alpha.20
 
 ### Patch Changes

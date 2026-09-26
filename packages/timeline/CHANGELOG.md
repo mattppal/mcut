@@ -1,5 +1,11 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.19
+
+### Patch Changes
+
+- [#208](https://github.com/mattppal/mcut/pull/208) [`1fab6ca`](https://github.com/mattppal/mcut/commit/1fab6cada1e1310f196b7f05e49cf15145cad849) Thanks [@mattppal](https://github.com/mattppal)! - `removeRanges` keeps the keyframes of a text or image element that spans a removed range. Keyframes after the range shift left with the content and keyframes inside it are dropped, so a title's fade-out survives a retake cut. The MCP server's import media schemas and transcript search move to their own modules, with the same exports from `@mcut/mcp-server/contract`.
+
 ## 0.1.0-alpha.18
 
 ### Minor Changes

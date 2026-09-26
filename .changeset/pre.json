@@ -102,6 +102,7 @@
     "recaption-every-piece",
     "recaption-stored-transcript",
     "reframe-slot-crop",
+    "remove-ranges-keyframes",
     "remove-ranges",
     "resize-layout-slot",
     "retake-one-word-drift",
