@@ -1,6 +1,5 @@
-import type { ContentView, Crop, FrameStyle, LayoutSlot, VisibleFraction } from '@mcut/timeline'
+import { getZoomWindow, type ContentView, type Crop, type FrameStyle, type LayoutSlot, type VisibleFraction } from '@mcut/timeline'
 import type { Canvas2D } from './types'
-import { applyView, type SourceRect } from './zoom-views'
 
 export interface FrameBox {
   x: number
@@ -9,7 +8,12 @@ export interface FrameBox {
   h: number
 }
 
-type MediaFit = LayoutSlot['fit'] | 'fill'
+export interface SourceRect {
+  sx: number
+  sy: number
+  sw: number
+  sh: number
+}
 
 type ViewFor = (visible: VisibleFraction) => ContentView
 
@@ -37,16 +41,23 @@ function cropSourceRect(crop: Crop | undefined, frame: CanvasImageSource): Sourc
   return { sx: crop.x * fw, sy: crop.y * fh, sw: crop.w * fw, sh: crop.h * fh }
 }
 
+const windowOf = (base: SourceRect, part: LayoutSlot['rect']): SourceRect => ({
+  sx: base.sx + part.x * base.sw,
+  sy: base.sy + part.y * base.sh,
+  sw: part.w * base.sw,
+  sh: part.h * base.sh,
+})
+
 export function viewSourceRect(crop: Crop | undefined, frame: CanvasImageSource, view: ContentView): SourceRect | null {
   const cropped = cropSourceRect(crop, frame)
   if (view.scale === 1) return cropped
   const { width, height } = getImageSize(frame)
-  return applyView(cropped ?? { sx: 0, sy: 0, sw: width, sh: height }, view)
+  return windowOf(cropped ?? { sx: 0, sy: 0, sw: width, sh: height }, getZoomWindow(view))
 }
 
 export const frameRadius = (style: FrameStyle, box: { w: number; h: number }): number => (style.cornerRadius ?? 0) * Math.min(box.w, box.h)
 
-function withFrameChrome(ctx: Canvas2D, style: FrameStyle, box: FrameBox, draw: () => void): void {
+export function withFrameChrome(ctx: Canvas2D, style: FrameStyle, box: FrameBox, draw: () => void): void {
   const radius = frameRadius(style, box)
   const tracePath = () => {
     ctx.beginPath()
@@ -82,22 +93,19 @@ function withFrameChrome(ctx: Canvas2D, style: FrameStyle, box: FrameBox, draw: 
   }
 }
 
-function placeSource(base: SourceRect, box: FrameBox, fit: MediaFit, viewFor: ViewFor): { src: SourceRect; dest: FrameBox } {
-  if (fit === 'fill') return { src: applyView(base, viewFor({ x: 1, y: 1 })), dest: box }
+function placeSource(base: SourceRect, box: FrameBox, fit: LayoutSlot['fit'], viewFor: ViewFor): { src: SourceRect; dest: FrameBox } {
   const fitScale = fit === 'cover' ? Math.max(box.w / base.sw, box.h / base.sh) : Math.min(box.w / base.sw, box.h / base.sh)
-  const view = viewFor({ x: box.w / (fitScale * base.sw), y: box.h / (fitScale * base.sh) })
+  const visible = { x: box.w / (fitScale * base.sw), y: box.h / (fitScale * base.sh) }
+  const view = viewFor(visible)
+  const shown = getZoomWindow(view, visible)
+  const src = windowOf(base, { x: Math.max(0, shown.x), y: Math.max(0, shown.y), w: Math.min(1, shown.w), h: Math.min(1, shown.h) })
   const scale = fitScale * view.scale
-  const sw = Math.min(base.sw, box.w / scale)
-  const sh = Math.min(base.sh, box.h / scale)
-  const dw = sw * scale
-  const dh = sh * scale
-  return {
-    src: { sx: base.sx + (base.sw - sw) * view.focus.x, sy: base.sy + (base.sh - sh) * view.focus.y, sw, sh },
-    dest: { x: box.x + (box.w - dw) / 2, y: box.y + (box.h - dh) / 2, w: dw, h: dh },
-  }
+  const dw = src.sw * scale
+  const dh = src.sh * scale
+  return { src, dest: { x: box.x + (box.w - dw) / 2, y: box.y + (box.h - dh) / 2, w: dw, h: dh } }
 }
 
-export function drawFramedMedia(ctx: Canvas2D, frame: CanvasImageSource, box: FrameBox, style: FrameStyle, fit: MediaFit, viewFor: ViewFor): void {
+export function drawFramedMedia(ctx: Canvas2D, frame: CanvasImageSource, box: FrameBox, style: FrameStyle, fit: LayoutSlot['fit'], viewFor: ViewFor): void {
   const { width, height } = getImageSize(frame)
   if (width <= 0 || height <= 0) return
   const { src, dest } = placeSource(cropSourceRect(style.crop, frame) ?? { sx: 0, sy: 0, sw: width, sh: height }, box, fit, viewFor)

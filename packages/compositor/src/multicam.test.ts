@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand, createProject, type LayoutSlot, type Project } from '@mcut/timeline'
 import type { RenderBackend } from './backend'
-import { renderFrameWith } from './render-frame'
+import { renderFrame, renderFrameWith } from './render-frame'
+import { FakeContext2D } from './test-utils'
 import type { Canvas2D } from './types'
 
 class SizingBackend implements RenderBackend {
@@ -19,7 +20,7 @@ class SizingBackend implements RenderBackend {
   popRasterScope(): void {}
 }
 
-type Camera = { rect: LayoutSlot['rect']; size?: { width: number; height: number } }
+type Camera = { rect: LayoutSlot['rect']; size?: { width: number; height: number }; fit?: LayoutSlot['fit'] }
 
 const FULL = { x: 0, y: 0, w: 1, h: 1 }
 const HD = { width: 1920, height: 1080 }
@@ -29,7 +30,7 @@ function multicam(element: object, cameras: readonly Camera[] = [{ rect: FULL }]
   for (const [index, { size }] of cameras.entries()) {
     project = applyCommand(project, { type: 'addAsset', asset: { id: `a-${index}`, kind: 'video', src: `blob:${index}`, durationMs: 60_000, ...size } })
   }
-  const slots = cameras.map(({ rect }, index) => ({ source: `cam-${index}`, rect }))
+  const slots = cameras.map(({ rect, fit }, index) => ({ source: `cam-${index}`, rect, ...(fit ? { fit } : {}) }))
   project = applyCommand(project, { type: 'saveLayout', layout: { id: 'l-cams', name: 'Cameras', slots } })
   return applyCommand(project, {
     type: 'addElement',
@@ -58,6 +59,16 @@ function composeSizes(project: Project, { renderScale = 1, timeMs = 1000 } = {})
     },
   })
   return sizes
+}
+
+const asCtx = (fake: FakeContext2D): Canvas2D => fake as unknown as Canvas2D
+
+const frame: ImageBitmap = { width: 640, height: 360, close: () => {} }
+
+function slotDraws(project: Project, timeMs = 1000): unknown[][] {
+  const composed = new FakeContext2D()
+  renderFrame(asCtx(new FakeContext2D()), project, timeMs, { source: { getFrame: () => frame }, createScratchContext: () => asCtx(composed) })
+  return composed.callsTo('drawImage').map((c) => c.args.slice(1))
 }
 
 describe('multicam compose density', () => {
@@ -115,5 +126,16 @@ describe('multicam compose density', () => {
 
   test('a side stops at 8192 pixels', () => {
     expect(composeSizes(multicam(scaled(2)), { renderScale: 4 })).toEqual([[8192, 8192]])
+  })
+})
+
+describe('multicam slot framing', () => {
+  test('a contain slot keeps its letterboxed side whole and centered while a slot zoom pans the other side', () => {
+    const project = applyCommand(multicam({}, [{ rect: { x: 0, y: 0, w: 0.25, h: 1 }, fit: 'contain' }]), {
+      type: 'addZoomRegion',
+      elementId: 'e-mc',
+      zoom: { source: 'cam-0', atMs: 0, inMs: 500, holdMs: 1000, outMs: 500, scale: 2, focus: { x: 1, y: 1 } },
+    })
+    expect(slotDraws(project)).toEqual([[320, 0, 320, 360, -960, -270, 480, 540]])
   })
 })

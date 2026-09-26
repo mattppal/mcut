@@ -4,7 +4,6 @@ import {
   type MulticamElement,
   type BlendMode,
   type CaptionElement,
-  type ContentView,
   type Effect,
   type ElementType,
   type FrameStyle,
@@ -14,8 +13,8 @@ import {
   type Transform,
   type VideoElement,
 } from '@mcut/timeline'
-import { applyChrome, type LayerChrome } from './backend'
-import { drawFramedMedia, frameRadius, getImageSize, viewSourceRect } from './framed-media'
+import { applyChrome, drawImageQuad2D, type LayerChrome } from './backend'
+import { frameRadius, getImageSize, viewSourceRect, withFrameChrome, type SourceRect } from './framed-media'
 import { toCanvasPoint } from './geometry'
 import { getCaptionLane } from './caption-lane'
 import { composeMulticam } from './multicam'
@@ -68,22 +67,22 @@ function withTransform(ctx: Canvas2D, context: ElementRenderContext, element: Vi
 function drawMediaFrame(
   context: ElementRenderContext,
   element: VisualChrome & FrameStyle,
-  frame: CanvasImageSource,
+  image: CanvasImageSource,
   dw: number,
   dh: number,
-  view: ContentView,
+  src: SourceRect | null,
 ): void {
   const box = { x: -dw / 2, y: -dh / 2, w: dw, h: dh }
   if (!element.stroke && !element.shadow) {
-    context.backend.drawImageQuad(
-      { image: frame, src: viewSourceRect(element.crop, frame, view), dw, dh, cornerRadius: frameRadius(element, box) },
-      chromeOf(context, element),
-    )
+    context.backend.drawImageQuad({ image, src, dw, dh, cornerRadius: frameRadius(element, box) }, chromeOf(context, element))
     return
   }
   const ctx = context.ctx
-  withTransform(ctx, context, element, () => drawFramedMedia(ctx, frame, box, element, 'fill', () => view))
+  withTransform(ctx, context, element, () => withFrameChrome(ctx, element, box, () => drawImageQuad2D(ctx, { image, src, dw, dh, cornerRadius: 0 })))
 }
+
+const clipSourceRect = (context: ElementRenderContext, element: VideoElement | ImageElement, frame: CanvasImageSource): SourceRect | null =>
+  viewSourceRect(reframedCrop(element, context.timeMs), frame, getClipView(element, context.viewTimeMs))
 
 const renderVideo: ElementRenderer<VideoElement> = (element, context) => {
   if (!context.source) return
@@ -95,7 +94,7 @@ const renderVideo: ElementRenderer<VideoElement> = (element, context) => {
   if (width <= 0 || height <= 0) return
   const dw = width * (element.crop?.w ?? 1)
   const dh = height * (element.crop?.h ?? 1)
-  drawMediaFrame(context, { ...element, crop: reframedCrop(element, context.timeMs) }, frame, dw, dh, getClipView(element, context.viewTimeMs))
+  drawMediaFrame(context, element, frame, dw, dh, clipSourceRect(context, element, frame))
 }
 
 const renderImage: ElementRenderer<ImageElement> = (element, context) => {
@@ -106,7 +105,7 @@ const renderImage: ElementRenderer<ImageElement> = (element, context) => {
   if (width <= 0 || height <= 0) return
   const dw = width * (element.crop?.w ?? 1)
   const dh = height * (element.crop?.h ?? 1)
-  drawMediaFrame(context, { ...element, crop: reframedCrop(element, context.timeMs) }, frame, dw, dh, getClipView(element, context.viewTimeMs))
+  drawMediaFrame(context, element, frame, dw, dh, clipSourceRect(context, element, frame))
 }
 
 const renderText: ElementRenderer<TextElement> = (element, context) => {
@@ -253,7 +252,8 @@ const renderMulticam: ElementRenderer<MulticamElement> = (element, context) => {
   const surface = composeMulticam(element, context, frames, view.scale)
   if (!surface) return
   const { width, height } = context.project
-  drawMediaFrame(context, element, surface.canvas, width * (element.crop?.w ?? 1), height * (element.crop?.h ?? 1), view)
+  const src = viewSourceRect(element.crop, surface.canvas, view)
+  drawMediaFrame(context, element, surface.canvas, width * (element.crop?.w ?? 1), height * (element.crop?.h ?? 1), src)
 }
 
 export const elementRenderers: { readonly [K in ElementType]: ElementRenderer<ElementByType[K]> } = {
