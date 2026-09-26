@@ -31,9 +31,8 @@ Error thrown by `probeMedia` and `createAsset` when a file cannot be read as med
 ```ts
 class PreviewMediaPool implements FrameSource {
   constructor(private resolveAsset: (assetId: AssetId) => AssetRef | undefined)
+  readonly audio: PreviewAudio
   get frameVersion(): number
-  setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void
-  getAudioSources(): ReadonlyMap<ElementId, string> | undefined
   getFrame(assetId: AssetId, sourceTimeMs: number): CanvasImageSource | null
   sync(items: ActiveMediaItem[], options: PreviewSyncOptions): void
   pauseAll(): void
@@ -41,7 +40,21 @@ class PreviewMediaPool implements FrameSource {
 }
 ```
 
-The approximate `FrameSource` for interactive preview. It keeps one pooled media element per asset in sync with the playback clock, plays `setAudioSources` URLs from a separate audio element while muting the asset's own audio, and decodes bitmaps for images. `frameVersion` goes up whenever `getFrame` may return a different picture for the same arguments, such as when a seek starts or lands, a video loads, a decoded frame arrives, or an image loads. A paused preview repaints only when it moves.
+The approximate `FrameSource` for interactive preview. It keeps one muted pooled video element per asset in sync with the playback clock and decodes bitmaps for images. Sound comes from `audio`, not from the elements. `frameVersion` goes up whenever `getFrame` may return a different picture for the same arguments, such as when a seek starts or lands, a video loads, a decoded frame arrives, or an image loads. A paused preview repaints only when it moves.
+
+### PreviewAudio
+
+```ts
+class PreviewAudio {
+  setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void
+  getAudioSources(): ReadonlyMap<ElementId, string> | undefined
+  clockTimeMs(displayTimeMs: number): number | null
+  sync(project: Project, playback: PlaybackState): void
+  dispose(): void
+}
+```
+
+Preview sound on one `AudioContext`, exported as a type and reached through `PreviewMediaPool.audio`. It plays the same audible segments and timed decode as `exportProject`, so every container is heard at the source time export writes. `sync` schedules sound a second ahead of the playhead with each clip's volume, fades, keyframes, time stretch, and reversal, applies track mute, master volume, and mute, and stays silent while paused or when the transport rate is above 4. A clip at a constant speed plays from one continuous decode and one time stretcher, so a stretched or reversed clip has no seams. A clip on a speed curve plays in crossfaded half-second windows. A seek starts a new anchor. A rate change hands off to a new anchor 200 ms ahead with a 20 ms equal-power crossfade, so sound carries across it. `setAudioSources` swaps an element's audio for a URL, as export does with `audioSources`. `clockTimeMs` returns the timeline time being heard at `displayTimeMs`, the time the next frame reaches the screen, or `null` while the context is not running. Before the output first renders it holds at the play position while a clip is due within a second, and returns `null` when there is nothing to hear, so a silent stretch plays on the wall clock while a sound server starts. `PlayerCanvas` passes it to the playback loop so the picture follows the sound.
 
 ### ScrubFrameCache
 

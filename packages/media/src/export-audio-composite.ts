@@ -110,9 +110,27 @@ export async function decodeCompositeRange(
   return composite ? { status: 'ready', audio: composite } : { status: 'empty' }
 }
 
+export interface NodeStart {
+  whenS: number
+  offsetS: number
+  durationS: number
+}
+
+export function lateStart(start: NodeStart, rate: number, nowS: number): NodeStart | null {
+  const lateS = Math.max(0, nowS - start.whenS)
+  const durationS = start.durationS - lateS * rate
+  if (durationS <= 0) return null
+  return { whenS: start.whenS + lateS, offsetS: start.offsetS + lateS * rate, durationS }
+}
+
+export function startNode(node: AudioBufferSourceNode, start: NodeStart): void {
+  const due = lateStart(start, node.playbackRate.value, node.context.currentTime)
+  if (due) node.start(due.whenS, due.offsetS, due.durationS)
+}
+
 function scheduleBuffer(
-  offline: OfflineAudioContext,
-  gain: GainNode,
+  context: BaseAudioContext,
+  destination: AudioNode,
   channels: readonly Float32Array[],
   sampleRate: number,
   whenS: number,
@@ -120,27 +138,27 @@ function scheduleBuffer(
 ): void {
   const length = channels[0]?.length ?? 0
   if (length === 0) return
-  const out = offline.createBuffer(channels.length, length, sampleRate)
+  const out = context.createBuffer(channels.length, length, sampleRate)
   for (const [channel, data] of channels.entries()) out.getChannelData(channel).set(data)
-  const node = offline.createBufferSource()
+  const node = context.createBufferSource()
   node.buffer = out
-  node.connect(gain)
-  node.start(whenS, 0, Math.min(out.duration, durationS))
+  node.connect(destination)
+  startNode(node, { whenS, offsetS: 0, durationS: Math.min(out.duration, durationS) })
 }
 
 export function scheduleComposite(
-  offline: OfflineAudioContext,
-  gain: GainNode,
+  context: BaseAudioContext,
+  destination: AudioNode,
   segment: AudibleSegment,
   channels: readonly Float32Array[],
   sampleRate: number,
 ): void {
-  scheduleBuffer(offline, gain, channels, sampleRate, segment.startMs / 1000, segment.durationMs / 1000)
+  scheduleBuffer(context, destination, channels, sampleRate, segment.startMs / 1000, segment.durationMs / 1000)
 }
 
 export async function scheduleStretchedSegment(
-  offline: OfflineAudioContext,
-  gain: GainNode,
+  context: BaseAudioContext,
+  destination: AudioNode,
   sink: Pick<AudioBufferSink, 'buffers'>,
   segment: AudibleSegment,
   constant: ConstantSpeed,
@@ -154,7 +172,7 @@ export async function scheduleStretchedSegment(
     const stretched = await stretchStereo(stereoOf(composite.audio), constant.rate)
     if (stretched.left.length === 0) return false
 
-    scheduleComposite(offline, gain, segment, [stretched.left, stretched.right], composite.audio.sampleRate)
+    scheduleComposite(context, destination, segment, [stretched.left, stretched.right], composite.audio.sampleRate)
     return true
   } catch (error) {
     if (signal?.aborted) throw error
@@ -168,8 +186,8 @@ function reversedLimitMessage(segment: AudibleSegment, sampleRate: number): stri
 }
 
 async function scheduleReversedChunks(
-  offline: OfflineAudioContext,
-  gain: GainNode,
+  context: BaseAudioContext,
+  destination: AudioNode,
   sink: Pick<AudioBufferSink, 'buffers'>,
   segment: AudibleSegment,
   totalFrames: number,
@@ -184,7 +202,14 @@ async function scheduleReversedChunks(
     switch (decoded.status) {
       case 'ready':
         for (const channel of decoded.audio.channels) channel.reverse()
-        scheduleBuffer(offline, gain, decoded.audio.channels, decoded.audio.sampleRate, outputStartS + span.outputFrame / sampleRate, span.frames / sampleRate)
+        scheduleBuffer(
+          context,
+          destination,
+          decoded.audio.channels,
+          decoded.audio.sampleRate,
+          outputStartS + span.outputFrame / sampleRate,
+          span.frames / sampleRate,
+        )
         break
       case 'empty':
         throw new Error(`Reversed audio produced no samples (element ${segment.elementId}).`)
@@ -199,8 +224,8 @@ async function scheduleReversedChunks(
 }
 
 export async function scheduleReversedSegment(
-  offline: OfflineAudioContext,
-  gain: GainNode,
+  context: BaseAudioContext,
+  destination: AudioNode,
   sink: Pick<AudioBufferSink, 'buffers'>,
   segment: AudibleSegment,
   signal?: AbortSignal,
@@ -219,7 +244,7 @@ export async function scheduleReversedSegment(
         left = stretched.left
         right = stretched.right
       }
-      scheduleComposite(offline, gain, segment, [left, right], composite.sampleRate)
+      scheduleComposite(context, destination, segment, [left, right], composite.sampleRate)
       return
     }
     case 'empty':
@@ -227,7 +252,7 @@ export async function scheduleReversedSegment(
     case 'too-long': {
       const rate = segment.sourceSpanMs / Math.max(1, segment.durationMs)
       if (Math.abs(rate - 1) > 1e-6) throw new Error(reversedLimitMessage(segment, decoded.sampleRate))
-      await scheduleReversedChunks(offline, gain, sink, segment, decoded.frames, decoded.sampleRate, signal)
+      await scheduleReversedChunks(context, destination, sink, segment, decoded.frames, decoded.sampleRate, signal)
       return
     }
     default: {

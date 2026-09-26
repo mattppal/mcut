@@ -1,3 +1,4 @@
+import type { AudioBufferSink } from 'mediabunny'
 import {
   getEffectiveVolume,
   hasFades,
@@ -15,6 +16,7 @@ import {
   scheduleComposite,
   scheduleReversedSegment,
   scheduleStretchedSegment,
+  startNode,
   type AudibleSegment,
 } from './export-audio-composite'
 import { AUDIO_SAMPLE_RATE, type MixedAudioData } from './export-types'
@@ -69,7 +71,7 @@ function sampleVolumeCurve(element: { startMs: number; durationMs: number }, get
   return curve
 }
 
-function collectAudibleSegments(project: Project, audioSources?: ReadonlyMap<ElementId, string>): AudibleSegment[] {
+export function collectAudibleSegments(project: Project, audioSources?: ReadonlyMap<ElementId, string>): AudibleSegment[] {
   const segments: AudibleSegment[] = []
   for (const track of project.tracks) {
     if (track.muted) continue
@@ -127,70 +129,79 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
       const track = await input.getPrimaryAudioTrack()
       if (!track) continue
       const sink = await sourceAudioSink(segment.src, input, track)
-      const segmentStartS = segment.startMs / 1000
-      const segmentEndS = (segment.startMs + segment.durationMs) / 1000
-      const trimS = segment.trimStartMs / 1000
-
       const gain = offline.createGain()
       if (segment.volumeCurve) {
-        gain.gain.setValueCurveAtTime(segment.volumeCurve, segmentStartS, segment.durationMs / 1000)
+        gain.gain.setValueCurveAtTime(segment.volumeCurve, segment.startMs / 1000, segment.durationMs / 1000)
       } else {
         gain.gain.value = segment.volume
       }
       gain.connect(offline.destination)
-
-      if (segment.reversed) {
-        await scheduleReversedSegment(offline, gain, sink, segment, signal)
-        continue
-      }
-
-      // Media elements keep pitch across playbackRate changes per https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preservesPitch so the export stretch does too
-      const constant = constantSpeedOf(segment.timeMap)
-      if (constant && Math.abs(constant.rate - 1) > 1e-6) {
-        const stretched = await scheduleStretchedSegment(offline, gain, sink, segment, constant, signal)
-        if (stretched) continue
-      }
-
-      const plan = segment.timeMap ? buildRemapPlan(segment.timeMap, segment.durationMs) : null
-      if (!plan) {
-        const composite = await decodeCompositeRange(sink, trimS, segment.sourceSpanMs / 1000, 'all', signal)
-        if (composite.status === 'ready') {
-          scheduleComposite(offline, gain, segment, composite.audio.channels, composite.audio.sampleRate)
-          continue
-        }
-      }
-
-      const decodeStartS = await leadStart(sink, trimS, segment.sourceSpanMs / 1000, signal)
-      for await (const { buffer, timestamp } of sink.buffers(decodeStartS, trimS + segment.sourceSpanMs / 1000)) {
-        signal?.throwIfAborted()
-        if (Math.round((trimS - timestamp) * buffer.sampleRate) >= buffer.length) continue
-        let rate = 1
-        let when: number
-        if (plan) {
-          const remapped = remapSourceToOutput(plan, (timestamp - trimS) * 1000)
-          if (!remapped || remapped.rate <= 0.01) continue
-          rate = remapped.rate
-          when = segmentStartS + remapped.outputMs / 1000
-        } else {
-          when = segmentStartS + (timestamp - trimS)
-        }
-        let offset = 0
-        if (when < segmentStartS) {
-          offset = (segmentStartS - when) * rate
-          when = segmentStartS
-        }
-        const playDuration = Math.min(buffer.duration - offset, (segmentEndS - when) * rate)
-        if (playDuration <= 0) continue
-        const node = offline.createBufferSource()
-        node.buffer = buffer
-        node.playbackRate.value = rate
-        node.connect(gain)
-        node.start(when, offset, playDuration)
-      }
+      await scheduleSegmentSources(offline, gain, sink, segment, signal)
     } finally {
       input.dispose()
     }
   }
 
   return offline.startRendering()
+}
+
+export async function scheduleSegmentSources(
+  context: BaseAudioContext,
+  destination: AudioNode,
+  sink: Pick<AudioBufferSink, 'buffers'>,
+  segment: AudibleSegment,
+  signal?: AbortSignal,
+): Promise<void> {
+  const segmentStartS = segment.startMs / 1000
+  const segmentEndS = (segment.startMs + segment.durationMs) / 1000
+  const trimS = segment.trimStartMs / 1000
+
+  if (segment.reversed) {
+    await scheduleReversedSegment(context, destination, sink, segment, signal)
+    return
+  }
+
+  // Media elements keep pitch across playbackRate changes per https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preservesPitch so the export stretch does too
+  const constant = constantSpeedOf(segment.timeMap)
+  if (constant && Math.abs(constant.rate - 1) > 1e-6) {
+    const stretched = await scheduleStretchedSegment(context, destination, sink, segment, constant, signal)
+    if (stretched) return
+  }
+
+  const plan = segment.timeMap ? buildRemapPlan(segment.timeMap, segment.durationMs) : null
+  if (!plan) {
+    const composite = await decodeCompositeRange(sink, trimS, segment.sourceSpanMs / 1000, 'all', signal)
+    if (composite.status === 'ready') {
+      scheduleComposite(context, destination, segment, composite.audio.channels, composite.audio.sampleRate)
+      return
+    }
+  }
+
+  const decodeStartS = await leadStart(sink, trimS, segment.sourceSpanMs / 1000, signal)
+  for await (const { buffer, timestamp } of sink.buffers(decodeStartS, trimS + segment.sourceSpanMs / 1000)) {
+    signal?.throwIfAborted()
+    if (Math.round((trimS - timestamp) * buffer.sampleRate) >= buffer.length) continue
+    let rate = 1
+    let when: number
+    if (plan) {
+      const remapped = remapSourceToOutput(plan, (timestamp - trimS) * 1000)
+      if (!remapped || remapped.rate <= 0.01) continue
+      rate = remapped.rate
+      when = segmentStartS + remapped.outputMs / 1000
+    } else {
+      when = segmentStartS + (timestamp - trimS)
+    }
+    let offset = 0
+    if (when < segmentStartS) {
+      offset = (segmentStartS - when) * rate
+      when = segmentStartS
+    }
+    const playDuration = Math.min(buffer.duration - offset, (segmentEndS - when) * rate)
+    if (playDuration <= 0) continue
+    const node = context.createBufferSource()
+    node.buffer = buffer
+    node.playbackRate.value = rate
+    node.connect(destination)
+    startNode(node, { whenS: when, offsetS: offset, durationS: playDuration })
+  }
 }

@@ -22,6 +22,8 @@ export { ensureFallbackAudioEncoders } from './encoders'
 
 export { getActiveMediaItems, PreviewMediaPool, type ActiveMediaItem, type PreviewSyncOptions } from './preview-pool'
 
+export type { PreviewAudio } from './preview-audio'
+
 export {
   exportProject,
   getExportSupport,
