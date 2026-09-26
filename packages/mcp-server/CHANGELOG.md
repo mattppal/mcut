@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.34
+
+### Patch Changes
+
+- [#210](https://github.com/mattppal/mcut/pull/210) [`fec8078`](https://github.com/mattppal/mcut/commit/fec8078ba57d9d74f2b6da7e711e26ee86bf4371) Thanks [@mattppal](https://github.com/mattppal)! - `transact` accepts `remove_ranges` with timeline ranges and runs it as one `removeRanges` command in the same undo step. With `time: "source"` inside `transact` it fails before anything changes. The `remove_ranges` description now says it is already one undo step on its own.
+
 ## 0.1.0-alpha.33
 
 ### Patch Changes
