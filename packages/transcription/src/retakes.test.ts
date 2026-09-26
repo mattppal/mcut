@@ -51,6 +51,24 @@ describe('findRetakes', () => {
     ])
   })
 
+  test('one word dropped from either take still matches, but two differences do not', () => {
+    const kept = 'hopefully you take this as an example of how you can bring it home.'
+    expect(findRetakes([...spoken('hopefully take this as an example of how you can', 0), ...spoken(kept, 5000)])).toEqual([
+      {
+        startMs: 0,
+        endMs: 5000,
+        abandonedText: 'hopefully take this as an example of how you can',
+        keptText: 'hopefully you take this as an example of how you can',
+        matchedWords: 10,
+      },
+    ])
+    expect(findRetakes([...spoken('hopefully you take this as an example of how', 0), ...spoken('hopefully take this as an example of how it works.', 5000)])[0]).toMatchObject({
+      endMs: 5000,
+      matchedWords: 8,
+    })
+    expect(findRetakes([...spoken('hopefully take this as a model', 0), ...spoken(kept, 5000)])).toEqual([])
+  })
+
   test('chained attempts merge into one range ending at the last take', () => {
     const words = [
       ...spoken('Now the neat thing is that it can use your computer.', 0),
