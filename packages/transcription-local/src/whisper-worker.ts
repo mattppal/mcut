@@ -104,12 +104,7 @@ function whisperLanguageTaskOptions(multilingual: boolean, language: string | un
   return { task: 'transcribe', ...(language ? { language } : {}) }
 }
 
-async function transcribeWindow(
-  asr: AsrPipeline,
-  audio: Float32Array,
-  multilingual: boolean,
-  language: string | undefined,
-): Promise<AsrChunk[] | null> {
+async function transcribeWindow(asr: AsrPipeline, audio: Float32Array, multilingual: boolean, language: string | undefined): Promise<AsrChunk[] | null> {
   const baseOptions: Record<string, unknown> = {
     // onnx-community Whisper builds need a _timestamped export for word-level return_timestamps. https://huggingface.co/onnx-community/whisper-base_timestamped
     return_timestamps: 'word',

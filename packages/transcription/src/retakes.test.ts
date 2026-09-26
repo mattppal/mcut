@@ -62,7 +62,9 @@ describe('findRetakes', () => {
         matchedWords: 10,
       },
     ])
-    expect(findRetakes([...spoken('hopefully you take this as an example of how', 0), ...spoken('hopefully take this as an example of how it works.', 5000)])[0]).toMatchObject({
+    expect(
+      findRetakes([...spoken('hopefully you take this as an example of how', 0), ...spoken('hopefully take this as an example of how it works.', 5000)])[0],
+    ).toMatchObject({
       endMs: 5000,
       matchedWords: 8,
     })
