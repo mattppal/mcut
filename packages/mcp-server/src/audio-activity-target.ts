@@ -2,7 +2,8 @@ import { getElementLocation, resolveElementAudioSource, type ElementAudioSource,
 
 export const audioActivityDescription =
   'Live bridge only: analyze a clip with source audio and return compact sound and silence windows in audio-asset time. ' +
-  'A multicam uses its audio source. One with none fails until setMulticamAudio. The fallback is the first clip with source audio. ' +
+  'A multicam uses its audio source. A selected multicam with none fails until setMulticamAudio instead of falling through to another clip. ' +
+  'The fallback is the first clip with source audio when the selection has none. ' +
   'Use this only through the connected browser for audio-aware inspection; do not fall back to ffmpeg. ' +
   'For spoken-word silence removal, prefer ensure_transcript followed by the live editor action transcript.remove-silence.'
 
@@ -19,10 +20,18 @@ export function pickAudioActivitySource(project: Project, selectedElementIds: re
     return source
   }
 
+  let resolved: ElementAudioSource | undefined
   for (const id of selectedElementIds) {
+    const location = getElementLocation(project, id)
+    if (!location) continue
     const source = resolveElementAudioSource(project, id)
-    if (source) return source
+    if (!source) {
+      if (location.element.type === 'multicam') throw new Error(missingAudioActivityMessage(project, id))
+      continue
+    }
+    if (!resolved) resolved = source
   }
+  if (resolved) return resolved
 
   for (const track of project.tracks) {
     for (const element of track.elements) {

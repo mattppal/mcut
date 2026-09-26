@@ -264,7 +264,8 @@ defineAction({
     properties: {
       elementId: {
         type: 'string',
-        description: 'Optional clip id. Defaults to the selected clip, then the first clip with source audio.',
+        description:
+          'Optional clip id. A selected multicam with no audio source fails until setMulticamAudio. With no selection, the first clip with source audio.',
       },
       minGapMs: {
         type: 'number',

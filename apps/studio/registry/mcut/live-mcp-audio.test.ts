@@ -62,9 +62,11 @@ describe('multicam audio activity', () => {
     const engine = multicamBesideMusic(false)
     engine.select(['e-mc'])
 
-    await expect(handleGetAudioActivity(engine, {}, async () => {
-      throw new Error('analyzer ran')
-    })).rejects.toThrow('Element "e-mc" has no audio source. Set one with setMulticamAudio.')
+    await expect(
+      handleGetAudioActivity(engine, {}, async () => {
+        throw new Error('analyzer ran')
+      }),
+    ).rejects.toThrow('Element "e-mc" has no audio source. Set one with setMulticamAudio.')
     expect(getElement(engine.project, 'e-music')).toMatchObject({ id: 'e-music', startMs: 0, durationMs: 8000, trimStartMs: 0 })
   })
 

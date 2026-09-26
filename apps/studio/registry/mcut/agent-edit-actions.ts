@@ -79,15 +79,25 @@ function silenceTarget(engine: EditorEngine, explicitId: ElementId | undefined):
     return { element: location.element, source }
   }
 
-  const ordered = [...engine.selection.elementIds, ...engine.project.tracks.flatMap((track) => track.elements.map((element) => element.id))]
-  const seen = new Set<string>()
-  for (const elementId of ordered) {
-    if (seen.has(elementId)) continue
-    seen.add(elementId)
+  let resolved: { element: MediaClip; source: ElementAudioSource } | undefined
+  for (const elementId of engine.selection.elementIds) {
     const location = getElementLocation(engine.project, elementId)
     if (!location || !isMediaClip(location.element)) continue
     const source = resolveElementAudioSource(engine.project, elementId)
-    if (source) return { element: location.element, source }
+    if (!source) {
+      if (location.element.type === 'multicam') throw new Error(`Element "${elementId}" has no audio source. Set one with setMulticamAudio.`)
+      continue
+    }
+    if (!resolved) resolved = { element: location.element, source }
+  }
+  if (resolved) return resolved
+
+  for (const track of engine.project.tracks) {
+    for (const element of track.elements) {
+      if (!isMediaClip(element)) continue
+      const source = resolveElementAudioSource(engine.project, element.id)
+      if (source) return { element, source }
+    }
   }
   throw new Error('Add or select a clip with source audio before removing silence.')
 }

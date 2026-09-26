@@ -44,7 +44,7 @@ is at `app://studio/tools.full.json` and the raw command profile at
 | `get_frame` | Live bridge only. PNG of one timeline frame. Call it before placing a zoom or a crop. |
 | `find_scene_changes` | Live bridge only. Timeline times where the picture of one video clip or multicam source changes, refined to the frame, and the stable segments between them. `sensitivity` from 0 to 1, default 0.5. A multicam reads its `screen` source by default. |
 | `get_contact_sheet` | Live bridge only. One PNG grid of thumbnails of one video clip or multicam source, each labelled with its timeline time. Pass `timesMs` or `count`. |
-| `get_audio_activity` | Live bridge only. Sound and silence windows for one clip with source audio, in audio-asset time. A multicam uses its audio source. |
+| `get_audio_activity` | Live bridge only. Sound and silence windows for one clip with source audio, in audio-asset time. A multicam uses its audio source. A selected multicam with none fails until setMulticamAudio instead of falling through to another clip. |
 | `get_transcript` | Caption-derived transcript. Never starts transcription. |
 | `search_transcript` | Find spoken words or phrases with timeline times. |
 | `find_retakes` | Retake candidates from the word-timed transcript, last to first, each a timeline range that keeps the last take. With `elementId`, a multicam is included. After the cuts, pass the full unchanged transcript to `apply_captions` once per remaining clip, never a slice. |
