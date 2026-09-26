@@ -258,14 +258,20 @@ describe('frame style rendering', () => {
   test('a multicam crop and corner radius cut and round the composed frame on the canvas pixels where they cut and round a clip', () => {
     const framing = { cornerRadius: 0.1, crop: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 } }
     const clip = new FakeContext2D()
-    renderFrame(asCtx(clip), projectWithVideo({ ...framing, transform: { x: 0, y: 0, scaleX: 1.5, scaleY: 1.5, rotation: 0 } }), 1000, { source: new FakeSource() })
+    renderFrame(asCtx(clip), projectWithVideo({ ...framing, transform: { x: 0, y: 0, scaleX: 1.5, scaleY: 1.5, rotation: 0 } }), 1000, {
+      source: new FakeSource(),
+    })
     const { main, composed } = renderComposed(projectWithMulticam({ width: 1920, height: 1080 }, {}, framing))
     const rounded = (fake: FakeContext2D) =>
-      fake.callsTo('roundRect').map(({ args, transform }) => [...deviceRect({ args: args.slice(0, 4), transform }), Number(args[4]) * Math.hypot(transform.a, transform.b)])
+      fake
+        .callsTo('roundRect')
+        .map(({ args, transform }) => [...deviceRect({ args: args.slice(0, 4), transform }), Number(args[4]) * Math.hypot(transform.a, transform.b)])
     expect(rounded(clip)).toEqual([[480, 270, 960, 540, 54]])
     expect(rounded(composed)).toEqual([[480, 270, 960, 540, 54]])
     expect(composed.callsTo('drawImage').map(deviceRect)).toEqual([[-480, -270, 1920, 1080]])
-    expect(main.callsTo('drawImage').map((c) => [c.args[0] === composed.canvas, ...c.args.slice(1, 5), ...deviceRect(c)])).toEqual([[true, 480, 270, 960, 540, 480, 270, 960, 540]])
+    expect(main.callsTo('drawImage').map((c) => [c.args[0] === composed.canvas, ...c.args.slice(1, 5), ...deviceRect(c)])).toEqual([
+      [true, 480, 270, 960, 540, 480, 270, 960, 540],
+    ])
   })
 
   test('crop shrinks natural and display size for layout/handles', () => {
