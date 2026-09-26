@@ -1,5 +1,11 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.13
+
+### Patch Changes
+
+- [#197](https://github.com/mattppal/mcut/pull/197) [`fa6f581`](https://github.com/mattppal/mcut/commit/fa6f581da9ce078b05916c46bfa5159e61b341a5) Thanks [@mattppal](https://github.com/mattppal)! - `createMulticam` keeps the sync of a clip placed after the others. Each source offset is that clip's media time at timeline 0 relative to the earliest source, and the multicam covers the span every source is placed on.
+
 ## 0.1.0-alpha.12
 
 ### Minor Changes

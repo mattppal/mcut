@@ -1,5 +1,20 @@
 # mcut-studio
 
+## 0.1.1-alpha.33
+
+### Patch Changes
+
+- Updated dependencies [[`fa6f581`](https://github.com/mattppal/mcut/commit/fa6f581da9ce078b05916c46bfa5159e61b341a5)]:
+  - @mcut/timeline@0.1.0-alpha.13
+  - @mcut/compositor@0.1.0-alpha.13
+  - @mcut/desktop-ipc@0.1.0-alpha.15
+  - @mcut/editor@0.1.0-alpha.13
+  - @mcut/mcp-server@0.1.0-alpha.23
+  - @mcut/media@0.1.0-alpha.21
+  - @mcut/react@0.1.0-alpha.22
+  - @mcut/transcription@0.1.0-alpha.14
+  - @mcut/transcription-local@1.0.0-alpha.17
+
 ## 0.1.1-alpha.32
 
 ### Patch Changes
