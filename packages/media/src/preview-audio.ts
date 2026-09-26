@@ -13,6 +13,7 @@ const HANDOFF_LEAD_S = 0.2
 const HANDOFF_FADE_S = 0.02
 const STOP_LEAD_S = 0.05
 const STOP_FADE_S = 0.005
+const SUSPEND_IDLE_S = 2
 const FADE_STEPS = 32
 
 interface OpenSource {
@@ -129,6 +130,7 @@ export class PreviewAudio {
   private heldMs: number | null = null
   private paused: Pause | null = null
   private stopping: { epochs: Epoch[]; untilS: number } | null = null
+  private quietS: number | null = null
   private disposed = false
 
   setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
@@ -167,6 +169,7 @@ export class PreviewAudio {
       this.pause(project, requested)
       return
     }
+    this.quietS = null
     if (rate <= 0 || rate > MAX_AUDIBLE_RATE) {
       this.flush()
       return
@@ -329,6 +332,16 @@ export class PreviewAudio {
     const rate = playback.playbackRate
     const audible = rate > 0 && rate <= MAX_AUDIBLE_RATE && dueSegments(this.segmentsOf(project), atMs, rate).length > 0
     this.heldMs = audible ? atMs : null
+    if (context) this.suspendWhenQuiet(context)
+  }
+
+  private suspendWhenQuiet(context: AudioContext): void {
+    if (context.state !== 'running') return
+    this.quietS ??= context.currentTime
+    const { contextTime, performanceTime } = context.getOutputTimestamp()
+    if (contextTime === undefined || !performanceTime || contextTime < this.quietS + SUSPEND_IDLE_S) return
+    this.quietS = null
+    void context.suspend()
   }
 
   private stop(context: AudioContext, sounding: Sounding, atMs: number): void {
@@ -341,6 +354,7 @@ export class PreviewAudio {
     }
     this.dropStopping()
     this.stopping = { epochs, untilS: stopS + STOP_FADE_S }
+    this.quietS = stopS + STOP_FADE_S
     this.epoch = null
     this.outgoing = null
   }
