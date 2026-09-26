@@ -42,7 +42,7 @@ function passThrough(name: PassThroughName, args: unknown): TransactSubRequest {
 
 function rejectTransactName(name: string): Error {
   return new Error(
-    `transact cannot run "${name}". Allowed tools are timeline commands (list_commands), operator_* tools, run_operator, run_action, and apply_commands.`,
+    `transact cannot run "${name}". Allowed tools are timeline commands (list_commands), operator_* tools, run_operator, run_action, apply_commands, and remove_ranges with timeline ranges.`,
   )
 }
 
