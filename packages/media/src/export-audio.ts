@@ -9,7 +9,14 @@ import {
   type Project,
   type TimeMap,
 } from '@mcut/timeline'
-import { decodeCompositeRange, scheduleComposite, scheduleReversedSegment, scheduleStretchedSegment, type AudibleSegment } from './export-audio-composite'
+import {
+  decodeCompositeRange,
+  leadStart,
+  scheduleComposite,
+  scheduleReversedSegment,
+  scheduleStretchedSegment,
+  type AudibleSegment,
+} from './export-audio-composite'
 import { AUDIO_SAMPLE_RATE, type MixedAudioData } from './export-types'
 import { inputFor } from './probe'
 import { constantSpeedOf } from './time-stretch'
@@ -153,8 +160,10 @@ async function mixAudioSegments(segments: AudibleSegment[], totalDurationMs: num
         }
       }
 
-      for await (const { buffer, timestamp } of sink.buffers(trimS, trimS + segment.sourceSpanMs / 1000)) {
+      const decodeStartS = await leadStart(sink, trimS, segment.sourceSpanMs / 1000, signal)
+      for await (const { buffer, timestamp } of sink.buffers(decodeStartS, trimS + segment.sourceSpanMs / 1000)) {
         signal?.throwIfAborted()
+        if (Math.round((trimS - timestamp) * buffer.sampleRate) >= buffer.length) continue
         let rate = 1
         let when: number
         if (plan) {

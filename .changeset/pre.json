@@ -47,6 +47,7 @@
     "expo-easing",
     "export-audio-encoder-delay",
     "export-audio-one-buffer",
+    "export-forward-seams",
     "export-frame-rgba",
     "export-job-socket-races",
     "export-job",
