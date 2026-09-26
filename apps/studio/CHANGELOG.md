@@ -1,5 +1,12 @@
 # mcut-studio
 
+## 0.1.1-alpha.46
+
+### Patch Changes
+
+- Updated dependencies [[`fec8078`](https://github.com/mattppal/mcut/commit/fec8078ba57d9d74f2b6da7e711e26ee86bf4371)]:
+  - @mcut/mcp-server@0.1.0-alpha.34
+
 ## 0.1.1-alpha.45
 
 ### Patch Changes

@@ -36,18 +36,23 @@ function sourceToTimeline(project: Project, elementId: ElementId, ranges: readon
   })
 }
 
-function planRangeRemoval(project: Project, input: RemoveRangesInput): CommandOfType<'removeRanges'> {
-  const rounded = input.ranges.map((range) => ({ startMs: Math.max(0, Math.round(range.startMs)), endMs: Math.round(range.endMs) }))
-  if (input.time !== 'source') {
-    if (input.elementId)
-      throw new CommandError(
-        'invalid-payload',
-        'remove_ranges reads elementId only with time "source". Omit it for timeline ranges such as find_retakes candidates.',
-      )
-    return { type: 'removeRanges', ranges: rounded }
+const roundRanges = (ranges: readonly Range[]): Range[] =>
+  ranges.map((range) => ({ startMs: Math.max(0, Math.round(range.startMs)), endMs: Math.round(range.endMs) }))
+
+export function timelineRangeRemoval(input: RemoveRangesInput): CommandOfType<'removeRanges'> {
+  if (input.elementId) {
+    throw new CommandError(
+      'invalid-payload',
+      'remove_ranges reads elementId only with time "source". Omit it for timeline ranges such as find_retakes candidates.',
+    )
   }
+  return { type: 'removeRanges', ranges: roundRanges(input.ranges) }
+}
+
+function planRangeRemoval(project: Project, input: RemoveRangesInput): CommandOfType<'removeRanges'> {
+  if (input.time !== 'source') return timelineRangeRemoval(input)
   if (!input.elementId) throw new CommandError('invalid-payload', 'remove_ranges with time "source" needs elementId')
-  return { type: 'removeRanges', ranges: sourceToTimeline(project, input.elementId, rounded) }
+  return { type: 'removeRanges', ranges: sourceToTimeline(project, input.elementId, roundRanges(input.ranges)) }
 }
 
 function durationMs(project: Project): number {
