@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.35
+
+### Patch Changes
+
+- [#211](https://github.com/mattppal/mcut/pull/211) [`5b0c6d4`](https://github.com/mattppal/mcut/commit/5b0c6d43e0ebae5142c1357cd93e4adccfeb27c6) Thanks [@mattppal](https://github.com/mattppal)! - The `transact` description and its error for a rejected tool now list `remove_ranges` with timeline ranges among the calls it accepts. The `remove_ranges`, `apply_captions`, and `find_retakes` descriptions say to call `apply_captions` on its own after `remove_ranges`, never inside `transact`, and that one `find_retakes` call after the cut is enough.
+
 ## 0.1.0-alpha.34
 
 ### Patch Changes
