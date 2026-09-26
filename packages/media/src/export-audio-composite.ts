@@ -17,7 +17,7 @@ export interface AudibleSegment {
 
 const MAX_STRETCH_SOURCE_FRAMES = 32_000_000
 const REVERSED_CHUNK_FRAMES = 8_000_000
-const DECODER_LEAD_FRAMES = 2_048
+const DECODER_LEAD_FRAMES = 8_192
 
 interface CompositeAudio {
   channels: Float32Array[]
