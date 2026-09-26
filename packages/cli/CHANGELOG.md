@@ -1,5 +1,14 @@
 # @mcut/cli
 
+## 0.1.0-alpha.15
+
+### Patch Changes
+
+- Updated dependencies [[`8e23a05`](https://github.com/mattppal/mcut/commit/8e23a054f987d7cdb3deef7866517164c63c351e)]:
+  - @mcut/timeline@0.1.0-alpha.14
+  - @mcut/editor@0.1.0-alpha.14
+  - @mcut/transcription@0.1.0-alpha.15
+
 ## 0.1.0-alpha.14
 
 ### Patch Changes

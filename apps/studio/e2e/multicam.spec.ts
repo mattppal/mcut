@@ -6,8 +6,10 @@ test('multicam: create from selection, style a slot shadow without crashing', as
   await openEditor(page, editorUrl)
   await importWebm(page, 'screen.webm')
   await importWebm(page, 'cam.webm')
+  if ((await page.locator('[data-mcut-lane]').count()) < 2) await page.getByTitle('Add track').click()
+  await expect(page.locator('[data-mcut-lane]')).toHaveCount(2)
   await dragAssetToLane(page, /screen.webm/, { offsetX: 120 })
-  await dragAssetToLane(page, /cam.webm/, { offsetX: 420 })
+  await dragAssetToLane(page, /cam.webm/, { laneIndex: 1, offsetX: 120 })
   await expect(clip(page)).toHaveCount(2)
 
   await clip(page).nth(0).click()
