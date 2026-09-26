@@ -30,6 +30,7 @@
     "bridge-catch-all",
     "bridge-malformed-host",
     "caption-word-order",
+    "captions-avoid-overlays",
     "center-person-mcp",
     "center-person-reframe",
     "cli-clean-voice",

@@ -1,5 +1,11 @@
 # @mcut/compositor
 
+## 0.1.0-alpha.16
+
+### Patch Changes
+
+- [#200](https://github.com/mattppal/mcut/pull/200) [`47f2eab`](https://github.com/mattppal/mcut/commit/47f2eab353bd22e9416c2d39c398f0169bc97b6b) Thanks [@mattppal](https://github.com/mattppal)! - Top and bottom captions now center in the space beside a picture-in-picture multicam slot, so a corner head overlay no longer covers them.
+
 ## 0.1.0-alpha.15
 
 ### Patch Changes
