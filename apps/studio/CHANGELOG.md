@@ -1,5 +1,13 @@
 # mcut-studio
 
+## 0.1.1-alpha.53
+
+### Patch Changes
+
+- Updated dependencies [[`8123049`](https://github.com/mattppal/mcut/commit/812304962348f29f74bf65a7cb439ed397087a49)]:
+  - @mcut/media@0.1.0-alpha.34
+  - @mcut/react@0.1.0-alpha.35
+
 ## 0.1.1-alpha.52
 
 ### Patch Changes

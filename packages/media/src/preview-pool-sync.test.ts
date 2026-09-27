@@ -92,3 +92,13 @@ test('a playing video element stays muted so its sound comes only from the previ
   pool.sync([{ assetId: asset.id, sourceTimeMs: 0, rate: 1 }], { isPlaying: true, playbackRate: 1 })
   expect({ muted: created.at(-1)?.muted, paused: created.at(-1)?.paused }).toEqual({ muted: true, paused: false })
 })
+
+test('a paused picture one 50 fps frame short of the playhead seeks to it', () => {
+  const asset: AssetRef = { id: 'a-frames', kind: 'video', src: 'blob:frames', nativePreview: true }
+  const pool = new PreviewMediaPool(() => asset)
+  const paused = { isPlaying: false, playbackRate: 1 }
+  pool.sync([{ assetId: asset.id, sourceTimeMs: 1000, rate: 1 }], paused)
+  const video = created.at(-1)
+  pool.sync([{ assetId: asset.id, sourceTimeMs: 1020, rate: 1 }], paused)
+  expect(video?.currentTime).toBe(1.02)
+})

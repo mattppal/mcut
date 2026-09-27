@@ -103,6 +103,7 @@
     "operator-error-codes",
     "paused-preview-idle",
     "preview-blur-render-scale",
+    "preview-pause-idle",
     "preview-timed-audio",
     "r6-format",
     "react-use-latest",

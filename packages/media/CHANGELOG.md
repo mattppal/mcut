@@ -1,5 +1,11 @@
 # @mcut/media
 
+## 0.1.0-alpha.34
+
+### Patch Changes
+
+- [#215](https://github.com/mattppal/mcut/pull/215) [`8123049`](https://github.com/mattppal/mcut/commit/812304962348f29f74bf65a7cb439ed397087a49) Thanks [@mattppal](https://github.com/mattppal)! - A paused preview playhead follows the sound still playing out after a pause and comes to rest at the middle of the pause fade, so a play from pause starts on the frame last shown with no jump and no skipped frames. The preview `AudioContext` suspends two seconds after the pause fade has been heard, so an idle paused editor stops spending CPU on audio. Preview sound anchors on the frame that schedules its voices, so a slow frame no longer trims the start of a play. A paused preview picture seeks to the playhead when it sits more than 5 ms away.
+
 ## 0.1.0-alpha.33
 
 ### Minor Changes

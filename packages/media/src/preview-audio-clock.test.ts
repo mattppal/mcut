@@ -147,6 +147,28 @@ describe('preview audio clock around the output start', () => {
     expect(audio.clockTimeMs(116)).toBe(2000)
   })
 
+  test('a context that moves past the start lead before the next frame anchors the sound on that frame instead of trimming it', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    renderedS = 0.56
+    audio.sync(project, playing(1000))
+    output.contextTime = 0.56
+    output.performanceTime = 160
+    expect(audio.clockTimeMs(176)).toBe(1000)
+  })
+
+  test('a play with every due source already open anchors on the frame it starts', () => {
+    renderedS = 0.5
+    output.contextTime = 0.49
+    output.performanceTime = 100
+    audio.sync(createProject(), playing(1000))
+    expect(audio.clockTimeMs(160)).toBeCloseTo(1025, 6)
+  })
+
   test('a second rate change before the first handoff sounds keeps the sounding epoch and hands off from it', async () => {
     const project = toneProject()
     renderedS = 0.5
@@ -181,10 +203,10 @@ describe('preview audio clock around the output start', () => {
     expect(sounding?.disconnected).toBe(false)
     expect(sounding?.curveStarts.at(-1)).toBeCloseTo(1.025, 3)
     audio.sync(project, playing(1420))
-    expect(audio.clockTimeMs(116)).toBe(1500)
+    expect(audio.clockTimeMs(116)).toBe(1502)
   })
 
-  test('paused frames keep the fading sound until its stop, and the first frame of a play holds there', async () => {
+  test('paused frames keep the fading sound until its stop, and the paused clock holds at the playhead until the sound passes it', async () => {
     const project = toneProject()
     renderedS = 0.5
     output.contextTime = 0.5
@@ -198,10 +220,72 @@ describe('preview audio clock around the output start', () => {
     renderedS = 0.991
     audio.sync(project, { ...playing(1420), isPlaying: false })
     expect(sounding?.disconnected).toBe(false)
-    expect(audio.clockTimeMs(116)).toBe(1500)
+    expect(audio.clockTimeMs(116)).toBe(1420)
     renderedS = 1.1
     audio.sync(project, { ...playing(1420), isPlaying: false })
     expect(sounding?.disconnected).toBe(true)
+  })
+
+  test('a paused clock follows the fading sound to its stop and holds there, and a play from there starts at the stop', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, playing(1000))
+    renderedS = 0.975
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    output.contextTime = 0.95
+    output.performanceTime = 500
+    expect(audio.clockTimeMs(516)).toBeCloseTo(1441, 6)
+    audio.sync(project, { ...playing(1441), isPlaying: false })
+    renderedS = 1.2
+    output.contextTime = 1.1
+    output.performanceTime = 650
+    expect(audio.clockTimeMs(666)).toBe(1502)
+    audio.sync(project, { ...playing(1502), isPlaying: false })
+    expect(audio.clockTimeMs(682)).toBe(1502)
+    audio.sync(project, playing(1502))
+    expect(audio.clockTimeMs(698)).toBe(1502)
+  })
+
+  test('a play above the audible rate from a paused stop leaves the playhead on the wall clock', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, playing(1000))
+    renderedS = 0.975
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    audio.sync(project, playing(1420, 8))
+    expect(audio.clockTimeMs(116)).toBeNull()
+  })
+
+  test('a pause suspends the context once its faded stop has been heard for the idle period, and a play then holds at the stop while it resumes', async () => {
+    const project = toneProject()
+    renderedS = 0.5
+    output.contextTime = 0.5
+    output.performanceTime = 100
+    audio.sync(project, playing(1000))
+    await settle()
+    audio.sync(project, playing(1000))
+    renderedS = 0.975
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    renderedS = 5
+    output.contextTime = 3.02
+    output.performanceTime = 2600
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    const running = contexts[0]?.state
+    output.contextTime = 3.04
+    output.performanceTime = 2620
+    audio.sync(project, { ...playing(1420), isPlaying: false })
+    const idle = contexts[0]?.state
+    resumeLands = false
+    audio.sync(project, playing(1420))
+    expect([running, idle, audio.clockTimeMs(2636)]).toEqual(['running', 'suspended', 1502])
   })
 
   test('a seek during a pause starts the next play where the seek landed', async () => {
