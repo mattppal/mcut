@@ -31,7 +31,11 @@ function mustBeZoomable(element: TimelineElement): ZoomableElement {
   return element
 }
 
-function withZooms(project: Project, elementId: string, update: (zooms: ZoomRegion[], element: ZoomableElement) => { zooms: ZoomRegion[]; touched: ZoomRegion | null }): Project {
+function withZooms(
+  project: Project,
+  elementId: string,
+  update: (zooms: ZoomRegion[], element: ZoomableElement) => { zooms: ZoomRegion[]; touched: ZoomRegion | null },
+): Project {
   const { track, element: located } = mustLocate(project, elementIdSchema.parse(elementId))
   const element = mustBeZoomable(located)
   const { zooms, touched } = update([...(element.zooms ?? [])], element)
@@ -93,7 +97,10 @@ function addAcrossPieces(project: Project, elementId: string, zoom: ZoomRegion):
     throw new CommandError('out-of-bounds', `timeline ${startMs}ms is not on a ${target.type} piece on the track of "${target.id}"`)
   }
   if (last.startMs + last.durationMs < endMs) {
-    throw new CommandError('out-of-bounds', `zoom "${zoom.id}" runs to timeline ${endMs}ms, past the last ${target.type} piece, which ends at ${last.startMs + last.durationMs}ms`)
+    throw new CommandError(
+      'out-of-bounds',
+      `zoom "${zoom.id}" runs to timeline ${endMs}ms, past the last ${target.type} piece, which ends at ${last.startMs + last.durationMs}ms`,
+    )
   }
   const taken = new Set(listZoomRegions(project).map((z) => z.id))
   if (taken.has(zoom.id)) throw new CommandError('invalid-payload', `zoom "${zoom.id}" already exists`)

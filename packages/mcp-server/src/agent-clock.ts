@@ -5,4 +5,5 @@ export function onTimelineClock<T extends object>(commandName: string, input: T)
   return { ...input, time: 'timeline' }
 }
 
-export const commandsOnTimelineClock = <T extends { type: string }>(commands: readonly T[]): T[] => commands.map((command) => onTimelineClock(command.type, command))
+export const commandsOnTimelineClock = <T extends { type: string }>(commands: readonly T[]): T[] =>
+  commands.map((command) => onTimelineClock(command.type, command))

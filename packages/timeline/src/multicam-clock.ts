@@ -64,7 +64,10 @@ export function findCutIndex(project: Project, element: MulticamElement, ms: num
     undefined,
   )
   if (!nearest || Math.abs(nearest.timelineMs - ms) > frameMs) {
-    throw new CommandError('unknown-cut', `no cut on "${element.id}" at timeline ${ms}ms; its cuts are at timeline ${cuts.map((c) => `${c.timelineMs}ms`).join(', ')}`)
+    throw new CommandError(
+      'unknown-cut',
+      `no cut on "${element.id}" at timeline ${ms}ms; its cuts are at timeline ${cuts.map((c) => `${c.timelineMs}ms`).join(', ')}`,
+    )
   }
   return element.angles.findIndex((a) => a.atMs === nearest.atMs)
 }

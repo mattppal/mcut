@@ -103,7 +103,7 @@ export const setAngleLayout = defineCommand({
   type: 'setAngleLayout',
   description:
     'Change which layout a multicam span uses without cutting (the paused "correct this take" action). ' +
-    "`atMs` is the span's cut time on the clock in `time`; with time \"timeline\" the piece's start picks its opening span.",
+    '`atMs` is the span\'s cut time on the clock in `time`; with time "timeline" the piece\'s start picks its opening span.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     atMs: z.number().int().nonnegative(),
