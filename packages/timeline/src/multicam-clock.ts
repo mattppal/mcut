@@ -8,7 +8,7 @@ export const angleClockSchema = z
   .enum(['source', 'timeline'])
   .describe(
     'Clock for the cut times. "timeline" is project timeline ms, where the playhead sits and get_summary lists cuts, and must fall inside this piece. ' +
-      '"source" is the synced group clock. Omitted means "source" in the SDK; the MCP server fills in "timeline".',
+      '"source" is the synced group clock, the only clock a reversed piece takes. Omitted means "source" in the SDK; the MCP server fills in "timeline".',
   )
   .optional()
 
@@ -35,10 +35,17 @@ function outsidePiece(project: Project, element: MulticamElement, timelineMs: nu
   )
 }
 
+function mustPlayForward(element: MulticamElement): void {
+  if (element.reversed) {
+    throw new CommandError('unsupported', `"${element.id}" plays reversed, so give its cut times with time "source", read from its angles list`)
+  }
+}
+
 export function resolveCutTime(project: Project, element: MulticamElement, ms: number, time: AngleClock): number {
   if (time === 'timeline') {
+    mustPlayForward(element)
     if (ms < element.startMs || ms >= element.startMs + element.durationMs) throw outsidePiece(project, element, ms)
-    return Math.round(getSourceTimeMs(element, ms - element.startMs))
+    return Math.floor(getSourceTimeMs(element, ms - element.startMs))
   }
   const { lowMs, highMs } = sourceWindow(element)
   if (ms < lowMs || ms > highMs) {
@@ -51,12 +58,13 @@ export function resolveCutTime(project: Project, element: MulticamElement, ms: n
   return ms
 }
 
-export function findCutIndex(project: Project, element: MulticamElement, ms: number, time: AngleClock): number {
+export function findCut(project: Project, element: MulticamElement, ms: number, time: AngleClock): { index: number; opening: boolean } {
   if (time !== 'timeline') {
     const index = element.angles.findIndex((a) => a.atMs === ms)
     if (index === -1) throw new CommandError('unknown-cut', `no cut at source ${ms}ms`)
-    return index
+    return { index, opening: index === 0 }
   }
+  mustPlayForward(element)
   const frameMs = 1000 / project.fps
   const cuts = getVisibleAngleCuts(element).map((cut) => ({ atMs: cut.atMs, timelineMs: Math.round(element.startMs + cut.localMs) }))
   const nearest = cuts.reduce<(typeof cuts)[number] | undefined>(
@@ -69,7 +77,7 @@ export function findCutIndex(project: Project, element: MulticamElement, ms: num
       `no cut on "${element.id}" at timeline ${ms}ms; its cuts are at timeline ${cuts.map((c) => `${c.timelineMs}ms`).join(', ')}`,
     )
   }
-  return element.angles.findIndex((a) => a.atMs === nearest.atMs)
+  return { index: element.angles.findIndex((a) => a.atMs === nearest.atMs), opening: nearest === cuts[0] }
 }
 
 export function withAnglesInWindow(element: TimelineElement): TimelineElement {
@@ -77,6 +85,9 @@ export function withAnglesInWindow(element: TimelineElement): TimelineElement {
   const { lowMs, highMs } = sourceWindow(element)
   const openIndex = getActiveAngleIndex(element.angles, lowMs)
   const closeIndex = element.reversed ? getActiveAngleIndex(element.angles, highMs) : -1
-  const angles = element.angles.filter((a, i) => i === openIndex || i === closeIndex || (a.atMs > lowMs && a.atMs < highMs))
-  return { ...element, angles }
+  const played = element.angles.flatMap((a, i) => (i === openIndex || i === closeIndex || (a.atMs > lowMs && a.atMs < highMs) ? [i] : []))
+  const reach = element.angleTransition ? 2 : 0
+  const first = Math.max(0, Math.min(...played) - reach)
+  const last = Math.max(...played) + reach
+  return { ...element, angles: element.angles.slice(first, last + 1) }
 }

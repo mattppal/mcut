@@ -21,10 +21,12 @@ from its start shifts the regions with the content.
 `addZoomRegion` and `updateZoomRegion` take `time`. `"element"`, the SDK
 default, reads `atMs` as element-local ms. `"timeline"`, the MCP server
 default, reads it as project timeline ms. With `"timeline"`, `addZoomRegion`
-covers that timeline range on every piece of the same kind on the element's
-track, so a zoom over a cut between two pieces is one command. Each piece after
-the first gets a copy with `-r` appended to the id. A range that starts off a
-piece or runs past the last piece is rejected.
+covers that timeline range on every abutting piece of the same media on the
+element's track, so a zoom over a cut between two pieces is one command. Each
+piece after the first gets a copy with `-r` appended to the id, and each copy
+updates on its own. `updateZoomRegion` only needs the region to overlap the
+element, so those copies stay editable. A range that starts off a piece, runs
+past the last piece, or crosses a gap is rejected.
 
 ```ts
 engine.dispatch({

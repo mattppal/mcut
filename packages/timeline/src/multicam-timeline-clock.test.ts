@@ -3,7 +3,7 @@ import { applyCommand } from './commands'
 import { CommandError } from './errors'
 import type { ElementId } from './id'
 import { createProject, type MulticamElement, type Project } from './model'
-import { getActiveLayout } from './multicam'
+import { getActiveLayout, getAngleTransitionAt, getMulticamGroupTimeMs } from './multicam'
 import { summarizeProject } from './summarize'
 import { thrownBy } from './test-helpers'
 import { getSlotView, listZoomRegions } from './zoom-regions'
@@ -161,7 +161,64 @@ describe('zooms in timeline time on a multicam cut into pieces', () => {
     let next = applyCommand(cut, { type: 'addZoomRegion', elementId: id, zoom, time: 'timeline' })
     next = applyCommand(next, { type: 'updateZoomRegion', elementId: id, zoomId: 'z-punch', patch: { atMs: 15_000 }, time: 'timeline' })
     expect(listZoomRegions(next)[0]?.startMs).toBe(15_000)
-    const outside = thrownBy(() => applyCommand(next, { type: 'updateZoomRegion', elementId: id, zoomId: 'z-punch', patch: { atMs: 3000 }, time: 'timeline' }))
+    const outside = thrownBy(() => applyCommand(next, { type: 'updateZoomRegion', elementId: id, zoomId: 'z-punch', patch: { atMs: 1000 }, time: 'timeline' }))
     expect(String(outside)).toContain('which plays timeline 5000 to 23000ms')
+  })
+
+  test('a zoom spread over a cut stays editable on each piece', () => {
+    const cut = cutRetake(withMulticam())
+    let next = applyCommand(cut, { type: 'addZoomRegion', elementId: pieces(cut)[0].id, zoom: { ...zoom, atMs: 4000 }, time: 'timeline' })
+    const [left, right] = pieces(next)
+    next = applyCommand(next, { type: 'updateZoomRegion', elementId: left.id, zoomId: 'z-punch', patch: { scale: 1.3 } })
+    next = applyCommand(next, { type: 'updateZoomRegion', elementId: right.id, zoomId: 'z-punch-r', patch: { scale: 1.3 } })
+    expect(listZoomRegions(next).map((z) => z.scale)).toEqual([1.3, 1.3])
+  })
+
+  test('a timeline zoom across a gap between pieces is rejected', () => {
+    let project = applyCommand(withMulticam(), { type: 'splitElement', elementId: 'e-mc', atMs: 10_000, rightElementId: 'e-right' })
+    project = applyCommand(project, { type: 'trimEdge', elementId: 'e-right', edge: 'start', deltaMs: 2000 })
+    const error = thrownBy(() => applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { ...zoom, atMs: 9500 }, time: 'timeline' }))
+    expect(String(error)).toContain('crosses a gap before "e-right"')
+  })
+})
+
+describe('timeline clock edge cases', () => {
+  test('a reversed piece takes cut times on the source clock only', () => {
+    const project = applyCommand(withMulticam(), { type: 'updateElement', elementId: 'e-mc', patch: { reversed: true } })
+    const error = thrownBy(() => applyCommand(project, { type: 'addAngleCut', elementId: 'e-mc', atMs: 10_000, layoutId: 'l-cam', time: 'timeline' }))
+    expect(error).toBeInstanceOf(CommandError)
+    expect(error instanceof CommandError && error.code).toBe('unsupported')
+  })
+
+  test('on a sped-up piece the cut is active from the exact timeline ms asked for', () => {
+    const project = applyCommand(withMulticam(), { type: 'setElementSpeed', elementId: 'e-mc', speed: 1.5 })
+    const next = applyCommand(project, { type: 'addAngleCut', elementId: 'e-mc', atMs: 1001, layoutId: 'l-cam', time: 'timeline' })
+    const element = pieces(applyCommand(next, { type: 'splitElement', elementId: 'e-mc', atMs: 15_000 }))[0]
+    expect(layoutAt(next, element, 1000)).toBe('l-screen')
+    expect(layoutAt(next, element, 1001)).toBe('l-cam')
+  })
+
+  test('splitting keeps the cuts that shape an angle transition at the piece edge', () => {
+    let project = withMulticam([
+      { atMs: 0, layoutId: 'l-screen' },
+      { atMs: 10_000, layoutId: 'l-cam' },
+      { atMs: 20_000, layoutId: 'l-screen' },
+    ])
+    project = applyCommand(project, { type: 'setMulticamAngleTransition', elementId: 'e-mc', transition: { type: 'dissolve', durationMs: 1000 } })
+    const before = getAngleTransitionAt(pieces(applyCommand(project, { type: 'splitElement', elementId: 'e-mc', atMs: 25_000 }))[0], 10_100)
+    const split = applyCommand(project, { type: 'splitElement', elementId: 'e-mc', atMs: 10_100, rightElementId: 'e-right' })
+    const right = pieces(split)[1]
+    expect(getAngleTransitionAt(right, getMulticamGroupTimeMs(right, 10_100))).toEqual(before)
+    expect(before).not.toBeNull()
+  })
+
+  test('the opening cut of a trimmed piece cannot be removed by timeline time', () => {
+    let project = withMulticam([
+      { atMs: 0, layoutId: 'l-screen' },
+      { atMs: 4000, layoutId: 'l-cam' },
+    ])
+    project = applyCommand(project, { type: 'trimEdge', elementId: 'e-mc', edge: 'start', deltaMs: 6000 })
+    const error = thrownBy(() => applyCommand(project, { type: 'removeAngleCut', elementId: 'e-mc', atMs: 6000, time: 'timeline' }))
+    expect(String(error)).toContain('cannot be removed')
   })
 })

@@ -228,14 +228,14 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',
   list_zooms:
     'List every zoom region in the project in one call: element id, source slot for multicam, element-local atMs, timeline startMs and endMs, ' +
-    'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. Pass startMs back as atMs, since edit_zooms takes timeline ms. Read this before revising zooms.',
+    'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. startMs and endMs are the part the element plays; the zoom itself starts at timeline element start plus atMs, which is the timeline atMs edit_zooms takes. Read this before revising zooms.',
   edit_zooms:
     'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
     'If any edit is rejected, none apply. ' +
     'atMs is timeline ms unless an edit sets time "element". An added zoom whose range crosses a cut between pieces lands on each piece it covers, ' +
-    'with "-r" added to the id on each piece after the first, so one edit covers the range. ' +
+    'with "-r" added to the id on each piece after the first, so one edit covers the range. Each copy updates and removes on its own. ' +
     'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.3x) with rect or focus on the discussed screen region. ' +
-    'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the source the shot shows so the other slots stay put, camera for a punch-in on the head-only shot or the screen key for a detail on the screen, or omit source to zoom the whole composite. atMs is element-local, and after cuts each multicam piece holds its own zooms.',
+    'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the source the shot shows so the other slots stay put, camera for a punch-in on the head-only shot or the screen key for a detail on the screen, or omit source to zoom the whole composite.',
   center_person:
     'Live bridge only: find the face on device in the connected editor and keep the person in frame as one undoable edit. Waits for the analysis. ' +
     'On a video, it crops to aspect, 9:16 by default, and the crop follows the face. ' +

@@ -4,7 +4,7 @@ import { CommandError } from '../errors'
 import { createElementId, createTrackId, type AssetId, type ElementId } from '../id'
 import { elementIdSchema, MIN_ELEMENT_DURATION_MS, validateElement, type Project, type TimelineElement, type Track } from '../model'
 import { getVisibleAngleCuts, isAudioOnlySource } from '../multicam'
-import { angleClockSchema, findCutIndex, resolveCutTime } from '../multicam-clock'
+import { angleClockSchema, findCut, resolveCutTime } from '../multicam-clock'
 import { transitionSchema } from '../transitions'
 import { listZoomRegions, renameSplitCopies, zoomRegionEndMs } from '../zoom-regions'
 import { defineCommand, mustGetLayout, mustLocate, replaceTrack } from './shared'
@@ -66,9 +66,9 @@ export const moveAngleCut = defineCommand({
   }),
   reduce: (project, payload) =>
     withMulticam(project, payload.elementId, (element) => {
-      const index = findCutIndex(project, element, payload.fromMs, payload.time)
+      const { index, opening } = findCut(project, element, payload.fromMs, payload.time)
       const previous = element.angles[index - 1]
-      if (!previous) {
+      if (!previous || opening) {
         throw new CommandError('invalid-payload', 'the first cut opens the schedule and cannot move; setAngleLayout changes its layout')
       }
       const next = element.angles[index + 1]
@@ -91,8 +91,8 @@ export const removeAngleCut = defineCommand({
   }),
   reduce: (project, payload) =>
     withMulticam(project, payload.elementId, (element) => {
-      const index = findCutIndex(project, element, payload.atMs, payload.time)
-      if (index === 0) {
+      const { index, opening } = findCut(project, element, payload.atMs, payload.time)
+      if (opening) {
         throw new CommandError('invalid-payload', 'the first cut opens the schedule and cannot be removed; setAngleLayout changes its layout')
       }
       return { ...element, angles: element.angles.filter((_, i) => i !== index) }
@@ -113,7 +113,7 @@ export const setAngleLayout = defineCommand({
   reduce: (project, payload) => {
     mustGetLayout(project, payload.layoutId)
     return withMulticam(project, payload.elementId, (element) => {
-      const index = findCutIndex(project, element, payload.atMs, payload.time)
+      const { index } = findCut(project, element, payload.atMs, payload.time)
       const angles = element.angles.map((a, i) => (i === index ? { ...a, layoutId: payload.layoutId } : a))
       return { ...element, angles }
     })

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CommandError } from '../errors'
+import { assertNever, CommandError } from '../errors'
 import { createZoomId } from '../id'
 import { elementIdSchema, type Project, type TimelineElement } from '../model'
 import {
@@ -35,12 +35,13 @@ function withZooms(
   project: Project,
   elementId: string,
   update: (zooms: ZoomRegion[], element: ZoomableElement) => { zooms: ZoomRegion[]; touched: ZoomRegion | null },
+  fit: 'inside' | 'overlap' = 'inside',
 ): Project {
   const { track, element: located } = mustLocate(project, elementIdSchema.parse(elementId))
   const element = mustBeZoomable(located)
   const { zooms, touched } = update([...(element.zooms ?? [])], element)
   if (touched) {
-    mustFitWindow(element, touched)
+    mustFitWindow(element, touched, fit)
     mustHaveSource(element, touched)
   }
   return replaceTrack(project, track.id, (t) => ({ ...t, elements: t.elements.map((e) => (e.id === element.id ? withSortedZooms(element, zooms) : e)) }))
@@ -54,8 +55,9 @@ function withSortedZooms(element: ZoomableElement, zooms: readonly ZoomRegion[])
   return next
 }
 
-function mustFitWindow(element: ZoomableElement, zoom: ZoomRegion): void {
-  if (zoom.atMs >= 0 && zoomRegionEndMs(zoom) <= element.durationMs) return
+function mustFitWindow(element: ZoomableElement, zoom: ZoomRegion, fit: 'inside' | 'overlap'): void {
+  const endMs = zoomRegionEndMs(zoom)
+  if (fit === 'inside' ? zoom.atMs >= 0 && endMs <= element.durationMs : zoom.atMs < element.durationMs && endMs > 0) return
   const at = (localMs: number) => `${localMs}ms (timeline ${element.startMs + localMs}ms)`
   throw new CommandError(
     'out-of-bounds',
@@ -79,9 +81,24 @@ function mustFind(zooms: readonly ZoomRegion[], zoomId: string): ZoomRegion {
   return zoom
 }
 
-function takesZoom(target: ZoomableElement, zoom: ZoomRegion, element: TimelineElement): element is ZoomableElement {
-  if (element.type !== target.type) return false
-  return zoom.source === undefined || (element.type === 'multicam' && element.sources.some((s) => s.key === zoom.source))
+function mediaOf(element: TimelineElement): string | null {
+  switch (element.type) {
+    case 'video':
+    case 'image':
+      return `${element.type}:${element.assetId}`
+    case 'multicam':
+      return `multicam:${element.sources.map((s) => `${s.key}=${s.assetId}`).join(',')}`
+    case 'audio':
+    case 'text':
+    case 'caption':
+      return null
+    default:
+      return assertNever(element)
+  }
+}
+
+function takesZoom(target: ZoomableElement, element: TimelineElement): element is ZoomableElement {
+  return mediaOf(element) === mediaOf(target)
 }
 
 function addAcrossPieces(project: Project, elementId: string, zoom: ZoomRegion): Project {
@@ -90,7 +107,7 @@ function addAcrossPieces(project: Project, elementId: string, zoom: ZoomRegion):
   mustHaveSource(target, zoom)
   const startMs = zoom.atMs
   const endMs = zoomRegionEndMs(zoom)
-  const pieces = track.elements.filter((e) => takesZoom(target, zoom, e) && e.startMs < endMs && e.startMs + e.durationMs > startMs)
+  const pieces = track.elements.filter((e) => takesZoom(target, e) && e.startMs < endMs && e.startMs + e.durationMs > startMs)
   const first = pieces.find((e) => e.startMs <= startMs)
   const last = pieces.at(-1)
   if (!first || !last) {
@@ -102,6 +119,11 @@ function addAcrossPieces(project: Project, elementId: string, zoom: ZoomRegion):
       `zoom "${zoom.id}" runs to timeline ${endMs}ms, past the last ${target.type} piece, which ends at ${last.startMs + last.durationMs}ms`,
     )
   }
+  const gap = pieces.find((piece, i) => {
+    const before = pieces[i - 1]
+    return before !== undefined && piece.startMs !== before.startMs + before.durationMs
+  })
+  if (gap) throw new CommandError('out-of-bounds', `zoom "${zoom.id}" crosses a gap before "${gap.id}"; place one zoom on each side of the gap`)
   const taken = new Set(listZoomRegions(project).map((z) => z.id))
   if (taken.has(zoom.id)) throw new CommandError('invalid-payload', `zoom "${zoom.id}" already exists`)
   const copies = new Map<string, ZoomRegion>()
@@ -128,7 +150,7 @@ export const addZoomRegion = defineCommand({
   description:
     'Add a zoom region to a video, image, or multicam element: zoom in over inMs, hold, zoom out over outMs, with easing and motion blur. ' +
     'Defaults to the subtlePunchIn preset (1.15x, easeOutExpo, motion blur 0.5). ' +
-    'With time "timeline", atMs is project timeline ms and the zoom covers that timeline range across every piece of the same kind on the track, ' +
+    'With time "timeline", atMs is project timeline ms and the zoom covers that timeline range across every abutting piece of the same media on the track, ' +
     'so a zoom over a cut between two pieces is one call. Each piece after the first gets a copy with "-r" added to the id. ' +
     'On a multicam, source names the angle whose slots zoom, so the screen zooms while a camera overlay stays put. ' +
     'A multicam zoom without source zooms the whole composite, overlays included.',
@@ -148,15 +170,21 @@ export const updateZoomRegion = defineCommand({
   type: 'updateZoomRegion',
   description:
     'Patch one zoom region: timing (atMs, inMs, holdMs, outMs), target (focus and scale, or rect), easing, or motionBlur. ' +
-    'With time "timeline", atMs is project timeline ms and must keep the zoom inside this element.',
+    'With time "timeline", atMs is project timeline ms. The zoom must still overlap this element, so a copy spread over a cut stays editable. ' +
+    'Each copy of a spread zoom updates on its own.',
   payloadSchema: z.object({ elementId: elementIdSchema, zoomId: z.string().min(1), patch: zoomRegionPatchSchema, time: zoomClockSchema }),
   reduce: (project, payload) =>
-    withZooms(project, payload.elementId, (zooms, element) => {
-      const { atMs } = payload.patch
-      const patch = payload.time === 'timeline' && atMs !== undefined ? { ...payload.patch, atMs: atMs - element.startMs } : payload.patch
-      const touched = patchZoomRegion(mustFind(zooms, payload.zoomId), patch)
-      return { zooms: zooms.map((z) => (z.id === touched.id ? touched : z)), touched }
-    }),
+    withZooms(
+      project,
+      payload.elementId,
+      (zooms, element) => {
+        const { atMs } = payload.patch
+        const patch = payload.time === 'timeline' && atMs !== undefined ? { ...payload.patch, atMs: atMs - element.startMs } : payload.patch
+        const touched = patchZoomRegion(mustFind(zooms, payload.zoomId), patch)
+        return { zooms: zooms.map((z) => (z.id === touched.id ? touched : z)), touched }
+      },
+      'overlap',
+    ),
 })
 
 export const removeZoomRegion = defineCommand({
