@@ -132,7 +132,11 @@ interface TranscriptionHints {
   vocabulary: readonly string[]
 }
 
-async function transcribeSource(source: ElementAudioSource, { language, vocabulary }: TranscriptionHints, deps: EnsureTranscriptDeps): Promise<TranscriptResult> {
+async function transcribeSource(
+  source: ElementAudioSource,
+  { language, vocabulary }: TranscriptionHints,
+  deps: EnsureTranscriptDeps,
+): Promise<TranscriptResult> {
   const wav = await extractSourceAudio(source, deps)
   if (!wav) {
     throw new Error(`"${source.asset.name ?? source.asset.id}" has no audio track.`)

@@ -55,11 +55,12 @@ interface ProjectMediaContext {
     wordCount: number
     startMs?: number
     endMs?: number
+    vocabulary: string[]
   }
 }
 ```
 
-A structured view of the whole project, summary fields, optional playback, selection, assets with usage, tracks with elements, markers, and transcript counts.
+A structured view of the whole project, summary fields, optional playback, selection, assets with usage, tracks with elements, markers, and transcript counts with the project vocabulary.
 
 ### ProjectMediaElementContext
 
