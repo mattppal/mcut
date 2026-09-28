@@ -6,7 +6,7 @@ import type { ToolCall } from './types'
 
 export type Capability = 'exists' | 'partial' | 'missing'
 
-export type FailureCause = 'agent-misuse' | 'tool-error' | 'missing-capability'
+export type FailureCause = 'agent-misuse' | 'tool-error' | 'missing-capability' | 'env-blocked'
 
 export interface EditStep {
   id: string
@@ -27,7 +27,10 @@ export class EditSpecError extends Error {}
 
 const MEDIA_EXTENSIONS = new Set(['.mp4', '.mov', '.mkv', '.webm', '.m4v', '.wav', '.mp3', '.m4a', '.aac', '.flac', '.png', '.jpg', '.jpeg'])
 
-const VALIDATION_ERROR = /invalid|expected|required|unknown tool|unrecognized|not found|does not exist|no element|no asset|zod|must be/i
+const VALIDATION_ERROR =
+  /out-of-bounds|outside the|invalid|expected|required|unknown tool|unrecognized|not found|does not exist|no element|no asset|zod|must be/i
+
+const ENV_BLOCKED = /huggingface\.co|hf\.co/
 
 const CANNOT =
   /\b(cannot|can't|can not|unable|not (?:possible|supported|available)|no (?:tool|way|support)|doesn't support|does not support|isn't supported|lack)/i
@@ -101,6 +104,7 @@ export function loadEditSpec(file: string, mediaDir: string | undefined): EditSp
 
 export function classifyFailure(step: EditStep, calls: ToolCall[], finalMessage: string): FailureCause {
   const errors = calls.filter((call) => call.isError)
+  if (errors.length > 0 && errors.every((call) => ENV_BLOCKED.test(call.result))) return 'env-blocked'
   const internal = errors.filter((call) => !VALIDATION_ERROR.test(call.result))
   if (internal.length > 0) return 'tool-error'
   if (step.capability === 'missing' || CANNOT.test(finalMessage)) return 'missing-capability'

@@ -2,7 +2,7 @@ import { getProjectDurationMs, type LayoutSlot, type Project } from '@mcut/timel
 import { type OverlaySample, REFERENCE_LOOK, rectOffReference, sampleOverlay } from './export-frames'
 import { type CheckInput, type CheckResult, type CheckRule, elements, multicamOf, ofType, outcome, same, seconds, sourceAssetName } from './check-kit'
 import { RETAKE_RULES } from './retake-checks'
-import { SHOT_RULES } from './shot-checks'
+import { SHOT_RULES, screenSpans } from './shot-checks'
 import { ZOOM_RULES } from './zoom-checks'
 
 export class UnknownCheckError extends Error {}
@@ -194,14 +194,12 @@ const RULES: CheckRule[] = [
     ({ after, calls }) => {
       const done = calls.find((call) => call.name === 'get_export' && !call.isError && /"state":\s*"done"/.test(call.result))
       const path = done === undefined ? undefined : /"outputPath":\s*"([^"]+)"/.exec(done.result)?.[1]
-      const multicam = multicamOf(after)
-      if (path === undefined || multicam === undefined)
-        return { pass: false, detail: path === undefined ? 'no finished export to sample' : 'no multicam element' }
-      const spans = multicam.angles
-        .map((angle, index) => ({ angle, endMs: multicam.angles[index + 1]?.atMs ?? multicam.durationMs }))
-        .map(({ angle, endMs }) => ({
-          midMs: multicam.startMs + (angle.atMs + endMs) / 2,
-          slot: after.layouts.find((layout) => layout.id === angle.layoutId && layout.slots.some(isFullFrame))?.slots.find(inBottomRight),
+      if (path === undefined) return { pass: false, detail: 'no finished export to sample' }
+      const spans = screenSpans(after)
+        .sort((a, b) => b.timelineEndMs - b.timelineStartMs - (a.timelineEndMs - a.timelineStartMs))
+        .map((span) => ({
+          midMs: (span.timelineStartMs + span.timelineEndMs) / 2,
+          slot: after.layouts.find((layout) => layout.id === span.layoutId)?.slots.find(inBottomRight),
         }))
         .filter((span): span is { midMs: number; slot: LayoutSlot } => span.slot !== undefined)
         .slice(0, 3)

@@ -74,9 +74,6 @@ function screenSourceKeys(project: Project): Set<string> {
   )
 }
 
-const SPAN_COVERAGE_MIN = 0.8
-const SPAN_SPILL_MAX_MS = 2_000
-
 const labels = (list: Zoom[]): string => list.map((zoom) => zoom.label).join('; ')
 
 function addedZooms(before: Project, after: Project): Zoom[] {
@@ -159,26 +156,6 @@ export const ZOOM_RULES: CheckRule[] = [
         `every zoom targets the screen source. ${labels(onScreen)}`,
         found.length === 0 ? 'no new zoom in this step' : `${found.length - onScreen.length} zoom(s) scale the whole composite or the camera. ${labels(found)}`,
       )
-    },
-  ],
-  [
-    /^zoom covers ((?:\d+(?:\.\d+)?-\d+(?:\.\d+)?s ?)+)$/,
-    ({ after }, match) => {
-      const spans = [...(match[1] ?? '').matchAll(/(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)s/g)].map((span) => ({
-        startMs: Number(span[1]) * 1000,
-        endMs: Number(span[2]) * 1000,
-      }))
-      const screenKeys = screenSourceKeys(after)
-      const onScreen = zooms(after).filter((zoom) => zoom.ratio > 1 && zoom.source !== undefined && screenKeys.has(zoom.source))
-      const fits = (zoom: Zoom, span: { startMs: number; endMs: number }): boolean =>
-        Math.min(zoom.endMs, span.endMs) - Math.max(zoom.startMs, span.startMs) >= (span.endMs - span.startMs) * SPAN_COVERAGE_MIN &&
-        zoom.startMs >= span.startMs - SPAN_SPILL_MAX_MS &&
-        zoom.endMs <= span.endMs + SPAN_SPILL_MAX_MS
-      const missed = spans.filter((span) => !onScreen.some((zoom) => fits(zoom, span)))
-      const stray = onScreen.filter((zoom) => !spans.some((span) => fits(zoom, span)))
-      const seconds = (ms: number): string => (ms / 1000).toFixed(1)
-      const detail = `${spans.length - missed.length}/${spans.length} spans covered${missed.length > 0 ? `, missed ${missed.map((span) => `${seconds(span.startMs)}-${seconds(span.endMs)}s`).join(' ')}` : ''}${stray.length > 0 ? `, off-span zooms ${stray.map((zoom) => `${seconds(zoom.startMs)}-${seconds(zoom.endMs)}s`).join(' ')}` : ''}`
-      return outcome(missed.length === 0 && stray.length === 0, detail, detail)
     },
   ],
 ]

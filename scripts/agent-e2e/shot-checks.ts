@@ -2,6 +2,8 @@ import type { LayoutSlot, MulticamElement, Project } from '@mcut/timeline'
 import { type CheckRule, elements, outcome } from './check-kit'
 
 const OPENING_HOLD_MIN_MS = 8_000
+const MIN_SHOT_MS = 2_000
+const COVERAGE_MIN = 0.8
 const BOUNDARY_BEFORE_MS = 150
 const BOUNDARY_AFTER_MS = 400
 
@@ -47,6 +49,42 @@ function openingHeadMs(project: Project): number {
   const last = ordered(project).at(-1)
   return last === undefined ? 0 : last.startMs + last.durationMs
 }
+
+export interface ScreenSpan {
+  layoutId: string
+  sourceStartMs: number
+  sourceEndMs: number
+  timelineStartMs: number
+  timelineEndMs: number
+}
+
+export function screenSpans(project: Project): ScreenSpan[] {
+  return ordered(project).flatMap((piece) => {
+    const end = piece.trimStartMs + piece.durationMs
+    const cuts = [...piece.angles].sort((a, b) => a.atMs - b.atMs)
+    const bounds = [piece.trimStartMs, ...cuts.map((cut) => cut.atMs).filter((atMs) => atMs > piece.trimStartMs && atMs < end), end]
+    return bounds.slice(0, -1).flatMap((startMs, index): ScreenSpan[] => {
+      const cut = cuts.filter((candidate) => candidate.atMs <= startMs).at(-1)
+      const endMs = bounds[index + 1] ?? end
+      if (cut === undefined || shotOf(project, piece, cut.layoutId) !== 'screen') return []
+      return [
+        {
+          layoutId: cut.layoutId,
+          sourceStartMs: startMs,
+          sourceEndMs: endMs,
+          timelineStartMs: piece.startMs + (startMs - piece.trimStartMs),
+          timelineEndMs: piece.startMs + (endMs - piece.trimStartMs),
+        },
+      ]
+    })
+  })
+}
+
+const overlap = (a: { startMs: number; endMs: number }, b: { startMs: number; endMs: number }): number =>
+  Math.max(0, Math.min(a.endMs, b.endMs) - Math.max(a.startMs, b.startMs))
+
+const windows = (text: string): { startMs: number; endMs: number }[] =>
+  [...text.matchAll(/(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)s/g)].map((match) => ({ startMs: Number(match[1]) * 1000, endMs: Number(match[2]) * 1000 }))
 
 function spokenWords(project: Project): { text: string; startMs: number; endMs: number }[] {
   return elements(project)
@@ -108,6 +146,47 @@ export const SHOT_RULES: CheckRule[] = [
       const wrong = found.filter((entry) => entry.shot !== want)
       const detail = found.map((entry) => `${(entry.timeMs / 1000).toFixed(0)}s ${entry.shot ?? 'not played'}`).join(', ')
       return outcome(wrong.length === 0, detail, detail)
+    },
+  ],
+  [
+    /^screen shown during ((?:\d+(?:\.\d+)?-\d+(?:\.\d+)?s ?)+)$/,
+    ({ after }, match) => {
+      const shown = screenSpans(after).map((span) => ({ startMs: span.sourceStartMs, endMs: span.sourceEndMs }))
+      const found = windows(match[1] ?? '').map((window) => ({ window, ms: shown.reduce((sum, span) => sum + overlap(span, window), 0) }))
+      const detail = found.map(({ window, ms }) => `${window.startMs / 1000}-${window.endMs / 1000}s screen ${(ms / 1000).toFixed(1)}s`).join(', ')
+      return outcome(
+        found.every(({ ms }) => ms >= MIN_SHOT_MS),
+        detail,
+        detail,
+      )
+    },
+  ],
+  [
+    /^zoom covers shown ((?:\d+(?:\.\d+)?-\d+(?:\.\d+)?s ?)+)$/,
+    ({ after }, match) => {
+      const shown = screenSpans(after).map((span) => ({ startMs: span.sourceStartMs, endMs: span.sourceEndMs }))
+      const zooms = ordered(after).flatMap((piece) =>
+        (piece.zooms ?? [])
+          .filter((zoom) => zoom.scale > 1 && zoom.source !== undefined && isScreenKey(after, piece, zoom.source))
+          .map((zoom) => ({ startMs: piece.trimStartMs + zoom.atMs, endMs: piece.trimStartMs + zoom.atMs + zoom.inMs + zoom.holdMs + zoom.outMs })),
+      )
+      const spans = windows(match[1] ?? '')
+      const results = spans.map((span) => {
+        const visible = shown.reduce((sum, part) => sum + overlap(part, span), 0)
+        const zoomed = zooms.reduce((sum, zoom) => sum + overlap(zoom, span), 0)
+        return { span, visible, zoomed }
+      })
+      const due = results.filter((result) => result.visible >= MIN_SHOT_MS)
+      const missed = due.filter((result) => result.zoomed < result.visible * COVERAGE_MIN)
+      const stray = zooms.filter((zoom) => !spans.some((span) => overlap(zoom, span) > 0))
+      const label = (range: { startMs: number; endMs: number }): string => `${(range.startMs / 1000).toFixed(1)}-${(range.endMs / 1000).toFixed(1)}s`
+      const detail = [
+        results.map((result) => `${label(result.span)} shown ${(result.visible / 1000).toFixed(1)}s zoomed ${(result.zoomed / 1000).toFixed(1)}s`).join(', '),
+        stray.length > 0 ? `off-span zooms ${stray.map(label).join(' ')}` : '',
+      ]
+        .filter((part) => part.length > 0)
+        .join('. ')
+      return outcome(due.length > 0 && missed.length === 0 && stray.length === 0, detail, detail)
     },
   ],
 ]

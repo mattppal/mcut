@@ -20,7 +20,7 @@ const editRowSchema = z.object({
   changes: z.array(z.string()),
   checks: z.array(z.object({ check: z.string(), pass: z.boolean(), detail: z.string() })),
   pass: z.boolean(),
-  failure: z.enum(['agent-misuse', 'tool-error', 'missing-capability']).nullable(),
+  failure: z.enum(['agent-misuse', 'tool-error', 'missing-capability', 'env-blocked']).nullable(),
   stoppedBy: z.enum(['model', 'step-cap', 'wall-clock', 'error']),
   finalMessage: z.string(),
   durationMs: z.number(),
@@ -44,7 +44,7 @@ const list = (items: string[], empty: string): string => (items.length === 0 ? e
 const callLine = (call: ToolCall): string => `${call.isError ? '✗' : '✓'} \`${call.name}\` ${cell(JSON.stringify(call.args)).slice(0, 140)}`
 
 export function tally(rows: EditRow[]): Record<'pass' | FailureCause, number> {
-  const counts = { pass: 0, 'agent-misuse': 0, 'tool-error': 0, 'missing-capability': 0 }
+  const counts = { pass: 0, 'agent-misuse': 0, 'tool-error': 0, 'missing-capability': 0, 'env-blocked': 0 }
   for (const row of rows) counts[row.failure ?? 'pass'] += 1
   return counts
 }
@@ -53,7 +53,7 @@ export function editMarkdown(report: EditReport): string {
   const counts = tally(report.rows)
   const header = [
     `Driver ${report.driver} against ${report.app}. ${counts.pass}/${report.rows.length} edits passed.`,
-    `Failures by cause. agent misuse ${counts['agent-misuse']}, tool error ${counts['tool-error']}, missing capability ${counts['missing-capability']}.`,
+    `Failures by cause. agent misuse ${counts['agent-misuse']}, tool error ${counts['tool-error']}, missing capability ${counts['missing-capability']}, blocked by the environment ${counts['env-blocked']}.`,
     '',
     '| Edit | Verdict | Cause | Tool calls | Errors | Checks | What changed |',
     '| --- | --- | --- | ---: | ---: | --- | --- |',
