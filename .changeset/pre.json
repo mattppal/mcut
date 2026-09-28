@@ -37,6 +37,7 @@
     "clean-opening-retake-cuts",
     "cli-clean-voice",
     "compose-scratch",
+    "correct-transcript",
     "create-multicam-late-offset",
     "decoded-preview-first-frame",
     "deflake-use-web-socket-test",
