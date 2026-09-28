@@ -1,5 +1,14 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.41
+
+### Patch Changes
+
+- Updated dependencies [[`8969b9a`](https://github.com/mattppal/mcut/commit/8969b9a7cfb42c3a0b80a68bf3471c490accece2)]:
+  - @mcut/timeline@0.1.0-alpha.22
+  - @mcut/editor@0.1.0-alpha.23
+  - @mcut/transcription@0.1.0-alpha.25
+
 ## 0.1.0-alpha.40
 
 ### Minor Changes

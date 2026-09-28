@@ -160,6 +160,7 @@
     "whisper-word-timestamps",
     "zoom-blur-pixel-test",
     "zoom-drag-cannot-fit",
+    "zoom-one-motion",
     "zoom-overlap-whole-writes",
     "zoom-rect-cap",
     "zoom-region-gestures",
