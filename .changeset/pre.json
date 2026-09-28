@@ -38,6 +38,7 @@
     "clean-opening-retake-cuts",
     "cli-clean-voice",
     "compose-scratch",
+    "correct-transcript-list",
     "correct-transcript",
     "create-multicam-late-offset",
     "decoded-preview-first-frame",
