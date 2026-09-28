@@ -285,6 +285,24 @@ describe('zoom regions on a multicam slot', () => {
     expect((1 - windowX) * view.focus.x + windowX / 2).toBeCloseTo(0.43, 5)
   })
 
+  test('a zoom on a letterboxed contain slot stays inside the source and never jumps', () => {
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
+    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus: { x: 0.8, y: 0.5 } } })
+    const slot = project.layouts.find((l) => l.name === 'Screen + Cam')?.slots.find((s) => s.source === 'screen')
+    if (!slot) throw new Error('default layout lost its screen slot')
+    let previous = getZoomWindow(getSlotView(multicam(project), slot, 0, { x: 1.5, y: 1 }), { x: 1.5, y: 1 })
+    for (let ms = 1; ms <= 3000; ms++) {
+      const shown = getZoomWindow(getSlotView(multicam(project), slot, ms, { x: 1.5, y: 1 }), { x: 1.5, y: 1 })
+      if (shown.w < 1) expect([shown.x >= 0, shown.x + shown.w <= 1 + 1e-9]).toEqual([true, true])
+      expect(Math.abs(shown.x - previous.x)).toBeLessThan(0.01)
+      previous = shown
+    }
+  })
+
   test('renaming a source key carries its zooms along', () => {
     let project = applyCommand(projectWithScreenAndCam(), {
       type: 'createMulticam',

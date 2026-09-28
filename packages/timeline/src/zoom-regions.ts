@@ -171,12 +171,14 @@ function zoomViewAt(
   const { scale, focus } = phase.region
   const amount = amountAt(phase)
   const current = 1 + (scale - 1) * amount
-  const widthProgress = scale === 1 ? amount : (1 - 1 / current) / (1 - 1 / scale)
   const focusOn = (restAt: number, target: number, shown: number) => {
-    const from = restAt * (1 - shown)
-    const to = anchorOf(target, shown / scale) * (1 - shown / scale)
     const width = shown / current
-    return width >= 1 ? restAt : (from + (to - from) * widthProgress) / (1 - width)
+    if (width >= 1) return restAt
+    const edge = Math.min(1, shown)
+    const from = restAt * (1 - edge)
+    const to = anchorOf(target, shown / scale) * (1 - shown / scale)
+    const progress = scale === 1 ? amount : (edge - width) / (edge - shown / scale)
+    return (from + (to - from) * progress) / (1 - width)
   }
   return { scale: current, focus: { x: focusOn(rest.x, focus.x, visible.x), y: focusOn(rest.y, focus.y, visible.y) } }
 }
