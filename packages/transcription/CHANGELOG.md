@@ -1,5 +1,11 @@
 # @mcut/transcription
 
+## 0.1.0-alpha.28
+
+### Minor Changes
+
+- [#232](https://github.com/mattppal/mcut/pull/232) [`bd1e045`](https://github.com/mattppal/mcut/commit/bd1e0453c18d65bb8f1e111c7a65c1bfc6a3671e) Thanks [@mattppal](https://github.com/mattppal)! - `search_transcript` takes `queries`, more phrases to find in the same call, and replies with one entry in `results` per phrase. Matching ignores case and punctuation and runs across caption boundaries, so a phrase like "printer. And" that spans two captions is found. Each match carries the eight words before and after it and `pauseBeforeMs` and `pauseAfterMs`, so one search shows where a clause ends. `searchProjectTranscript` in `@mcut/transcription` is the one implementation the headless server and the Studio bridge share.
+
 ## 0.1.0-alpha.27
 
 ### Minor Changes
