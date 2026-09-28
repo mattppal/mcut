@@ -1,5 +1,12 @@
 # @mcut/transcription-local
 
+## 1.0.0-alpha.27
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @mcut/transcription@0.1.0-alpha.24
+
 ## 1.0.0-alpha.26
 
 ### Patch Changes

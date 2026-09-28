@@ -1,5 +1,12 @@
 # @mcut/transcription
 
+## 0.1.0-alpha.24
+
+### Patch Changes
+
+- Updated dependencies [[`32b5539`](https://github.com/mattppal/mcut/commit/32b55399e1623dd870857135af89a1a83407b102)]:
+  - @mcut/timeline@0.1.0-alpha.21
+
 ## 0.1.0-alpha.23
 
 ### Patch Changes
