@@ -1,12 +1,13 @@
-import { transcriptResultSchema, type TranscriptResult } from '@mcut/transcription'
+import { transcriptResultSchema, type TranscribeOptions, type TranscriptResult } from '@mcut/transcription'
 import { z } from 'zod'
 import { isOnDeviceTranscriptionEnabled, transcribeOnDevice } from '@/registry/mcut/local-transcription'
 
 const transcribeFailureSchema = z.object({ error: z.string() })
 
-async function transcribeRemote(audio: Blob): Promise<TranscriptResult> {
+async function transcribeRemote(audio: Blob, options?: TranscribeOptions): Promise<TranscriptResult> {
   const form = new FormData()
   form.append('audio', audio, 'audio.wav')
+  for (const term of options?.vocabulary ?? []) form.append('vocabulary', term)
   const response = await fetch('/api/transcribe', { method: 'POST', body: form })
   const isJson = response.headers.get('content-type')?.includes('application/json') ?? false
   if (!response.ok) {
@@ -24,6 +25,6 @@ async function transcribeRemote(audio: Blob): Promise<TranscriptResult> {
   return result.data
 }
 
-export function transcribe(audio: Blob): Promise<TranscriptResult> {
-  return isOnDeviceTranscriptionEnabled() ? transcribeOnDevice(audio) : transcribeRemote(audio)
+export function transcribe(audio: Blob, options?: TranscribeOptions): Promise<TranscriptResult> {
+  return isOnDeviceTranscriptionEnabled() ? transcribeOnDevice(audio, options) : transcribeRemote(audio, options)
 }

@@ -171,6 +171,7 @@ export function createLocalWhisperProvider(options: CreateLocalWhisperProviderOp
           config: { model, device, dtype, ...(options.ortWasmPaths ? { ortWasmPaths: options.ortWasmPaths } : {}) },
           audio,
           ...(transcribeOptions?.language ? { language: transcribeOptions.language } : {}),
+          ...(transcribeOptions?.vocabulary?.length ? { vocabulary: [...transcribeOptions.vocabulary] } : {}),
         }
         worker.postMessage(request, [audio.buffer])
       })

@@ -20,6 +20,25 @@ import { toCaptionElements } from "@mcut/transcription"
 const captions = toCaptionElements(transcript)
 ```
 
+## Vocabulary
+
+Pass `vocabulary` to `transcribe` with names and terms the audio contains,
+usually the project's `vocabulary`, which `updateProject` sets. The AI SDK
+adapter ignores it, so pass hints there through `providerOptions`.
+
+- Local Whisper gets the terms as a decoder prompt after `<|startofprev|>`,
+  the way the [reference decoder](https://github.com/openai/whisper/blob/main/whisper/decoding.py)
+  builds one. Like that decoder, it keeps the last 223 prompt tokens, half the
+  448-token text context less one.
+- AssemblyAI gets them as `keyterms_prompt`, which replaced `word_boost`.
+  Phrases longer than six words are left out, the limit the
+  [AI SDK AssemblyAI provider](https://ai-sdk.dev/providers/ai-sdk-providers/assemblyai)
+  documents.
+
+```ts
+await provider.transcribe({ audio }, { vocabulary: ["Grokbot", "Karen X. Cheng", "mcut"] })
+```
+
 Read next:
 
 - [Captions](/docs/recipes/captions)

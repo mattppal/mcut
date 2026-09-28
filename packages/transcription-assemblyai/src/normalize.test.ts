@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, spyOn, test } from 'bun:test'
+import { AssemblyAI, type TranscribeParams } from 'assemblyai'
 import { createAssemblyAIProvider, normalizeAssemblyAIResult } from './index'
 
 describe('createAssemblyAIProvider', () => {
@@ -6,6 +7,19 @@ describe('createAssemblyAIProvider', () => {
     const provider = createAssemblyAIProvider({ apiKey: 'test' })
     const signal = AbortSignal.abort()
     await expect(provider.transcribe({ audio: new Uint8Array(4), mimeType: 'audio/wav' }, { signal })).rejects.toThrow(/cancelled/)
+  })
+
+  test('sends the vocabulary as keyterms, dropping blanks, duplicates, and phrases over six words', async () => {
+    const client = new AssemblyAI({ apiKey: 'test' })
+    const submitted: TranscribeParams[] = []
+    spyOn(client.transcripts, 'submit').mockImplementation(async (params) => {
+      submitted.push(params)
+      throw new Error('stop after submit')
+    })
+    const provider = createAssemblyAIProvider({ client })
+    const vocabulary = ['Grokbot', ' Karen X. Cheng ', 'Grokbot', '', 'one two three four five six seven']
+    await expect(provider.transcribe({ audio: new Uint8Array(4) }, { vocabulary })).rejects.toThrow('stop after submit')
+    expect(submitted[0]?.keyterms_prompt).toEqual(['Grokbot', 'Karen X. Cheng'])
   })
 })
 

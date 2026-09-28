@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { getProjectMediaContext, getProjectTranscript } from './project-context'
+import { EditorEngine } from './engine'
 import { parseProject, type Project } from './model'
 
 function projectWithTranscript(): Project {
@@ -205,5 +206,20 @@ describe('getProjectMediaContext', () => {
         ],
       },
     })
+  })
+})
+
+describe('project vocabulary', () => {
+  test('updateProject replaces the vocabulary without duplicates, and media context lists it for transcription', () => {
+    const engine = new EditorEngine({ project: projectWithTranscript() })
+    expect(getProjectMediaContext(engine.project).transcript.vocabulary).toEqual([])
+    engine.dispatch({ type: 'updateProject', vocabulary: ['Grokbot', ' Karen X. Cheng ', 'Grokbot'] })
+    expect(getProjectMediaContext(engine.project).transcript.vocabulary).toEqual(['Grokbot', 'Karen X. Cheng'])
+    engine.dispatch({ type: 'updateProject', name: 'Renamed' })
+    expect(engine.project.vocabulary).toEqual(['Grokbot', 'Karen X. Cheng'])
+    engine.dispatch({ type: 'updateProject', vocabulary: ['mcut'] })
+    expect(engine.project.vocabulary).toEqual(['mcut'])
+    expect(parseProject(engine.toJSON()).vocabulary).toEqual(['mcut'])
+    expect(() => engine.dispatch({ type: 'updateProject', vocabulary: [' '] })).toThrow()
   })
 })

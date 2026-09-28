@@ -170,6 +170,25 @@ describe('ensureTranscriptForBridge', () => {
     ])
   })
 
+  test('passes the project vocabulary to transcription as hints', async () => {
+    const engine = new EditorEngine({ project: project() })
+    engine.dispatch({ type: 'updateProject', vocabulary: ['Grokbot', 'Karen X. Cheng'] })
+    const seen: unknown[] = []
+    const base = deps()
+    await ensureTranscriptForBridge(
+      engine,
+      { language: 'en' },
+      {
+        ...base,
+        transcribeOnDevice: (audio, options) => {
+          seen.push(options)
+          return base.transcribeOnDevice(audio, options)
+        },
+      },
+    )
+    expect(seen).toEqual([{ language: 'en', vocabulary: ['Grokbot', 'Karen X. Cheng'] }])
+  })
+
   test('preserves an existing overlapping transcript unless replace is true', async () => {
     const engine = new EditorEngine({ project: project({ caption: 'Existing' }) })
     let called = false

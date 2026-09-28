@@ -295,6 +295,7 @@ export const projectSchema = z.object({
   layouts: z.array(layoutSchema).default([]),
   presets: z.array(propertyPresetSchema).default([]),
   markers: z.array(markerSchema).default([]),
+  vocabulary: z.array(z.string().trim().min(1).max(100)).max(1000).optional(),
 })
 
 export type Transform = z.infer<typeof transformSchema>

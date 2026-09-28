@@ -1,7 +1,7 @@
 'use client'
 
 import { CaptionsIcon, FolderOpenIcon, SearchIcon, SparklesIcon, TypeIcon } from '@/lib/icons'
-import type { TranscriptResult } from '@mcut/transcription'
+import type { TranscribeOptions, TranscriptResult } from '@mcut/transcription'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { AnimationsPanel } from './animations-panel'
 import { CaptionsPanel } from './captions-panel'
@@ -23,7 +23,7 @@ export const LEFT_TABS: Array<{ id: LeftTab; label: string; icon: typeof FolderO
 
 export interface LeftPanelProps {
   tab: LeftTab
-  transcribe?: (audio: Blob) => Promise<TranscriptResult>
+  transcribe?: (audio: Blob, options?: TranscribeOptions) => Promise<TranscriptResult>
   omitted: ReadonlySet<EmbedOmission>
 }
 

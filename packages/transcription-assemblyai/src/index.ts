@@ -58,6 +58,12 @@ async function toAudioArg(audio: TranscribeInput['audio']): Promise<string | Uin
   return audio
 }
 
+const KEYTERM_MAX_WORDS = 6
+
+function keyterms(vocabulary: readonly string[]): string[] {
+  return [...new Set(vocabulary.map((term) => term.trim()).filter((term) => term.length > 0 && term.split(/\s+/).length <= KEYTERM_MAX_WORDS))]
+}
+
 const POLL_INTERVAL_MS = 3000
 
 function cancellation(signal: AbortSignal): Error {
@@ -99,6 +105,7 @@ export function createAssemblyAIProvider(options: AssemblyAIProviderOptions = {}
         audio: await toAudioArg(input.audio),
         speaker_labels: options.speakerLabels ?? true,
         ...(transcribeOptions?.language ? { language_code: transcribeOptions.language } : {}),
+        ...(transcribeOptions?.vocabulary?.length ? { keyterms_prompt: keyterms(transcribeOptions.vocabulary) } : {}),
         ...options.params,
       })
       while (transcript.status !== 'completed' && transcript.status !== 'error') {

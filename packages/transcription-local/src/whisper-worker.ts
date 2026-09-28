@@ -1,6 +1,7 @@
 import { env, pipeline } from '@huggingface/transformers'
 import type { TranscriptResult, TranscriptWord } from '@mcut/transcription'
 import { mergeChunkWords, planChunks, segmentsFromWords, type ChunkResult } from './chunking'
+import { promptedDecoderIds, type WhisperPromptTokenizer } from './prompt'
 import { textHasRepetitionLoop } from './repetition'
 import { hasSpeech } from './vad'
 import { WHISPER_SAMPLE_RATE } from './wav'
@@ -18,7 +19,9 @@ interface AsrChunk {
   timestamp: [number | null, number | null]
 }
 
-type AsrPipeline = (audio: Float32Array, options: Record<string, unknown>) => Promise<{ text: string; chunks?: AsrChunk[] }>
+type AsrPipeline = ((audio: Float32Array, options: Record<string, unknown>) => Promise<{ text: string; chunks?: AsrChunk[] }>) & {
+  tokenizer: WhisperPromptTokenizer
+}
 
 interface OrtWasmEnv {
   wasmPaths?: string | { mjs?: string | URL; wasm?: string | URL }
@@ -104,11 +107,13 @@ function whisperLanguageTaskOptions(multilingual: boolean, language: string | un
   return { task: 'transcribe', ...(language ? { language } : {}) }
 }
 
-async function transcribeWindow(asr: AsrPipeline, audio: Float32Array, multilingual: boolean, language: string | undefined): Promise<AsrChunk[] | null> {
+async function transcribeWindow(asr: AsrPipeline, audio: Float32Array, multilingual: boolean, language: string | undefined, vocabulary: readonly string[]): Promise<AsrChunk[] | null> {
+  const decoderIds = promptedDecoderIds(asr.tokenizer, vocabulary, multilingual ? (language ?? 'en') : null)
   const baseOptions: Record<string, unknown> = {
     // onnx-community Whisper builds need a _timestamped export for word-level return_timestamps. https://huggingface.co/onnx-community/whisper-base_timestamped
     return_timestamps: 'word',
     ...whisperLanguageTaskOptions(multilingual, language),
+    ...(decoderIds ? { decoder_input_ids: decoderIds } : {}),
   }
   for (const temperature of [0, 0.2, 0.4]) {
     const output = await asr(audio, {
@@ -138,7 +143,7 @@ function windowWords(raw: AsrChunk[], offsetMs: number): TranscriptWord[] {
 }
 
 async function handleTranscribe(message: WhisperWorkerRequest): Promise<TranscriptResult> {
-  const { audio, config, language } = message
+  const { audio, config, language, vocabulary = [] } = message
   const multilingual = !isEnglishOnlyWhisperModel(config.model)
   const asr = await ensurePipeline(config, (progress) => scope.postMessage({ type: 'progress', id: message.id, progress, phase: 'model' }))
   scope.postMessage({ type: 'progress', id: message.id, progress: 0, phase: 'transcribe' })
@@ -149,7 +154,7 @@ async function handleTranscribe(message: WhisperWorkerRequest): Promise<Transcri
   for (const [index, chunk] of chunks.entries()) {
     const window = audio.subarray(Math.floor(chunk.startS * WHISPER_SAMPLE_RATE), Math.floor(chunk.endS * WHISPER_SAMPLE_RATE))
     if (hasSpeech(window, WHISPER_SAMPLE_RATE)) {
-      const raw = await transcribeWindow(asr, window, multilingual, language)
+      const raw = await transcribeWindow(asr, window, multilingual, language, vocabulary)
       if (raw) results.push({ chunk, words: windowWords(raw, chunk.startS * 1000) })
     }
     scope.postMessage({

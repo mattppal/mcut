@@ -15,6 +15,7 @@ export interface WhisperTranscribeRequest {
   config: WhisperWorkerConfig
   audio: Float32Array
   language?: string
+  vocabulary?: string[]
 }
 
 export type WhisperWorkerRequest = WhisperTranscribeRequest

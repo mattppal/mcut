@@ -1,21 +1,28 @@
 import { z } from 'zod'
 import { CommandError } from '../errors'
 import { getElementAssetIds } from '../media-clip'
-import { assetIdSchema, assetRefSchema } from '../model'
+import { assetIdSchema, assetRefSchema, projectSchema } from '../model'
 import { compactTimelineIfMagnetic } from '../placement'
 import { propertyPresetSchema } from '../presets'
 import { defineCommand } from './shared'
 
 export const updateProject = defineCommand({
   type: 'updateProject',
-  description: 'Update project settings (name, dimensions, fps).',
+  description:
+    'Update project settings (name, dimensions, fps, vocabulary). vocabulary is the full list of names and terms the transcript should spell right, ' +
+    'for example ["Grokbot", "Karen X. Cheng"]. Transcription gets it as hints, so later transcripts spell them right. It replaces the list, so pass every term to keep.',
   payloadSchema: z.object({
     name: z.string().min(1).optional(),
     width: z.number().int().positive().optional(),
     height: z.number().int().positive().optional(),
     fps: z.number().positive().optional(),
+    vocabulary: projectSchema.shape.vocabulary,
   }),
-  reduce: (project, payload) => ({ ...project, ...payload }),
+  reduce: (project, { vocabulary, ...settings }) => ({
+    ...project,
+    ...settings,
+    ...(vocabulary ? { vocabulary: [...new Set(vocabulary)] } : {}),
+  }),
 })
 
 export const addAsset = defineCommand({
