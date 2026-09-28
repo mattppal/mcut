@@ -128,8 +128,10 @@ Cam".
    with its `elementId`, because both default to the first multicam.
 3. Write the shot list before you change anything, one line per span with its timeline
    start, its layout, and the reason.
-   - Open on "Camera". The intro is the speaker talking to the viewer. Hold it until they
-     turn to the screen.
+   - Open clean on "Camera". The first piece starts about 400ms before the first kept
+     word, with no short shot and jump before it, and fades in from black over 500ms with
+     `applyAnimationPreset` `fade-in` on that multicam piece. The intro is the speaker talking to
+     the viewer. Hold it until they turn to the screen.
    - Add the opening punch-in on the `camera` source at the first pause after the first
      sentence or two, not at 0s. A pause is a gap of about 300ms or more between words.
      Use the `subtlePunchIn` preset (1.15x, expo ease, motion blur). It lasts 3000ms, so
@@ -139,6 +141,9 @@ Cam".
      screen", "my computer", or the name of the app or page, spoken while a matching
      screen span is up. Cut in the word gap before that sentence starts, not on the cue
      word.
+   - Prefer a retake cut as the cut to "Screen + Cam" when the lines after it are about the
+     screen. The head jumps at a retake cut, and cutting away hides it. A speaker who is
+     already looking at the screen is ready for the cut, even before the cue word.
    - Cut back to "Camera" when the speaker turns back to the viewer, for a story, an
      opinion, a summary, or the sign-off.
    - Hold each shot at least 2s. Merge a shorter span into its neighbor.
@@ -159,20 +164,30 @@ When the words and the screen disagree, ask the user instead of guessing.
 A talking head about a printed daily report, with a screen share, after its retakes
 are cut. Times are on the cut timeline.
 
+- Open on the kept take. `find_retakes` returns 1.08s to 15.12s for the first
+  abandoned take, after a silent lead-in from 0s, and 15.12s is the kept take's first
+  word. Cut 0s to 14.72s instead, so the video
+  opens 400ms before "Each morning when I wake up", then fade that piece in from black.
+
 - Cut at the start of the sentence that holds the screen cue, not on the cue word. The
   sentence "And the amazing thing is this report is generated entirely by Grokbot"
-  starts at 20.2s while the report is up on screen, and "this report" comes at 21.1s.
+  starts at 19.5s while the report is up on screen, and "this report" comes at 20.4s.
   This sentence is the turn to the screen, so the opening "Camera" shot ends in the
-  word gap just before 20.2s.
+  word gap just before 19.5s.
 - Stay on "Screen + Cam" while the speaker keeps pointing at what is on screen, even
-  when the screen content changes. At 30.3s a retake cut joins the report to the next
+  when the screen content changes. At 29.7s a retake cut joins the report to the next
   sentence, "First, I got to give a shout out because I was really inspired by Karen
   Chang, who built something similar with her morning newspaper that she's sharing
-  here." Her post is up from 30.3s, and "sharing here" at 39.7s points at it. Keep
-  "Screen + Cam" from 20.2s through that sentence. Cutting back to "Camera" between the
+  here." Her post is up from 29.7s, and "sharing here" at 39.0s points at it. Keep
+  "Screen + Cam" from 19.5s through that sentence. Cutting back to "Camera" between the
   report and the post, or waiting until after "sharing here", misses the moment.
+- Cut to the screen on a retake cut. The retake cut at 29.7s joins "how I built it."
+  to the Karen Chang sentence, and the speaker is already looking at her post. If the
+  shot before it is "Camera", cut to "Screen + Cam" right at 29.7s, not a sentence later.
+  The retake cut at 143.3s leads into "Now, the neat thing is that Grokbot can execute
+  commands on your computer" while the chat view is up, so cut to the screen there too.
 - Merge a shot under 2s into its neighbor. Near the end the speaker says "print this
-  page" at 251.4s and the page shows for about 1s. That reads as a flash, so keep the
+  page" at 250.7s and the page shows for about 1s. That reads as a flash, so keep the
   line on "Camera" unless the next screen span starts right after it.
 
 ### Other multicam edits
