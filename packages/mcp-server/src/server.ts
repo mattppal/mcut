@@ -20,7 +20,6 @@ import {
   describeLayoutChange,
   getProjectMediaContext,
   getProjectTranscript,
-  listZoomRegions,
   parseCommand,
   parseProject,
   type BuiltinCommand,
@@ -39,7 +38,7 @@ import {
   type McpServerStaticToolCall,
   type TransactSubRequest,
 } from './contract'
-import { commandsOnTimelineClock, onTimelineClock } from './agent-clock'
+import { commandsOnTimelineClock, onTimelineClock, zoomsOnTimelineClock } from './agent-clock'
 import { liveBridgeAudioActivityMessage, pickAudioActivitySource } from './audio-activity-target'
 import { transcriptOriginNote } from './caption-transcript-match'
 import { toClipSourceWords } from './clip-source-words'
@@ -247,12 +246,14 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'lint_project':
       return text(JSON.stringify(lintProject(await targetProject(target)), null, 2))
     case 'list_zooms':
-      return text(JSON.stringify(listZoomRegions(await targetProject(target)), null, 2))
-    case 'edit_zooms':
+      return text(JSON.stringify(zoomsOnTimelineClock(await targetProject(target)), null, 2))
+    case 'edit_zooms': {
       await target.applyCommands(commandsOnTimelineClock(call.arguments.edits))
+      const project = await targetProject(target)
       return text(
-        `OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}${severeZoomNote(await targetProject(target))}`,
+        `OK: ${call.arguments.edits.length} zoom edit(s) applied. Every atMs below is timeline ms, the clock edit_zooms takes.\n\n${JSON.stringify(zoomsOnTimelineClock(project), null, 2)}${severeZoomNote(project)}`,
       )
+    }
     case 'center_person': {
       if (!target.centerPerson) return failure('center_person is not available on this target.')
       const result = await target.centerPerson(call.arguments)

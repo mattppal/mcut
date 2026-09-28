@@ -2,7 +2,14 @@ import { describe, expect, test } from 'bun:test'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { EditorEngine, applyCommand, createProject, getActiveLayout, listZoomRegions, type MulticamElement, type Project } from '@mcut/timeline'
+import { z } from 'zod'
 import { createMcutMcpServer } from './server'
+
+function textOf(result: Awaited<ReturnType<Client['callTool']>>): string {
+  const content = 'content' in result && Array.isArray(result.content) ? result.content : []
+  const first = content[0]
+  return first?.type === 'text' ? first.text : ''
+}
 
 function multicamCutIntoPieces(): Project {
   let project = createProject({ fps: 30 })
@@ -87,5 +94,29 @@ describe('agent tools take timeline time on a multicam cut into pieces', () => {
       { id: 'z-open', startMs: 4000, endMs: 5000 },
       { id: 'z-open-r', startMs: 5000, endMs: 7000 },
     ])
+  })
+
+  test('list_zooms reports atMs on the clock edit_zooms takes, so writing it back keeps the zoom in place', async () => {
+    const engine = new EditorEngine({ project: multicamCutIntoPieces() })
+    const client = await connect(engine)
+    const id = secondPiece(engine).id
+    await client.callTool({
+      name: 'edit_zooms',
+      arguments: {
+        edits: [{ type: 'addZoomRegion', elementId: id, zoom: { id: 'z-detail', source: 'screen', atMs: 15_000, inMs: 500, holdMs: 2000, outMs: 500 } }],
+      },
+    })
+    const listed = z
+      .array(z.object({ id: z.string(), atMs: z.number() }))
+      .parse(JSON.parse(textOf(await client.callTool({ name: 'list_zooms', arguments: {} }))))
+    expect(listed).toEqual([{ id: 'z-detail', atMs: 15_000 }])
+
+    const before = listZoomRegions(engine.project)
+    const rewritten = await client.callTool({
+      name: 'edit_zooms',
+      arguments: { edits: listed.map((zoom) => ({ type: 'updateZoomRegion', elementId: id, zoomId: zoom.id, patch: { atMs: zoom.atMs } })) },
+    })
+    expect(rewritten.isError).toBeFalsy()
+    expect(listZoomRegions(engine.project)).toEqual(before)
   })
 })

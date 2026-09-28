@@ -18,7 +18,7 @@ const ortWasmPathsSchema = z.object({ mjs: z.string(), wasm: z.string() })
 
 export type OrtWasmPaths = z.infer<typeof ortWasmPathsSchema>
 
-const progressSchema = z.object({ phase: z.enum(['model', 'detect']), progress: unit })
+const progressSchema = z.object({ phase: z.literal('detect'), progress: unit })
 
 export type FaceDetectorProgress = z.infer<typeof progressSchema>
 
