@@ -206,6 +206,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline and store that transcript for apply_captions to reuse after cuts. Explicit tool only; get_transcript never auto-transcribes. ' +
+    'After cuts, captions over any piece of the same audio count as its transcript, and a stored transcript is placed over the pieces instead of transcribing again. Pass replace true to transcribe again. ' +
     'Required before transcript-based silence removal when captions are missing.',
   list_commands: 'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
   apply_commands:
@@ -232,7 +233,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
     'If any edit is rejected, none apply. ' +
     'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.3x) with rect or focus on the discussed screen region. ' +
-    'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the screen key so the camera overlay stays put, or omit source to zoom the whole composite.',
+    'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the source the shot shows so the other slots stay put, camera for a punch-in on the head-only shot or the screen key for a detail on the screen, or omit source to zoom the whole composite. atMs is element-local, and after cuts each multicam piece holds its own zooms.',
   center_person:
     'Live bridge only: find the face on device in the connected editor and keep the person in frame as one undoable edit. Waits for the analysis. ' +
     'On a video, it crops to aspect, 9:16 by default, and the crop follows the face. ' +

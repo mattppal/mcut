@@ -179,6 +179,34 @@ describe('apply_captions with a source scope', () => {
     expectEveryPieceInSync(engine)
   })
 
+  test('ensure_transcript on a piece of a cut multicam with no captions left places the stored transcript over every piece instead of transcribing', async () => {
+    const engine = multicam()
+    const transcripts = new StoredTranscripts()
+    let transcribed = 0
+    const target: McutMcpTarget = {
+      ...transcribingTarget(engine),
+      ensureTranscript: () => {
+        transcribed += 1
+        return { applied: false, source: { elementId: 'e-keep-2' } }
+      },
+    }
+    const server = createMcutMcpServerForTarget({ target, transcripts })
+    const client = new Client({ name: 'test', version: '0.0.0' })
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)])
+    await client.callTool({ name: 'apply_captions', arguments: { transcript, elementId: 'e-mc' } })
+    cutTwoRetakes(engine)
+    for (const { caption } of getProjectCaptions(engine.project)) engine.dispatch({ type: 'removeElement', elementId: caption.id })
+
+    const result = await client.callTool({ name: 'ensure_transcript', arguments: { elementId: 'e-keep-2' } })
+    expect(result.isError).toBeFalsy()
+    expect(transcribed).toBe(0)
+    expectEveryPieceInSync(engine)
+
+    await client.callTool({ name: 'ensure_transcript', arguments: { elementId: 'e-keep-2', replace: true } })
+    expect(transcribed).toBe(1)
+  })
+
   test('the transcript an earlier apply_captions passed is reused after cuts, and a slice keeps the rest of it', async () => {
     const engine = multicam()
     const client = await connect(engine)

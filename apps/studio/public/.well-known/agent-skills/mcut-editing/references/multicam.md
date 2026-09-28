@@ -102,13 +102,64 @@ the part of the frame its fit shows. Each slot rect keeps its size and aspect an
 keeps its size, so only the framing inside the slot follows the face. `setReframe` with a
 null `track` stops the follow and puts each crop back where the layout saved it.
 
-## Switching rhythm (the editorial part)
+## Choosing shots (the editorial part)
+
+A multicam edit is a shot list. Plan it from what the speaker says and what the screen
+shows, then apply it in one pass. Never alternate angles on a fixed rhythm.
+
+### Talking head with a screen recording
+
+The default layouts include "Camera" (head only), "Screen + Cam" (screen full frame,
+head in a corner), and "Screen" (screen only). This edit uses "Camera" and "Screen +
+Cam".
+
+1. Read the words. Cut retakes first with `find_retakes` and one `remove_ranges`, then
+   call `apply_captions` with `elementId`, `replace` set to true, and no transcript, on
+   its own. Then call `get_transcript` with `includeWords` set to true, so the word times
+   match the cut timeline. Call `ensure_transcript` first if there is no transcript.
+2. Read the screen. After the cuts the multicam is several pieces, one element each.
+   Call `find_scene_changes` on the `screen` source and `get_contact_sheet` once per piece
+   with its `elementId`, because both default to the first multicam.
+3. Write the shot list before you change anything, one line per span with its timeline
+   start, its layout, and the reason.
+   - Open on "Camera". The intro is the speaker talking to the viewer. Hold it until they
+     turn to the screen.
+   - Add the opening punch-in on the `camera` source at the first pause after the first
+     sentence or two, not at 0s. A pause is a gap of about 300ms or more between words.
+     Use the `subtlePunchIn` preset (1.15x, expo ease, motion blur). It lasts 3000ms, so
+     it must end before the next angle cut, or the head overlay zooms too.
+   - Cut to "Screen + Cam" when the speaker starts talking about what is on screen. Cues
+     are words that point at it, such as "this", "here", "look at", "you can see", "my
+     screen", "my computer", or the name of the app or page, spoken while a matching
+     screen span is up. Cut in the word gap before that sentence starts, not on the cue
+     word.
+   - Cut back to "Camera" when the speaker turns back to the viewer, for a story, an
+     opinion, a summary, or the sign-off.
+   - Hold each shot at least 2s. Merge a shorter span into its neighbor.
+4. Convert each shot list time before you apply it. Transcript words, scene changes,
+   and contact sheet tiles are timeline ms. For a timeline time `t`, find the piece whose
+   window holds it, from its `startMs` to `startMs + durationMs`, and edit that piece.
+   - An angle cut's `atMs` is on the source clock, `trimStartMs + (t - startMs)`.
+   - A zoom region's `atMs` is element-local, `t - startMs`, and the whole zoom must fit
+     inside the piece.
+   - Set each piece's opening shot with `addAngleCut` at the piece's `trimStartMs`. A
+     cut at the same `atMs` is replaced, so this works on every piece, including the
+     first, whose opening cut sits at its `trimStartMs`.
+   - These formulas hold at 1x forward. For a sped up or reversed piece, see "The
+     source clock" above.
+5. Apply the whole list in one `transact`, the `addAngleCut` calls and the zoom
+   regions, with `source` set on each zoom. Cut only in word gaps.
+6. Check the result. Call `get_contact_sheet` with one time per shot. The summary lists
+   cuts in element-local seconds, while `angles` holds source clock ms, so compare them
+   after converting.
+
+When the words and the screen disagree, ask the user instead of guessing.
+
+### Other multicam edits
 
 - Cut on speaker changes and beats of the screen content, never mid-word.
 - Hold every angle at least 2s. Favor the layout that shows what the audience needs
   (screen while demoing, camera for reactions, side-by-side for banter).
-- Open on the establishing layout (screen plus PiP) so both sources register, then
-  tighten.
 
 ## Flattening
 

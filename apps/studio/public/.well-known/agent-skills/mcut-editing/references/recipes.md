@@ -54,7 +54,7 @@ mcut silence-cuts project.json --transcript transcript.json --element e-camera -
 **When the user says:** "zoom in at 4 seconds" or "punch in for emphasis"
 **Template:** `talking-head`
 
-One zoom region, not scale keyframes. It zooms in over inMs, holds, and zooms back out, with easeOutExpo and motion blur on by default. The subtlePunchIn preset is 1.15x. Times are element-local (0 is clip start), so the zoom survives the clip being dragged. `list_zooms` shows every zoom, and `edit_zooms` revises them as one undo step. On a multicam, set `source` to the screen key so the camera overlay stays put.
+One zoom region, not scale keyframes. It zooms in over inMs, holds, and zooms back out, with easeOutExpo and motion blur on by default. The subtlePunchIn preset is 1.15x. Times are element-local (0 is clip start), so the zoom survives the clip being dragged. `list_zooms` shows every zoom, and `edit_zooms` revises them as one undo step. On a multicam, set `source` to the source the shot shows, `camera` for a punch-in on the head-only shot or the screen key for a detail on the screen, so the other slots stay put.
 
 ```json
 [
