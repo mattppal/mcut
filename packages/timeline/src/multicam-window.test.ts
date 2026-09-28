@@ -68,24 +68,24 @@ describe('multicam window edits', () => {
     expect(layoutAt(project, element, 2600)).toBe('l-cam')
   })
 
-  test('splitting a sped-up multicam copies the angles and keeps content in place', () => {
+  test('splitting a sped-up multicam drops the cuts outside each piece and keeps content in place', () => {
     let project = applyCommand(withMulticam(), { type: 'setElementSpeed', elementId: 'e-mc', speed: 2 })
     project = applyCommand(project, { type: 'splitElement', elementId: 'e-mc', atMs: 2000, rightElementId: 'e-mc-right' })
     const left = multicam(project)
     const right = multicam(project, 'e-mc-right')
-    expect(left.angles).toEqual(ANGLES)
+    expect(left.angles).toEqual(ANGLES.slice(0, 1))
     expect(right.angles).toEqual(ANGLES)
     expect(getMulticamGroupTimeMs(right, 2000)).toBe(5000)
     expect(layoutAt(project, right, 2400)).toBe('l-screen')
     expect(layoutAt(project, right, 2600)).toBe('l-cam')
   })
 
-  test('splitting a reversed multicam copies the angles and keeps content in place', () => {
+  test('splitting a reversed multicam drops the cuts outside each piece and keeps content in place', () => {
     let project = applyCommand(withMulticam(), { type: 'updateElement', elementId: 'e-mc', patch: { reversed: true } })
     project = applyCommand(project, { type: 'splitElement', elementId: 'e-mc', atMs: 4000, rightElementId: 'e-mc-right' })
     const left = multicam(project)
     const right = multicam(project, 'e-mc-right')
-    expect(left.angles).toEqual(ANGLES)
+    expect(left.angles).toEqual(ANGLES.slice(1))
     expect(right.angles).toEqual(ANGLES)
     expect(getMulticamGroupTimeMs(left, 0)).toBe(11_000)
     expect(getMulticamGroupTimeMs(right, 4000)).toBe(7000)

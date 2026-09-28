@@ -9,7 +9,7 @@ import { getElement } from './selectors'
 import { getClipView, listZoomRegions } from './zoom-regions'
 
 describe('split + flatten', () => {
-  test('splitting a multicam moves the window and copies the switch list', () => {
+  test('splitting a multicam moves the window and keeps only the cuts each piece plays', () => {
     const { project } = projectWithRecordings()
     let next = createMc(project)
     const camLayout = next.layouts.find((l) => l.name === 'Camera')!
@@ -22,7 +22,7 @@ describe('split + flatten', () => {
       { atMs: 0, layoutId: next.layouts[0]!.id },
       { atMs: 10_000, layoutId: camLayout.id },
     ]
-    expect(left.angles).toEqual(schedule)
+    expect(left.angles).toEqual(schedule.slice(0, 1))
     expect(right.angles).toEqual(schedule)
     expect(right.trimStartMs).toBe(6000)
     expect(right.sources.map((s) => s.offsetMs)).toEqual([0, 0])

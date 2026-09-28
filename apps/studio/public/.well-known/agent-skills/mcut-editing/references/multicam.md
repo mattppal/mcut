@@ -33,26 +33,32 @@ the synced sources. Angle cuts and source sync stay put.
    source. `offsetMs` is the source's media time at source clock 0. Trims, splits,
    slips, and speed changes never change it.
 
-## The source clock
+## Timeline time and the source clock
 
-Angle cuts sit on the **source clock**, the synced time every source shares. The
-multicam's `trimStartMs` is its in-point on that clock. At 1x forward, a timeline time
-`t` is at source clock `trimStartMs + (t - startMs)`. A speed change or a reverse
-changes that mapping. The cuts keep their source clock times, so each cut stays on
-the same moment of the recording.
+Give every angle cut and zoom in timeline ms, the time of the playhead, transcript
+words, scene changes, and contact sheet tiles. The MCP tools convert it. The project
+summary lists cuts after `cuts at timeline` and zooms after `zooms at timeline`, in
+timeline seconds, so you can pass the cut times back as they are. A zoom spread over
+a cut lists each piece's part, so read a zoom's own start from `list_zooms` as the
+element's `startMs` plus `atMs`.
 
-The project summary lists cuts at element-local seconds, where the clip's viewer sees
-them. The angle commands take `atMs` on the source clock. Read those values from the
-element's `angles` list.
+The element stores angle cuts on the **source clock**, the synced time every source
+shares, so each cut stays on the same moment of the recording through trims, splits,
+speed changes, and reverse. That is the element's `angles` list. Pass `time: "source"`
+only when you give a value from that list, which a reversed piece requires.
 
 ## Switching
 
-- `addAngleCut { elementId, atMs, layoutId }` cuts at a source clock time. The layout
-  holds until the next cut. The first cut opens the schedule. It cannot move or be
-  removed.
-- `moveAngleCut { fromMs, toMs }` and `removeAngleCut { atMs }` retime or drop cuts.
-  `setAngleLayout { atMs, layoutId }` swaps the composition of the span that starts
-  at `atMs` without adding a cut.
+- `addAngleCut { elementId, atMs, layoutId }` cuts at a timeline time inside that
+  piece. A time outside it is rejected with the id of the piece that plays it. The
+  layout holds until the next cut. The first cut opens the schedule. It cannot move
+  or be removed.
+- `moveAngleCut { fromMs, toMs }` and `removeAngleCut { atMs }` retime or drop cuts,
+  found by timeline time within one frame. `setAngleLayout { atMs, layoutId }` swaps
+  the composition of the span that starts at `atMs` without adding a cut. At the
+  piece's `startMs` it sets the opening shot.
+- Cutting or splitting a multicam keeps on each piece only the cuts it plays, plus
+  the neighbors an angle transition needs at its edges.
 - `setMulticamAngleTransition { transition | null }` is one style blended at every
   cut (Kdenlive-style mixer). `null` means hard cuts, the right default. When blending,
   keep the window at 300ms or less. Windows are clamped so neighbors never overlap.
@@ -136,22 +142,15 @@ Cam".
    - Cut back to "Camera" when the speaker turns back to the viewer, for a story, an
      opinion, a summary, or the sign-off.
    - Hold each shot at least 2s. Merge a shorter span into its neighbor.
-4. Convert each shot list time before you apply it. Transcript words, scene changes,
-   and contact sheet tiles are timeline ms. For a timeline time `t`, find the piece whose
-   window holds it, from its `startMs` to `startMs + durationMs`, and edit that piece.
-   - An angle cut's `atMs` is on the source clock, `trimStartMs + (t - startMs)`.
-   - A zoom region's `atMs` is element-local, `t - startMs`, and the whole zoom must fit
-     inside the piece.
-   - Set each piece's opening shot with `addAngleCut` at the piece's `trimStartMs`. A
-     cut at the same `atMs` is replaced, so this works on every piece, including the
-     first, whose opening cut sits at its `trimStartMs`.
-   - These formulas hold at 1x forward. For a sped up or reversed piece, see "The
-     source clock" above.
+4. Match each shot list time to a piece. The times are timeline ms, and the tools take
+   them as they are. Pass each angle cut to the piece whose window, from its `startMs`
+   to `startMs + durationMs`, holds the time. Set each piece's opening shot with
+   `setAngleLayout` at the piece's `startMs`. A zoom takes any piece on the track as
+   `elementId`, and one that crosses a cut lands on each piece it covers.
 5. Apply the whole list in one `transact`, the `addAngleCut` calls and the zoom
    regions, with `source` set on each zoom. Cut only in word gaps.
-6. Check the result. Call `get_contact_sheet` with one time per shot. The summary lists
-   cuts in element-local seconds, while `angles` holds source clock ms, so compare them
-   after converting.
+6. Check the result. Call `get_contact_sheet` with one time per shot, and compare the
+   summary's `cuts at timeline` with the shot list.
 
 When the words and the screen disagree, ask the user instead of guessing.
 

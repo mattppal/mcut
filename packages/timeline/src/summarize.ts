@@ -34,10 +34,10 @@ function describeFades(clip: MediaClip): string {
 
 function describeMulticam(project: Project, element: MulticamElement): string {
   const cuts = getVisibleAngleCuts(element)
-    .map((cut) => `${seconds(cut.localMs)}→${project.layouts.find((l) => l.id === cut.layoutId)?.name ?? cut.layoutId}`)
+    .map((cut) => `${seconds(element.startMs + cut.localMs)}→${project.layouts.find((l) => l.id === cut.layoutId)?.name ?? cut.layoutId}`)
     .join(', ')
   const keys = element.sources.map((src) => src.key).join(' + ')
-  return `multicam [${keys}]${describeWindow(element)} cuts: ${cuts}` + (element.audioSource ? ` (audio: ${element.audioSource})` : '')
+  return `multicam [${keys}]${describeWindow(element)} cuts at timeline: ${cuts}` + (element.audioSource ? ` (audio: ${element.audioSource})` : '')
 }
 
 function describeContent(project: Project, element: TimelineElement): string {
@@ -78,8 +78,8 @@ function describeElement(project: Project, element: TimelineElement): string {
     suffix += ` [→ ${element.transition.type} ${element.transition.durationMs}ms]`
   }
   if ('zooms' in element && element.zooms && element.zooms.length > 0) {
-    const zooms = zoomRegionRefs(element).map((z) => `${z.id}${z.source ? ` ${z.source}` : ''} ${z.scale}x @ ${seconds(z.startMs)}`)
-    suffix += ` [zooms: ${zooms.join(', ')}]`
+    const zooms = zoomRegionRefs(element).map((z) => `${z.id}${z.source ? ` ${z.source}` : ''} ${z.scale}x ${seconds(z.startMs)} to ${seconds(z.endMs)}`)
+    suffix += ` [zooms at timeline: ${zooms.join(', ')}]`
   }
   if (isMediaClip(element)) suffix += describeFades(element)
   return `${element.id} ${what} @ ${range}${suffix}`

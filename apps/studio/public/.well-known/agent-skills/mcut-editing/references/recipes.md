@@ -54,7 +54,7 @@ mcut silence-cuts project.json --transcript transcript.json --element e-camera -
 **When the user says:** "zoom in at 4 seconds" or "punch in for emphasis"
 **Template:** `talking-head`
 
-One zoom region, not scale keyframes. It zooms in over inMs, holds, and zooms back out, with easeOutExpo and motion blur on by default. The subtlePunchIn preset is 1.15x. Times are element-local (0 is clip start), so the zoom survives the clip being dragged. `list_zooms` shows every zoom, and `edit_zooms` revises them as one undo step. On a multicam, set `source` to the source the shot shows, `camera` for a punch-in on the head-only shot or the screen key for a detail on the screen, so the other slots stay put.
+One zoom region, not scale keyframes. It zooms in over inMs, holds, and zooms back out, with easeOutExpo and motion blur on by default. The subtlePunchIn preset is 1.15x. Over MCP atMs is timeline ms. The zoom is stored element-local (0 is clip start), which this headless script passes, so it survives the clip being dragged. `list_zooms` shows every zoom, and `edit_zooms` revises them as one undo step. On a multicam, set `source` to the source the shot shows, `camera` for a punch-in on the head-only shot or the screen key for a detail on the screen, so the other slots stay put.
 
 ```json
 [
@@ -590,7 +590,7 @@ mcut captions project.json --transcript transcript.json --element e-camera --sty
 **When the user says:** "cut to the camera when they start talking, back to the screen after"
 **Template:** `multicam-podcast`
 
-Angle cuts sit on the source clock, the synced time every source shares (element-local time at 1x from a zero trim), and each names a layout (a composition), not only a camera. Full-screen camera, screen plus PiP, and side-by-side are all layouts. The cut holds until the next one. `setMulticamAngleTransition` standardizes every cut. Null is hard cuts, the right default. Use 300ms or less when you do blend. Switch on speaker changes, never mid-word, and hold each angle at least 2s. Audio stays pinned to one source via `setMulticamAudio` so switching angles never changes the sound.
+Over MCP, angle cut tools take timeline ms and reject a time outside the piece. They store cuts on the source clock, the synced time every source shares, which this headless script passes and which equals timeline time on an untrimmed multicam at 0. Each cut names a layout (a composition), not only a camera. Full-screen camera, screen plus PiP, and side-by-side are all layouts. The cut holds until the next one. `setMulticamAngleTransition` standardizes every cut. Null is hard cuts, the right default. Use 300ms or less when you do blend. Switch on speaker changes, never mid-word, and hold each angle at least 2s. Audio stays pinned to one source via `setMulticamAudio` so switching angles never changes the sound.
 
 ```json
 [
