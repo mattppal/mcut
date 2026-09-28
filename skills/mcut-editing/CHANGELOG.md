@@ -1,5 +1,11 @@
 # mcut-editing-skill
 
+## 0.0.1-alpha.30
+
+### Patch Changes
+
+- [#229](https://github.com/mattppal/mcut/pull/229) [`29f1867`](https://github.com/mattppal/mcut/commit/29f1867993cd5871e96baa309a09115feeb407f8) Thanks [@mattppal](https://github.com/mattppal)! - `list_zooms` and the `edit_zooms` result report each zoom's `atMs` in timeline ms, the clock `edit_zooms` takes, instead of element-local ms. An agent that reads a zoom and writes its `atMs` back keeps it in place, and zooms on different pieces of a split multicam no longer show look-alike times that belong to different moments.
+
 ## 0.0.1-alpha.29
 
 ### Patch Changes
