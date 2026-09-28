@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { z } from 'zod'
-import { blocked, check, pass, poll, type Driver, type SurfaceContext, type View } from '../context.ts'
+import { check, pass, poll, type Driver, type SurfaceContext, type View } from '../context.ts'
 import { percentRange, toastsSeen, watchToasts } from './captions.ts'
 import { clips } from './core.ts'
 import { openRailTab } from './edit.ts'
@@ -9,10 +9,8 @@ import { switchToPortrait } from './modes.ts'
 import { saveThroughMenu } from './project.ts'
 
 const SUCCESS_TOAST = 'Person centered'
-const DOWNLOAD_TOAST = /^Downloading face model… (\d+)% \(one-time, cached after this\)$/
 const DETECT_TOAST = /^Finding the person… (\d+)%$/
 const QUIET_TOASTS = [/^Imported \d+ files?$/, /^Autosaved/]
-const MODEL_DOWNLOAD_ERROR = /^Could not download the face detection model/
 const MODEL_FILE = 'face_detection_yunet_2023mar.onnx'
 const TARGET_ASPECT = 9 / 16
 const MIN_TRAVEL = 0.3
@@ -38,27 +36,12 @@ const savedProjectSchema = z.object({
   ),
 })
 
-const isError = (text: string): boolean =>
-  text !== SUCCESS_TOAST && !DOWNLOAD_TOAST.test(text) && !DETECT_TOAST.test(text) && !QUIET_TOASTS.some((pattern) => pattern.test(text))
-
-async function faceModelCached(view: View): Promise<boolean> {
-  const raw: unknown = await view.evaluate(async (file) => {
-    if (!('caches' in window)) return false
-    for (const name of await caches.keys()) {
-      const requests = await (await caches.open(name)).keys()
-      if (requests.some((request) => request.url.endsWith(`/${file}`))) return true
-    }
-    return false
-  }, MODEL_FILE)
-  return z.boolean().parse(raw)
-}
+const isError = (text: string): boolean => text !== SUCCESS_TOAST && !DETECT_TOAST.test(text) && !QUIET_TOASTS.some((pattern) => pattern.test(text))
 
 function describeToasts(toasts: readonly string[]): string {
-  const download = percentRange(toasts, DOWNLOAD_TOAST)
   const detect = percentRange(toasts, DETECT_TOAST)
-  const rest = toasts.filter((text) => !DOWNLOAD_TOAST.test(text) && !DETECT_TOAST.test(text))
+  const rest = toasts.filter((text) => !DETECT_TOAST.test(text))
   return [
-    download.updates > 0 ? `"Downloading face model… N%" ${download.updates} update(s) from ${download.min}% to ${download.max}%` : 'no Downloading toast',
     detect.updates > 0 ? `"Finding the person… N%" ${detect.updates} update(s) from ${detect.min}% to ${detect.max}%` : 'no Finding toast',
     rest.length > 0 ? `then ${rest.map((text) => `"${text}"`).join(', ')}` : 'no other toast',
   ].join(', ')
@@ -135,8 +118,6 @@ async function readCenteredClip(file: string, name: string) {
 const centerPerson: Driver = async (ctx) => {
   const { view } = ctx
   await watchToasts(view)
-  const cached = await faceModelCached(view)
-  if (!cached && ctx.whisper.mode === 'offline') return blocked(`${ctx.whisper.reason}, and the face model downloads from the same host`)
   const portrait = await switchToPortrait(view)
   const name = await placeFaceClip(ctx)
   await ctx.upstreamRequests()
@@ -146,21 +127,10 @@ const centerPerson: Driver = async (ctx) => {
   const toasts = describeToasts(run.toasts)
   ctx.log(`toasts: ${toasts}, ${upstream.length} upstream request(s)`)
   if (run.error !== undefined) {
-    if (ctx.whisper.mode === 'mirror' && MODEL_DOWNLOAD_ERROR.test(run.error))
-      return blocked(`the mirror at ${ctx.whisper.url} holds no opencv/face_detection_yunet/${MODEL_FILE}, so the toast reads "${run.error}"`)
     throw new Error(`Center person failed with the toast "${run.error}" after ${run.ms} ms, ${toasts}`)
   }
   check(run.toasts.includes(SUCCESS_TOAST), `"${SUCCESS_TOAST}" within ${run.ms} ms, ${toasts}`)
-  const download = percentRange(run.toasts, DOWNLOAD_TOAST)
-  const model = cached
-    ? check(
-        download.updates === 0 && modelRequests === 0,
-        `the cached model showed ${download.updates} Downloading toast(s) and fetched ${modelRequests} model file(s)`,
-      )
-    : check(
-        download.max > 0 && modelRequests > 0,
-        `the first run fetched ${modelRequests} model file(s) under a Downloading toast that reached ${download.max}%`,
-      )
+  const model = check(modelRequests === 0, `the bundled face model made ${modelRequests} model download request(s)`)
   const { file } = await saveThroughMenu(ctx)
   const saved = await readCenteredClip(file, name)
   const aspect = (saved.crop.w * saved.width) / (saved.crop.h * saved.height)
