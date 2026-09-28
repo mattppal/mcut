@@ -27,7 +27,7 @@ import {
   type Project,
   type ProjectTranscriptOptions,
 } from '@mcut/timeline'
-import { buildCaptionsCommand, findRetakes } from '@mcut/transcription'
+import { buildCaptionsCommand, findRetakes, searchProjectTranscript } from '@mcut/transcription'
 import { z } from 'zod'
 import {
   MCP_SERVER_STATIC_TOOL_CALL_SCHEMA,
@@ -47,18 +47,19 @@ import { correctTranscriptOn } from './correct-transcript'
 import { frameContent, frameGrabSchema } from './frame-content'
 import { contactSheetContent } from './picture-tools'
 import { removeRangesOn } from './remove-ranges'
-import { searchProjectTranscript } from './search-transcript'
 import { planSourceCaptions, sourceCaptionsNote } from './source-captions'
 import { StoredTranscripts, ensuredCapture } from './stored-transcripts'
 import { severeZoomNote } from './zoom-warnings'
 import { runEngineTransact, translateTransactCalls } from './transact'
+
+type SearchTranscriptInput = z.infer<(typeof MCP_TOOL_INPUTS)['search_transcript']>
 
 export interface McutMcpTarget {
   getSummary(): string | Promise<string>
   getProject(): unknown | Promise<unknown>
   getMediaContext?(): unknown | Promise<unknown>
   getTranscript?(options?: ProjectTranscriptOptions): unknown | Promise<unknown>
-  searchTranscript?(query: string): unknown | Promise<unknown>
+  searchTranscript?(input: SearchTranscriptInput): unknown | Promise<unknown>
   ensureTranscript?(input: unknown): unknown | Promise<unknown>
   centerPerson?(input: unknown): unknown | Promise<unknown>
   getAudioActivity?(input: unknown): unknown | Promise<unknown>
@@ -126,7 +127,7 @@ function createEngineTarget(engine: EditorEngine, onChange: () => void | Promise
         selection: engine.selection,
       }),
     getTranscript: (options) => getProjectTranscript(engine.project, options),
-    searchTranscript: (query) => searchProjectTranscript(engine.project, query),
+    searchTranscript: ({ query, queries = [] }) => ({ results: searchProjectTranscript(engine.project, [query, ...queries]) }),
     ensureTranscript: async () => {
       throw new Error('ensure_transcript requires a live browser bridge connected to an editor tab.')
     },
@@ -196,7 +197,7 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       return text(JSON.stringify(await target.getTranscript(call.arguments), null, 2))
     case 'search_transcript':
       if (!target.searchTranscript) return failure('search_transcript is not available on this target.')
-      return text(JSON.stringify(await target.searchTranscript(call.arguments.query), null, 2))
+      return text(JSON.stringify(await target.searchTranscript(call.arguments), null, 2))
     case 'find_retakes': {
       const project = await targetProject(target)
       const transcript = getProjectTranscript(project, { includeWords: true })
