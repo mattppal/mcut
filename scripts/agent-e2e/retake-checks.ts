@@ -39,7 +39,41 @@ const normalize = (text: string): string => text.toLowerCase().replace(/[^a-z0-9
 
 const seconds = (ms: number): string => (ms / 1000).toFixed(1)
 
+const NEAR_MISS_EDITS = 2
+
+function editDistance(a: string, b: string): number {
+  let row = Array.from({ length: b.length + 1 }, (_, index) => index)
+  for (let i = 1; i <= a.length; i++) {
+    const next = [i]
+    for (let j = 1; j <= b.length; j++) next.push(Math.min((row[j] ?? 0) + 1, (next[j - 1] ?? 0) + 1, (row[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1)))
+    row = next
+  }
+  return row[b.length] ?? 0
+}
+
+function captionTokens(project: Project): string[] {
+  return elements(project)
+    .filter((element) => element.type === 'caption')
+    .sort((a, b) => a.startMs - b.startMs)
+    .flatMap((element) => (element.type === 'caption' ? element.text.split(/\s+/) : []))
+    .map((token) => token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').replace(/['’]s$/, ''))
+    .filter((token) => token.length > 0)
+}
+
 export const RETAKE_RULES: CheckRule[] = [
+  [
+    /^captions spell (\S+)$/,
+    ({ after }, match) => {
+      const name = match[1] ?? ''
+      const tokens = captionTokens(after)
+      const spans = tokens.flatMap((token, index) => [token, `${token} ${tokens[index + 1] ?? ''}`.trim()])
+      const near = (span: string): boolean => editDistance(span.replace(/[\s-]/g, '').toLowerCase(), name.toLowerCase()) <= NEAR_MISS_EDITS
+      const right = tokens.filter((token) => token === name).length
+      const wrong = [...new Set(spans.filter((span) => span !== name && near(span) && !(span.startsWith(`${name} `) || span.endsWith(` ${name}`))))]
+      const detail = `${right} "${name}"${wrong.length > 0 ? `, misspelled ${wrong.map((span) => `"${span}"`).join(' ')}` : ''}`
+      return outcome(right > 0 && wrong.length === 0, detail, detail)
+    },
+  ],
   [
     /^retakes removed$/,
     ({ after, calls }) => {

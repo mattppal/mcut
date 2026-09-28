@@ -26,6 +26,10 @@ edits:
     checks: [transcript, captions]
     capability: exists
     note: Desktop transcription downloads a Whisper model from huggingface.co on first use.
+  - id: 04b-names
+    ask: My bot is called Grokbot, one word. Fix it everywhere the captions or transcript mishear it.
+    checks: [captions spell Grokbot, captions in sync]
+    note: Matt's transcript has "Grockbot" and "Grogbot", and on-device Whisper writes "Grok Bot". correct_transcript fixes the captions and the stored transcript and keeps word timings.
   - id: 05-shots
     ask: Start on the shot of my head, and after my first pause add a slight zoom in on me. When I start talking about what's on my screen, cut to the screen with my head in the corner, and cut back to just my head when I'm talking to the camera. Keep every zoom subtle with exponential easing and motion blur. Fade in from black at the very start.
     checks:
