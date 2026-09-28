@@ -29,9 +29,13 @@ adapter ignores it, so pass hints there through `providerOptions`.
 - Local Whisper gets the terms as a decoder prompt after `<|startofprev|>`,
   the way the [reference decoder](https://github.com/openai/whisper/blob/main/whisper/decoding.py)
   builds one. Like that decoder, it keeps the last 223 prompt tokens, half the
-  448-token text context less one.
+  448-token text context less one. When speech is left after the last
+  prompted word in a window, it decodes that window again without the prompt
+  and keeps whichever result reaches further. Pass `language` as a code such
+  as `en`, since a language name leaves the decoder unprompted.
 - AssemblyAI gets them as `keyterms_prompt`, which replaced `word_boost`.
-  Phrases longer than six words are left out, the limit the
+  Terms past 1000 words in total are dropped, and phrases longer than six
+  words are left out, the limit the
   [AI SDK AssemblyAI provider](https://ai-sdk.dev/providers/ai-sdk-providers/assemblyai)
   documents.
 

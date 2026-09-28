@@ -20,6 +20,11 @@ describe('createAssemblyAIProvider', () => {
     const vocabulary = ['Grokbot', ' Karen X. Cheng ', 'Grokbot', '', 'one two three four five six seven']
     await expect(provider.transcribe({ audio: new Uint8Array(4) }, { vocabulary })).rejects.toThrow('stop after submit')
     expect(submitted[0]?.keyterms_prompt).toEqual(['Grokbot', 'Karen X. Cheng'])
+    await expect(provider.transcribe({ audio: new Uint8Array(4) }, { vocabulary: [' '] })).rejects.toThrow('stop after submit')
+    expect(submitted[1]).not.toHaveProperty('keyterms_prompt')
+    const many = Array.from({ length: 300 }, (_, i) => `alpha beta term${i}`)
+    await expect(provider.transcribe({ audio: new Uint8Array(4) }, { vocabulary: many })).rejects.toThrow('stop after submit')
+    expect(submitted[2]?.keyterms_prompt).toEqual(many.slice(0, 333))
   })
 })
 

@@ -37,4 +37,8 @@ describe('promptedDecoderIds', () => {
     expect(promptedDecoderIds(tokenizer, [' '], 'en')).toBeNull()
     expect(promptedDecoderIds(tokenizer, ['Grokbot'], 'xx')).toBeNull()
   })
+
+  test('a language code in another case or with a region still names the language token', () => {
+    expect(promptedDecoderIds(tokenizer, ['Grokbot'], 'EN-us')?.slice(-2)).toEqual([50259, 50359])
+  })
 })

@@ -3,7 +3,7 @@ import type { TranscriptResult, TranscriptWord } from '@mcut/transcription'
 import { mergeChunkWords, planChunks, segmentsFromWords, type ChunkResult } from './chunking'
 import { promptedDecoderIds, type WhisperPromptTokenizer } from './prompt'
 import { textHasRepetitionLoop } from './repetition'
-import { hasSpeech } from './vad'
+import { hasSpeech, hasSpeechAfter } from './vad'
 import { WHISPER_SAMPLE_RATE } from './wav'
 import type { WhisperWorkerConfig, WhisperWorkerRequest, WhisperWorkerResponse } from './protocol'
 
@@ -99,7 +99,7 @@ async function ensurePipeline(config: WhisperWorkerConfig, onProgress: (progress
 
 function isEnglishOnlyWhisperModel(model: string): boolean {
   // English-only Whisper checkpoints reject a language/task pair. https://github.com/openai/whisper#available-models-and-languages
-  return model.endsWith('.en')
+  return /\.en(_|$)/.test(model)
 }
 
 function whisperLanguageTaskOptions(multilingual: boolean, language: string | undefined): { task?: string; language?: string } {
@@ -107,7 +107,7 @@ function whisperLanguageTaskOptions(multilingual: boolean, language: string | un
   return { task: 'transcribe', ...(language ? { language } : {}) }
 }
 
-async function transcribeWindow(
+async function decodeWindow(
   asr: AsrPipeline,
   audio: Float32Array,
   multilingual: boolean,
@@ -132,6 +132,21 @@ async function transcribeWindow(
     if (!textHasRepetitionLoop(output.text)) return output.chunks ?? []
   }
   return null
+}
+
+const reachS = (chunks: readonly AsrChunk[]) => chunks.reduce((max, { timestamp: [startS, endS] }) => Math.max(max, endS ?? startS ?? 0), 0)
+
+async function transcribeWindow(
+  asr: AsrPipeline,
+  audio: Float32Array,
+  multilingual: boolean,
+  language: string | undefined,
+  vocabulary: readonly string[],
+): Promise<AsrChunk[] | null> {
+  const prompted = await decodeWindow(asr, audio, multilingual, language, vocabulary)
+  if (vocabulary.length === 0 || (prompted && !hasSpeechAfter(audio, WHISPER_SAMPLE_RATE, reachS(prompted)))) return prompted
+  const plain = await decodeWindow(asr, audio, multilingual, language, [])
+  return prompted && (!plain || reachS(plain) <= reachS(prompted)) ? prompted : plain
 }
 
 function windowWords(raw: AsrChunk[], offsetMs: number): TranscriptWord[] {

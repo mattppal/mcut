@@ -140,7 +140,15 @@ function VocabularyField() {
   const engine = useEditor()
   const vocabulary = useProject().vocabulary ?? []
   const [draft, setDraft] = useState('')
-  const save = (next: string[]) => engine.dispatch({ type: 'updateProject', vocabulary: next })
+  const save = (next: string[]): boolean => {
+    try {
+      engine.dispatch({ type: 'updateProject', vocabulary: next })
+      return true
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update the vocabulary')
+      return false
+    }
+  }
   return (
     <div data-slot="transcription-vocabulary" className="flex flex-col gap-1">
       <PanelSectionLabel>Vocabulary</PanelSectionLabel>
@@ -162,12 +170,18 @@ function VocabularyField() {
           onSubmit={(event) => {
             event.preventDefault()
             const term = draft.trim()
-            if (!term) return
-            save([...vocabulary, term])
-            setDraft('')
+            const known = vocabulary.some((other) => other.toLowerCase() === term.toLowerCase())
+            if (term && (known || save([...vocabulary, term]))) setDraft('')
           }}
         >
-          <Input value={draft} placeholder="Add a name or term" className="h-6 w-36 text-2xs" onChange={(event) => setDraft(event.target.value)} />
+          <Input
+            value={draft}
+            maxLength={100}
+            aria-label="Add a name or term to the vocabulary"
+            placeholder="Add a name or term"
+            className="h-6 w-36 text-2xs"
+            onChange={(event) => setDraft(event.target.value)}
+          />
           <Button type="submit" variant="ghost" size="icon-xs" title="Add to vocabulary. Transcription gets these as hints to spell them right.">
             <PlusIcon />
           </Button>

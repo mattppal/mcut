@@ -59,9 +59,15 @@ async function toAudioArg(audio: TranscribeInput['audio']): Promise<string | Uin
 }
 
 const KEYTERM_MAX_WORDS = 6
+const KEYTERMS_MAX_TOTAL_WORDS = 1000
 
 function keyterms(vocabulary: readonly string[]): string[] {
-  return [...new Set(vocabulary.map((term) => term.trim()).filter((term) => term.length > 0 && term.split(/\s+/).length <= KEYTERM_MAX_WORDS))]
+  const terms = [...new Set(vocabulary.map((term) => term.trim()).filter((term) => term.length > 0 && term.split(/\s+/).length <= KEYTERM_MAX_WORDS))]
+  let words = 0
+  return terms.filter((term) => {
+    words += term.split(/\s+/).length
+    return words <= KEYTERMS_MAX_TOTAL_WORDS
+  })
 }
 
 const POLL_INTERVAL_MS = 3000
@@ -101,11 +107,12 @@ export function createAssemblyAIProvider(options: AssemblyAIProviderOptions = {}
     async transcribe(input: TranscribeInput, transcribeOptions?: TranscribeOptions): Promise<TranscriptResult> {
       const signal = transcribeOptions?.signal
       if (signal?.aborted) throw cancellation(signal)
+      const terms = keyterms(transcribeOptions?.vocabulary ?? [])
       let transcript = await client.transcripts.submit({
         audio: await toAudioArg(input.audio),
         speaker_labels: options.speakerLabels ?? true,
         ...(transcribeOptions?.language ? { language_code: transcribeOptions.language } : {}),
-        ...(transcribeOptions?.vocabulary?.length ? { keyterms_prompt: keyterms(transcribeOptions.vocabulary) } : {}),
+        ...(terms.length > 0 ? { keyterms_prompt: terms } : {}),
         ...options.params,
       })
       while (transcript.status !== 'completed' && transcript.status !== 'error') {

@@ -130,7 +130,7 @@ export const MCP_TOOL_INPUTS = {
         'When true, re-transcribe and replace captions overlapping the target clip. Defaults to false. Pass it only when the user asks to redo the transcript or a tool says the captions lack word timings.',
       )
       .optional(),
-    language: z.string().trim().describe('Optional language hint for Whisper.').optional(),
+    language: z.string().trim().describe('Optional language hint for Whisper, an ISO 639-1 code such as "en".').optional(),
   }),
   list_commands: EMPTY_INPUT,
   apply_commands: z.strictObject({
