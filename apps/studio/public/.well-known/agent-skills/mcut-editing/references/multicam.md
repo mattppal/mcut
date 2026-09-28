@@ -109,8 +109,9 @@ shows, then apply it in one pass. Never alternate angles on a fixed rhythm.
 
 ### Talking head with a screen recording
 
-The layouts are "Camera" (head only), "Screen + Cam" (screen full frame, head in a
-corner), and "Screen" (screen only). This edit uses "Camera" and "Screen + Cam".
+The default layouts include "Camera" (head only), "Screen + Cam" (screen full frame,
+head in a corner), and "Screen" (screen only). This edit uses "Camera" and "Screen +
+Cam".
 
 1. Read the words. Cut retakes first with `find_retakes` and one `remove_ranges`, then
    call `apply_captions` with `elementId`, `replace` set to true, and no transcript, on
@@ -141,11 +142,13 @@ corner), and "Screen" (screen only). This edit uses "Camera" and "Screen + Cam".
    - An angle cut's `atMs` is on the source clock, `trimStartMs + (t - startMs)`.
    - A zoom region's `atMs` is element-local, `t - startMs`, and the whole zoom must fit
      inside the piece.
-   - Set each piece's opening shot with `setAngleLayout` at the opening cut's `atMs`,
-     read from its `angles`. The opening cut cannot move or be removed, so do not add a
-     cut beside it.
-5. Apply the whole list in one `transact`, the `addAngleCut` and `setAngleLayout` calls
-   and the zoom regions, with `source` set on each zoom. Cut only in word gaps.
+   - Set each piece's opening shot with `addAngleCut` at the piece's `trimStartMs`. A
+     cut at the same `atMs` is replaced, so this works on every piece, including the
+     first, whose opening cut sits at its `trimStartMs`.
+   - These formulas hold at 1x forward. For a sped up or reversed piece, see "The
+     source clock" above.
+5. Apply the whole list in one `transact`, the `addAngleCut` calls and the zoom
+   regions, with `source` set on each zoom. Cut only in word gaps.
 6. Check the result. Call `get_contact_sheet` with one time per shot. The summary lists
    cuts in element-local seconds, while `angles` holds source clock ms, so compare them
    after converting.

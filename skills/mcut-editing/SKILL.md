@@ -200,8 +200,8 @@ out inside that segment, and end it before the next change.
 Plan angle cuts from the transcript and the screen, never on a fixed rhythm. For a
 talking head with a screen recording, open on "Camera" (head only), cut to "Screen +
 Cam" when the speaker starts talking about what the screen shows, and cut back to
-"Camera" when they talk to the viewer again. Follow the shot list steps in `references/multicam.md`
-before you add any angle cut.
+"Camera" when they talk to the viewer again. Follow the shot list steps in
+`references/multicam.md` before you add any angle cut.
 
 ### Punch-ins and detail zooms
 
