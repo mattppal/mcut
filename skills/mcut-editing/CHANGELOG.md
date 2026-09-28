@@ -1,5 +1,11 @@
 # mcut-editing-skill
 
+## 0.0.1-alpha.25
+
+### Patch Changes
+
+- [#219](https://github.com/mattppal/mcut/pull/219) [`d4e7da6`](https://github.com/mattppal/mcut/commit/d4e7da61168461358f51cabd480e83b73219dc44) Thanks [@mattppal](https://github.com/mattppal)! - The multicam reference adds a worked example for a talking head with a screen share. It cuts to the screen in the gap before the sentence that first points at it ("And the amazing thing is this report…", "First, I got to give a shout out… that she's sharing here"), not on the cue words or after the sentence, stays on the screen while the content changes under the same thread, and holds every shot at least 2s instead of flashing the screen for a second.
+
 ## 0.0.1-alpha.24
 
 ### Patch Changes
