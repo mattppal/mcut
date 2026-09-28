@@ -55,7 +55,7 @@
     "oxlint": "1.83.0",
     "pkg-pr-new": "0.0.75",
     "publint": "0.3.21",
-    "tsdown": "0.22.2",
+    "tsdown": "0.23.0",
     "turbo": "2.9.18",
     "typescript": "6.0.3",
     "zod": "4.4.3"
