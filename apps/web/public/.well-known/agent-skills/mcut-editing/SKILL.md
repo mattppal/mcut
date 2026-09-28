@@ -115,14 +115,15 @@ work.
    fixes every caption and the stored transcript as one undo step, and keeps
    word timings.
 2. If it reports no match, call `search_transcript` with part of the name to
-   see how it was heard, then correct that spelling. Make one call per wrong
-   spelling, for example "Grok Bot" and "Grockbot" separately.
+   see how it was heard, then correct that spelling. Fix several wrong
+   spellings in one call with `corrections`, a list of `find` and `replace`
+   pairs, for example "Grok Bot" and "Grockbot" together.
 3. Do not retype captions with `updateElement` or re-run `ensure_transcript`
    to fix a name. Retyped text loses its word timings and can leave the old
    spelling in the stored transcript, and transcribing again brings it back.
 
 ```json
-{ "name": "correct_transcript", "arguments": { "find": "Grok Bot", "replace": "Grokbot" } }
+{ "name": "correct_transcript", "arguments": { "corrections": [{ "find": "Grok Bot", "replace": "Grokbot" }, { "find": "Grockbot", "replace": "Grokbot" }] } }
 ```
 
 ### Remove retakes

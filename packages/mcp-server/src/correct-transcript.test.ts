@@ -109,6 +109,37 @@ describe('correct_transcript', () => {
     expect(spokenText(engine)).toEndWith('Then Grok Bot.')
   })
 
+  test('fixes several spellings in one call as one undo step and names the one that matched nothing', async () => {
+    const { engine, client } = await captioned([...spoken('We asked Grockbot for an intro.', 4000), ...spoken('Then Grogbot wrote the outro.', 9000)])
+    const before = placedWords(engine)
+    const result = await client.callTool({
+      name: 'correct_transcript',
+      arguments: {
+        corrections: [
+          { find: 'Grockbot', replace: 'Grokbot' },
+          { find: 'Grogbot', replace: 'Grokbot' },
+          { find: 'Grok Bot', replace: 'Grokbot' },
+        ],
+      },
+    })
+    expect(result.isError).toBeFalsy()
+    expect(textOf(result)).toContain('No whole-word match for "Grok Bot"')
+    expect(spokenText(engine)).toBe('We asked Grokbot for an intro. Then Grokbot wrote the outro.')
+
+    await client.callTool({ name: 'undo', arguments: {} })
+    expect(placedWords(engine)).toEqual(before)
+  })
+
+  test('transact points correct_transcript at its corrections list', async () => {
+    const { client } = await captioned()
+    const result = await client.callTool({
+      name: 'transact',
+      arguments: { calls: [{ name: 'correct_transcript', arguments: { find: 'Grok Bot', replace: 'Grokbot' } }] },
+    })
+    expect(result.isError).toBe(true)
+    expect(textOf(result)).toContain('corrections')
+  })
+
   test('reports a spelling that matches nothing instead of claiming success', async () => {
     const { client } = await captioned()
     const result = await client.callTool({ name: 'correct_transcript', arguments: { find: 'Grock Bot', replace: 'Grokbot' } })

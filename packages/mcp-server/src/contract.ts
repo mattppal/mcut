@@ -2,7 +2,13 @@ import { z } from 'zod'
 import { centerPersonOptionsSchema, operatorIds, operators, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
 import { retakeOptionsSchema } from '@mcut/transcription'
-import { applyCaptionsInputSchema, applySilenceCutsInputSchema, removeRangesDescription, removeRangesInputSchema } from './transcript-tool-inputs'
+import {
+  applyCaptionsInputSchema,
+  applySilenceCutsInputSchema,
+  correctTranscriptInputSchema,
+  removeRangesDescription,
+  removeRangesInputSchema,
+} from './transcript-tool-inputs'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
 import { PICTURE_TOOL_DESCRIPTIONS, PICTURE_TOOL_INPUTS } from './picture-tools'
 import { commandBatchSchema } from './transact-shape'
@@ -154,14 +160,7 @@ export const MCP_TOOL_INPUTS = {
       .describe('Tool calls to apply as one undo step. Each name is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.'),
   }),
   apply_captions: applyCaptionsInputSchema,
-  correct_transcript: z.strictObject({
-    find: z
-      .string()
-      .trim()
-      .min(1, 'correct_transcript requires a non-empty find string.')
-      .describe('The words as transcribed, for example "Grok Bot". Matches whole words, ignoring case.'),
-    replace: z.string().trim().min(1, 'correct_transcript requires a non-empty replace string.').describe('The correct spelling, for example "Grokbot".'),
-  }),
+  correct_transcript: correctTranscriptInputSchema,
   apply_silence_cuts: applySilenceCutsInputSchema,
   lint_project: EMPTY_INPUT,
   list_zooms: EMPTY_INPUT,
@@ -247,7 +246,8 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Never invent a transcript when transcription fails. ' +
     'The result warns when the transcript matches no transcript in the project. Caption words left in order after cuts still match.',
   correct_transcript:
-    'Fix a misheard name or term everywhere in the transcript as one undoable edit. When the user names a correction ("it is Grokbot, not Grok Bot"), call this once per wrong spelling instead of retyping captions. ' +
+    'Fix a misheard name or term everywhere in the transcript as one undoable edit. When the user names a correction ("it is Grokbot, not Grok Bot"), call this instead of retyping captions. ' +
+    'Pass find and replace for one spelling, or corrections with every find and replace pair to fix several spellings in one call. ' +
     'Replaces whole-word, case-insensitive matches of find with replace in every caption and in the transcript the server stored for apply_captions, so re-captioning after cuts keeps the fix. ' +
     'Word timings stay: a multi-word find merged into one word spans the timings of the words it replaces, and a multi-word replace splits the timing of what it replaces by character share. ' +
     'If nothing matches, call search_transcript with part of the phrase to see how it was transcribed, then correct that spelling. Undo removes the whole correction.',
