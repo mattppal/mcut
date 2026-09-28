@@ -206,7 +206,8 @@ Cam" when the speaker starts talking about what the screen shows, and cut back t
 `addAngleCut`, `moveAngleCut`, `removeAngleCut`, and `setAngleLayout` take
 timeline milliseconds, the times `get_summary` lists after `cuts at timeline`.
 A time outside the piece named by `elementId` is rejected with the id of the
-piece that plays it, so cut that piece instead. `setAngleLayout` at a piece's
+piece that plays it, so cut that piece instead. A reversed piece takes cut
+times only with `time: "source"`, read from its `angles` list. `setAngleLayout` at a piece's
 start changes its opening shot. Cutting or splitting a multicam keeps on each
 piece only the cuts it plays.
 
@@ -228,8 +229,8 @@ Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
 `get_summary` use, even on a piece left after cuts. A zoom whose range crosses a
 cut between pieces is still one `addZoomRegion`. It lands on every piece it
 covers, and each piece after the first gets a copy with `-r` added to the id, so
-don't scan the pieces yourself. A zoom that runs past the last piece is
-rejected.
+don't scan the pieces yourself. Each copy updates and removes on its own. A
+zoom that runs past the last piece or across a gap between pieces is rejected.
 
 Keep zooms subtle (1.1x to 1.35x), keep `easeOutExpo`, and keep `motionBlur` on.
 On a multicam, set `source` to the source the shot shows so the other slots stay

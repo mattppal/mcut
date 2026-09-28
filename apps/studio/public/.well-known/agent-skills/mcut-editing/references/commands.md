@@ -347,7 +347,7 @@ Cut a multicam to a layout at `atMs`. With time "timeline", `atMs` is project ti
 - `elementId` (string, required)
 - `atMs` (integer, required)
 - `layoutId` (string, required)
-- `time` ("source" | "timeline", optional): Clock for the cut times. "timeline" is project timeline ms, where the playhead sits and get_summary lists cuts, and must fall inside this piece. "source" is the synced group clock. Omitted means "source" in the SDK; the MCP server fills in "timeline".
+- `time` ("source" | "timeline", optional): Clock for the cut times. "timeline" is project timeline ms, where the playhead sits and get_summary lists cuts, and must fall inside this piece. "source" is the synced group clock, the only clock a reversed piece takes. Omitted means "source" in the SDK; the MCP server fills in "timeline".
 
 ## moveAngleCut
 
@@ -356,7 +356,7 @@ Retime a multicam cut (drag its tick). `fromMs` and `toMs` use the clock in `tim
 - `elementId` (string, required)
 - `fromMs` (integer, required)
 - `toMs` (integer, required)
-- `time` ("source" | "timeline", optional): Clock for the cut times. "timeline" is project timeline ms, where the playhead sits and get_summary lists cuts, and must fall inside this piece. "source" is the synced group clock. Omitted means "source" in the SDK; the MCP server fills in "timeline".
+- `time` ("source" | "timeline", optional): Clock for the cut times. "timeline" is project timeline ms, where the playhead sits and get_summary lists cuts, and must fall inside this piece. "source" is the synced group clock, the only clock a reversed piece takes. Omitted means "source" in the SDK; the MCP server fills in "timeline".
 
 ## removeAngleCut
 
@@ -364,7 +364,7 @@ Remove the multicam cut at `atMs`, on the clock in `time` (a timeline time match
 
 - `elementId` (string, required)
 - `atMs` (integer, required)
-- `time` ("source" | "timeline", optional): Clock for the cut times. "timeline" is project timeline ms, where the playhead sits and get_summary lists cuts, and must fall inside this piece. "source" is the synced group clock. Omitted means "source" in the SDK; the MCP server fills in "timeline".
+- `time` ("source" | "timeline", optional): Clock for the cut times. "timeline" is project timeline ms, where the playhead sits and get_summary lists cuts, and must fall inside this piece. "source" is the synced group clock, the only clock a reversed piece takes. Omitted means "source" in the SDK; the MCP server fills in "timeline".
 
 ## setAngleLayout
 
@@ -373,7 +373,7 @@ Change which layout a multicam span uses without cutting (the paused "correct th
 - `elementId` (string, required)
 - `atMs` (integer, required)
 - `layoutId` (string, required)
-- `time` ("source" | "timeline", optional): Clock for the cut times. "timeline" is project timeline ms, where the playhead sits and get_summary lists cuts, and must fall inside this piece. "source" is the synced group clock. Omitted means "source" in the SDK; the MCP server fills in "timeline".
+- `time` ("source" | "timeline", optional): Clock for the cut times. "timeline" is project timeline ms, where the playhead sits and get_summary lists cuts, and must fall inside this piece. "source" is the synced group clock, the only clock a reversed piece takes. Omitted means "source" in the SDK; the MCP server fills in "timeline".
 
 ## setMulticamAudio
 
@@ -421,7 +421,7 @@ Detach the audio of a video or multicam element onto its own audio element; a mu
 
 ## addZoomRegion
 
-Add a zoom region to a video, image, or multicam element. Zoom in over inMs, hold, zoom out over outMs, with easing and motion blur. Defaults to the subtlePunchIn preset (1.15x, easeOutExpo, motion blur 0.5). With time "timeline", atMs is project timeline ms and the zoom covers that timeline range across every piece of the same kind on the track, so a zoom over a cut between two pieces is one call. Each piece after the first gets a copy with "-r" added to the id. On a multicam, source names the angle whose slots zoom, so the screen zooms while a camera overlay stays put. A multicam zoom without source zooms the whole composite, overlays included.
+Add a zoom region to a video, image, or multicam element. Zoom in over inMs, hold, zoom out over outMs, with easing and motion blur. Defaults to the subtlePunchIn preset (1.15x, easeOutExpo, motion blur 0.5). With time "timeline", atMs is project timeline ms and the zoom covers that timeline range across every abutting piece of the same media on the track, so a zoom over a cut between two pieces is one call. Each piece after the first gets a copy with "-r" added to the id. On a multicam, source names the angle whose slots zoom, so the screen zooms while a camera overlay stays put. A multicam zoom without source zooms the whole composite, overlays included.
 
 - `elementId` (string, required)
 - `zoom` (object, required)
@@ -429,7 +429,7 @@ Add a zoom region to a video, image, or multicam element. Zoom in over inMs, hol
 
 ## updateZoomRegion
 
-Patch one zoom region. Timing (atMs, inMs, holdMs, outMs), target (focus and scale, or rect), easing, or motionBlur. With time "timeline", atMs is project timeline ms and must keep the zoom inside this element.
+Patch one zoom region. Timing (atMs, inMs, holdMs, outMs), target (focus and scale, or rect), easing, or motionBlur. With time "timeline", atMs is project timeline ms. The zoom must still overlap this element, so a copy spread over a cut stays editable. Each copy of a spread zoom updates on its own.
 
 - `elementId` (string, required)
 - `zoomId` (string, required)

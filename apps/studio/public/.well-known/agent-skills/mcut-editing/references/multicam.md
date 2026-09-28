@@ -38,12 +38,14 @@ the synced sources. Angle cuts and source sync stay put.
 Give every angle cut and zoom in timeline ms, the time of the playhead, transcript
 words, scene changes, and contact sheet tiles. The MCP tools convert it. The project
 summary lists cuts after `cuts at timeline` and zooms after `zooms at timeline`, in
-timeline seconds, so you can pass them back as they are.
+timeline seconds, so you can pass the cut times back as they are. A zoom spread over
+a cut lists each piece's part, so read a zoom's own start from `list_zooms` as the
+element's `startMs` plus `atMs`.
 
 The element stores angle cuts on the **source clock**, the synced time every source
 shares, so each cut stays on the same moment of the recording through trims, splits,
 speed changes, and reverse. That is the element's `angles` list. Pass `time: "source"`
-only when you give a value from that list.
+only when you give a value from that list, which a reversed piece requires.
 
 ## Switching
 
@@ -55,7 +57,8 @@ only when you give a value from that list.
   found by timeline time within one frame. `setAngleLayout { atMs, layoutId }` swaps
   the composition of the span that starts at `atMs` without adding a cut. At the
   piece's `startMs` it sets the opening shot.
-- Cutting or splitting a multicam keeps on each piece only the cuts it plays.
+- Cutting or splitting a multicam keeps on each piece only the cuts it plays, plus
+  the neighbors an angle transition needs at its edges.
 - `setMulticamAngleTransition { transition | null }` is one style blended at every
   cut (Kdenlive-style mixer). `null` means hard cuts, the right default. When blending,
   keep the window at 300ms or less. Windows are clamped so neighbors never overlap.
