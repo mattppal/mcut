@@ -3,6 +3,7 @@
 import { extractAudioToWav } from '@mcut/media'
 import { buildApplyCaptionsCommand, type TranscribeOptions, type TranscriptResult } from '@mcut/transcription'
 import {
+  getElementLocation,
   getProjectCaptions,
   getProjectTranscript,
   rangesOverlap,
@@ -100,10 +101,18 @@ function assertBridgeTranscriptionSupported(source: ElementAudioSource): void {
   }
 }
 
-function overlappingCaptions(engine: EditorEngine, source: ElementAudioSource) {
+function overlappingCaptions(engine: EditorEngine, pieces: readonly ElementAudioSource[]) {
   return getProjectCaptions(engine.project).filter(({ caption }) =>
-    rangesOverlap(caption.startMs, caption.durationMs, source.timelineStartMs, source.timelineDurationMs),
+    pieces.some((piece) => rangesOverlap(caption.startMs, caption.durationMs, piece.timelineStartMs, piece.timelineDurationMs)),
   )
+}
+
+function sameSourcePieces(engine: EditorEngine, source: ElementAudioSource): ElementAudioSource[] {
+  const project = engine.project
+  const track = getElementLocation(project, source.elementId)?.track
+  return (track?.elements ?? [])
+    .map((element) => resolveElementAudioSource(project, element.id))
+    .filter((piece): piece is ElementAudioSource => piece?.assetId === source.assetId)
 }
 
 function sourceResult(source: ElementAudioSource): EnsureTranscriptResult['source'] {
@@ -150,10 +159,10 @@ export async function ensureTranscriptForBridge(
   const source = pickTranscriptionSource(engine, payload)
   const sourceInfo = sourceResult(source)
   const existingTranscript = (): EnsureTranscriptResult | null =>
-    !payload.replace && overlappingCaptions(engine, source).length > 0
+    !payload.replace && overlappingCaptions(engine, sameSourcePieces(engine, source)).length > 0
       ? {
           applied: false,
-          reason: 'Transcript captions already overlap the target clip.',
+          reason: 'Captions already cover a clip that plays this audio. Pass replace true to transcribe again.',
           source: sourceInfo,
           transcript: getProjectTranscript(engine.project, { includeWords: true }),
         }
@@ -182,7 +191,7 @@ export async function ensureTranscriptForBridge(
 
   engine.transact(() => {
     if (payload.replace) {
-      for (const { caption } of overlappingCaptions(engine, source)) {
+      for (const { caption } of overlappingCaptions(engine, [source])) {
         engine.dispatch({ type: 'removeElement', elementId: caption.id })
       }
     }

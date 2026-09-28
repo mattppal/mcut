@@ -206,6 +206,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline and store that transcript for apply_captions to reuse after cuts. Explicit tool only; get_transcript never auto-transcribes. ' +
+    'After cuts, captions over any piece of the same audio count as its transcript, and a stored transcript is placed over the pieces instead of transcribing again. Pass replace true to transcribe again. ' +
     'Required before transcript-based silence removal when captions are missing.',
   list_commands: 'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
   apply_commands:
