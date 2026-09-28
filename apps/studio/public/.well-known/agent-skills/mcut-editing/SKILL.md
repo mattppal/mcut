@@ -115,6 +115,9 @@ of them in `transact`.
    the whole cut should be one. It cuts every range from the clip and from
    every track under it and closes the gaps. Do not cut retakes with
    `splitElement`, `trimElement`, or `rippleDelete`.
+   When a candidate starts in the first few seconds, start it at 0 instead,
+   and end it about 400ms before the kept take's first word. Otherwise the
+   video opens on a short lead-in and then jumps to the kept take.
 3. Call `apply_captions` once with `elementId` set to any remaining piece and
    `replace: true`. Do not pass `transcript`. The call reuses the stored
    transcript, captions every piece on the track that plays the same audio at
@@ -125,7 +128,7 @@ of them in `transact`.
    edit is done, so do not run it again.
 
 ```json
-{ "name": "remove_ranges", "arguments": { "ranges": [{ "startMs": 325720, "endMs": 333580 }, { "startMs": 1080, "endMs": 15120 }] } }
+{ "name": "remove_ranges", "arguments": { "ranges": [{ "startMs": 325720, "endMs": 333580 }, { "startMs": 0, "endMs": 14720 }] } }
 ```
 
 With `time: "source"` and `elementId`, `remove_ranges` reads ranges in the
@@ -148,6 +151,11 @@ Use the built-in preset action instead of hand-authoring opacity keyframes:
   }
 }
 ```
+
+The action fades both ends of one clip. After retake cuts or angle cuts the
+video is several pieces, so to fade in from black only at the start, call
+`applyAnimationPreset` with `preset: "fade-in"` and `options: { "durationMs": 500 }`
+on the piece at 0s.
 
 For clip-to-clip transitions, use `setTransition` only on the left clip of an
 exact butt cut. Built-ins: `dissolve`, `fade-black`, `fade-white`, `slide-left`,
