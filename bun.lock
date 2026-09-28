@@ -26,7 +26,7 @@
     },
     "apps/desktop": {
       "name": "mcut-desktop",
-      "version": "0.1.0",
+      "version": "0.1.2",
       "devDependencies": {
         "@mcut/desktop-ipc": "workspace:*",
         "@mcut/mcp-server": "workspace:*",
@@ -44,9 +44,9 @@
     },
     "apps/studio": {
       "name": "mcut-studio",
-      "version": "0.1.0",
+      "version": "0.1.1-alpha.57",
       "dependencies": {
-        "@base-ui/react": "1.5.0",
+        "@base-ui/react": "1.8.0",
         "@dnd-kit/core": "6.3.1",
         "@dnd-kit/sortable": "10.0.0",
         "@dnd-kit/utilities": "3.2.2",
@@ -96,7 +96,7 @@
       "name": "mcut-web",
       "version": "0.1.0",
       "dependencies": {
-        "@base-ui/react": "1.5.0",
+        "@base-ui/react": "1.8.0",
         "@hugeicons/core-free-icons": "4.2.0",
         "@hugeicons/react": "1.1.6",
         "@types/mdx": "2.0.14",
@@ -125,7 +125,7 @@
     },
     "examples/agentic-editing": {
       "name": "agentic-editing-example",
-      "version": "0.0.0",
+      "version": "0.0.1-alpha.21",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
         "ai": "^6.0.0",
@@ -133,7 +133,7 @@
     },
     "examples/headless-editing": {
       "name": "headless-editing-example",
-      "version": "0.0.0",
+      "version": "0.0.1-alpha.24",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
         "@mcut/transcription": "workspace:*",
@@ -141,7 +141,7 @@
     },
     "examples/mcp-server": {
       "name": "mcp-server-example",
-      "version": "0.0.0",
+      "version": "0.0.1-alpha.40",
       "dependencies": {
         "@mcut/mcp-server": "workspace:*",
         "@mcut/timeline": "workspace:*",
@@ -150,7 +150,7 @@
     },
     "packages/cli": {
       "name": "@mcut/cli",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.25",
       "bin": {
         "mcut": "./dist/cli.js",
       },
@@ -164,7 +164,7 @@
     },
     "packages/compositor": {
       "name": "@mcut/compositor",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.23",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
       },
@@ -174,7 +174,7 @@
     },
     "packages/desktop-ipc": {
       "name": "@mcut/desktop-ipc",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.24",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
         "zod": "4.4.3",
@@ -182,7 +182,7 @@
     },
     "packages/editor": {
       "name": "@mcut/editor",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.23",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
         "zod": "4.4.3",
@@ -190,8 +190,9 @@
     },
     "packages/mcp-server": {
       "name": "@mcut/mcp-server",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.41",
       "bin": {
+        "mcp-server": "./dist/cli.js",
         "mcut-bridge": "./dist/bridge-cli.js",
         "mcut-mcp": "./dist/cli.js",
         "mcut-mcp-live": "./dist/live-cli.js",
@@ -210,7 +211,7 @@
     },
     "packages/media": {
       "name": "@mcut/media",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.36",
       "dependencies": {
         "@mcut/compositor": "workspace:*",
         "@mcut/timeline": "workspace:*",
@@ -226,7 +227,7 @@
     },
     "packages/react": {
       "name": "@mcut/react",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.37",
       "dependencies": {
         "@mcut/compositor": "workspace:*",
         "@mcut/media": "workspace:*",
@@ -249,7 +250,7 @@
     },
     "packages/timeline": {
       "name": "@mcut/timeline",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.22",
       "dependencies": {
         "@tanstack/store": "0.11.0",
         "zod": "4.4.3",
@@ -257,7 +258,7 @@
     },
     "packages/transcription": {
       "name": "@mcut/transcription",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.25",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
         "zod": "4.4.3",
@@ -265,7 +266,7 @@
     },
     "packages/transcription-ai-sdk": {
       "name": "@mcut/transcription-ai-sdk",
-      "version": "0.1.0-alpha.0",
+      "version": "1.0.0-alpha.25",
       "devDependencies": {
         "@mcut/transcription": "workspace:*",
         "ai": "^6.0.0",
@@ -277,7 +278,7 @@
     },
     "packages/transcription-assemblyai": {
       "name": "@mcut/transcription-assemblyai",
-      "version": "0.1.0-alpha.0",
+      "version": "1.0.0-alpha.25",
       "dependencies": {
         "assemblyai": "^4.16.1",
       },
@@ -290,7 +291,7 @@
     },
     "packages/transcription-local": {
       "name": "@mcut/transcription-local",
-      "version": "0.1.0-alpha.0",
+      "version": "1.0.0-alpha.28",
       "dependencies": {
         "@huggingface/transformers": "^4.3.0",
       },
@@ -303,14 +304,14 @@
     },
     "packages/voice": {
       "name": "@mcut/voice",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.1",
       "dependencies": {
         "zod": "4.4.3",
       },
     },
     "skills/mcut-editing": {
       "name": "mcut-editing-skill",
-      "version": "0.0.0",
+      "version": "0.0.1-alpha.27",
       "dependencies": {
         "@mcut/cli": "workspace:*",
         "@mcut/timeline": "workspace:*",
@@ -395,9 +396,9 @@
 
     "@babel/types": ["@babel/types@7.29.7", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.7", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA=="],
 
-    "@base-ui/react": ["@base-ui/react@1.5.0", "", { "dependencies": { "@babel/runtime": "^7.29.2", "@base-ui/utils": "0.2.9", "@floating-ui/react-dom": "^2.1.8", "@floating-ui/utils": "^0.2.11", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@date-fns/tz": "^1.2.0", "@types/react": "^17 || ^18 || ^19", "date-fns": "^4.0.0", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@date-fns/tz", "@types/react", "date-fns"] }, "sha512-z1gSAlced1yY+iM+mHDEtIkD8UI3Ebs52MuBPxvV6f5hRutk+xvCH/wuB7hDqDzK9JG5FoMz5nhrqtSs1wjt1A=="],
+    "@base-ui/react": ["@base-ui/react@1.8.0", "", { "dependencies": { "@babel/runtime": "^7.29.7", "@base-ui/utils": "0.4.0", "@floating-ui/react-dom": "^2.1.9", "@floating-ui/utils": "^0.2.12", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@date-fns/tz": "^1.2.0", "@types/react": "^17 || ^18 || ^19", "date-fns": "^4.0.0", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@date-fns/tz", "@types/react", "date-fns"] }, "sha512-P0/1sxo6SBVZOklKMIedvTWqw2s2IQzi9x5bIVsXu980cuSOD4NeuRSs+/L7LZQfDkZP/uRZyGPyfFl/B1oH+Q=="],
 
-    "@base-ui/utils": ["@base-ui/utils@0.2.9", "", { "dependencies": { "@babel/runtime": "^7.29.2", "@floating-ui/utils": "^0.2.11", "reselect": "^5.1.1", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@types/react": "^17 || ^18 || ^19", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@types/react"] }, "sha512-x/PDDCYzoqPpjrdyb3VcyylTI2IjUXEtYDGi5foh7KsnmNJIIaVwA2GLgDH1dps1GgXiJbA60hM+AyuTfQzIvw=="],
+    "@base-ui/utils": ["@base-ui/utils@0.4.0", "", { "dependencies": { "@babel/runtime": "^7.29.7", "@floating-ui/utils": "^0.2.12", "reselect": "^5.2.0", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@types/react": "^17 || ^18 || ^19", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@types/react"] }, "sha512-bO9fz25kKtPf+aZVyfQrC0PDmJdmVni31W2hCS5/Owb+inwdIL3XU26pCPRPlt4LSxZrBgLwubXQXQlKaFEZzw=="],
 
     "@braidai/lang": ["@braidai/lang@1.1.2", "", {}, "sha512-qBcknbBufNHlui137Hft8xauQMTZDKdophmLFv05r2eNmdIv/MlPuP4TdUknHG68UdWLgVZwgxVe735HzJNIwA=="],
 
@@ -549,13 +550,13 @@
 
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.4.1", "", { "dependencies": { "@eslint/core": "^0.17.0", "levn": "^0.4.1" } }, "sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA=="],
 
-    "@floating-ui/core": ["@floating-ui/core@1.7.5", "", { "dependencies": { "@floating-ui/utils": "^0.2.11" } }, "sha512-1Ih4WTWyw0+lKyFMcBHGbb5U5FtuHJuujoyyr5zTaWS5EYMeT6Jb2AuDeftsCsEuchO+mM2ij5+q9crhydzLhQ=="],
+    "@floating-ui/core": ["@floating-ui/core@1.8.0", "", { "dependencies": { "@floating-ui/utils": "^0.2.12" } }, "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ=="],
 
-    "@floating-ui/dom": ["@floating-ui/dom@1.7.6", "", { "dependencies": { "@floating-ui/core": "^1.7.5", "@floating-ui/utils": "^0.2.11" } }, "sha512-9gZSAI5XM36880PPMm//9dfiEngYoC6Am2izES1FF406YFsjvyBMmeJ2g4SAju3xWwtuynNRFL2s9hgxpLI5SQ=="],
+    "@floating-ui/dom": ["@floating-ui/dom@1.8.0", "", { "dependencies": { "@floating-ui/core": "^1.8.0", "@floating-ui/utils": "^0.2.12" } }, "sha512-yXSrzeHZBTZadLOlfyhCkJHNeLJnHRnRInwdZ40L7ZiaAtrBwoYlsDrX3v5zB1Utk7CLfzcOVnVVWoXEky7Ceg=="],
 
-    "@floating-ui/react-dom": ["@floating-ui/react-dom@2.1.8", "", { "dependencies": { "@floating-ui/dom": "^1.7.6" }, "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-cC52bHwM/n/CxS87FH0yWdngEZrjdtLW/qVruo68qg+prK7ZQ4YGdut2GyDVpoGeAYe/h899rVeOVm6Oi40k2A=="],
+    "@floating-ui/react-dom": ["@floating-ui/react-dom@2.1.9", "", { "dependencies": { "@floating-ui/dom": "^1.8.0" }, "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-JDjEFGCpImxDCA7JJKviA0M9+RtmJdj0m/NVU5IMgBK+AmZouAQQ7/+2GLH0GXXY0YMw9oXPB8hKdbPYg5QLYg=="],
 
-    "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
+    "@floating-ui/utils": ["@floating-ui/utils@0.2.12", "", {}, "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="],
 
     "@fuma-translate/react": ["@fuma-translate/react@1.0.2", "", { "peerDependencies": { "@types/react": "*", "react": "^19.2.0", "react-dom": "^19.2.0" }, "optionalPeers": ["@types/react"] }, "sha512-uOiOtBx3nRXR8Nu1GzBf1tApgF1FErDBTHxRIAQeyQdyOoZbrNRN6H4kDCWObY4qyGeGbHydG0DHzgeUgFDMIw=="],
 
@@ -3175,6 +3176,8 @@
 
     "@quansync/fs/quansync": ["quansync@1.0.0", "", {}, "sha512-5xZacEEufv3HSTPQuchrvV6soaiACMFnq1H8wkVioctoH3TRha9Sz66lOxRwPK/qZj7HPiSveih9yAyh98gvqA=="],
 
+    "@radix-ui/react-popper/@floating-ui/react-dom": ["@floating-ui/react-dom@2.1.8", "", { "dependencies": { "@floating-ui/dom": "^1.7.6" }, "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-cC52bHwM/n/CxS87FH0yWdngEZrjdtLW/qVruo68qg+prK7ZQ4YGdut2GyDVpoGeAYe/h899rVeOVm6Oi40k2A=="],
+
     "@rolldown/binding-wasm32-wasi/@emnapi/core": ["@emnapi/core@1.11.0", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.2", "tslib": "^2.4.0" } }, "sha512-l9Oo58x0HOP5znGzVhYW9U3e5wVuA4LAZU2AGezTmkhO1CgQRFDhDg4nneHsu/t3WniXg9QrG2nIXL/ZS8ln8Q=="],
 
     "@rolldown/binding-wasm32-wasi/@emnapi/runtime": ["@emnapi/runtime@1.11.0", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-55coeOFKHv1ywEcUXJtWU5f+Jr/W5tZDvZig8DLKSwUN1JpROQ4rk/SNOQiFWmaR/VKF4zuFyW1B8JduOSv6Pg=="],
@@ -3517,6 +3520,8 @@
 
     "@next/eslint-plugin-next/fast-glob/glob-parent": ["glob-parent@5.1.2", "", { "dependencies": { "is-glob": "^4.0.1" } }, "sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow=="],
 
+    "@radix-ui/react-popper/@floating-ui/react-dom/@floating-ui/dom": ["@floating-ui/dom@1.7.6", "", { "dependencies": { "@floating-ui/core": "^1.7.5", "@floating-ui/utils": "^0.2.11" } }, "sha512-9gZSAI5XM36880PPMm//9dfiEngYoC6Am2izES1FF406YFsjvyBMmeJ2g4SAju3xWwtuynNRFL2s9hgxpLI5SQ=="],
+
     "@rolldown/binding-wasm32-wasi/@emnapi/core/@emnapi/wasi-threads": ["@emnapi/wasi-threads@1.2.2", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA=="],
 
     "@types/cacheable-request/@types/node/undici-types": ["undici-types@7.24.6", "", {}, "sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg=="],
@@ -3712,6 +3717,10 @@
     "@eslint/eslintrc/minimatch/brace-expansion/balanced-match": ["balanced-match@1.0.2", "", {}, "sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw=="],
 
     "@manypkg/find-root/find-up/locate-path/p-locate": ["p-locate@4.1.0", "", { "dependencies": { "p-limit": "^2.2.0" } }, "sha512-R79ZZ/0wAxKGu3oYMlz8jy/kbhsNrS7SKZ7PxEHBgJ5+F2mtFW2fK2cOtBh1cHYkQsbzFV7I+EoRKe6Yt0oK7A=="],
+
+    "@radix-ui/react-popper/@floating-ui/react-dom/@floating-ui/dom/@floating-ui/core": ["@floating-ui/core@1.7.5", "", { "dependencies": { "@floating-ui/utils": "^0.2.11" } }, "sha512-1Ih4WTWyw0+lKyFMcBHGbb5U5FtuHJuujoyyr5zTaWS5EYMeT6Jb2AuDeftsCsEuchO+mM2ij5+q9crhydzLhQ=="],
+
+    "@radix-ui/react-popper/@floating-ui/react-dom/@floating-ui/dom/@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
     "app-builder-lib/@electron/get/global-agent/matcher": ["matcher@3.0.0", "", { "dependencies": { "escape-string-regexp": "^4.0.0" } }, "sha512-OkeDaAZ/bQCxeFAozM55PKcKU0yJMPGifLwV4Qgjitu+5MoAfSQN4lsLJeXZ1b8w0x+/Emda6MZgXS1jvsapng=="],
 
