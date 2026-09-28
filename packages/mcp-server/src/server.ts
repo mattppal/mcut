@@ -43,6 +43,7 @@ import { commandsOnTimelineClock, onTimelineClock } from './agent-clock'
 import { liveBridgeAudioActivityMessage, pickAudioActivitySource } from './audio-activity-target'
 import { transcriptOriginNote } from './caption-transcript-match'
 import { toClipSourceWords } from './clip-source-words'
+import { correctTranscriptOn } from './correct-transcript'
 import { frameContent, frameGrabSchema } from './frame-content'
 import { contactSheetContent } from './picture-tools'
 import { removeRangesOn } from './remove-ranges'
@@ -276,6 +277,8 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       if (given && elementId) transcripts.remember(project, elementId, given.words)
       return text(`OK: ${command.captions.length} caption(s) applied${plan ? sourceCaptionsNote(plan) : '.'} ${origin}\n\n${await target.getSummary()}`)
     }
+    case 'correct_transcript':
+      return text(`${await correctTranscriptOn(target, transcripts, call.arguments)}\n\n${await target.getSummary()}`)
     case 'apply_silence_cuts': {
       const { elementId, transcript, ...options } = call.arguments
       const plan = planSilenceCuts(await targetProject(target), elementId, transcript, options)

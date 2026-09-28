@@ -163,6 +163,29 @@ interface CaptionMergeResult {
 
 The merged caption produced by `mergeCaptions`, with start, duration, text, and optional words.
 
+### CaptionCorrectionPatch
+
+```ts
+interface CaptionCorrectionPatch extends CaptionContentPatch {
+  startMs: number
+  durationMs: number
+}
+```
+
+One caption changed by `correctCaptions`, with its new position, since a match across two captions moves the boundary between them.
+
+### TranscriptCorrection
+
+```ts
+interface TranscriptCorrection {
+  patches: CaptionCorrectionPatch[]
+  removedIds: string[]
+  count: number
+}
+```
+
+The result of `correctCaptions`, with the captions to update, the captions to remove, and the number of matches replaced.
+
 ### CaptionSplitResult
 
 ```ts
