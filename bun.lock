@@ -26,7 +26,7 @@
     },
     "apps/desktop": {
       "name": "mcut-desktop",
-      "version": "0.1.0",
+      "version": "0.1.2",
       "devDependencies": {
         "@mcut/desktop-ipc": "workspace:*",
         "@mcut/mcp-server": "workspace:*",
@@ -44,7 +44,7 @@
     },
     "apps/studio": {
       "name": "mcut-studio",
-      "version": "0.1.0",
+      "version": "0.1.1-alpha.57",
       "dependencies": {
         "@base-ui/react": "1.5.0",
         "@dnd-kit/core": "6.3.1",
@@ -82,7 +82,7 @@
         "@playwright/test": "1.60.0",
         "@tailwindcss/postcss": "^4",
         "@types/color": "4.2.1",
-        "@types/node": "^20",
+        "@types/node": "^26",
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "eslint": "^9",
@@ -114,7 +114,7 @@
       "devDependencies": {
         "@eslint/compat": "^2.1.0",
         "@tailwindcss/postcss": "^4",
-        "@types/node": "^25",
+        "@types/node": "^26",
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "eslint": "^10",
@@ -125,7 +125,7 @@
     },
     "examples/agentic-editing": {
       "name": "agentic-editing-example",
-      "version": "0.0.0",
+      "version": "0.0.1-alpha.21",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
         "ai": "^6.0.0",
@@ -133,7 +133,7 @@
     },
     "examples/headless-editing": {
       "name": "headless-editing-example",
-      "version": "0.0.0",
+      "version": "0.0.1-alpha.24",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
         "@mcut/transcription": "workspace:*",
@@ -141,7 +141,7 @@
     },
     "examples/mcp-server": {
       "name": "mcp-server-example",
-      "version": "0.0.0",
+      "version": "0.0.1-alpha.40",
       "dependencies": {
         "@mcut/mcp-server": "workspace:*",
         "@mcut/timeline": "workspace:*",
@@ -150,7 +150,7 @@
     },
     "packages/cli": {
       "name": "@mcut/cli",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.25",
       "bin": {
         "mcut": "./dist/cli.js",
       },
@@ -164,7 +164,7 @@
     },
     "packages/compositor": {
       "name": "@mcut/compositor",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.23",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
       },
@@ -174,7 +174,7 @@
     },
     "packages/desktop-ipc": {
       "name": "@mcut/desktop-ipc",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.24",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
         "zod": "4.4.3",
@@ -182,7 +182,7 @@
     },
     "packages/editor": {
       "name": "@mcut/editor",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.23",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
         "zod": "4.4.3",
@@ -190,8 +190,9 @@
     },
     "packages/mcp-server": {
       "name": "@mcut/mcp-server",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.41",
       "bin": {
+        "mcp-server": "./dist/cli.js",
         "mcut-bridge": "./dist/bridge-cli.js",
         "mcut-mcp": "./dist/cli.js",
         "mcut-mcp-live": "./dist/live-cli.js",
@@ -210,7 +211,7 @@
     },
     "packages/media": {
       "name": "@mcut/media",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.36",
       "dependencies": {
         "@mcut/compositor": "workspace:*",
         "@mcut/timeline": "workspace:*",
@@ -226,7 +227,7 @@
     },
     "packages/react": {
       "name": "@mcut/react",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.37",
       "dependencies": {
         "@mcut/compositor": "workspace:*",
         "@mcut/media": "workspace:*",
@@ -249,7 +250,7 @@
     },
     "packages/timeline": {
       "name": "@mcut/timeline",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.22",
       "dependencies": {
         "@tanstack/store": "0.11.0",
         "zod": "4.4.3",
@@ -257,7 +258,7 @@
     },
     "packages/transcription": {
       "name": "@mcut/transcription",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.25",
       "dependencies": {
         "@mcut/timeline": "workspace:*",
         "zod": "4.4.3",
@@ -265,7 +266,7 @@
     },
     "packages/transcription-ai-sdk": {
       "name": "@mcut/transcription-ai-sdk",
-      "version": "0.1.0-alpha.0",
+      "version": "1.0.0-alpha.25",
       "devDependencies": {
         "@mcut/transcription": "workspace:*",
         "ai": "^6.0.0",
@@ -277,7 +278,7 @@
     },
     "packages/transcription-assemblyai": {
       "name": "@mcut/transcription-assemblyai",
-      "version": "0.1.0-alpha.0",
+      "version": "1.0.0-alpha.25",
       "dependencies": {
         "assemblyai": "^4.16.1",
       },
@@ -290,7 +291,7 @@
     },
     "packages/transcription-local": {
       "name": "@mcut/transcription-local",
-      "version": "0.1.0-alpha.0",
+      "version": "1.0.0-alpha.28",
       "dependencies": {
         "@huggingface/transformers": "^4.3.0",
       },
@@ -303,14 +304,14 @@
     },
     "packages/voice": {
       "name": "@mcut/voice",
-      "version": "0.1.0-alpha.0",
+      "version": "0.1.0-alpha.1",
       "dependencies": {
         "zod": "4.4.3",
       },
     },
     "skills/mcut-editing": {
       "name": "mcut-editing-skill",
-      "version": "0.0.0",
+      "version": "0.0.1-alpha.27",
       "dependencies": {
         "@mcut/cli": "workspace:*",
         "@mcut/timeline": "workspace:*",
@@ -1197,7 +1198,7 @@
 
     "@types/ms": ["@types/ms@2.1.0", "", {}, "sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA=="],
 
-    "@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
+    "@types/node": ["@types/node@26.6.2", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-X1P21scMv4zGKLYqjdGjaKa7COa0RKVYYZZN/NfvLQ1JegxFhdhpZG/Lyn8AXx6CDUavKAd11v6BvfpkDByK8g=="],
 
     "@types/normalize-package-data": ["@types/normalize-package-data@2.4.4", "", {}, "sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA=="],
 
@@ -2955,7 +2956,7 @@
 
     "undici": ["undici@7.28.0", "", {}, "sha512-cRZYrTDwWznlnRiPjggAGxZXanty6M8RV1ff8Wm4LWXBp7/IG8v5DnOm74DtUBp9OONpK75YlPnIjQqX0dBDtA=="],
 
-    "undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
+    "undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
     "unicode-animations": ["unicode-animations@1.0.3", "", { "dependencies": { "unicode-animations": "^1.0.1" }, "bin": { "unicode-animations": "scripts/demo.cjs" } }, "sha512-+klB2oWwcYZjYWhwP4Pr8UZffWDFVx6jKeIahE6z0QYyM2dwDeDPyn5nevCYbyotxvtT9lh21cVURO1RX0+YMg=="],
 
@@ -3323,8 +3324,6 @@
 
     "mcut-studio/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
-    "mcut-web/@types/node": ["@types/node@25.9.3", "", { "dependencies": { "undici-types": ">=7.24.0 <7.24.7" } }, "sha512-603BddQMv3pUcr4U2dhujk83N2tTDVr/34wII2B6bJy6g+8WD6yUb11jszNs0gdi4PesVWl7ABt8nYMVpnLUcg=="],
-
     "mcut-web/eslint": ["eslint@10.5.0", "", { "dependencies": { "@eslint-community/eslint-utils": "^4.8.0", "@eslint-community/regexpp": "^4.12.2", "@eslint/config-array": "^0.23.5", "@eslint/config-helpers": "^0.6.0", "@eslint/core": "^1.2.1", "@eslint/plugin-kit": "^0.7.2", "@humanfs/node": "^0.16.6", "@humanwhocodes/module-importer": "^1.0.1", "@humanwhocodes/retry": "^0.4.2", "@types/estree": "^1.0.6", "ajv": "^6.14.0", "cross-spawn": "^7.0.6", "debug": "^4.3.2", "escape-string-regexp": "^4.0.0", "eslint-scope": "^9.1.2", "eslint-visitor-keys": "^5.0.1", "espree": "^11.2.0", "esquery": "^1.7.0", "esutils": "^2.0.2", "fast-deep-equal": "^3.1.3", "file-entry-cache": "^8.0.0", "find-up": "^5.0.0", "glob-parent": "^6.0.2", "ignore": "^5.2.0", "imurmurhash": "^0.1.4", "is-glob": "^4.0.0", "json-stable-stringify-without-jsonify": "^1.0.1", "minimatch": "^10.2.4", "natural-compare": "^1.4.0", "optionator": "^0.9.3" }, "peerDependencies": { "jiti": "*" }, "optionalPeers": ["jiti"], "bin": { "eslint": "bin/eslint.js" } }, "sha512-1y+7C+vi12bUK1IpZeaV3gsH9fHLBmPvYmPx42pvT/E9yG0IC8g3PUZZgp0+JLJl7ZDK0flc2gc+Aw9dpCvIsQ=="],
 
     "mcut-web/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
@@ -3602,8 +3601,6 @@
     "hast-util-raw/parse5/entities": ["entities@6.0.1", "", {}, "sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g=="],
 
     "hosted-git-info/lru-cache/yallist": ["yallist@4.0.0", "", {}, "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A=="],
-
-    "mcut-web/@types/node/undici-types": ["undici-types@7.24.6", "", {}, "sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg=="],
 
     "mcut-web/eslint/@eslint/config-array": ["@eslint/config-array@0.23.5", "", { "dependencies": { "@eslint/object-schema": "^3.0.5", "debug": "^4.3.1", "minimatch": "^10.2.4" } }, "sha512-Y3kKLvC1dvTOT+oGlqNQ1XLqK6D1HU2YXPc52NmAlJZbMMWDzGYXMiPRJ8TYD39muD/OTjlZmNJ4ib7dvSrMBA=="],
 
