@@ -101,7 +101,7 @@ export const FEATURE_TABLE: readonly Feature[] = [
   feature('aspect-presets', 'Switch the project aspect to 9:16', 'full'),
   feature(
     'center-person',
-    'Center a moving face in a 9:16 project so the crop fills the frame, including the first-run face model download on this device',
+    'Center a moving face in a 9:16 project so the crop fills the frame, with the bundled face model and no download',
     'full',
   ),
   feature('export-webm', 'Export the timeline as WebM', 'fast'),

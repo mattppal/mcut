@@ -5,7 +5,7 @@ description: Keep a face in frame with one undoable reframe edit.
 
 `createLocalFaceDetector` from `@mcut/media` samples a video on device and
 returns the largest face at each sample time, or null when there is none. The
-first call downloads the face model from huggingface.co and caches it.
+YuNet face model ships inside the package, so detection needs no download.
 `planCenterPerson` from `@mcut/editor` turns those samples into a list of
 commands. The first is one smoothed `setReframe`, and
 [Reframe](/docs/sdk/timeline/reframe) covers the track it writes. Apply the list
