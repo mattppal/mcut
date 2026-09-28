@@ -1,5 +1,12 @@
 # @mcut/cli
 
+## 0.1.0-alpha.26
+
+### Patch Changes
+
+- Updated dependencies [[`237ed77`](https://github.com/mattppal/mcut/commit/237ed774eafa2c4fe2c3dbe327c19b00690c4fba)]:
+  - @mcut/transcription@0.1.0-alpha.26
+
 ## 0.1.0-alpha.25
 
 ### Patch Changes

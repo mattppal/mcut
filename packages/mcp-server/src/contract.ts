@@ -63,6 +63,7 @@ export const MCP_AGENT_TOOL_NAMES = [
   'list_commands',
   'apply_commands',
   'apply_captions',
+  'correct_transcript',
   'apply_silence_cuts',
   'lint_project',
   'list_zooms',
@@ -130,7 +131,7 @@ export const MCP_TOOL_INPUTS = {
         'When true, re-transcribe and replace captions overlapping the target clip. Defaults to false. Pass it only when the user asks to redo the transcript or a tool says the captions lack word timings.',
       )
       .optional(),
-    language: z.string().trim().describe('Optional language hint for Whisper.').optional(),
+    language: z.string().trim().describe('Optional language hint for Whisper, an ISO 639-1 code such as "en".').optional(),
   }),
   list_commands: EMPTY_INPUT,
   apply_commands: z.strictObject({
@@ -149,6 +150,14 @@ export const MCP_TOOL_INPUTS = {
       .describe('Tool calls to apply as one undo step. Each name is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.'),
   }),
   apply_captions: applyCaptionsInputSchema,
+  correct_transcript: z.strictObject({
+    find: z
+      .string()
+      .trim()
+      .min(1, 'correct_transcript requires a non-empty find string.')
+      .describe('The words as transcribed, for example "Grok Bot". Matches whole words, ignoring case.'),
+    replace: z.string().trim().min(1, 'correct_transcript requires a non-empty replace string.').describe('The correct spelling, for example "Grokbot".'),
+  }),
   apply_silence_cuts: applySilenceCutsInputSchema,
   lint_project: EMPTY_INPUT,
   list_zooms: EMPTY_INPUT,
@@ -212,6 +221,7 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline and store that transcript for apply_captions to reuse after cuts. Explicit tool only; get_transcript never auto-transcribes. ' +
+    'Whisper gets the project vocabulary as spelling hints. When the user names people, products, or terms before transcribing, set them first with updateProject { vocabulary }, the full list. ' +
     'After cuts, captions over any piece of the same audio count as its transcript, and a stored transcript is placed over the pieces instead of transcribing again. ' +
     'Required before transcript-based silence removal when captions are missing. When captions already exist it keeps them and returns at once, so omit replace. ' +
     'Pass replace true only when the user asks to redo the transcript or a tool says the captions lack word timings.',
@@ -229,6 +239,11 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'An explicit transcript comes from a transcription provider. ensure_transcript already applies its captions, so there is no need to call this after it. ' +
     'Never invent a transcript when transcription fails. ' +
     'The result warns when the transcript matches no transcript in the project. Caption words left in order after cuts still match.',
+  correct_transcript:
+    'Fix a misheard name or term everywhere in the transcript as one undoable edit. When the user names a correction ("it is Grokbot, not Grok Bot"), call this once per wrong spelling instead of retyping captions. ' +
+    'Replaces whole-word, case-insensitive matches of find with replace in every caption and in the transcript the server stored for apply_captions, so re-captioning after cuts keeps the fix. ' +
+    'Word timings stay: a multi-word find merged into one word spans the timings of the words it replaces, and a multi-word replace splits the timing of what it replaces by character share. ' +
+    'If nothing matches, call search_transcript with part of the phrase to see how it was transcribed, then correct that spelling. Undo removes the whole correction.',
   apply_silence_cuts: applySilenceCutsDescription,
   lint_project:
     'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
@@ -316,6 +331,7 @@ export const MCP_SERVER_STATIC_TOOL_CALL_SCHEMA = z.discriminatedUnion('name', [
   staticToolCall('ensure_transcript'),
   staticToolCall('get_audio_activity'),
   staticToolCall('apply_captions'),
+  staticToolCall('correct_transcript'),
   staticToolCall('apply_silence_cuts'),
   staticToolCall('lint_project'),
   staticToolCall('list_zooms'),

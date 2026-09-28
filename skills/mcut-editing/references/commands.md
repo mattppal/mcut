@@ -57,12 +57,13 @@ Move a track to a new position in the paint order.
 
 ## updateProject
 
-Update project settings (name, dimensions, fps).
+Update project settings (name, dimensions, fps, vocabulary). vocabulary is the full list of names and terms the transcript should spell right, for example ["Grokbot", "Karen X. Cheng"]. Transcription gets it as hints, so later transcripts spell them right. It replaces the list, so pass every term to keep.
 
 - `name` (string, optional)
 - `width` (integer, optional)
 - `height` (integer, optional)
 - `fps` (number, optional)
+- `vocabulary` (string[], optional)
 
 ## addAsset
 

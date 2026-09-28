@@ -29,7 +29,12 @@ Minimum loop:
 3. If speech matters, `get_transcript` with `includeWords: true`
 4. If transcript is missing, `ensure_transcript`. Omit `replace`, so existing
    captions are kept. Set `replace` to true only when the user asks to redo the
-   transcript or a tool says the captions lack word timings.
+   transcript or a tool says the captions lack word timings. If the user names
+   people, products, or terms, set them first with `updateProject` and
+   `vocabulary`, for example `["Grokbot", "Karen X. Cheng", "mcut"]`. The list
+   replaces the old one, so read `transcript.vocabulary` from
+   `get_media_context` and pass every term to keep. Transcription gets it as
+   spelling hints.
 5. `list_actions`
 6. Prefer `run_action` high-level actions and task tools such as `edit_zooms` and `center_person` over raw commands
 7. When one user request needs more than one edit call, send them all in one
@@ -96,6 +101,28 @@ opens a dialog for a person and imports nothing. `addAsset` cannot load a
 
 This action uses word-timed captions and timeline commands. If it says there is
 no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
+
+### Correct misheard names
+
+Transcription often mishears names and product terms, for example "Grok Bot"
+for "Grokbot". When the user names a correction, or you spot a name the user
+spelled differently, fix it with `correct_transcript` before any other caption
+work.
+
+1. Call `correct_transcript` with `find` set to the transcribed spelling and
+   `replace` set to the correct one. It matches whole words and ignores case,
+   fixes every caption and the stored transcript as one undo step, and keeps
+   word timings.
+2. If it reports no match, call `search_transcript` with part of the name to
+   see how it was heard, then correct that spelling. Make one call per wrong
+   spelling, for example "Grok Bot" and "Grockbot" separately.
+3. Do not retype captions with `updateElement` or re-run `ensure_transcript`
+   to fix a name. Retyped text loses its word timings and can leave the old
+   spelling in the stored transcript, and transcribing again brings it back.
+
+```json
+{ "name": "correct_transcript", "arguments": { "find": "Grok Bot", "replace": "Grokbot" } }
+```
 
 ### Remove retakes
 

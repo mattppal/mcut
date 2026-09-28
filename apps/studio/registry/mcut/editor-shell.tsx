@@ -6,7 +6,7 @@ import { usePanelRef, type PanelImperativeHandle } from 'react-resizable-panels'
 import { toast } from 'sonner'
 import { EditorProvider, useDocumentRootAttribute, useDocumentRootClass, useEditor, useWindowEvent } from '@mcut/react'
 import type { Project } from '@mcut/timeline'
-import type { TranscriptResult } from '@mcut/transcription'
+import type { TranscribeOptions, TranscriptResult } from '@mcut/transcription'
 import { cn } from '@/lib/utils'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -129,7 +129,7 @@ function EditorDocumentTheme({ theme }: { theme: EditorTheme }) {
 
 export interface EditorShellProps {
   project?: Project
-  transcribe?: (audio: Blob) => Promise<TranscriptResult>
+  transcribe?: (audio: Blob, options?: TranscribeOptions) => Promise<TranscriptResult>
   embed?: EmbedOptions
 }
 

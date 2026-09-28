@@ -8,11 +8,17 @@ function failureMessage(error: unknown): string {
   return error.cause instanceof Error ? `${error.message} (${error.cause.message})` : error.message
 }
 
-function transcribeOptions(language: string | undefined, signal: AbortSignal): { language?: string; signal: AbortSignal } {
-  return language === undefined ? { signal } : { language, signal }
+interface AudioForm {
+  audio: Blob
+  language: string | undefined
+  vocabulary: string[]
 }
 
-async function readAudioForm(request: Request): Promise<{ audio: Blob; language: string | undefined } | Response> {
+function transcribeOptions({ language, vocabulary }: AudioForm, signal: AbortSignal): { language?: string; vocabulary?: string[]; signal: AbortSignal } {
+  return { ...(language === undefined ? {} : { language }), ...(vocabulary.length > 0 ? { vocabulary } : {}), signal }
+}
+
+async function readAudioForm(request: Request): Promise<AudioForm | Response> {
   try {
     const form = await request.formData()
     const audio = form.get('audio')
@@ -20,7 +26,8 @@ async function readAudioForm(request: Request): Promise<{ audio: Blob; language:
       return Response.json({ error: 'Expected multipart form data with a non-empty "audio" file.' }, { status: 400 })
     }
     const language = form.get('language')
-    return { audio, language: typeof language === 'string' && language.length > 0 ? language : undefined }
+    const vocabulary = form.getAll('vocabulary').filter((term): term is string => typeof term === 'string' && term.trim().length > 0)
+    return { audio, language: typeof language === 'string' && language.length > 0 ? language : undefined, vocabulary }
   } catch (error) {
     return Response.json({ error: `Expected multipart form data. ${failureMessage(error)}` }, { status: 400 })
   }
@@ -44,7 +51,7 @@ export async function handleTranscribeRequest(request: Request, settings: Deskto
   const signal = AbortSignal.timeout(TRANSCRIBE_TIMEOUT_MS)
   try {
     const provider = createAssemblyAIProvider({ apiKey: key })
-    const result = await provider.transcribe({ audio: form.audio, mimeType: form.audio.type || 'audio/wav' }, transcribeOptions(form.language, signal))
+    const result = await provider.transcribe({ audio: form.audio, mimeType: form.audio.type || 'audio/wav' }, transcribeOptions(form, signal))
     return Response.json(result)
   } catch (error) {
     if (signal.aborted) {

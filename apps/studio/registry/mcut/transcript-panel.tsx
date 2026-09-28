@@ -17,6 +17,7 @@ import {
   searchCaptions,
   splitCaptionAtWord,
   type TranscriptMatch,
+  type TranscribeOptions,
   type TranscriptResult,
 } from '@mcut/transcription'
 import { cn } from '@/lib/utils'
@@ -29,7 +30,7 @@ import { addTranscriptKeyword, attachTranscriptSearch, removeTranscriptKeyword, 
 
 export interface TranscriptPanelProps {
   className?: string
-  transcribe?: (audio: Blob) => Promise<TranscriptResult>
+  transcribe?: (audio: Blob, options?: TranscribeOptions) => Promise<TranscriptResult>
 }
 
 function captionsOf(project: Project): CaptionElement[] {
@@ -269,7 +270,7 @@ function useRetranscribe(transcribe: TranscriptPanelProps['transcribe']) {
       if (!transcribe || !source) throw new Error('Select a video, audio, or multicam clip first.')
       const wav = await extractAudioToWav(source.asset.src)
       if (!wav) throw new Error(`"${source.asset.name ?? source.asset.id}" has no audio track.`)
-      const result = await transcribe(wav)
+      const result = await transcribe(wav, { vocabulary: engine.project.vocabulary ?? [] })
       return { result, source }
     },
     onSuccess: ({ result, source }: { result: TranscriptResult; source: ElementAudioSource }) => {
