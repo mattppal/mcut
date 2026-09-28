@@ -5,7 +5,7 @@ import type { AudibleSegment } from './export-audio-composite'
 import { AUDIO_SAMPLE_RATE } from './export-types'
 import { inputFor } from './probe'
 import { contextAt, epochChange, handoffAnchor, heardContextS, heardTimelineMs, voiceStartS, type AudioAnchor } from './preview-audio-plan'
-import { createVoice, dropVoice, LOOKAHEAD_S, pumpVoice, retuneVoice, START_LEAD_S, type SinkOf, type Voice } from './preview-audio-voice'
+import { createVoice, dropVoice, equalPower, LOOKAHEAD_S, pumpVoice, retuneVoice, START_LEAD_S, type SinkOf, type Voice } from './preview-audio-voice'
 import { sourceAudioSink } from './source-timing'
 
 const MAX_AUDIBLE_RATE = 4
@@ -13,7 +13,7 @@ const HANDOFF_LEAD_S = 0.2
 const HANDOFF_FADE_S = 0.02
 const STOP_LEAD_S = 0.05
 const STOP_FADE_S = 0.005
-const FADE_STEPS = 32
+const SUSPEND_IDLE_S = 2
 
 interface OpenSource {
   input: Input
@@ -28,7 +28,7 @@ interface KeyedSegment {
 
 interface Epoch {
   anchor: AudioAnchor
-  primed: boolean
+  stage: 'opening' | 'opened' | 'primed'
   output: GainNode
   voices: Map<string, Voice>
   reportedMs: number
@@ -37,6 +37,17 @@ interface Epoch {
 interface Outgoing {
   epoch: Epoch
   untilS: number | null
+}
+
+interface Sounding {
+  anchor: AudioAnchor
+  outgoing: AudioAnchor | null
+}
+
+interface Pause {
+  stoppedMs: number
+  reportedMs: number
+  sounding: Sounding
 }
 
 interface SegmentMemo {
@@ -63,13 +74,11 @@ function outputStarted(context: AudioContext): boolean {
   return (context.getOutputTimestamp().performanceTime ?? 0) > 0
 }
 
-function equalPower(rising: boolean): Float32Array {
-  const curve = new Float32Array(FADE_STEPS)
-  for (let step = 0; step < FADE_STEPS; step++) {
-    const angle = ((step / (FADE_STEPS - 1)) * Math.PI) / 2
-    curve[step] = rising ? Math.sin(angle) : Math.cos(angle)
-  }
-  return curve
+function heardAt(context: AudioContext, displayTimeMs: number): number | null {
+  const { contextTime, performanceTime } = context.getOutputTimestamp()
+  return contextTime !== undefined && performanceTime !== undefined && performanceTime > 0
+    ? heardContextS({ contextTime, performanceTime }, displayTimeMs)
+    : null
 }
 
 function crossfade(from: GainNode, to: GainNode, atS: number): void {
@@ -105,12 +114,14 @@ export class PreviewAudio {
   private epoch: Epoch | null = null
   private outgoing: Outgoing | null = null
   private sources = new Map<string, Promise<OpenSource | null>>()
+  private settled = new WeakSet<Promise<OpenSource | null>>()
   private audioSources: ReadonlyMap<ElementId, string> | undefined
   private memo: SegmentMemo | null = null
   private outputRendered = false
   private heldMs: number | null = null
-  private paused: { atMs: number; stoppedMs: number } | null = null
+  private paused: Pause | null = null
   private stopping: { epochs: Epoch[]; untilS: number } | null = null
+  private quietS: number | null = null
   private disposed = false
 
   setAudioSources(sources: ReadonlyMap<ElementId, string> | undefined): void {
@@ -123,16 +134,23 @@ export class PreviewAudio {
 
   clockTimeMs(displayTimeMs: number): number | null {
     const { context, epoch } = this
-    if (!context || !epoch || context.state !== 'running') return this.heldMs
+    if (!context || context.state !== 'running') return this.heldMs
+    if (!epoch) return this.pausedTimeMs(context, displayTimeMs)
     const sounding = this.soundingAnchors()
     if (!sounding) return epoch.reportedMs
-    const stamp = context.getOutputTimestamp()
-    const heardS =
-      stamp.contextTime !== undefined && stamp.performanceTime !== undefined && stamp.performanceTime > 0
-        ? heardContextS({ contextTime: stamp.contextTime, performanceTime: stamp.performanceTime }, displayTimeMs)
-        : sounding.anchor.contextS
+    const heardS = heardAt(context, displayTimeMs) ?? sounding.anchor.contextS
     epoch.reportedMs = Math.max(epoch.reportedMs, heardTimelineMs(sounding.anchor, sounding.outgoing, heardS))
     return epoch.reportedMs
+  }
+
+  private pausedTimeMs(context: AudioContext, displayTimeMs: number): number | null {
+    const paused = this.paused
+    if (!paused) return this.heldMs
+    const heardS = heardAt(context, displayTimeMs)
+    if (heardS === null) return paused.reportedMs
+    const heardMs = heardTimelineMs(paused.sounding.anchor, paused.sounding.outgoing, heardS)
+    paused.reportedMs = Math.min(paused.stoppedMs, Math.max(paused.reportedMs, heardMs))
+    return paused.reportedMs
   }
 
   sync(project: Project, requested: PlaybackState): void {
@@ -142,6 +160,7 @@ export class PreviewAudio {
       this.pause(project, requested)
       return
     }
+    this.quietS = null
     if (rate <= 0 || rate > MAX_AUDIBLE_RATE) {
       this.flush()
       return
@@ -162,9 +181,10 @@ export class PreviewAudio {
       return
     }
     const epoch = this.ensureEpoch(context, master, playback, segments)
+    if (epoch.stage === 'opened') this.prime(context, epoch)
     const sinkOf: SinkOf = (src) => this.sourceOf(src).then((opened) => opened?.sink ?? null)
     this.settleOutgoing(context, sinkOf)
-    if (!epoch.primed) return
+    if (epoch.stage !== 'primed') return
     this.reconcile(context, epoch, segments)
     for (const voice of epoch.voices.values()) pumpVoice(context, epoch.anchor, voice, sinkOf)
   }
@@ -192,37 +212,41 @@ export class PreviewAudio {
   private ensureEpoch(context: AudioContext, master: GainNode, playback: PlaybackState, segments: KeyedSegment[]): Epoch {
     const current = this.epoch
     const change =
-      current && epochChange({ rate: current.anchor.rate, reportedMs: current.reportedMs, sounding: current.primed || this.outgoing !== null }, playback)
+      current &&
+      epochChange({ rate: current.anchor.rate, reportedMs: current.reportedMs, sounding: current.stage === 'primed' || this.outgoing !== null }, playback)
     if (current && change === 'keep') return current
     if (current && change === 'handoff') this.beginHandoff(context, current)
     else this.flush()
     const output = context.createGain()
     output.connect(master)
     const timelineMs = current && change === 'handoff' ? current.reportedMs : Math.round(playback.currentTimeMs)
+    const opening = dueSegments(segments, timelineMs, playback.playbackRate).map(({ segment }) => this.sourceOf(segment.src))
     const epoch: Epoch = {
       anchor: { timelineMs, contextS: 0, rate: playback.playbackRate },
-      primed: false,
+      stage: opening.every((source) => this.settled.has(source)) ? 'opened' : 'opening',
       output,
       voices: new Map(),
       reportedMs: timelineMs,
     }
     this.epoch = epoch
-    const opening = dueSegments(segments, timelineMs, playback.playbackRate).map(({ segment }) => this.sourceOf(segment.src))
     void Promise.all(opening).then(() => {
-      if (this.epoch !== epoch || !this.context) return
-      const outgoing = this.outgoing
-      const leadS = outgoing ? HANDOFF_LEAD_S : START_LEAD_S
-      const atS = (Math.round(this.context.currentTime * this.context.sampleRate) + Math.round(leadS * this.context.sampleRate)) / this.context.sampleRate
-      if (outgoing) {
-        epoch.anchor = handoffAnchor(outgoing.epoch.anchor, atS, epoch.anchor.rate)
-        crossfade(outgoing.epoch.output, epoch.output, atS)
-        outgoing.untilS = atS + HANDOFF_FADE_S
-      } else {
-        epoch.anchor.contextS = atS
-      }
-      epoch.primed = true
+      if (this.epoch === epoch && epoch.stage === 'opening') epoch.stage = 'opened'
     })
     return epoch
+  }
+
+  private prime(context: AudioContext, epoch: Epoch): void {
+    const outgoing = this.outgoing
+    const leadS = outgoing ? HANDOFF_LEAD_S : START_LEAD_S
+    const atS = (Math.round(context.currentTime * context.sampleRate) + Math.round(leadS * context.sampleRate)) / context.sampleRate
+    if (outgoing) {
+      epoch.anchor = handoffAnchor(outgoing.epoch.anchor, atS, epoch.anchor.rate)
+      crossfade(outgoing.epoch.output, epoch.output, atS)
+      outgoing.untilS = atS + HANDOFF_FADE_S
+    } else {
+      epoch.anchor.contextS = atS
+    }
+    epoch.stage = 'primed'
   }
 
   private segmentsOf(project: Project): KeyedSegment[] {
@@ -269,13 +293,14 @@ export class PreviewAudio {
       return null
     })
     this.sources.set(src, opening)
+    void opening.then(() => this.settled.add(opening))
     return opening
   }
 
   private beginHandoff(context: AudioContext, current: Epoch): void {
     this.epoch = null
     const outgoing = this.outgoing
-    if (!current.primed || (outgoing && context.currentTime < current.anchor.contextS)) {
+    if (current.stage !== 'primed' || (outgoing && context.currentTime < current.anchor.contextS)) {
       dropEpoch(current)
       if (outgoing && outgoing.untilS !== null) {
         outgoing.untilS = null
@@ -288,9 +313,9 @@ export class PreviewAudio {
     this.outgoing = { epoch: current, untilS: null }
   }
 
-  private soundingAnchors(): { anchor: AudioAnchor; outgoing: AudioAnchor | null } | null {
+  private soundingAnchors(): Sounding | null {
     const outgoing = this.outgoing?.epoch.anchor ?? null
-    const anchor = this.epoch?.primed ? this.epoch.anchor : outgoing
+    const anchor = this.epoch?.stage === 'primed' ? this.epoch.anchor : outgoing
     return anchor ? { anchor, outgoing } : null
   }
 
@@ -304,11 +329,22 @@ export class PreviewAudio {
     const rate = playback.playbackRate
     const audible = rate > 0 && rate <= MAX_AUDIBLE_RATE && dueSegments(this.segmentsOf(project), atMs, rate).length > 0
     this.heldMs = audible ? atMs : null
+    if (context) this.suspendWhenQuiet(context)
   }
 
-  private stop(context: AudioContext, sounding: { anchor: AudioAnchor; outgoing: AudioAnchor | null }, atMs: number): void {
+  private suspendWhenQuiet(context: AudioContext): void {
+    if (context.state !== 'running') return
+    this.quietS ??= context.currentTime
+    const { contextTime, performanceTime } = context.getOutputTimestamp()
+    if (contextTime === undefined || !performanceTime || contextTime < this.quietS + SUSPEND_IDLE_S) return
+    this.quietS = null
+    void context.suspend()
+  }
+
+  private stop(context: AudioContext, sounding: Sounding, atMs: number): void {
     const stopS = context.currentTime + STOP_LEAD_S
-    this.paused = { atMs, stoppedMs: Math.max(atMs, heardTimelineMs(sounding.anchor, sounding.outgoing, stopS)) }
+    const fadeMidMs = Math.round(heardTimelineMs(sounding.anchor, sounding.outgoing, stopS + STOP_FADE_S / 2))
+    this.paused = { stoppedMs: Math.max(atMs, fadeMidMs), reportedMs: atMs, sounding }
     const epochs = [this.epoch, this.outgoing?.epoch ?? null].flatMap((epoch) => (epoch ? [epoch] : []))
     for (const epoch of epochs) {
       epoch.output.gain.cancelAndHoldAtTime(stopS)
@@ -316,13 +352,14 @@ export class PreviewAudio {
     }
     this.dropStopping()
     this.stopping = { epochs, untilS: stopS + STOP_FADE_S }
+    this.quietS = stopS + STOP_FADE_S
     this.epoch = null
     this.outgoing = null
   }
 
   private resumePoint(requestedMs: number): number {
     const paused = this.paused
-    if (paused && Math.abs(requestedMs - paused.atMs) <= 1) return paused.stoppedMs
+    if (paused && Math.abs(requestedMs - paused.reportedMs) <= 1) return paused.stoppedMs
     this.paused = null
     return requestedMs
   }
@@ -355,6 +392,7 @@ export class PreviewAudio {
 
   private flush(): void {
     this.heldMs = null
+    this.paused = null
     this.dropStopping()
     this.dropCurrent()
   }
