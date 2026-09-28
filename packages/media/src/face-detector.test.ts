@@ -17,13 +17,13 @@ function scriptedWorker(reply: string): Worker {
 const media = new Blob(['bytes the scripted worker never decodes'])
 const samples = [{ sourceMs: 0, box: { x: 0.25, y: 0.5, w: 0.125, h: 0.25 } }]
 const replyFace = `self.postMessage({ type: 'result', id, samples: ${JSON.stringify(samples)} })`
-const replyFailure = `self.postMessage({ type: 'error', id, message: 'Could not download the face detection model' })`
-const replyProgress = `self.postMessage({ type: 'progress', id, phase: 'model', progress: 0.5 })`
+const replyFailure = `self.postMessage({ type: 'error', id, message: 'This browser cannot decode the video track' })`
+const replyProgress = `self.postMessage({ type: 'progress', id, phase: 'detect', progress: 0.5 })`
 
 test('a failed detection discards the worker so the next call retries on a fresh one that is then reused', async () => {
   const replies = [replyFailure, replyFace]
   const detector = createLocalFaceDetector({ createWorker: () => scriptedWorker(replies.shift() ?? replyFailure) })
-  expect(await detector.detect(media).catch(String)).toBe('Error: Could not download the face detection model')
+  expect(await detector.detect(media).catch(String)).toBe('Error: This browser cannot decode the video track')
   expect(await detector.detect(media)).toEqual(samples)
   expect(await detector.detect(media)).toEqual(samples)
   expect(spawned).toHaveLength(2)
