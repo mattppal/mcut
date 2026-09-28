@@ -2,7 +2,13 @@ import { z } from 'zod'
 import { centerPersonOptionsSchema, operatorIds, operators, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
 import { retakeOptionsSchema } from '@mcut/transcription'
-import { applyCaptionsInputSchema, applySilenceCutsInputSchema, removeRangesDescription, removeRangesInputSchema } from './transcript-tool-inputs'
+import {
+  applyCaptionsInputSchema,
+  applySilenceCutsInputSchema,
+  correctTranscriptInputSchema,
+  removeRangesDescription,
+  removeRangesInputSchema,
+} from './transcript-tool-inputs'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
 import { PICTURE_TOOL_DESCRIPTIONS, PICTURE_TOOL_INPUTS } from './picture-tools'
 import { commandBatchSchema } from './transact-shape'
@@ -85,18 +91,6 @@ export const MCP_AGENT_TOOL_NAMES = [
 
 export type McpAgentToolName = (typeof MCP_AGENT_TOOL_NAMES)[number]
 
-const correctionFind = z
-  .string()
-  .trim()
-  .min(1, 'correct_transcript requires a non-empty find string.')
-  .describe('The words as transcribed, for example "Grok Bot". Matches whole words, ignoring case.')
-
-const correctionReplace = z
-  .string()
-  .trim()
-  .min(1, 'correct_transcript requires a non-empty replace string.')
-  .describe('The correct spelling, for example "Grokbot".')
-
 export const MCP_TOOL_INPUTS = {
   get_summary: EMPTY_INPUT,
   get_project: EMPTY_INPUT,
@@ -162,19 +156,7 @@ export const MCP_TOOL_INPUTS = {
       .describe('Tool calls to apply as one undo step. Each name is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.'),
   }),
   apply_captions: applyCaptionsInputSchema,
-  correct_transcript: z
-    .strictObject({
-      find: correctionFind.optional(),
-      replace: correctionReplace.optional(),
-      corrections: z
-        .array(z.strictObject({ find: correctionFind, replace: correctionReplace }))
-        .min(1)
-        .optional()
-        .describe('Several find and replace pairs applied in order as one undo step, for example every misspelling of one name.'),
-    })
-    .refine((input) => (input.corrections === undefined) === (input.find !== undefined && input.replace !== undefined), {
-      message: 'correct_transcript takes find and replace, or a corrections list, not both.',
-    }),
+  correct_transcript: correctTranscriptInputSchema,
   apply_silence_cuts: applySilenceCutsInputSchema,
   lint_project: EMPTY_INPUT,
   list_zooms: EMPTY_INPUT,
