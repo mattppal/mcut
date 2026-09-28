@@ -6,12 +6,14 @@ import {
   getProjectCaptions,
   getProjectTranscript,
   isMediaClip,
+  rangesOverlap,
   resolveElementAudioSource,
   type ElementId,
   type Project,
 } from '@mcut/timeline'
 import { captionTranscriptsMatch } from './caption-transcript-match'
 import { toClipSourceWords } from './clip-source-words'
+import { planSourceCaptions, sourcePieces, type SourceCaptionsPlan } from './source-captions'
 
 interface SourceWord {
   text: string
@@ -74,6 +76,17 @@ export class StoredTranscripts {
     const placed = getProjectTranscript(project, { includeWords: true }).captions.flatMap((caption) => caption.words ?? [])
     const words = toClipSourceWords(project, options.elementId, placed)
     if (words.length > 0) this.#bySource.set(key, spliced(this.#bySource.get(key) ?? [], words))
+  }
+
+  replayOverUncaptioned(project: Project, elementId: ElementId): SourceCaptionsPlan | undefined {
+    if (!isForward(project, elementId) || !this.#bySource.has(forwardSourceKey(project, elementId))) return undefined
+    const { pieces } = sourcePieces(project, elementId)
+    const captioned = getProjectCaptions(project).some(({ caption }) =>
+      pieces.some((piece) => rangesOverlap(caption.startMs, caption.durationMs, piece.timelineStartMs, piece.timelineDurationMs)),
+    )
+    if (captioned) return undefined
+    const plan = planSourceCaptions(project, this.recall(project, elementId), { elementId })
+    return plan.command.captions.length > 0 ? plan : undefined
   }
 
   recall(project: Project, elementId: ElementId): TranscriptResult {

@@ -246,6 +246,46 @@ describe('ensureTranscriptForBridge', () => {
     ])
   })
 
+  test('after cuts, captions on one piece of a multicam count for every piece that plays its audio, unless replace is true', async () => {
+    const engine = new EditorEngine({ project: multicamProject() })
+    engine.dispatch({ type: 'splitElement', elementId: 'e-multicam', atMs: 3000, rightElementId: 'e-cut' })
+    engine.dispatch({ type: 'splitElement', elementId: 'e-cut', atMs: 4000, rightElementId: 'e-keep' })
+    engine.dispatch({ type: 'splitElement', elementId: 'e-keep', atMs: 5000, rightElementId: 'e-tail' })
+    engine.dispatch({ type: 'rippleDelete', elementIds: ['e-cut'] })
+    engine.dispatch({ type: 'addTrack', id: 't-captions' })
+    engine.dispatch({
+      type: 'addElement',
+      trackId: 't-captions',
+      element: {
+        id: 'e-caption-old',
+        type: 'caption',
+        startMs: 2100,
+        durationMs: 500,
+        text: 'Existing',
+        words: [{ text: 'Existing', startMs: 0, endMs: 400 }],
+      },
+    })
+    let transcribed = 0
+    const counting: EnsureTranscriptDeps = {
+      ...depsWithSourceTimes(),
+      transcribeOnDevice: async (audio, options) => {
+        transcribed += 1
+        return depsWithSourceTimes().transcribeOnDevice(audio, options)
+      },
+    }
+
+    for (const elementId of ['e-keep', 'e-tail'] as const) {
+      const result = await ensureTranscriptForBridge(engine, { elementId }, counting)
+      expect(result.applied).toBe(false)
+      expect(result.transcript.text).toBe('Existing')
+    }
+    expect(transcribed).toBe(0)
+
+    const replaced = await ensureTranscriptForBridge(engine, { elementId: 'e-multicam', replace: true }, counting)
+    expect(replaced.applied).toBe(true)
+    expect(transcribed).toBe(1)
+  })
+
   test('replace removes overlapping captions before applying the new transcript', async () => {
     const engine = new EditorEngine({ project: project({ caption: 'Existing' }) })
 
