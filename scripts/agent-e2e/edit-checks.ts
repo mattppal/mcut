@@ -1,6 +1,7 @@
 import { getProjectDurationMs, type LayoutSlot, type Project } from '@mcut/timeline'
 import { type OverlaySample, REFERENCE_LOOK, rectOffReference, sampleOverlay } from './export-frames'
 import { type CheckInput, type CheckResult, type CheckRule, elements, multicamOf, ofType, outcome, same, seconds, sourceAssetName } from './check-kit'
+import { OPENING_RULES, exportedPath } from './opening-checks'
 import { RETAKE_RULES } from './retake-checks'
 import { SHOT_RULES, screenSpans } from './shot-checks'
 import { ZOOM_RULES } from './zoom-checks'
@@ -192,8 +193,7 @@ const RULES: CheckRule[] = [
   [
     /^exported overlay styled$/,
     ({ after, calls }) => {
-      const done = calls.find((call) => call.name === 'get_export' && !call.isError && /"state":\s*"done"/.test(call.result))
-      const path = done === undefined ? undefined : /"outputPath":\s*"([^"]+)"/.exec(done.result)?.[1]
+      const path = exportedPath(calls)
       if (path === undefined) return { pass: false, detail: 'no finished export to sample' }
       const spans = screenSpans(after)
         .sort((a, b) => b.timelineEndMs - b.timelineStartMs - (a.timelineEndMs - a.timelineStartMs))
@@ -306,6 +306,7 @@ const RULES: CheckRule[] = [
   ...ZOOM_RULES,
   ...RETAKE_RULES,
   ...SHOT_RULES,
+  ...OPENING_RULES,
 ]
 
 export const CHECK_VOCABULARY = RULES.map(([pattern]) => pattern.source.replace(/^\^|\$$/g, ''))

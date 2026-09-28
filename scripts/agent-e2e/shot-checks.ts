@@ -24,7 +24,7 @@ function shotOf(project: Project, multicam: MulticamElement, layoutId: string): 
   return slots.every((slot) => !isScreenKey(project, multicam, slot.source)) ? 'head' : 'other'
 }
 
-function shotAtSource(project: Project, sourceMs: number): Shot | undefined {
+export function shotAtSource(project: Project, sourceMs: number): Shot | undefined {
   const piece = multicams(project).find((element) => sourceMs >= element.trimStartMs && sourceMs < element.trimStartMs + element.durationMs)
   if (piece === undefined) return undefined
   const angle = [...piece.angles]

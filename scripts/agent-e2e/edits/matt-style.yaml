@@ -19,7 +19,7 @@ edits:
   - id: 03-retakes
     transcript: matt-transcript.json
     ask: Find the retakes and remove them, keeping the good take each time, then re-caption what remains so the captions stay in sync with the speech.
-    checks: [duration shorter by at most 60s, retakes removed, captions in sync]
+    checks: [duration shorter by at most 60s, retakes removed, captions in sync, clean opening]
     note: The runner applies Matt's word-timed transcript with apply_captions first, as a transcription provider would.
   - id: 04-captions
     ask: Transcribe the audio and add captions.
@@ -27,7 +27,7 @@ edits:
     capability: exists
     note: Desktop transcription downloads a Whisper model from huggingface.co on first use.
   - id: 05-shots
-    ask: Start on the shot of my head, and after my first pause add a slight zoom in on me. When I start talking about what's on my screen, cut to the screen with my head in the corner, and cut back to just my head when I'm talking to the camera. Keep every zoom subtle with exponential easing and motion blur.
+    ask: Start on the shot of my head, and after my first pause add a slight zoom in on me. When I start talking about what's on my screen, cut to the screen with my head in the corner, and cut back to just my head when I'm talking to the camera. Keep every zoom subtle with exponential easing and motion blur. Fade in from black at the very start.
     checks:
       [
         opens on head only,
@@ -37,8 +37,11 @@ edits:
         subtle zoom,
         exponential easing,
         motion blur,
+        clean opening,
+        fades in from black,
+        retake cut at 49.7s 185.8s cuts to the screen,
       ]
-    note: Shot times are on Matt's source clock. 15 to about 34 s he tells the story to camera. At 35 s "this report is generated entirely by Grokbot" the Daily Brief page is up, at 57 s he points at Karen Chang's post "that she's sharing here", and at 190 s he talks about Grokbot running commands on his computer while the chat view is up.
+    note: Shot times are on Matt's source clock. 15 to about 34 s he tells the story to camera. At 35 s "this report is generated entirely by Grokbot" the Daily Brief page is up, at 57 s he points at Karen Chang's post "that she's sharing here", and at 190 s he talks about Grokbot running commands on his computer while the chat view is up. Retakes end at 49.7 s, just before the Karen Chang lines, and at 185.8 s, just before the chat view. Cutting to the screen there hides the jump. The first kept take starts at 15.1 s, after a 1 s lead-in and an abandoned take.
   - id: 07-detail-zoom
     ask: Each time the printed Daily Brief page (the white sheet with Events, Affirmations, and Journaling sections, shown large in the middle of the screen) is on screen, zoom into it on the screen recording with the same easing and motion blur, keep the zoom subtle, hold while it stays on screen, then zoom back out before it leaves.
     checks: [zoom in hold out, subtle zoom, exponential easing, motion blur, zoom on screen source, zoom covers shown 0-44.9s 99.3-138.7s 235.9-251.9s]
@@ -46,5 +49,5 @@ edits:
     note: find_scene_changes and get_contact_sheet locate the page's visits. The full page is on screen 0 to 44.9 s, 99.3 to 138.7 s, and 235.9 to 251.9 s in Matt's footage. Chat views with a small thumbnail of the page don't count.
   - id: 08-export
     ask: Export the video.
-    checks: [export job done, exported overlay styled]
+    checks: [export job done, exported overlay styled, exported fades in from black]
     capability: exists

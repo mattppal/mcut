@@ -69,6 +69,13 @@ const distance = (a: Rgb, b: Rgb): number => Math.hypot(a[0] - b[0], a[1] - b[1]
 
 const luma = (c: Rgb): number => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
 
+export function meanLuma(file: string, timeMs: number, width: number, height: number): number {
+  const frame = frameAt(file, timeMs, width, height)
+  let sum = 0
+  for (let at = 0; at < frame.length; at += 3) sum += luma([frame[at] ?? 0, frame[at + 1] ?? 0, frame[at + 2] ?? 0])
+  return sum / (frame.length / 3)
+}
+
 export function sampleOverlay(file: string, timeMs: number, slot: LayoutSlot, width: number, height: number): OverlaySample {
   const frame = frameAt(file, timeMs, width, height)
   const x0 = slot.rect.x * width
