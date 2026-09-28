@@ -198,9 +198,9 @@ out inside that segment, and end it before the next change.
 ### Choose shots on a multicam
 
 Plan angle cuts from the transcript and the screen, never on a fixed rhythm. For a
-talking head with a screen recording, open on the head-only shot, cut to the screen
-when the speaker starts talking about what it shows, and cut back to the head when
-they talk to the viewer again. Follow the shot list steps in `references/multicam.md`
+talking head with a screen recording, open on "Camera" (head only), cut to "Screen +
+Cam" when the speaker starts talking about what the screen shows, and cut back to
+"Camera" when they talk to the viewer again. Follow the shot list steps in `references/multicam.md`
 before you add any angle cut.
 
 ### Punch-ins and detail zooms
@@ -255,6 +255,8 @@ with ffmpeg.
 - Timeline positions are absolute.
 - Keyframes, time maps, and animation preset internals are element-local.
 - Multicam angle cuts are on the source clock the multicam's sources share.
+- Zoom region `atMs` is element-local, 0 at the clip start. After cuts, each
+  multicam piece has its own angle cuts and zooms.
 - Transcript word times from captions are timeline times. Silence cuts, captions
   scoped to a clip, and audio activity read that clip's audio source. A multicam
   uses its `audioSource`. They convert back to that asset's media time for forward

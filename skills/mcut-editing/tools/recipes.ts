@@ -95,7 +95,8 @@ export const RECIPES: Recipe[] = [
       'easeOutExpo and motion blur on by default. The subtlePunchIn preset is 1.15x. Times are ' +
       'element-local (0 is clip start), so the zoom survives the clip being dragged. `list_zooms` ' +
       'shows every zoom, and `edit_zooms` revises them as one undo step. On a multicam, set `source` to ' +
-      'the screen key so the camera overlay stays put.',
+      'the source the shot shows, `camera` for a punch-in on the head-only shot or the screen key for a ' +
+      'detail on the screen, so the other slots stay put.',
     commands: [{ type: 'addZoomRegion', elementId: 'e-camera', zoom: { id: 'z-punch', preset: 'subtlePunchIn', atMs: 4000 } }],
     verify: (project) => {
       const camera = element(project, 'e-camera')
