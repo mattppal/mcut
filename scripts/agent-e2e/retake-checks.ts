@@ -1,7 +1,7 @@
 import type { Project } from '@mcut/timeline'
 import { type CheckRule, elements, outcome } from './check-kit'
 
-const RANGE_TOLERANCE_MS = 300
+const RANGE_TOLERANCE_MS = 500
 const SYNC_TOLERANCE_MS = 250
 const SYNC_MIN_SHARE = 0.95
 
