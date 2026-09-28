@@ -4,6 +4,7 @@ import { CommandError } from '../errors'
 import { createElementId, createTrackId, type AssetId, type ElementId } from '../id'
 import { elementIdSchema, MIN_ELEMENT_DURATION_MS, validateElement, type Project, type TimelineElement, type Track } from '../model'
 import { getVisibleAngleCuts, isAudioOnlySource } from '../multicam'
+import { angleClockSchema, findCutIndex, resolveCutTime } from '../multicam-clock'
 import { transitionSchema } from '../transitions'
 import { listZoomRegions, renameSplitCopies, zoomRegionEndMs } from '../zoom-regions'
 import { defineCommand, mustGetLayout, mustLocate, replaceTrack } from './shared'
@@ -29,21 +30,23 @@ function withMulticam(project: Project, elementId: ElementId, update: (element: 
 export const addAngleCut = defineCommand({
   type: 'addAngleCut',
   description:
-    'Cut a multicam to a layout. `atMs` is on the source clock, the synced group time every source shares ' +
-    '(at 1x forward it is the multicam trimStartMs plus element-local ms), so cuts stay on the same content ' +
-    'through trims, splits, speed changes, and reverse. The layout is active from `atMs` until the next cut ' +
+    'Cut a multicam to a layout at `atMs`. With time "timeline", `atMs` is project timeline ms and must fall inside this piece. ' +
+    'With time "source", it is the synced group time every source shares, so cuts stay on the same content through trims, splits, speed changes, and reverse. ' +
+    'Either way the cut is stored on the source clock. The layout is active from the cut until the next cut ' +
     '(the live-switching primitive, press a layout key while playing).',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     atMs: z.number().int().nonnegative(),
     layoutId: z.string().min(1),
+    time: angleClockSchema,
   }),
   reduce: (project, payload) => {
     mustGetLayout(project, payload.layoutId)
     return withMulticam(project, payload.elementId, (element) => {
+      const atMs = resolveCutTime(project, element, payload.atMs, payload.time)
       const angles = element.angles
-        .filter((a) => a.atMs !== payload.atMs)
-        .concat({ atMs: payload.atMs, layoutId: payload.layoutId })
+        .filter((a) => a.atMs !== atMs)
+        .concat({ atMs, layoutId: payload.layoutId })
         .sort((a, b) => a.atMs - b.atMs)
       return { ...element, angles }
     })
@@ -53,25 +56,24 @@ export const addAngleCut = defineCommand({
 export const moveAngleCut = defineCommand({
   type: 'moveAngleCut',
   description:
-    'Retime a multicam cut (drag its tick). `fromMs` and `toMs` are on the source clock, like addAngleCut. ' +
+    'Retime a multicam cut (drag its tick). `fromMs` and `toMs` use the clock in `time`, like addAngleCut; a timeline `fromMs` matches the cut within one frame. ' +
     'Clamped between its neighbors. The first cut opens the schedule and cannot move.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     fromMs: z.number().int().nonnegative(),
     toMs: z.number().int().positive(),
+    time: angleClockSchema,
   }),
   reduce: (project, payload) =>
     withMulticam(project, payload.elementId, (element) => {
-      const index = element.angles.findIndex((a) => a.atMs === payload.fromMs)
+      const index = findCutIndex(project, element, payload.fromMs, payload.time)
       const previous = element.angles[index - 1]
-      if (index === -1) {
-        throw new CommandError('unknown-cut', `no cut at ${payload.fromMs}ms`)
-      }
       if (!previous) {
         throw new CommandError('invalid-payload', 'the first cut opens the schedule and cannot move; setAngleLayout changes its layout')
       }
       const next = element.angles[index + 1]
-      const toMs = Math.max(previous.atMs + 1, Math.min(payload.toMs, next ? next.atMs - 1 : Infinity))
+      const target = payload.time === 'timeline' ? resolveCutTime(project, element, payload.toMs, 'timeline') : payload.toMs
+      const toMs = Math.max(previous.atMs + 1, Math.min(target, next ? next.atMs - 1 : Infinity))
       const angles = element.angles.map((a, i) => (i === index ? { ...a, atMs: toMs } : a))
       return { ...element, angles }
     }),
@@ -79,40 +81,39 @@ export const moveAngleCut = defineCommand({
 
 export const removeAngleCut = defineCommand({
   type: 'removeAngleCut',
-  description: 'Remove a multicam cut at `atMs` on the source clock; the previous layout extends over its span. The first cut cannot be removed.',
+  description:
+    'Remove the multicam cut at `atMs`, on the clock in `time` (a timeline time matches the cut within one frame); the previous layout extends over its span. ' +
+    'The first cut cannot be removed.',
   payloadSchema: z.object({
     elementId: elementIdSchema,
     atMs: z.number().int().nonnegative(),
+    time: angleClockSchema,
   }),
   reduce: (project, payload) =>
     withMulticam(project, payload.elementId, (element) => {
-      const index = element.angles.findIndex((a) => a.atMs === payload.atMs)
-      if (index === -1) {
-        throw new CommandError('unknown-cut', `no cut at ${payload.atMs}ms`)
-      }
+      const index = findCutIndex(project, element, payload.atMs, payload.time)
       if (index === 0) {
         throw new CommandError('invalid-payload', 'the first cut opens the schedule and cannot be removed; setAngleLayout changes its layout')
       }
-      return { ...element, angles: element.angles.filter((a) => a.atMs !== payload.atMs) }
+      return { ...element, angles: element.angles.filter((_, i) => i !== index) }
     }),
 })
 
 export const setAngleLayout = defineCommand({
   type: 'setAngleLayout',
   description:
-    'Change which layout a multicam span uses without cutting (the paused "correct this take" action). ' + "`atMs` is the span's cut time on the source clock.",
+    'Change which layout a multicam span uses without cutting (the paused "correct this take" action). ' +
+    "`atMs` is the span's cut time on the clock in `time`; with time \"timeline\" the piece's start picks its opening span.",
   payloadSchema: z.object({
     elementId: elementIdSchema,
     atMs: z.number().int().nonnegative(),
     layoutId: z.string().min(1),
+    time: angleClockSchema,
   }),
   reduce: (project, payload) => {
     mustGetLayout(project, payload.layoutId)
     return withMulticam(project, payload.elementId, (element) => {
-      const index = element.angles.findIndex((a) => a.atMs === payload.atMs)
-      if (index === -1) {
-        throw new CommandError('unknown-cut', `no cut at ${payload.atMs}ms`)
-      }
+      const index = findCutIndex(project, element, payload.atMs, payload.time)
       const angles = element.angles.map((a, i) => (i === index ? { ...a, layoutId: payload.layoutId } : a))
       return { ...element, angles }
     })

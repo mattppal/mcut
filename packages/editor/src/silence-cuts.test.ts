@@ -159,7 +159,7 @@ describe('planSilenceCuts', () => {
     expect(thrown).toMatchObject({ code: 'unsupported', message: expect.stringMatching(/reversed/) })
   })
 
-  test('cuts a muted multicam on its offset audio source and keeps each angle cut', () => {
+  test('cuts a muted multicam on its offset audio source and keeps the angle cuts each piece plays', () => {
     const engine = new EditorEngine({ project: createProject({ id: 'p-mc' }) })
     engine.dispatch({ type: 'addTrack', id: 't-mic' })
     engine.dispatch({
@@ -207,8 +207,8 @@ describe('planSilenceCuts', () => {
     expect(plan.removedMs).toBe(6000)
     const pieces = plan.project.tracks.flatMap((track) => track.elements).filter((element) => element.type === 'multicam')
     expect(pieces).toHaveLength(2)
-    expect(pieces[0]).toMatchObject({ id: 'e-mc', startMs: 1000, durationMs: 3000, trimStartMs: 0, angles })
-    expect(pieces[1]).toMatchObject({ startMs: 4000, durationMs: 11000, trimStartMs: 9000, angles })
+    expect(pieces[0]).toMatchObject({ id: 'e-mc', startMs: 1000, durationMs: 3000, trimStartMs: 0, angles: angles.slice(0, 1) })
+    expect(pieces[1]).toMatchObject({ startMs: 4000, durationMs: 11000, trimStartMs: 9000, angles: angles.slice(1) })
   })
 
   test('a multicam with no audio source points at setMulticamAudio', () => {

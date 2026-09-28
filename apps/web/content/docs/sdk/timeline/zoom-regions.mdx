@@ -18,6 +18,14 @@ gets the id with `-r` appended, so no two pieces share a zoom id. A trim can
 leave a region running past an edge, where it plays cut off. Growing a clip
 from its start shifts the regions with the content.
 
+`addZoomRegion` and `updateZoomRegion` take `time`. `"element"`, the SDK
+default, reads `atMs` as element-local ms. `"timeline"`, the MCP server
+default, reads it as project timeline ms. With `"timeline"`, `addZoomRegion`
+covers that timeline range on every piece of the same kind on the element's
+track, so a zoom over a cut between two pieces is one command. Each piece after
+the first gets a copy with `-r` appended to the id. A range that starts off a
+piece or runs past the last piece is rejected.
+
 ```ts
 engine.dispatch({
   type: 'addZoomRegion',

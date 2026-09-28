@@ -199,7 +199,7 @@ describe('zoom regions on a clip', () => {
       { id: 'z-mid', elementId: 'e-screen', atMs: 9000, startMs: 9000, endMs: 10_500 },
       { id: 'z-mid-r', elementId: 'e-right', atMs: -1500, startMs: 10_500, endMs: 12_000 },
     ])
-    expect(summarizeProject(split)).toContain('[zooms: z-mid-r 1.15x @ 10.50s]')
+    expect(summarizeProject(split)).toContain('[zooms at timeline: z-mid-r 1.15x 10.50s to 12.00s]')
   })
 
   test('a zoom left past the clip end by a trim does not block edits to other zooms', () => {
