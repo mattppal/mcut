@@ -1,5 +1,11 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.39
+
+### Patch Changes
+
+- [#217](https://github.com/mattppal/mcut/pull/217) [`ab632e3`](https://github.com/mattppal/mcut/commit/ab632e3328c68c9c761db0d326ac0a3c0eb03173) Thanks [@mattppal](https://github.com/mattppal)! - `ensure_transcript` recognizes an existing transcript after retake cuts. Captions over any piece on the track that plays the same audio count as that audio's transcript, so a call on another piece returns them instead of transcribing again. When no captions are left but the server stored a transcript for that audio, it places that transcript over every piece instead of transcribing. `replace: true` still transcribes again.
+
 ## 0.1.0-alpha.38
 
 ### Patch Changes

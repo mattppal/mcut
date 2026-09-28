@@ -45,6 +45,7 @@
     "detail-zoom-subtle",
     "duplicate-element-ids",
     "edge-trim-safe-integer",
+    "ensure-transcript-cut-pieces",
     "expo-easing",
     "export-audio-encoder-delay",
     "export-audio-one-buffer",
