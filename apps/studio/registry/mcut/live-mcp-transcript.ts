@@ -127,18 +127,27 @@ function sourceResult(source: ElementAudioSource): EnsureTranscriptResult['sourc
   }
 }
 
-async function transcribeSource(source: ElementAudioSource, language: string | undefined, deps: EnsureTranscriptDeps): Promise<TranscriptResult> {
+interface TranscriptionHints {
+  language: string | undefined
+  vocabulary: readonly string[]
+}
+
+async function transcribeSource(
+  source: ElementAudioSource,
+  { language, vocabulary }: TranscriptionHints,
+  deps: EnsureTranscriptDeps,
+): Promise<TranscriptResult> {
   const wav = await extractSourceAudio(source, deps)
   if (!wav) {
     throw new Error(`"${source.asset.name ?? source.asset.id}" has no audio track.`)
   }
-  return deps.transcribeOnDevice(wav, language ? { language } : undefined)
+  return deps.transcribeOnDevice(wav, { ...(language ? { language } : {}), ...(vocabulary.length > 0 ? { vocabulary } : {}) })
 }
 
 const inFlight = new WeakMap<EnsureTranscriptDeps, Map<string, Promise<TranscriptResult>>>()
 
-function sharedTranscription(source: ElementAudioSource, language: string | undefined, deps: EnsureTranscriptDeps): Promise<TranscriptResult> {
-  const key = `${source.asset.id}|${source.sourceStartMs}|${source.sourceEndMs}|${language ?? ''}`
+function sharedTranscription(source: ElementAudioSource, hints: TranscriptionHints, deps: EnsureTranscriptDeps): Promise<TranscriptResult> {
+  const key = `${source.asset.id}|${source.sourceStartMs}|${source.sourceEndMs}|${hints.language ?? ''}|${hints.vocabulary.join('\n')}`
   let running = inFlight.get(deps)
   if (!running) {
     running = new Map()
@@ -146,7 +155,7 @@ function sharedTranscription(source: ElementAudioSource, language: string | unde
   }
   const pending = running.get(key)
   if (pending) return pending
-  const started = transcribeSource(source, language, deps).finally(() => running.delete(key))
+  const started = transcribeSource(source, hints, deps).finally(() => running.delete(key))
   running.set(key, started)
   return started
 }
@@ -176,7 +185,7 @@ export async function ensureTranscriptForBridge(
     throw new Error('Local Whisper transcription is not supported in this browser. Use a WebGPU-capable browser with enough memory.')
   }
 
-  const result = await sharedTranscription(source, payload.language, deps)
+  const result = await sharedTranscription(source, { language: payload.language, vocabulary: engine.project.vocabulary ?? [] }, deps)
   const meanwhile = existingTranscript()
   if (meanwhile) return meanwhile
   const command = buildApplyCaptionsCommand(result, {

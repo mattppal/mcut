@@ -42,6 +42,7 @@ export interface TranscribeInput {
 
 export interface TranscribeOptions {
   language?: string
+  vocabulary?: readonly string[]
   signal?: AbortSignal
 }
 

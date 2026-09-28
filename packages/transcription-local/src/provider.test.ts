@@ -30,6 +30,7 @@ type Behavior = 'hang' | 'fail-first-only' | 'slow-shared-download' | 'succeed'
 
 class ScriptedWorker extends EventTarget {
   terminated = false
+  readonly requests: WhisperWorkerRequest[] = []
   private seen = 0
 
   constructor(private readonly behavior: Behavior) {
@@ -39,6 +40,7 @@ class ScriptedWorker extends EventTarget {
   private readonly waiting: number[] = []
 
   postMessage(request: WhisperWorkerRequest): void {
+    this.requests.push(request)
     if (this.behavior === 'slow-shared-download') {
       this.waiting.push(request.id)
       if (this.waiting.length === 1) this.download(request.id, 6)
@@ -90,9 +92,18 @@ function providerWith(behaviors: Behavior[], modelLoadTimeoutMs = 25) {
       return worker
     },
   })
-  const transcribe = () => provider.transcribe({ audio: silentWav(), mimeType: 'audio/wav' })
+  const transcribe = (vocabulary?: string[]) => provider.transcribe({ audio: silentWav(), mimeType: 'audio/wav' }, vocabulary ? { vocabulary } : undefined)
   return { transcribe, workers }
 }
+
+describe('local whisper provider vocabulary', () => {
+  test('sends the vocabulary to the worker, and omits it when empty', async () => {
+    const { transcribe, workers } = providerWith(['succeed'])
+    await transcribe(['Grokbot', 'Karen X. Cheng'])
+    await transcribe([])
+    expect(workers[0]?.requests.map((request) => request.vocabulary)).toEqual([['Grokbot', 'Karen X. Cheng'], undefined])
+  })
+})
 
 describe('local whisper provider model load', () => {
   test('a model load that never answers rejects, and the next call gets a fresh worker', async () => {

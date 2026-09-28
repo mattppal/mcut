@@ -29,7 +29,12 @@ Minimum loop:
 3. If speech matters, `get_transcript` with `includeWords: true`
 4. If transcript is missing, `ensure_transcript`. Omit `replace`, so existing
    captions are kept. Set `replace` to true only when the user asks to redo the
-   transcript or a tool says the captions lack word timings.
+   transcript or a tool says the captions lack word timings. If the user names
+   people, products, or terms, set them first with `updateProject` and
+   `vocabulary`, for example `["Grokbot", "Karen X. Cheng", "mcut"]`. The list
+   replaces the old one, so read `transcript.vocabulary` from
+   `get_media_context` and pass every term to keep. Transcription gets it as
+   spelling hints.
 5. `list_actions`
 6. Prefer `run_action` high-level actions and task tools such as `edit_zooms` and `center_person` over raw commands
 7. When one user request needs more than one edit call, send them all in one

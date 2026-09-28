@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { CaptionsIcon, DownloadIcon, SparklesIcon, Trash2Icon } from '@/lib/icons'
+import { CaptionsIcon, DownloadIcon, PlusIcon, SparklesIcon, Trash2Icon, XIcon } from '@/lib/icons'
 import { toast } from 'sonner'
 import { extractAudioToWav } from '@mcut/media'
 import { useEditor, useProject, usePlayback } from '@mcut/react'
@@ -16,9 +16,10 @@ import {
   type Project,
   resolveElementAudioSource,
 } from '@mcut/timeline'
-import { buildApplyCaptionsCommand, retypeCaption, toSrt, toVtt, type SubtitleCue, type TranscriptResult } from '@mcut/transcription'
+import { buildApplyCaptionsCommand, retypeCaption, toSrt, toVtt, type SubtitleCue, type TranscribeOptions, type TranscriptResult } from '@mcut/transcription'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
@@ -30,7 +31,7 @@ import { host, type TranscriptionSettings } from './studio-host'
 
 export interface CaptionsPanelProps {
   className?: string
-  transcribe?: (audio: Blob) => Promise<TranscriptResult>
+  transcribe?: (audio: Blob, options?: TranscribeOptions) => Promise<TranscriptResult>
 }
 
 function captionsOf(project: Project): CaptionElement[] {
@@ -132,6 +133,61 @@ function OnDeviceToggle() {
   )
 }
 
+function VocabularyField() {
+  const engine = useEditor()
+  const vocabulary = useProject().vocabulary ?? []
+  const [draft, setDraft] = useState('')
+  const save = (next: string[]): boolean => {
+    try {
+      engine.dispatch({ type: 'updateProject', vocabulary: next })
+      return true
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update the vocabulary')
+      return false
+    }
+  }
+  return (
+    <div data-slot="transcription-vocabulary" className="flex flex-col gap-1">
+      <PanelSectionLabel>Vocabulary</PanelSectionLabel>
+      <div className="flex flex-wrap items-center gap-1">
+        {vocabulary.map((term) => (
+          <button
+            key={term}
+            type="button"
+            title="Remove from vocabulary"
+            className="flex items-center gap-1 rounded-full bg-(--clip-caption)/15 px-2 py-0.5 text-2xs text-(--clip-caption) hover:bg-(--clip-caption)/25"
+            onClick={() => save(vocabulary.filter((other) => other !== term))}
+          >
+            {term}
+            <XIcon className="size-2.5" />
+          </button>
+        ))}
+        <form
+          className="flex items-center gap-1"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const term = draft.trim()
+            const known = vocabulary.some((other) => other.toLowerCase() === term.toLowerCase())
+            if (term && (known || save([...vocabulary, term]))) setDraft('')
+          }}
+        >
+          <Input
+            value={draft}
+            maxLength={100}
+            aria-label="Add a name or term to the vocabulary"
+            placeholder="Add a name or term"
+            className="h-6 w-36 text-2xs"
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <Button type="submit" variant="ghost" size="icon-xs" title="Add to vocabulary. Transcription gets these as hints to spell them right.">
+            <PlusIcon />
+          </Button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 function TranscriptionKeyStatus({ settings }: { settings: TranscriptionSettings }) {
   const onDevice = useOnDeviceTranscription()
   const configured = useTranscriptionConfigured(settings)
@@ -201,7 +257,7 @@ export function CaptionsPanel({ className, transcribe }: CaptionsPanelProps) {
       if (!wav) {
         throw new Error(`"${source.asset.name ?? source.asset.id}" has no audio track.`)
       }
-      const result = await transcribe(wav)
+      const result = await transcribe(wav, { vocabulary: engine.project.vocabulary ?? [] })
       return { result, source }
     },
     onSuccess: ({ result, source }) => {
@@ -243,6 +299,7 @@ export function CaptionsPanel({ className, transcribe }: CaptionsPanelProps) {
         )}
         <OnDeviceToggle />
         {host.transcriptionSettings && <TranscriptionKeyStatus settings={host.transcriptionSettings} />}
+        <VocabularyField />
 
         {captions.length > 0 && (
           <>

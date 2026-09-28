@@ -72,6 +72,7 @@ export interface ProjectMediaContext {
     wordCount: number
     startMs?: number
     endMs?: number
+    vocabulary: string[]
   }
 }
 
@@ -235,6 +236,7 @@ export function getProjectMediaContext(project: Project, options: ProjectViewCon
       wordCount: transcript.wordCount,
       ...(transcriptStart !== undefined ? { startMs: transcriptStart } : {}),
       ...(transcriptEnd !== undefined ? { endMs: transcriptEnd } : {}),
+      vocabulary: project.vocabulary ?? [],
     },
   }
 }

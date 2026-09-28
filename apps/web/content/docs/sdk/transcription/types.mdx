@@ -21,11 +21,12 @@ Audio handed to a provider as a blob, buffer, byte array, or URL string, with an
 ```ts
 interface TranscribeOptions {
   language?: string
+  vocabulary?: readonly string[]
   signal?: AbortSignal
 }
 ```
 
-Per-call transcription options, a language hint and an abort signal.
+Per-call transcription options, a language hint, names and terms to spell right, and an abort signal. Providers that take no hints ignore `vocabulary`.
 
 ### TranscriptionProvider
 

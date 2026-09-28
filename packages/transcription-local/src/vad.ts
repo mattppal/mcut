@@ -29,3 +29,11 @@ export function hasSpeech(samples: Float32Array, sampleRate: number): boolean {
   const { activeFraction, peakRms } = measureActivity(samples, sampleRate)
   return peakRms >= MIN_SPEECH_PEAK_RMS && activeFraction >= MIN_SPEECH_ACTIVE_FRACTION
 }
+
+const MIN_TAIL_S = 1
+const TAIL_GUARD_S = 0.25
+
+export function hasSpeechAfter(samples: Float32Array, sampleRate: number, fromS: number): boolean {
+  const from = Math.ceil((fromS + TAIL_GUARD_S) * sampleRate)
+  return samples.length - from >= MIN_TAIL_S * sampleRate && hasSpeech(samples.subarray(from), sampleRate)
+}
