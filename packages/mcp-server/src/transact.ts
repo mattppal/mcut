@@ -1,6 +1,7 @@
 import { applyCommands, operatorIds, parseOperatorId, runOperator, summarizeEngine, type OperatorId } from '@mcut/editor'
 import { EditorEngine, listToolDefinitions, parseCommand } from '@mcut/timeline'
 import { z } from 'zod'
+import { commandsOnTimelineClock, onTimelineClock } from './agent-clock'
 import { MCP_TOOL_INPUTS, operatorToolName } from './contract'
 import { timelineRangeRemoval } from './remove-ranges'
 import { applyTransact, transactCallError, type TransactSubRequest } from './transact-shape'
@@ -37,7 +38,7 @@ function passThrough(name: PassThroughName, args: unknown): TransactSubRequest {
     return { type: 'dispatch_command', commandName: type, input: { ranges } }
   }
   const parsed = MCP_TOOL_INPUTS.apply_commands.parse(args)
-  return { type: 'apply_commands', commands: parsed.commands }
+  return { type: 'apply_commands', commands: commandsOnTimelineClock(parsed.commands) }
 }
 
 function rejectTransactName(name: string): Error {
@@ -75,7 +76,7 @@ export function translateTransactCalls(calls: readonly TransactCall[]): Transact
     }
     const operatorId = operatorsByTool.get(call.name)
     if (operatorId !== undefined) return { type: 'run_operator', operatorId, input: args }
-    if (commandNames.has(call.name)) return { type: 'dispatch_command', commandName: call.name, input: args }
+    if (commandNames.has(call.name)) return { type: 'dispatch_command', commandName: call.name, input: onTimelineClock(call.name, args) }
     throw rejectTransactName(call.name)
   })
   for (const request of requests) {
