@@ -249,8 +249,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
     'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',
   list_zooms:
-    'List every zoom region in the project in one call: element id, source slot for multicam, element-local atMs, timeline startMs and endMs, ' +
-    'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. startMs and endMs are the part the element plays; the zoom itself starts at timeline element start plus atMs, which is the timeline atMs edit_zooms takes. Read this before revising zooms.',
+    'List every zoom region in the project in one call: element id, source slot for multicam, atMs, startMs and endMs, ' +
+    'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. Every time is timeline ms. atMs is where the zoom starts, the value edit_zooms takes, ' +
+    'so pass it back unchanged to keep a zoom in place. startMs and endMs are the part this element plays, so a zoom spread over a cut lists one row per piece with the same atMs. Read this before revising zooms.',
   edit_zooms:
     'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
     'If any edit is rejected, none apply. ' +
