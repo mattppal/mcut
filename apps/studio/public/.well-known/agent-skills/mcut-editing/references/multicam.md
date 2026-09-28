@@ -109,31 +109,46 @@ shows, then apply it in one pass. Never alternate angles on a fixed rhythm.
 
 ### Talking head with a screen recording
 
-1. Read the words. Call `get_transcript` with `includeWords` set to true, after
-   `ensure_transcript` if there is none. Cut retakes first with `find_retakes` and
-   `remove_ranges`, then plan on the cut timeline.
-2. Read the screen. `find_scene_changes` on the `screen` source returns the spans where
-   the picture holds still. `get_contact_sheet` over a span shows what it holds.
-3. Write the shot list before you change anything, one line per span with its start,
-   its layout, and the reason.
-   - Open on the head-only layout. The intro is the speaker talking to the viewer.
-     Hold it until they turn to the screen.
-   - Put the opening punch-in on the camera at the first pause after the first
-     sentence or two, not at 0s. A pause is a gap of about 300ms or more between
-     words. Keep it subtle, about 1.1x, with an expo ease and motion blur.
-   - Cut to the screen layout, the screen full frame with the head overlay, when the
-     speaker starts talking about what is on screen. Cues are words that point at it,
-     such as "this", "here", "look at", "you can see", "my screen", "my computer", or
-     the name of the app or page, spoken while a matching screen span is up. Cut in the
-     word gap before that sentence starts, not on the cue word.
-   - Cut back to the head-only layout when the speaker turns back to the viewer, for a
-     story, an opinion, a summary, or the sign-off.
+The layouts are "Camera" (head only), "Screen + Cam" (screen full frame, head in a
+corner), and "Screen" (screen only). This edit uses "Camera" and "Screen + Cam".
+
+1. Read the words. Cut retakes first with `find_retakes` and one `remove_ranges`, then
+   call `apply_captions` with `elementId`, `replace` set to true, and no transcript, on
+   its own. Then call `get_transcript` with `includeWords` set to true, so the word times
+   match the cut timeline. Call `ensure_transcript` first if there is no transcript.
+2. Read the screen. After the cuts the multicam is several pieces, one element each.
+   Call `find_scene_changes` on the `screen` source and `get_contact_sheet` once per piece
+   with its `elementId`, because both default to the first multicam.
+3. Write the shot list before you change anything, one line per span with its timeline
+   start, its layout, and the reason.
+   - Open on "Camera". The intro is the speaker talking to the viewer. Hold it until they
+     turn to the screen.
+   - Add the opening punch-in on the `camera` source at the first pause after the first
+     sentence or two, not at 0s. A pause is a gap of about 300ms or more between words.
+     Use the `subtlePunchIn` preset (1.15x, expo ease, motion blur). It lasts 3000ms, so
+     it must end before the next angle cut, or the head overlay zooms too.
+   - Cut to "Screen + Cam" when the speaker starts talking about what is on screen. Cues
+     are words that point at it, such as "this", "here", "look at", "you can see", "my
+     screen", "my computer", or the name of the app or page, spoken while a matching
+     screen span is up. Cut in the word gap before that sentence starts, not on the cue
+     word.
+   - Cut back to "Camera" when the speaker turns back to the viewer, for a story, an
+     opinion, a summary, or the sign-off.
    - Hold each shot at least 2s. Merge a shorter span into its neighbor.
-4. Apply the whole list in one `transact`. Save any layout you need with `saveLayout`,
-   add one `addAngleCut` per span on the source clock, and add the zoom regions with
-   `source` set. Cut only in word gaps.
-5. Check the result. Call `get_contact_sheet` with one time per shot, and compare the
-   cut list in the summary with your shot list.
+4. Convert each shot list time before you apply it. Transcript words, scene changes,
+   and contact sheet tiles are timeline ms. For a timeline time `t`, find the piece whose
+   window holds it, from its `startMs` to `startMs + durationMs`, and edit that piece.
+   - An angle cut's `atMs` is on the source clock, `trimStartMs + (t - startMs)`.
+   - A zoom region's `atMs` is element-local, `t - startMs`, and the whole zoom must fit
+     inside the piece.
+   - Set each piece's opening shot with `setAngleLayout` at the opening cut's `atMs`,
+     read from its `angles`. The opening cut cannot move or be removed, so do not add a
+     cut beside it.
+5. Apply the whole list in one `transact`, the `addAngleCut` and `setAngleLayout` calls
+   and the zoom regions, with `source` set on each zoom. Cut only in word gaps.
+6. Check the result. Call `get_contact_sheet` with one time per shot. The summary lists
+   cuts in element-local seconds, while `angles` holds source clock ms, so compare them
+   after converting.
 
 When the words and the screen disagree, ask the user instead of guessing.
 
