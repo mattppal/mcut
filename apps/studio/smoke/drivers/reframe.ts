@@ -36,8 +36,7 @@ const savedProjectSchema = z.object({
   ),
 })
 
-const isError = (text: string): boolean =>
-  text !== SUCCESS_TOAST && !DETECT_TOAST.test(text) && !QUIET_TOASTS.some((pattern) => pattern.test(text))
+const isError = (text: string): boolean => text !== SUCCESS_TOAST && !DETECT_TOAST.test(text) && !QUIET_TOASTS.some((pattern) => pattern.test(text))
 
 function describeToasts(toasts: readonly string[]): string {
   const detect = percentRange(toasts, DETECT_TOAST)

@@ -99,11 +99,7 @@ export const FEATURE_TABLE: readonly Feature[] = [
   feature('multicam', 'Build a multicam clip from two sources', 'full'),
   feature('collage', 'Build a collage from two sources', 'full'),
   feature('aspect-presets', 'Switch the project aspect to 9:16', 'full'),
-  feature(
-    'center-person',
-    'Center a moving face in a 9:16 project so the crop fills the frame, with the bundled face model and no download',
-    'full',
-  ),
+  feature('center-person', 'Center a moving face in a 9:16 project so the crop fills the frame, with the bundled face model and no download', 'full'),
   feature('export-webm', 'Export the timeline as WebM', 'fast'),
   feature('export-mp4', 'Export the timeline as MP4', 'full'),
   feature('export-mkv', 'Export the timeline as MKV', 'full'),
