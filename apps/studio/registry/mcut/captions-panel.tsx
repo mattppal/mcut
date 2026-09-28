@@ -16,7 +16,7 @@ import {
   type Project,
   resolveElementAudioSource,
 } from '@mcut/timeline'
-import { buildApplyCaptionsCommand, toSrt, toVtt, type SubtitleCue, type TranscribeOptions, type TranscriptResult } from '@mcut/transcription'
+import { buildApplyCaptionsCommand, retypeCaption, toSrt, toVtt, type SubtitleCue, type TranscribeOptions, type TranscriptResult } from '@mcut/transcription'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -65,10 +65,6 @@ function downloadText(filename: string, text: string, type: string) {
   URL.revokeObjectURL(url)
 }
 
-function retypedTextWithoutWordTimings(text: string): Pick<CaptionElement, 'text' | 'words'> {
-  return { text, words: [] }
-}
-
 function CaptionRow({ caption }: { caption: CaptionElement }) {
   const engine = useEditor()
   const active = usePlayback((s) => isElementActiveAt(caption, s.currentTimeMs))
@@ -110,11 +106,12 @@ function CaptionRow({ caption }: { caption: CaptionElement }) {
         rows={1}
         className="min-h-7 resize-none border-transparent bg-transparent p-1 text-xs shadow-none focus-visible:border-transparent focus-visible:bg-input/50 focus-visible:ring-0"
         onChange={(event) => {
+          const patch = retypeCaption(caption, event.target.value)
           try {
             engine.dispatch({
               type: 'updateElement',
               elementId: caption.id,
-              patch: retypedTextWithoutWordTimings(event.target.value),
+              patch: { text: patch.text, words: patch.words ?? [] },
             })
           } catch {}
         }}

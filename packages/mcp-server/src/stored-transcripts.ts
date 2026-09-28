@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { TranscriptResult } from '@mcut/transcription'
+import { correctWords, type TranscriptResult } from '@mcut/transcription'
 import {
   CommandError,
   elementIdSchema,
@@ -39,6 +39,46 @@ function spliced(stored: readonly SourceWord[], incoming: readonly SourceWord[])
   return [...before, ...incoming.map(({ text, startMs, endMs }) => ({ text, startMs, endMs })), ...after]
 }
 
+const SYNC_TOLERANCE_MS = 250
+
+const spokenForm = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '')
+
+function agreesWithStored(stored: readonly SourceWord[], words: readonly SourceWord[]): boolean {
+  const first = words[0]
+  const last = words.at(-1)
+  if (!first || !last) return false
+  const nearby = stored.filter((word) => word.endMs >= first.startMs - SYNC_TOLERANCE_MS && word.startMs <= last.endMs + SYNC_TOLERANCE_MS)
+  const agreeing = words.filter((word) =>
+    nearby.some((other) => spokenForm(other.text) === spokenForm(word.text) && Math.abs(midMs(other) - midMs(word)) <= SYNC_TOLERANCE_MS),
+  )
+  return agreeing.length * 2 >= words.length
+}
+
+type Correction = readonly [find: string, replace: string]
+
+function asCorrected(words: readonly SourceWord[], corrections: readonly Correction[]): SourceWord[] {
+  return corrections.reduce((current, [find, replace]) => correctWords(current, find, replace).words, [...words])
+}
+
+function withCaptionEdits(project: Project, elementId: ElementId, stored: readonly SourceWord[], corrections: readonly Correction[]): SourceWord[] {
+  const { pieces } = sourcePieces(project, elementId)
+  let merged = [...stored]
+  for (const { startMs, words = [] } of getProjectCaptions(project).map(({ caption }) => caption)) {
+    for (const piece of pieces) {
+      const pieceEndMs = piece.timelineStartMs + piece.timelineDurationMs
+      const inPiece = words
+        .filter((word) => startMs + word.startMs >= piece.timelineStartMs && startMs + word.endMs <= pieceEndMs)
+        .map((word) => ({
+          text: word.text,
+          startMs: piece.sourceStartMs + startMs + word.startMs - piece.timelineStartMs,
+          endMs: piece.sourceStartMs + startMs + word.endMs - piece.timelineStartMs,
+        }))
+      if (agreesWithStored(merged, inPiece) || agreesWithStored(merged, asCorrected(inPiece, corrections))) merged = spliced(merged, inPiece)
+    }
+  }
+  return merged
+}
+
 function forwardSourceKey(project: Project, elementId: ElementId): string {
   const source = resolveElementAudioSource(project, elementId)
   if (!source) throw new CommandError('invalid-payload', `element "${elementId}" has no source audio`)
@@ -62,6 +102,7 @@ function isCut(project: Project, elementId: ElementId): boolean {
 
 export class StoredTranscripts {
   readonly #bySource = new Map<string, SourceWord[]>()
+  readonly #corrections: Correction[] = []
 
   remember(project: Project, elementId: ElementId, words: readonly SourceWord[]): void {
     if (!isForward(project, elementId) || words.length === 0) return
@@ -89,14 +130,26 @@ export class StoredTranscripts {
     return plan.command.captions.length > 0 ? plan : undefined
   }
 
+  correct(find: string, replace: string): number {
+    this.#corrections.push([find, replace])
+    let count = 0
+    for (const [key, words] of this.#bySource) {
+      const corrected = correctWords(words, find, replace)
+      count += corrected.count
+      this.#bySource.set(key, corrected.words)
+    }
+    return count
+  }
+
   recall(project: Project, elementId: ElementId): TranscriptResult {
-    const words = this.#bySource.get(forwardSourceKey(project, elementId)) ?? []
-    if (words.length === 0) {
+    const stored = this.#bySource.get(forwardSourceKey(project, elementId)) ?? []
+    if (stored.length === 0) {
       throw new CommandError(
         'invalid-payload',
         `no stored transcript for the audio "${elementId}" plays. Pass the full transcript. find_retakes with elementId stores one only before that audio is cut.`,
       )
     }
+    const words = withCaptionEdits(project, elementId, stored, this.#corrections)
     const text = words.map((word) => word.text).join(' ')
     const captionText = getProjectCaptions(project)
       .map(({ caption }) => caption.text)

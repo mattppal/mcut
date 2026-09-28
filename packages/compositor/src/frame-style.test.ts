@@ -230,10 +230,10 @@ describe('frame style rendering', () => {
     const rounded = (args: unknown[]) => args.map((v) => Math.round(Number(v) * 1e6) / 1e6)
     const last = (method: string) => rounded(composed.callsTo(method).at(-1)?.args ?? [])
     expect(last('rect')).toEqual([-960, -540, 1920, 1080])
-    expect(last('translate')).toEqual([-120, -67.5])
+    expect(last('translate')).toEqual([-240, -135])
     expect(last('scale')).toEqual([1.25, 1.25])
     expect(last('drawImage').slice(1)).toEqual([0, 0, 640, 360, 384, 205.2, 528, 297])
-    expect(onCanvas(main, composed, 'drawImage').map(rounded)).toEqual([[1320, 729, 660, 371.25]])
+    expect(onCanvas(main, composed, 'drawImage').map(rounded)).toEqual([[1200, 661.5, 660, 371.25]])
   })
 
   test('a reframe track slides a slot crop onto the subject, and the fitted part keeps following once the crop meets the frame edge', () => {

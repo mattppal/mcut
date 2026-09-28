@@ -1,5 +1,11 @@
 # @mcut/timeline
 
+## 0.1.0-alpha.22
+
+### Patch Changes
+
+- [#221](https://github.com/mattppal/mcut/pull/221) [`8969b9a`](https://github.com/mattppal/mcut/commit/8969b9a7cfb42c3a0b80a68bf3471c490accece2) Thanks [@mattppal](https://github.com/mattppal)! - A zoom region moves as one motion about a fixed point. The scale follows the region's easing, and the framing moves in step with the shown window, so no edge of the picture reverses direction partway through the ease. Before, the framing moved on its own lerp and the picture drifted sideways while it scaled.
+
 ## 0.1.0-alpha.21
 
 ### Minor Changes

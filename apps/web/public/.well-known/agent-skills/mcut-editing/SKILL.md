@@ -102,6 +102,28 @@ opens a dialog for a person and imports nothing. `addAsset` cannot load a
 This action uses word-timed captions and timeline commands. If it says there is
 no word-timed transcript, call `ensure_transcript`. Do not fall back to ffmpeg.
 
+### Correct misheard names
+
+Transcription often mishears names and product terms, for example "Grok Bot"
+for "Grokbot". When the user names a correction, or you spot a name the user
+spelled differently, fix it with `correct_transcript` before any other caption
+work.
+
+1. Call `correct_transcript` with `find` set to the transcribed spelling and
+   `replace` set to the correct one. It matches whole words and ignores case,
+   fixes every caption and the stored transcript as one undo step, and keeps
+   word timings.
+2. If it reports no match, call `search_transcript` with part of the name to
+   see how it was heard, then correct that spelling. Make one call per wrong
+   spelling, for example "Grok Bot" and "Grockbot" separately.
+3. Do not retype captions with `updateElement` or re-run `ensure_transcript`
+   to fix a name. Retyped text loses its word timings and can leave the old
+   spelling in the stored transcript, and transcribing again brings it back.
+
+```json
+{ "name": "correct_transcript", "arguments": { "find": "Grok Bot", "replace": "Grokbot" } }
+```
+
 ### Remove retakes
 
 The flow is `find_retakes`, then one `remove_ranges` call, then one
@@ -120,6 +142,11 @@ of them in `transact`.
    the whole cut should be one. It cuts every range from the clip and from
    every track under it and closes the gaps. Do not cut retakes with
    `splitElement`, `trimElement`, or `rippleDelete`.
+   When no transcript word comes before a candidate's `startMs`, so only
+   silence leads in, start it at 0 instead. Its `endMs` is the kept take's
+   first word, so end it about 400ms earlier, but not before the end of the
+   last abandoned word. Otherwise the video opens on a short lead-in and then
+   jumps to the kept take.
 3. Call `apply_captions` once with `elementId` set to any remaining piece and
    `replace: true`. Do not pass `transcript`. The call reuses the stored
    transcript, captions every piece on the track that plays the same audio at
@@ -130,7 +157,7 @@ of them in `transact`.
    edit is done, so do not run it again.
 
 ```json
-{ "name": "remove_ranges", "arguments": { "ranges": [{ "startMs": 325720, "endMs": 333580 }, { "startMs": 1080, "endMs": 15120 }] } }
+{ "name": "remove_ranges", "arguments": { "ranges": [{ "startMs": 325720, "endMs": 333580 }, { "startMs": 0, "endMs": 14720 }] } }
 ```
 
 With `time: "source"` and `elementId`, `remove_ranges` reads ranges in the
@@ -153,6 +180,11 @@ Use the built-in preset action instead of hand-authoring opacity keyframes:
   }
 }
 ```
+
+The action fades both ends of one clip. After retake cuts or angle cuts the
+video is several pieces, so to fade in from black only at the start, call
+`applyAnimationPreset` with `preset: "fade-in"` and `options: { "durationMs": 500 }`
+on the video or multicam piece at 0s, not the caption there.
 
 For clip-to-clip transitions, use `setTransition` only on the left clip of an
 exact butt cut. Built-ins: `dissolve`, `fade-black`, `fade-white`, `slide-left`,

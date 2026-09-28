@@ -41,4 +41,6 @@ export {
   type TranscriptMatch,
 } from './transcript-tools'
 
+export { correctCaptions, correctWords, retypeCaption, type CaptionCorrectionPatch, type TranscriptCorrection } from './transcript-corrections'
+
 export { findRetakes, retakeOptionsSchema, type RetakeCandidate, type RetakeOptions } from './retakes'

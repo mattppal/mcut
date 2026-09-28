@@ -64,7 +64,7 @@ export function searchCaptions(captions: readonly TranscriptCaption[], query: st
   return matches.sort((a, b) => a.timeMs - b.timeMs || a.startChar - b.startChar)
 }
 
-function buildMatch(caption: TranscriptCaption, mapped: MappedWord[] | null, startChar: number, endChar: number): TranscriptMatch {
+export function buildMatch(caption: TranscriptCaption, mapped: MappedWord[] | null, startChar: number, endChar: number): TranscriptMatch {
   let firstWord: number | undefined
   let lastWord: number | undefined
   if (mapped) {
@@ -117,25 +117,26 @@ export function replaceMatch(caption: TranscriptCaption, match: TranscriptMatch,
   }
 }
 
-export function replaceAllMatches(captions: readonly TranscriptCaption[], query: string, replacement: string): CaptionContentPatch[] {
-  const patches: CaptionContentPatch[] = []
-  for (const caption of captions) {
-    const matches = searchCaptions([caption], query)
-    if (matches.length === 0) continue
-    let current: TranscriptCaption = caption
-    let wordsValid = mapCaptionWords(caption) !== null
-    for (const match of matchesFromRight(matches)) {
-      const spliced = spliceMatch(current, match, replacement)
-      wordsValid &&= spliced.words !== null
-      current = { ...current, text: spliced.text, words: spliced.words ?? [] }
-    }
-    patches.push({
-      captionId: caption.id,
-      text: collapseSpaces(current.text),
-      ...(wordsValid && current.words ? { words: current.words } : {}),
-    })
+export function patchMatches(caption: TranscriptCaption, matches: readonly TranscriptMatch[], replacement: string): CaptionContentPatch {
+  let current: TranscriptCaption = caption
+  let wordsValid = mapCaptionWords(caption) !== null
+  for (const match of matchesFromRight(matches)) {
+    const spliced = spliceMatch(current, match, replacement)
+    wordsValid &&= spliced.words !== null
+    current = { ...current, text: spliced.text, words: spliced.words ?? [] }
   }
-  return patches
+  return {
+    captionId: caption.id,
+    text: collapseSpaces(current.text),
+    ...(wordsValid && current.words ? { words: current.words } : {}),
+  }
+}
+
+export function replaceAllMatches(captions: readonly TranscriptCaption[], query: string, replacement: string): CaptionContentPatch[] {
+  return captions.flatMap((caption) => {
+    const matches = searchCaptions([caption], query)
+    return matches.length === 0 ? [] : [patchMatches(caption, matches, replacement)]
+  })
 }
 
 export function retypeWord(caption: TranscriptCaption, wordIndex: number, newText: string): CaptionContentPatch | null {
@@ -146,7 +147,7 @@ export function retypeWord(caption: TranscriptCaption, wordIndex: number, newTex
   return replaceMatch(caption, match, newText.trim())
 }
 
-function distributeTokens(tokens: string[], startMs: number, endMs: number): CaptionWord[] {
+export function distributeTokens(tokens: string[], startMs: number, endMs: number): CaptionWord[] {
   if (tokens.length === 0) return []
   const totalChars = tokens.reduce((sum, t) => sum + t.length, 0)
   const span = Math.max(0, endMs - startMs)
