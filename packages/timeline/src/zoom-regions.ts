@@ -168,16 +168,17 @@ function zoomViewAt(
 ): ContentView {
   const phase = phaseAt(zooms, source, localMs)
   if (!phase) return { scale: 1, focus: rest }
-  const amount = amountAt(phase)
   const { scale, focus } = phase.region
-  const lerp = (from: number, to: number) => from + (to - from) * amount
-  return {
-    scale: lerp(1, scale),
-    focus: {
-      x: lerp(rest.x, anchorOf(focus.x, visible.x / scale)),
-      y: lerp(rest.y, anchorOf(focus.y, visible.y / scale)),
-    },
+  const amount = amountAt(phase)
+  const current = 1 + (scale - 1) * amount
+  const widthProgress = scale === 1 ? amount : (1 - 1 / current) / (1 - 1 / scale)
+  const focusOn = (restAt: number, target: number, shown: number) => {
+    const from = restAt * (1 - shown)
+    const to = anchorOf(target, shown / scale) * (1 - shown / scale)
+    const width = shown / current
+    return width >= 1 ? restAt : (from + (to - from) * widthProgress) / (1 - width)
   }
+  return { scale: current, focus: { x: focusOn(rest.x, focus.x, visible.x), y: focusOn(rest.y, focus.y, visible.y) } }
 }
 
 export function getSlotView(

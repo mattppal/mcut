@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand } from './commands'
 import { EditorEngine } from './engine'
+import { evaluateEasing } from './keyframes'
 import { createProject, splitElementAt, type MulticamElement, type Project, type VideoElement } from './model'
 import { getElement } from './selectors'
 import { summarizeProject } from './summarize'
@@ -156,6 +157,32 @@ describe('zoom regions on a clip', () => {
     const right = video(split, 'e-right')
     for (const t of [10_000, 10_400]) expect(getClipView(left, t)).toEqual(getClipView(whole, t))
     for (const t of [10_500, 11_500]) expect(getClipView(right, t)).toEqual(getClipView(whole, t))
+  })
+
+  test('every frame of a zoom through a cut is one expo ease about a fixed point', () => {
+    const project = applyCommand(projectWithScreenAndCam(), {
+      type: 'addZoomRegion',
+      elementId: 'e-screen',
+      zoom: { id: 'z-page', atMs: 10_000, inMs: 700, holdMs: 1000, outMs: 700, scale: 1.28, focus: { x: 0.45, y: 0.6 } },
+    })
+    const split = applyCommand(project, { type: 'splitElement', elementId: 'e-screen', atMs: 10_300, rightElementId: 'e-right' })
+    const onScreen = (timeMs: number, point: number) => {
+      const shown = getZoomWindow(getClipView(video(split, timeMs < 10_300 ? 'e-screen' : 'e-right'), timeMs))
+      return { x: (point - shown.x) / shown.w, y: (point - shown.y) / shown.h }
+    }
+    const expected = (timeMs: number) => {
+      if (timeMs < 10_700) return evaluateEasing('easeOutExpo', (timeMs - 10_000) / 700)
+      if (timeMs < 11_700) return 1
+      return 1 - evaluateEasing('easeOutExpo', (timeMs - 11_700) / 700)
+    }
+    for (let frame = 0; frame < 72; frame++) {
+      const timeMs = 10_000 + (frame * 1000) / 30
+      for (const point of [0, 1]) {
+        const [rest, held, now] = [onScreen(10_000, point), onScreen(11_000, point), onScreen(timeMs, point)]
+        expect((now.x - rest.x) / (held.x - rest.x)).toBeCloseTo(expected(timeMs), 6)
+        expect((now.y - rest.y) / (held.y - rest.y)).toBeCloseTo(expected(timeMs), 6)
+      }
+    }
   })
 
   test.each([
