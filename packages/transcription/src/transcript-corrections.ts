@@ -26,7 +26,7 @@ function wholeWordPattern(find: string): RegExp | null {
   const tokens = find.trim().split(/\s+/).filter(Boolean)
   if (tokens.length === 0) return null
   const body = tokens.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join(String.raw`\s+`)
-  return new RegExp(String.raw`(?<![\p{L}\p{N}])${body}(?![\p{L}\p{N}])`, 'giu')
+  return new RegExp(String.raw`(?<![\p{L}\p{M}\p{N}])${body}(?![\p{L}\p{M}\p{N}])`, 'giu')
 }
 
 function spansOf(text: string, needle: string): Array<[number, number]> {
@@ -44,6 +44,8 @@ function wholeWordMatches(caption: TranscriptCaption, pattern: RegExp, replaceme
     .map(([start, end]) => buildMatch(caption, mapped, start, end))
 }
 
+const MAX_JOIN_GAP_MS = 800
+
 function acrossBoundary(
   a: TranscriptCaption,
   b: TranscriptCaption,
@@ -58,6 +60,9 @@ function acrossBoundary(
     (match) => match.firstWord !== undefined && match.lastWord !== undefined && match.firstWord < boundary && match.lastWord >= boundary,
   )
   if (cross?.lastWord === undefined) return null
+  const aLast = a.words?.at(-1)
+  const bFirst = b.words?.[0]
+  if (!aLast || !bFirst || b.startMs + bFirst.startMs - (a.startMs + aLast.endMs) > MAX_JOIN_GAP_MS) return null
   const patch = patchMatches(joined, [cross], replacement)
   if (!patch.words) return null
   const corrected = { ...joined, text: patch.text, words: patch.words }
@@ -82,7 +87,7 @@ export function correctCaptions(captions: readonly TranscriptCaption[], find: st
       count += matches.length
       if (matches.length === 0) return caption
       const patch = patchMatches(caption, matches, replacement)
-      return { ...caption, text: patch.text, words: patch.words ?? [] }
+      return { ...caption, text: patch.text, words: patch.words ?? caption.words }
     })
   const removedIds: string[] = []
   for (let i = 0; i + 1 < current.length; i++) {
@@ -111,6 +116,7 @@ export function correctCaptions(captions: readonly TranscriptCaption[], find: st
 
 export function correctWords(words: readonly CaptionWord[], find: string, replace: string): { words: CaptionWord[]; count: number } {
   const caption: TranscriptCaption = { id: '', startMs: 0, durationMs: 0, text: words.map((word) => word.text).join(' '), words: [...words] }
+  if (!mapCaptionWords(caption)) return { words: [...words], count: 0 }
   const { patches, count } = correctCaptions([caption], find, replace)
   return { words: patches[0]?.words ?? [...words], count }
 }

@@ -54,7 +54,13 @@ function agreesWithStored(stored: readonly SourceWord[], words: readonly SourceW
   return agreeing.length * 2 >= words.length
 }
 
-function withCaptionEdits(project: Project, elementId: ElementId, stored: readonly SourceWord[]): SourceWord[] {
+type Correction = readonly [find: string, replace: string]
+
+function asCorrected(words: readonly SourceWord[], corrections: readonly Correction[]): SourceWord[] {
+  return corrections.reduce((current, [find, replace]) => correctWords(current, find, replace).words, [...words])
+}
+
+function withCaptionEdits(project: Project, elementId: ElementId, stored: readonly SourceWord[], corrections: readonly Correction[]): SourceWord[] {
   const { pieces } = sourcePieces(project, elementId)
   let merged = [...stored]
   for (const { startMs, words = [] } of getProjectCaptions(project).map(({ caption }) => caption)) {
@@ -67,7 +73,7 @@ function withCaptionEdits(project: Project, elementId: ElementId, stored: readon
           startMs: piece.sourceStartMs + startMs + word.startMs - piece.timelineStartMs,
           endMs: piece.sourceStartMs + startMs + word.endMs - piece.timelineStartMs,
         }))
-      if (agreesWithStored(merged, inPiece)) merged = spliced(merged, inPiece)
+      if (agreesWithStored(merged, inPiece) || agreesWithStored(merged, asCorrected(inPiece, corrections))) merged = spliced(merged, inPiece)
     }
   }
   return merged
@@ -96,6 +102,7 @@ function isCut(project: Project, elementId: ElementId): boolean {
 
 export class StoredTranscripts {
   readonly #bySource = new Map<string, SourceWord[]>()
+  readonly #corrections: Correction[] = []
 
   remember(project: Project, elementId: ElementId, words: readonly SourceWord[]): void {
     if (!isForward(project, elementId) || words.length === 0) return
@@ -124,6 +131,7 @@ export class StoredTranscripts {
   }
 
   correct(find: string, replace: string): number {
+    this.#corrections.push([find, replace])
     let count = 0
     for (const [key, words] of this.#bySource) {
       const corrected = correctWords(words, find, replace)
@@ -141,7 +149,7 @@ export class StoredTranscripts {
         `no stored transcript for the audio "${elementId}" plays. Pass the full transcript. find_retakes with elementId stores one only before that audio is cut.`,
       )
     }
-    const words = withCaptionEdits(project, elementId, stored)
+    const words = withCaptionEdits(project, elementId, stored, this.#corrections)
     const text = words.map((word) => word.text).join(' ')
     const captionText = getProjectCaptions(project)
       .map(({ caption }) => caption.text)

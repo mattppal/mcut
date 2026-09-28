@@ -126,6 +126,17 @@ describe('correctCaptions', () => {
     expect(patches.at(-1)?.words?.at(-1)).toEqual({ text: 'Grokbot', startMs: 450, endMs: 1000 })
   })
 
+  test('two captions a long pause apart are not joined', () => {
+    const first = caption('c-a', 0, [['Grok', 0, 300]], 300)
+    const second = caption('c-b', 2000, [['Bot', 0, 300]], 300)
+    expect(correctCaptions([first, second], 'Grok Bot', 'Grokbot').count).toBe(0)
+  })
+
+  test('a caption whose words no longer map to its text keeps its word timings', () => {
+    const drifted: TranscriptCaption = { ...MISHEARD, text: 'I asked Grok Bot, and I’m done' }
+    expect(correctCaptions([drifted], 'Grok Bot', 'Grokbot').patches).toMatchObject([{ text: 'I asked Grokbot, and I’m done', words: MISHEARD_WORDS }])
+  })
+
   test('a second caption made only of the rest of the name is removed', () => {
     const first = caption(
       'c-a',
@@ -160,6 +171,11 @@ describe('correctWords', () => {
     expect(result.count).toBe(2)
     expect(result.words.map((w) => w.text).join(' ')).toBe('I asked Grokbot, and Grokbot answered.')
     expect(result.words.at(-1)).toEqual({ text: 'answered.', startMs: 1850, endMs: 2300 })
+  })
+
+  test('a list with an empty word is left as it is', () => {
+    const words = [...MISHEARD_WORDS, { text: '', startMs: 2400, endMs: 2400 }]
+    expect(correctWords(words, 'Grok Bot', 'Grokbot')).toEqual({ words, count: 0 })
   })
 })
 

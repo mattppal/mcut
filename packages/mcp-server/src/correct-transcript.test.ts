@@ -42,10 +42,10 @@ const spokenText = (engine: EditorEngine) =>
     .map((word) => word.text)
     .join(' ')
 
-async function captioned(): Promise<{ engine: EditorEngine; client: Client }> {
+async function captioned(words = misheard): Promise<{ engine: EditorEngine; client: Client }> {
   const engine = talkingHead()
   const client = await connect(engine)
-  await client.callTool({ name: 'apply_captions', arguments: { transcript: { words: misheard }, elementId: 'e-talk' } })
+  await client.callTool({ name: 'apply_captions', arguments: { transcript: { words }, elementId: 'e-talk' } })
   return { engine, client }
 }
 
@@ -96,6 +96,17 @@ describe('correct_transcript', () => {
     const rebuilt = await client.callTool({ name: 'apply_captions', arguments: { elementId: 'e-talk', replace: true } })
     expect(rebuilt.isError).toBeFalsy()
     expect(spokenText(engine)).toContain('Then Grokbot wrote the outro too.')
+  })
+
+  test('after undoing a correction, captions rebuilt after a cut follow the undone captions', async () => {
+    const { engine, client } = await captioned([...spoken('Yesterday afternoon we asked for an intro.', 4000), ...spoken('Then Grok Bot.', 9000)])
+    await client.callTool({ name: 'correct_transcript', arguments: { find: 'Grok Bot', replace: 'Grokbot' } })
+    await client.callTool({ name: 'undo', arguments: {} })
+    await client.callTool({ name: 'remove_ranges', arguments: { ranges: [{ startMs: 6000, endMs: 7500 }] } })
+
+    const rebuilt = await client.callTool({ name: 'apply_captions', arguments: { elementId: 'e-talk', replace: true } })
+    expect(textOf(rebuilt)).toStartWith('OK')
+    expect(spokenText(engine)).toEndWith('Then Grok Bot.')
   })
 
   test('reports a spelling that matches nothing instead of claiming success', async () => {
