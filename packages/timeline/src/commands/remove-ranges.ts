@@ -4,6 +4,7 @@ import { CommandError } from '../errors'
 import { createElementId } from '../id'
 import { animatablePropertySchema, splitKeyframes, type KeyframeMap } from '../keyframes'
 import { MIN_ELEMENT_DURATION_MS, type Project, type TimelineElement } from '../model'
+import { withAnglesInWindow } from '../multicam-clock'
 import { compactTimelineIfMagnetic, placementFor } from '../placement'
 import { mintRightPiece } from './elements'
 import { defineCommand, sortByStart } from './shared'
@@ -58,12 +59,12 @@ function carve(project: Project, element: TimelineElement, { startMs, endMs }: T
   }
   const pieces: TimelineElement[] = []
   if (keepHead) {
-    const left = applyEdgeTrim(element, 'end', startMs - elementEndMs)
+    const left = withAnglesInWindow(applyEdgeTrim(element, 'end', startMs - elementEndMs))
     if ('transition' in left) delete left.transition
     pieces.push(left)
   }
   if (keepTail) {
-    const right = applyEdgeTrim(element, 'start', endMs - element.startMs)
+    const right = withAnglesInWindow(applyEdgeTrim(element, 'start', endMs - element.startMs))
     pieces.push({ ...(keepHead ? mintRightPiece(project, right, createElementId()) : right), startMs })
   }
   return pieces

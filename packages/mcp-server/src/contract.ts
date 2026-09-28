@@ -124,7 +124,12 @@ export const MCP_TOOL_INPUTS = {
   remove_ranges: removeRangesInputSchema,
   ensure_transcript: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
-    replace: z.boolean().describe('When true, replace captions overlapping the target clip. Defaults to false.').optional(),
+    replace: z
+      .boolean()
+      .describe(
+        'When true, re-transcribe and replace captions overlapping the target clip. Defaults to false. Pass it only when the user asks to redo the transcript or a tool says the captions lack word timings.',
+      )
+      .optional(),
     language: z.string().trim().describe('Optional language hint for Whisper.').optional(),
   }),
   list_commands: EMPTY_INPUT,
@@ -175,7 +180,8 @@ export const MCP_TOOL_INPUTS = {
 const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   get_summary:
     'A compact textual rendering of the current project: tracks (topmost first), elements ' +
-    'with ids/timing/keyframes/effects/transitions, and assets. Read this before editing, ' +
+    'with ids/timing/keyframes/effects/transitions, and assets. Multicam cuts and zooms are listed in timeline seconds, the time the angle cut and zoom tools take. ' +
+    'Read this before editing, ' +
     'then use get_media_context/get_transcript for video metadata and transcript details.',
   get_project: 'The full project document as JSON (the serializable source of truth).',
   get_media_context:
@@ -206,8 +212,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline and store that transcript for apply_captions to reuse after cuts. Explicit tool only; get_transcript never auto-transcribes. ' +
-    'After cuts, captions over any piece of the same audio count as its transcript, and a stored transcript is placed over the pieces instead of transcribing again. Pass replace true to transcribe again. ' +
-    'Required before transcript-based silence removal when captions are missing.',
+    'After cuts, captions over any piece of the same audio count as its transcript, and a stored transcript is placed over the pieces instead of transcribing again. ' +
+    'Required before transcript-based silence removal when captions are missing. When captions already exist it keeps them and returns at once, so omit replace. ' +
+    'Pass replace true only when the user asks to redo the transcript or a tool says the captions lack word timings.',
   list_commands: 'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
   apply_commands:
     'Apply one or more serializable timeline commands in one undoable transaction, then return an updated project summary. ' +
@@ -228,12 +235,14 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',
   list_zooms:
     'List every zoom region in the project in one call: element id, source slot for multicam, element-local atMs, timeline startMs and endMs, ' +
-    'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. Read this before revising zooms.',
+    'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. startMs and endMs are the part the element plays; the zoom itself starts at timeline element start plus atMs, which is the timeline atMs edit_zooms takes. Read this before revising zooms.',
   edit_zooms:
     'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
     'If any edit is rejected, none apply. ' +
+    'atMs is timeline ms unless an edit sets time "element". An added zoom whose range crosses a cut between pieces lands on each piece it covers, ' +
+    'with "-r" added to the id on each piece after the first, so one edit covers the range. Each copy updates and removes on its own. ' +
     'A zoom zooms in over inMs, holds, and zooms out over outMs. Presets: subtlePunchIn (1.15x) for an opening punch-in, detailZoom (1.3x) with rect or focus on the discussed screen region. ' +
-    'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the source the shot shows so the other slots stay put, camera for a punch-in on the head-only shot or the screen key for a detail on the screen, or omit source to zoom the whole composite. atMs is element-local, and after cuts each multicam piece holds its own zooms.',
+    'Keep zooms subtle, keep easeOutExpo, and keep motionBlur on. On a multicam, set source to the source the shot shows so the other slots stay put, camera for a punch-in on the head-only shot or the screen key for a detail on the screen, or omit source to zoom the whole composite.',
   center_person:
     'Live bridge only: find the face on device in the connected editor and keep the person in frame as one undoable edit. Waits for the analysis. ' +
     'On a video, it crops to aspect, 9:16 by default, and the crop follows the face. ' +

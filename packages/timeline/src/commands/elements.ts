@@ -15,6 +15,7 @@ import {
   type TimelineElement,
 } from '../model'
 import { compactTimelineIfMagnetic, placementFor, rangesOverlap } from '../placement'
+import { withAnglesInWindow } from '../multicam-clock'
 import { listZoomRegions, renameSplitCopies } from '../zoom-regions'
 import { defineCommand, insertSorted, mintElementId, mustGetTrack, mustLocate, replaceTrack, sortByStart } from './shared'
 
@@ -210,8 +211,9 @@ export const splitElement = defineCommand({
         `cannot split "${element.id}" at ${payload.atMs}ms: both halves must be at least ` + `${MIN_ELEMENT_DURATION_MS}ms long`,
       )
     }
-    const { left, right: rightHalf } = splitElementAt(element, offset)
-    const right = mintRightPiece(project, rightHalf, mintElementId(project, payload.rightElementId))
+    const halves = splitElementAt(element, offset)
+    const left = withAnglesInWindow(halves.left)
+    const right = mintRightPiece(project, withAnglesInWindow(halves.right), mintElementId(project, payload.rightElementId))
     if ('transition' in left) delete left.transition
     return replaceTrack(project, track.id, (t) => ({
       ...t,

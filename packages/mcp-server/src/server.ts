@@ -39,6 +39,7 @@ import {
   type McpServerStaticToolCall,
   type TransactSubRequest,
 } from './contract'
+import { commandsOnTimelineClock, onTimelineClock } from './agent-clock'
 import { liveBridgeAudioActivityMessage, pickAudioActivitySource } from './audio-activity-target'
 import { transcriptOriginNote } from './caption-transcript-match'
 import { toClipSourceWords } from './clip-source-words'
@@ -246,7 +247,7 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
     case 'list_zooms':
       return text(JSON.stringify(listZoomRegions(await targetProject(target)), null, 2))
     case 'edit_zooms':
-      await target.applyCommands(call.arguments.edits)
+      await target.applyCommands(commandsOnTimelineClock(call.arguments.edits))
       return text(
         `OK: ${call.arguments.edits.length} zoom edit(s) applied.\n\n${JSON.stringify(listZoomRegions(await targetProject(target)), null, 2)}${severeZoomNote(await targetProject(target))}`,
       )
@@ -367,7 +368,7 @@ export function createMcutMcpServerForTarget(options: McutMcpServerForTargetOpti
       }
       const layoutId = changedLayoutId(name, args)
       const before = layoutId ? await targetProject(target) : null
-      await target.dispatchCommand(name, args ?? {})
+      await target.dispatchCommand(name, onTimelineClock(name, args ?? {}))
       const change = before && layoutId ? describeLayoutChange(before, await targetProject(target), layoutId) : []
       return text(
         [`OK: ${name} applied.`, ...change, '', await target.getSummary()].join('\n') +
