@@ -203,6 +203,13 @@ Cam" when the speaker starts talking about what the screen shows, and cut back t
 "Camera" when they talk to the viewer again. Follow the shot list steps in
 `references/multicam.md` before you add any angle cut.
 
+`addAngleCut`, `moveAngleCut`, `removeAngleCut`, and `setAngleLayout` take
+timeline milliseconds, the times `get_summary` lists after `cuts at timeline`.
+A time outside the piece named by `elementId` is rejected with the id of the
+piece that plays it, so cut that piece instead. `setAngleLayout` at a piece's
+start changes its opening shot. Cutting or splitting a multicam keeps on each
+piece only the cuts it plays.
+
 ### Punch-ins and detail zooms
 
 Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
@@ -216,6 +223,13 @@ Use zoom regions, not scale keyframes. `list_zooms` returns every zoom, and
   ]
 }
 ```
+
+`atMs` is timeline milliseconds, the time `get_frame`, `search_transcript`, and
+`get_summary` use, even on a piece left after cuts. A zoom whose range crosses a
+cut between pieces is still one `addZoomRegion`. It lands on every piece it
+covers, and each piece after the first gets a copy with `-r` added to the id, so
+don't scan the pieces yourself. A zoom that runs past the last piece is
+rejected.
 
 Keep zooms subtle (1.1x to 1.35x), keep `easeOutExpo`, and keep `motionBlur` on.
 On a multicam, set `source` to the source the shot shows so the other slots stay
@@ -254,9 +268,11 @@ with ffmpeg.
 - All project times are integer milliseconds.
 - Timeline positions are absolute.
 - Keyframes, time maps, and animation preset internals are element-local.
-- Multicam angle cuts are on the source clock the multicam's sources share.
-- Zoom region `atMs` is element-local, 0 at the clip start. After cuts, each
-  multicam piece has its own angle cuts and zooms.
+- Multicam angle cuts are stored on the source clock the multicam's sources
+  share, and zoom regions are stored element-local. The MCP tools take and
+  report both in timeline time. Pass `time: "source"` or `time: "element"` only
+  to give the stored clock. After cuts, each multicam piece has its own angle
+  cuts and zooms, and the tools find the piece for a timeline time.
 - Transcript word times from captions are timeline times. Silence cuts, captions
   scoped to a clip, and audio activity read that clip's audio source. A multicam
   uses its `audioSource`. They convert back to that asset's media time for forward
