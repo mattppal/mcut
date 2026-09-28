@@ -8,7 +8,6 @@ import {
   CommandError,
   ProjectFormatError,
   getElementLocation,
-  getProjectCaptions,
   getProjectMediaContext,
   getProjectTranscript,
   listToolDefinitions,
@@ -16,10 +15,9 @@ import {
   type BuiltinCommand,
   type EditorEngine,
   type ElementAudioSource,
-  type Project,
   type Track,
 } from '@mcut/timeline'
-import { searchCaptions } from '@mcut/transcription'
+import { searchProjectTranscript } from '@mcut/transcription'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { prepareAddAssetCommand } from './add-asset-src'
@@ -68,26 +66,6 @@ export const LIVE_MCP_REQUEST_TYPES = [...LIVE_MCP_STATIC_TOOL_REQUESTS, ...LIVE
 
 export function liveMcpOperatorToolName(operatorId: OperatorId): string {
   return operatorToolName(operatorId)
-}
-
-function searchProjectTranscript(project: Project, query: string): unknown {
-  const captionRefs = getProjectCaptions(project)
-  const captions = captionRefs.map((ref) => ref.caption)
-  const byId = new Map<string, (typeof captionRefs)[number]>(captionRefs.map((ref) => [ref.caption.id, ref]))
-  const matches = searchCaptions(captions, query).map((match) => {
-    const ref = byId.get(match.captionId)
-    const text = ref?.caption.text ?? ''
-    return {
-      ...match,
-      text: text.slice(match.startChar, match.endChar),
-      captionText: text,
-      trackId: ref?.trackId,
-      trackName: ref?.trackName,
-      startMs: match.timeMs,
-      endMs: match.endTimeMs,
-    }
-  })
-  return { query, count: matches.length, matches }
 }
 
 function locateAudioActivitySource(engine: EditorEngine, payload: AudioActivityPayload): AudioActivitySource {
@@ -261,7 +239,7 @@ export async function handleLiveMcpRequest(engine: EditorEngine, ui: ReturnType<
     case 'get_transcript':
       return getProjectTranscript(engine.project, request.payload)
     case 'search_transcript':
-      return searchProjectTranscript(engine.project, request.payload.query)
+      return { results: searchProjectTranscript(engine.project, [request.payload.query, ...(request.payload.queries ?? [])]) }
     case 'ensure_transcript':
       return await ensureTranscriptForBridge(engine, request.payload)
     case 'center_person':

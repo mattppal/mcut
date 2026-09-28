@@ -82,7 +82,8 @@ opens a dialog for a person and imports nothing. `addAsset` cannot load a
 ### Transcribe and remove silence
 
 1. `ensure_transcript` for the target clip if captions or word timings are missing.
-2. Optionally inspect with `get_transcript` / `search_transcript`.
+2. Optionally inspect with `get_transcript` / `search_transcript`. Pass every
+   phrase you need to `search_transcript` in one call with `queries`.
 3. Do outside research only to repair transcript text or names, not to detect
    media silence.
 4. Run:
