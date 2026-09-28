@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { applyCommand } from './commands'
 import { EditorEngine } from './engine'
+import { evaluateEasing } from './keyframes'
 import { createProject, splitElementAt, type MulticamElement, type Project, type VideoElement } from './model'
 import { getElement } from './selectors'
 import { summarizeProject } from './summarize'
@@ -158,6 +159,32 @@ describe('zoom regions on a clip', () => {
     for (const t of [10_500, 11_500]) expect(getClipView(right, t)).toEqual(getClipView(whole, t))
   })
 
+  test('every frame of a zoom through a cut is one expo ease about a fixed point', () => {
+    const project = applyCommand(projectWithScreenAndCam(), {
+      type: 'addZoomRegion',
+      elementId: 'e-screen',
+      zoom: { id: 'z-page', atMs: 10_000, inMs: 700, holdMs: 1000, outMs: 700, scale: 1.28, focus: { x: 0.45, y: 0.6 } },
+    })
+    const split = applyCommand(project, { type: 'splitElement', elementId: 'e-screen', atMs: 10_300, rightElementId: 'e-right' })
+    const onScreen = (timeMs: number, point: number) => {
+      const shown = getZoomWindow(getClipView(video(split, timeMs < 10_300 ? 'e-screen' : 'e-right'), timeMs))
+      return { x: (point - shown.x) / shown.w, y: (point - shown.y) / shown.h }
+    }
+    const expected = (timeMs: number) => {
+      if (timeMs < 10_700) return evaluateEasing('easeOutExpo', (timeMs - 10_000) / 700)
+      if (timeMs < 11_700) return 1
+      return 1 - evaluateEasing('easeOutExpo', (timeMs - 11_700) / 700)
+    }
+    for (let frame = 0; frame < 72; frame++) {
+      const timeMs = 10_000 + (frame * 1000) / 30
+      for (const point of [0, 1]) {
+        const [rest, held, now] = [onScreen(10_000, point), onScreen(11_000, point), onScreen(timeMs, point)]
+        expect((now.x - rest.x) / (held.x - rest.x)).toBeCloseTo(expected(timeMs), 6)
+        expect((now.y - rest.y) / (held.y - rest.y)).toBeCloseTo(expected(timeMs), 6)
+      }
+    }
+  })
+
   test.each([
     ['splitElement', () => ({ type: 'splitElement', elementId: 'e-screen', atMs: 10_500 })],
     [
@@ -256,6 +283,28 @@ describe('zoom regions on a multicam slot', () => {
     const view = getSlotView(multicam(project), slot, 1000, { x: visibleX, y: 1 })
     const windowX = visibleX / view.scale
     expect((1 - windowX) * view.focus.x + windowX / 2).toBeCloseTo(0.43, 5)
+  })
+
+  test('a zoom on a letterboxed contain slot stays inside the source and never jumps', () => {
+    let project = applyCommand(projectWithScreenAndCam(), {
+      type: 'createMulticam',
+      sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
+      multicamId: 'e-mc',
+    })
+    project = applyCommand(project, {
+      type: 'addZoomRegion',
+      elementId: 'e-mc',
+      zoom: { source: 'screen', atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus: { x: 0.8, y: 0.5 } },
+    })
+    const slot = project.layouts.find((l) => l.name === 'Screen + Cam')?.slots.find((s) => s.source === 'screen')
+    if (!slot) throw new Error('default layout lost its screen slot')
+    let previous = getZoomWindow(getSlotView(multicam(project), slot, 0, { x: 1.5, y: 1 }), { x: 1.5, y: 1 })
+    for (let ms = 1; ms <= 3000; ms++) {
+      const shown = getZoomWindow(getSlotView(multicam(project), slot, ms, { x: 1.5, y: 1 }), { x: 1.5, y: 1 })
+      if (shown.w < 1) expect([shown.x >= 0, shown.x + shown.w <= 1 + 1e-9]).toEqual([true, true])
+      expect(Math.abs(shown.x - previous.x)).toBeLessThan(0.01)
+      previous = shown
+    }
   })
 
   test('renaming a source key carries its zooms along', () => {

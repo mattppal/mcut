@@ -1,5 +1,26 @@
 # mcut-editing-skill
 
+## 0.0.1-alpha.27
+
+### Patch Changes
+
+- [#220](https://github.com/mattppal/mcut/pull/220) [`d91f20b`](https://github.com/mattppal/mcut/commit/d91f20bd52bc12cd46c95ce279551d72c7d92bd5) Thanks [@mattppal](https://github.com/mattppal)! - The talking head plus screen procedure now opens clean on the kept take, with the lead-in cut from 0s and a 500ms fade in from black on the first piece, and prefers a retake cut as the cut to the screen when the next lines are about it, so the jump is hidden.
+
+## 0.0.1-alpha.26
+
+### Patch Changes
+
+- Updated dependencies [[`8969b9a`](https://github.com/mattppal/mcut/commit/8969b9a7cfb42c3a0b80a68bf3471c490accece2)]:
+  - @mcut/timeline@0.1.0-alpha.22
+  - @mcut/cli@0.1.0-alpha.25
+  - @mcut/transcription@0.1.0-alpha.25
+
+## 0.0.1-alpha.25
+
+### Patch Changes
+
+- [#219](https://github.com/mattppal/mcut/pull/219) [`d4e7da6`](https://github.com/mattppal/mcut/commit/d4e7da61168461358f51cabd480e83b73219dc44) Thanks [@mattppal](https://github.com/mattppal)! - The multicam reference adds a worked example for a talking head with a screen share. It cuts to the screen in the gap before the sentence that first points at it ("And the amazing thing is this report…", "First, I got to give a shout out… that she's sharing here"), not on the cue words or after the sentence, stays on the screen while the content changes under the same thread, and holds every shot at least 2s instead of flashing the screen for a second.
+
 ## 0.0.1-alpha.24
 
 ### Patch Changes
