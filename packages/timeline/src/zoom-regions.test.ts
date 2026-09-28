@@ -291,7 +291,11 @@ describe('zoom regions on a multicam slot', () => {
       sources: [{ elementId: 'e-screen' }, { elementId: 'e-cam' }],
       multicamId: 'e-mc',
     })
-    project = applyCommand(project, { type: 'addZoomRegion', elementId: 'e-mc', zoom: { source: 'screen', atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus: { x: 0.8, y: 0.5 } } })
+    project = applyCommand(project, {
+      type: 'addZoomRegion',
+      elementId: 'e-mc',
+      zoom: { source: 'screen', atMs: 0, inMs: 1000, holdMs: 1000, outMs: 1000, scale: 2, focus: { x: 0.8, y: 0.5 } },
+    })
     const slot = project.layouts.find((l) => l.name === 'Screen + Cam')?.slots.find((s) => s.source === 'screen')
     if (!slot) throw new Error('default layout lost its screen slot')
     let previous = getZoomWindow(getSlotView(multicam(project), slot, 0, { x: 1.5, y: 1 }), { x: 1.5, y: 1 })
