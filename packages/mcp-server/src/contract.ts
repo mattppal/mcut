@@ -124,7 +124,12 @@ export const MCP_TOOL_INPUTS = {
   remove_ranges: removeRangesInputSchema,
   ensure_transcript: z.strictObject({
     elementId: ELEMENT_ID_INPUT,
-    replace: z.boolean().describe('When true, replace captions overlapping the target clip. Defaults to false.').optional(),
+    replace: z
+      .boolean()
+      .describe(
+        'When true, re-transcribe and replace captions overlapping the target clip. Defaults to false. Pass it only when the user asks to redo the transcript or a tool says the captions lack word timings.',
+      )
+      .optional(),
     language: z.string().trim().describe('Optional language hint for Whisper.').optional(),
   }),
   list_commands: EMPTY_INPUT,
@@ -207,7 +212,8 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
   ensure_transcript:
     'Live bridge only: if the target clip has no caption transcript, transcribe it with local Whisper in the connected browser, ' +
     'then apply word-timed captions to the timeline and store that transcript for apply_captions to reuse after cuts. Explicit tool only; get_transcript never auto-transcribes. ' +
-    'Required before transcript-based silence removal when captions are missing.',
+    'Required before transcript-based silence removal when captions are missing. When captions already exist it keeps them and returns at once, so omit replace. ' +
+    'Pass replace true only when the user asks to redo the transcript or a tool says the captions lack word timings.',
   list_commands: 'List every raw timeline command schema. Use this when apply_commands needs exact payload details.',
   apply_commands:
     'Apply one or more serializable timeline commands in one undoable transaction, then return an updated project summary. ' +

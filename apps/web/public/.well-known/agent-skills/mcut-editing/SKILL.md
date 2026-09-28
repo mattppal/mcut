@@ -27,7 +27,9 @@ Minimum loop:
 1. `get_summary`
 2. `get_media_context`
 3. If speech matters, `get_transcript` with `includeWords: true`
-4. If transcript is missing, `ensure_transcript`
+4. If transcript is missing, `ensure_transcript`. Omit `replace`, so existing
+   captions are kept. Set `replace` to true only when the user asks to redo the
+   transcript or a tool says the captions lack word timings.
 5. `list_actions`
 6. Prefer `run_action` high-level actions and task tools such as `edit_zooms` and `center_person` over raw commands
 7. When one user request needs more than one edit call, send them all in one
