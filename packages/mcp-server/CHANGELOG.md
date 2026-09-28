@@ -1,5 +1,17 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.39
+
+### Patch Changes
+
+- [#217](https://github.com/mattppal/mcut/pull/217) [`ab632e3`](https://github.com/mattppal/mcut/commit/ab632e3328c68c9c761db0d326ac0a3c0eb03173) Thanks [@mattppal](https://github.com/mattppal)! - `ensure_transcript` recognizes an existing transcript after retake cuts. Captions over any piece on the track that plays the same audio count as that audio's transcript, so a call on another piece returns them instead of transcribing again. When no captions are left but the server stored a transcript for that audio, it places that transcript over every piece instead of transcribing. `replace: true` still transcribes again.
+
+## 0.1.0-alpha.38
+
+### Patch Changes
+
+- [#216](https://github.com/mattppal/mcut/pull/216) [`5a1935f`](https://github.com/mattppal/mcut/commit/5a1935f4265079a6426926f1a21cbce6a6af25b6) Thanks [@mattppal](https://github.com/mattppal)! - The skill plans multicam angle cuts as a shot list from the transcript and the screen instead of a fixed rhythm. For a talking head with a screen recording it opens on the head-only shot, puts the opening punch-in on the camera at the first pause, cuts to the screen when the speaker starts talking about what it shows, and cuts back to the head for direct address. The punch-in example zooms the camera source, and the "open on the establishing layout" advice is gone. The procedure spells out how to turn timeline times into an angle cut's source clock time and a zoom's element-local time on the right piece after retake cuts. The `edit_zooms` description says which source to zoom and that `atMs` is element-local.
+
 ## 0.1.0-alpha.37
 
 ### Patch Changes

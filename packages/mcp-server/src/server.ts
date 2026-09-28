@@ -215,6 +215,13 @@ async function callStaticTool(target: McutMcpTarget, call: McpServerStaticToolCa
       return text(await removeRangesOn(target, call.arguments))
     case 'ensure_transcript': {
       if (!target.ensureTranscript) return failure('ensure_transcript is not available on this target.')
+      const { elementId, replace } = call.arguments
+      const replay = elementId && !replace ? transcripts.replayOverUncaptioned(await targetProject(target), elementId) : undefined
+      if (replay) {
+        await target.applyCommands([replay.command])
+        const lead = `OK: transcript ensured from the one stored for this audio, without transcribing again. ${replay.command.captions.length} caption(s) applied`
+        return text(`${lead}${sourceCaptionsNote(replay)}\n\n${await target.getSummary()}`)
+      }
       const result = await target.ensureTranscript(call.arguments)
       const ensured = ensuredCapture(result)
       if (ensured) transcripts.captureCaptions(await targetProject(target), ensured)
