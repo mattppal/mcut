@@ -102,9 +102,13 @@ describe('agent tools take timeline time on a multicam cut into pieces', () => {
     const id = secondPiece(engine).id
     await client.callTool({
       name: 'edit_zooms',
-      arguments: { edits: [{ type: 'addZoomRegion', elementId: id, zoom: { id: 'z-detail', source: 'screen', atMs: 15_000, inMs: 500, holdMs: 2000, outMs: 500 } }] },
+      arguments: {
+        edits: [{ type: 'addZoomRegion', elementId: id, zoom: { id: 'z-detail', source: 'screen', atMs: 15_000, inMs: 500, holdMs: 2000, outMs: 500 } }],
+      },
     })
-    const listed = z.array(z.object({ id: z.string(), atMs: z.number() })).parse(JSON.parse(textOf(await client.callTool({ name: 'list_zooms', arguments: {} }))))
+    const listed = z
+      .array(z.object({ id: z.string(), atMs: z.number() }))
+      .parse(JSON.parse(textOf(await client.callTool({ name: 'list_zooms', arguments: {} }))))
     expect(listed).toEqual([{ id: 'z-detail', atMs: 15_000 }])
 
     const before = listZoomRegions(engine.project)
