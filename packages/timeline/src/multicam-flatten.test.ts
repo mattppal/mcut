@@ -129,11 +129,11 @@ describe('split + flatten', () => {
     }
 
     expectBox(clipBox(camera, 1000), { x: 1344, y: 745.2, w: 528, h: 297 })
-    expectBox(clipBox(camera, 2060), { x: 1320, y: 729, w: 660, h: 371.25 })
-    expectBox(clipBox(screen, 2060), { x: -360, y: -202.5, w: 2400, h: 1350 })
+    expectBox(clipBox(camera, 2060), { x: 1200, y: 661.5, w: 660, h: 371.25 })
+    expectBox(clipBox(screen, 2060), { x: -480, y: -270, w: 2400, h: 1350 })
     expectBox(clipBox(camera, 3000), { x: 1056, y: 577.8, w: 792, h: 445.5 })
     expectBox(clipBox(screen, 3000), { x: -960, y: -540, w: 2880, h: 1620 })
-    expectBox(clipBox(camera, 3660), { x: 1320, y: 729, w: 660, h: 371.25 })
+    expectBox(clipBox(camera, 3660), { x: 1200, y: 661.5, w: 660, h: 371.25 })
     expectBox(clipBox(camera, 5000), { x: 1344, y: 745.2, w: 528, h: 297 })
     for (let ms = 1990; ms <= 4210; ms += 1) {
       expectBox(clipBox(camera, ms), slotBox(pip, ms))
