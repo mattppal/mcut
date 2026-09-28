@@ -152,6 +152,40 @@ function splitCaptionAtWord(
 
 Splits a caption immediately before the given word into two captions, or returns `null` when either half would be invalid or too short.
 
+## Corrections
+
+### correctCaptions
+
+```ts
+function correctCaptions(
+  captions: readonly TranscriptCaption[],
+  find: string,
+  replace: string,
+): TranscriptCorrection
+```
+
+Replaces whole-word, case-insensitive matches of `find` with `replace` across the captions of one track. Word timings stay. A multi-word `find` merged into one word spans the words it replaces, and a multi-word `replace` splits their timing by character share. A match split across two neighbouring captions moves into the first one, and the second starts after it or is removed when nothing is left. A match already inside an occurrence of `replace` is skipped, so a second call changes nothing. Apply the removals, then the patches in the order returned, so captions never overlap.
+
+### correctWords
+
+```ts
+function correctWords(
+  words: readonly CaptionWord[],
+  find: string,
+  replace: string,
+): { words: CaptionWord[]; count: number }
+```
+
+Applies the same correction to a plain word list, such as a stored source-time transcript, and returns the corrected words with the number of matches.
+
+### retypeCaption
+
+```ts
+function retypeCaption(caption: TranscriptCaption, text: string): CaptionContentPatch
+```
+
+Rewrites a caption's text as typed while keeping word timings. Words left unchanged keep their timing, the edited run takes the span of the words it replaces, and an inserted word shares the timing of its neighbour. Returns the text alone when the words no longer map to the old text.
+
 ## Retakes
 
 ### findRetakes

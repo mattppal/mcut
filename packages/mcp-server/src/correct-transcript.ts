@@ -22,19 +22,21 @@ function correctionCommands(project: Project, find: string, replace: string): { 
     count += correction.count
     removals.push(...correction.removedIds.map((captionId): BuiltinCommand => ({ type: 'removeElement', elementId: elementIdSchema.parse(captionId) })))
     updates.push(
-      ...correction.patches.map(
-        ({ captionId, text, words, startMs, durationMs }): BuiltinCommand => ({
-          type: 'updateElement',
-          elementId: elementIdSchema.parse(captionId),
-          patch: { text, words: words ?? [], startMs, durationMs },
-        }),
-      ),
+      ...correction.patches.map(({ captionId, text, words, startMs, durationMs }): BuiltinCommand => ({
+        type: 'updateElement',
+        elementId: elementIdSchema.parse(captionId),
+        patch: { text, words: words ?? [], startMs, durationMs },
+      })),
     )
   }
   return { commands: [...removals, ...updates], count }
 }
 
-export async function correctTranscriptOn(target: CorrectionTarget, transcripts: StoredTranscripts, { find, replace }: CorrectTranscriptInput): Promise<string> {
+export async function correctTranscriptOn(
+  target: CorrectionTarget,
+  transcripts: StoredTranscripts,
+  { find, replace }: CorrectTranscriptInput,
+): Promise<string> {
   const { commands, count } = correctionCommands(parseProject(await target.getProject()), find, replace)
   if (commands.length > 0) await target.applyCommands(commands)
   const stored = transcripts.correct(find, replace)

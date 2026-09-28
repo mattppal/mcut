@@ -44,7 +44,12 @@ function wholeWordMatches(caption: TranscriptCaption, pattern: RegExp, replaceme
     .map(([start, end]) => buildMatch(caption, mapped, start, end))
 }
 
-function acrossBoundary(a: TranscriptCaption, b: TranscriptCaption, pattern: RegExp, replacement: string): [TranscriptCaption, TranscriptCaption | null] | null {
+function acrossBoundary(
+  a: TranscriptCaption,
+  b: TranscriptCaption,
+  pattern: RegExp,
+  replacement: string,
+): [TranscriptCaption, TranscriptCaption | null] | null {
   const boundary = mapCaptionWords(a)?.length ?? 0
   if (boundary === 0 || !mapCaptionWords(b)) return null
   const merged = mergeCaptions(a, b)
