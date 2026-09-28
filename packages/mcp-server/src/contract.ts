@@ -91,7 +91,11 @@ const correctionFind = z
   .min(1, 'correct_transcript requires a non-empty find string.')
   .describe('The words as transcribed, for example "Grok Bot". Matches whole words, ignoring case.')
 
-const correctionReplace = z.string().trim().min(1, 'correct_transcript requires a non-empty replace string.').describe('The correct spelling, for example "Grokbot".')
+const correctionReplace = z
+  .string()
+  .trim()
+  .min(1, 'correct_transcript requires a non-empty replace string.')
+  .describe('The correct spelling, for example "Grokbot".')
 
 export const MCP_TOOL_INPUTS = {
   get_summary: EMPTY_INPUT,

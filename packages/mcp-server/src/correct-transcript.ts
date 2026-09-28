@@ -1,4 +1,13 @@
-import { applyCommand, CommandError, elementIdSchema, getProjectCaptions, parseProject, type BuiltinCommand, type CaptionElement, type Project } from '@mcut/timeline'
+import {
+  applyCommand,
+  CommandError,
+  elementIdSchema,
+  getProjectCaptions,
+  parseProject,
+  type BuiltinCommand,
+  type CaptionElement,
+  type Project,
+} from '@mcut/timeline'
 import { correctCaptions } from '@mcut/transcription'
 import type { z } from 'zod'
 import type { MCP_TOOL_INPUTS } from './contract'
@@ -39,7 +48,8 @@ interface Correction {
 
 function correctionsOf(input: CorrectTranscriptInput): Correction[] {
   if (input.corrections !== undefined) return input.corrections
-  if (input.find === undefined || input.replace === undefined) throw new CommandError('invalid-payload', 'correct_transcript takes find and replace, or a corrections list.')
+  if (input.find === undefined || input.replace === undefined)
+    throw new CommandError('invalid-payload', 'correct_transcript takes find and replace, or a corrections list.')
   return [{ find: input.find, replace: input.replace }]
 }
 
