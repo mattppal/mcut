@@ -159,21 +159,21 @@ When the words and the screen disagree, ask the user instead of guessing.
 A talking head about a printed daily report, with a screen share, after its retakes
 are cut. Times are on the cut timeline.
 
-- At 20.2s the speaker says "And the amazing thing is this report is generated
-  entirely by Grokbot" while the report is up on screen. "This report" points at the
-  screen, so cut to "Screen + Cam" in the word gap before "And the amazing thing", at
-  20.2s. Do not wait for the cue words at 21.1s, and do not hold "Camera" through the
-  sentence because the story started on camera. Hold the screen while the report
-  stays up.
-- At 30.3s the next sentence starts, "First, I got to give a shout out because I was
-  really inspired by Karen Chang, who built something similar with her morning
-  newspaper that she's sharing here." Her post is on screen, and "sharing here" at
-  39.7s points at it. The sentence that first points at the screen starts at 30.3s, so
-  cut there. A cut after the sentence ends shows the post only once the speaker has
-  moved on.
-- Near the end the speaker says "print this page" at 251.4s, and the page shows for
-  about 1s. A shot under 2s reads as a flash. Hold the screen shot for 2s if the page
-  is still up, or keep that line on "Camera".
+- Cut at the start of the sentence that holds the screen cue, not on the cue word. The
+  sentence "And the amazing thing is this report is generated entirely by Grokbot"
+  starts at 20.2s while the report is up on screen, and "this report" comes at 21.1s.
+  This sentence is the turn to the screen, so the opening "Camera" shot ends in the
+  word gap just before 20.2s.
+- Stay on "Screen + Cam" while the speaker keeps pointing at what is on screen, even
+  when the screen content changes. At 30.3s a retake cut joins the report to the next
+  sentence, "First, I got to give a shout out because I was really inspired by Karen
+  Chang, who built something similar with her morning newspaper that she's sharing
+  here." Her post is up from 30.3s, and "sharing here" at 39.7s points at it. Keep
+  "Screen + Cam" from 20.2s through that sentence. Cutting back to "Camera" between the
+  report and the post, or waiting until after "sharing here", misses the moment.
+- Merge a shot under 2s into its neighbor. Near the end the speaker says "print this
+  page" at 251.4s and the page shows for about 1s. That reads as a flash, so keep the
+  line on "Camera" unless the next screen span starts right after it.
 
 ### Other multicam edits
 
