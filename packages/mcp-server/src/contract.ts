@@ -112,6 +112,10 @@ export const MCP_TOOL_INPUTS = {
   }),
   search_transcript: z.strictObject({
     query: z.string().trim().min(1, 'search_transcript requires a non-empty query string.'),
+    queries: z
+      .array(z.string().trim().min(1))
+      .describe('More phrases to find in the same call. The reply then has one results entry per phrase, query first.')
+      .optional(),
   }),
   find_retakes: retakeOptionsSchema
     .extend({
@@ -208,7 +212,10 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'If no transcript exists and speech context is needed, call ensure_transcript in live bridge mode. ' +
     'Do not use ffmpeg or shell media analysis as a substitute for transcript-aware edits.',
   search_transcript:
-    'Search the caption-derived transcript and return timeline times for matches. ' + 'Use this to locate spoken words/phrases before cutting or annotating.',
+    'Find spoken words or phrases in the caption-derived transcript and return timeline startMs and endMs for each match. ' +
+    'Matching ignores case and punctuation and runs across caption boundaries. ' +
+    'Each match also has the words before and after it and pauseBeforeMs and pauseAfterMs, the silence on each side, so one search shows where a sentence or clause ends. ' +
+    'Pass every phrase you need in one call with queries instead of calling once per phrase. For the whole text with word timings, call get_transcript.',
   find_retakes:
     'Find retakes in the word-timed transcript. A phrase whose opening words are spoken again within maxLookaheadMs. ' +
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
