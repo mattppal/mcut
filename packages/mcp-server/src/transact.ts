@@ -41,9 +41,14 @@ function passThrough(name: PassThroughName, args: unknown): TransactSubRequest {
   return { type: 'apply_commands', commands: commandsOnTimelineClock(parsed.commands) }
 }
 
+const BATCHED_ALONE: Readonly<Partial<Record<string, string>>> = {
+  correct_transcript: 'Call correct_transcript once with corrections set to every find and replace pair. It is already one undo step.',
+}
+
 function rejectTransactName(name: string): Error {
+  const alone = BATCHED_ALONE[name]
   return new Error(
-    `transact cannot run "${name}". Allowed tools are timeline commands (list_commands), operator_* tools, run_operator, run_action, apply_commands, and remove_ranges with timeline ranges.`,
+    `transact cannot run "${name}". ${alone ?? 'Allowed tools are timeline commands (list_commands), operator_* tools, run_operator, run_action, apply_commands, and remove_ranges with timeline ranges.'}`,
   )
 }
 

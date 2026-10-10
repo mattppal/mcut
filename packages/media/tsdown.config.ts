@@ -20,6 +20,7 @@ export default defineConfig([
     clean: false,
     fixedExtension: false,
     noExternal: /.*/,
+    loader: { '.onnx': 'binary' },
     outputOptions: { inlineDynamicImports: true },
     onSuccess: async () => {
       const path = new URL('./dist/face-detector-worker.js', import.meta.url)

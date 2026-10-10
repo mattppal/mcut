@@ -1,5 +1,45 @@
 # mcut-studio
 
+## 0.1.1-alpha.62
+
+### Patch Changes
+
+- Updated dependencies [[`f24fe5a`](https://github.com/mattppal/mcut/commit/f24fe5a85bf48fe8989afa8c44cb4265a28f2bb3)]:
+  - @mcut/mcp-server@0.1.0-alpha.46
+
+## 0.1.1-alpha.61
+
+### Patch Changes
+
+- Updated dependencies [[`bd1e045`](https://github.com/mattppal/mcut/commit/bd1e0453c18d65bb8f1e111c7a65c1bfc6a3671e)]:
+  - @mcut/transcription@0.1.0-alpha.28
+  - @mcut/mcp-server@0.1.0-alpha.45
+  - @mcut/transcription-local@1.0.0-alpha.31
+
+## 0.1.1-alpha.60
+
+### Patch Changes
+
+- Updated dependencies [[`93ad890`](https://github.com/mattppal/mcut/commit/93ad89046e5b9d7073ada409790b2506e5f203cd), [`29f1867`](https://github.com/mattppal/mcut/commit/29f1867993cd5871e96baa309a09115feeb407f8)]:
+  - @mcut/media@0.1.0-alpha.38
+  - @mcut/mcp-server@0.1.0-alpha.44
+  - @mcut/react@0.1.0-alpha.39
+
+## 0.1.1-alpha.59
+
+### Patch Changes
+
+- Updated dependencies [[`7a7c2ac`](https://github.com/mattppal/mcut/commit/7a7c2ac72ee2f8c9f8be230b91ae3f9eb5fb2e25)]:
+  - @mcut/timeline@0.1.0-alpha.23
+  - @mcut/transcription@0.1.0-alpha.27
+  - @mcut/transcription-local@1.0.0-alpha.30
+  - @mcut/mcp-server@0.1.0-alpha.43
+  - @mcut/compositor@0.1.0-alpha.24
+  - @mcut/desktop-ipc@0.1.0-alpha.25
+  - @mcut/editor@0.1.0-alpha.24
+  - @mcut/media@0.1.0-alpha.37
+  - @mcut/react@0.1.0-alpha.38
+
 ## 0.1.1-alpha.58
 
 ### Patch Changes

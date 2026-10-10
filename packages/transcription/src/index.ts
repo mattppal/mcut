@@ -43,4 +43,6 @@ export {
 
 export { correctCaptions, correctWords, retypeCaption, type CaptionCorrectionPatch, type TranscriptCorrection } from './transcript-corrections'
 
+export { searchProjectTranscript, type TranscriptSearchMatch, type TranscriptSearchResult } from './search-transcript'
+
 export { findRetakes, retakeOptionsSchema, type RetakeCandidate, type RetakeOptions } from './retakes'

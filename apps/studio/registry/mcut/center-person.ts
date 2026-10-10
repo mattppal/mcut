@@ -49,7 +49,6 @@ interface CenterPersonResult {
 const PROGRESS_TOAST_ID = 'mcut-center-person'
 
 const PROGRESS_LABEL = {
-  model: (percent: number) => `Downloading face model… ${percent}% (one-time, cached after this)`,
   detect: (percent: number) => `Finding the person… ${percent}%`,
 }
 

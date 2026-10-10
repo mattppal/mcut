@@ -141,6 +141,17 @@ function searchCaptions(
 
 Runs a case-insensitive substring search across captions and returns each hit with its character range, word span, and absolute time.
 
+### searchProjectTranscript
+
+```ts
+function searchProjectTranscript(
+  project: Project,
+  queries: readonly string[],
+): TranscriptSearchResult[]
+```
+
+Searches the word stream of every caption track and returns one result per query, in order. Matching ignores case and punctuation and runs across caption boundaries. Each match gives its timeline span, the eight words before and after it, and the silence on each side.
+
 ### splitCaptionAtWord
 
 ```ts

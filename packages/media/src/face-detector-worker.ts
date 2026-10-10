@@ -10,9 +10,7 @@ import {
   type OrtWasmPaths,
 } from './face-detector-protocol'
 import { largestFace, letterboxSize, writeYunetInput, YUNET_INPUT_SIZE } from './yunet'
-
-const MODEL_URL = 'https://huggingface.co/opencv/face_detection_yunet/resolve/3cc26e7f1014a5ee5d74a42acee58bafc9d0a310/face_detection_yunet_2023mar.onnx'
-const MODEL_CACHE = 'mcut-models-v1'
+import yunetModel from '../models/face_detection_yunet_2023mar.onnx'
 
 let session: Promise<ort.InferenceSession> | null = null
 
@@ -25,43 +23,9 @@ function defaultWasmPaths(): OrtWasmPaths {
   return { mjs: `${base}.mjs`, wasm: `${base}.wasm` }
 }
 
-async function openModelCache(): Promise<Cache | null> {
-  if (typeof caches === 'undefined') return null
-  return caches.open(MODEL_CACHE).catch(() => null)
-}
-
-async function downloadModel(onProgress: (progress: number) => void): Promise<Uint8Array<ArrayBuffer>> {
-  try {
-    const response = await fetch(MODEL_URL)
-    if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`)
-    const total = Number(response.headers.get('content-length'))
-    const reader = response.body.getReader()
-    const chunks: Uint8Array<ArrayBuffer>[] = []
-    let loaded = 0
-    for (let read = await reader.read(); !read.done; read = await reader.read()) {
-      chunks.push(read.value)
-      loaded += read.value.byteLength
-      if (total > 0) onProgress(Math.min(1, loaded / total))
-    }
-    return new Uint8Array(await new Blob(chunks).arrayBuffer())
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error)
-    throw new Error(`Could not download the face detection model from huggingface.co (${reason}). Check the connection and try again.`, { cause: error })
-  }
-}
-
-async function loadModel(onProgress: (progress: number) => void): Promise<Uint8Array<ArrayBuffer>> {
-  const cache = await openModelCache()
-  const cached = await cache?.match(MODEL_URL)
-  if (cached) return new Uint8Array(await cached.arrayBuffer())
-  const model = await downloadModel(onProgress)
-  await cache?.put(MODEL_URL, new Response(model)).catch(() => undefined)
-  return model
-}
-
-async function createSession(paths: OrtWasmPaths | undefined, onProgress: (progress: number) => void): Promise<ort.InferenceSession> {
+async function createSession(paths: OrtWasmPaths | undefined): Promise<ort.InferenceSession> {
   ort.env.wasm.wasmPaths = paths ?? defaultWasmPaths()
-  return ort.InferenceSession.create(await loadModel(onProgress), { executionProviders: ['wasm'] })
+  return ort.InferenceSession.create(yunetModel, { executionProviders: ['wasm'] })
 }
 
 function sampleTimesMs(durationS: number, sampleRateHz: number): number[] {
@@ -100,7 +64,7 @@ async function detectFaces(request: FaceDetectRequest, model: ort.InferenceSessi
 async function handle(request: FaceDetectRequest): Promise<void> {
   const report = (phase: FaceDetectorProgress['phase']) => (progress: number) => post({ type: 'progress', id: request.id, phase, progress })
   try {
-    session ??= createSession(request.ortWasmPaths, report('model'))
+    session ??= createSession(request.ortWasmPaths)
     const samples = await detectFaces(request, await session, report('detect'))
     post({ type: 'result', id: request.id, samples })
   } catch (error) {

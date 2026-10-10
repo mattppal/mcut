@@ -229,6 +229,35 @@ interface TranscriptCaption {
 
 The caption element shape the transcript tools operate on, with word timings relative to `startMs`.
 
+### TranscriptSearchResult
+
+```ts
+interface TranscriptSearchResult {
+  query: string
+  count: number
+  matches: TranscriptSearchMatch[]
+}
+```
+
+### TranscriptSearchMatch
+
+```ts
+interface TranscriptSearchMatch {
+  text: string
+  startMs: number
+  endMs: number
+  before: string
+  after: string
+  pauseBeforeMs: number | null
+  pauseAfterMs: number | null
+  captionId: string
+  trackId: string
+  trackName: string
+}
+```
+
+`startMs` and `endMs` are timeline ms. `pauseBeforeMs` and `pauseAfterMs` are the gaps to the neighboring words on the same track, or null at either end of it.
+
 ### TranscriptMatch
 
 ```ts

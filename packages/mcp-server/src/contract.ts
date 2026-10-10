@@ -2,7 +2,13 @@ import { z } from 'zod'
 import { centerPersonOptionsSchema, operatorIds, operators, type OperatorDefinition, type OperatorId } from '@mcut/editor'
 import { elementIdSchema, listToolDefinitions, zoomCommandSchema } from '@mcut/timeline'
 import { retakeOptionsSchema } from '@mcut/transcription'
-import { applyCaptionsInputSchema, applySilenceCutsInputSchema, removeRangesDescription, removeRangesInputSchema } from './transcript-tool-inputs'
+import {
+  applyCaptionsInputSchema,
+  applySilenceCutsInputSchema,
+  correctTranscriptInputSchema,
+  removeRangesDescription,
+  removeRangesInputSchema,
+} from './transcript-tool-inputs'
 import { cancelExportInputSchema, exportVideoInputSchema, getExportInputSchema } from './export-protocol'
 import { PICTURE_TOOL_DESCRIPTIONS, PICTURE_TOOL_INPUTS } from './picture-tools'
 import { commandBatchSchema } from './transact-shape'
@@ -112,6 +118,10 @@ export const MCP_TOOL_INPUTS = {
   }),
   search_transcript: z.strictObject({
     query: z.string().trim().min(1, 'search_transcript requires a non-empty query string.'),
+    queries: z
+      .array(z.string().trim().min(1))
+      .describe('More phrases to find in the same call. The reply then has one results entry per phrase, query first.')
+      .optional(),
   }),
   find_retakes: retakeOptionsSchema
     .extend({
@@ -150,14 +160,7 @@ export const MCP_TOOL_INPUTS = {
       .describe('Tool calls to apply as one undo step. Each name is a timeline command, an operator_* tool, run_operator, run_action, or apply_commands.'),
   }),
   apply_captions: applyCaptionsInputSchema,
-  correct_transcript: z.strictObject({
-    find: z
-      .string()
-      .trim()
-      .min(1, 'correct_transcript requires a non-empty find string.')
-      .describe('The words as transcribed, for example "Grok Bot". Matches whole words, ignoring case.'),
-    replace: z.string().trim().min(1, 'correct_transcript requires a non-empty replace string.').describe('The correct spelling, for example "Grokbot".'),
-  }),
+  correct_transcript: correctTranscriptInputSchema,
   apply_silence_cuts: applySilenceCutsInputSchema,
   lint_project: EMPTY_INPUT,
   list_zooms: EMPTY_INPUT,
@@ -208,7 +211,10 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'If no transcript exists and speech context is needed, call ensure_transcript in live bridge mode. ' +
     'Do not use ffmpeg or shell media analysis as a substitute for transcript-aware edits.',
   search_transcript:
-    'Search the caption-derived transcript and return timeline times for matches. ' + 'Use this to locate spoken words/phrases before cutting or annotating.',
+    'Find spoken words or phrases in the caption-derived transcript and return timeline startMs and endMs for each match. ' +
+    'Matching ignores case and punctuation and runs across caption boundaries. ' +
+    'Each match also has the words before and after it and pauseBeforeMs and pauseAfterMs, the silence on each side, so one search shows where a sentence or clause ends. ' +
+    'Pass every phrase you need in one call with queries instead of calling once per phrase. For the whole text with word timings, call get_transcript.',
   find_retakes:
     'Find retakes in the word-timed transcript. A phrase whose opening words are spoken again within maxLookaheadMs. ' +
     'Each candidate range runs from the abandoned take start to the kept take start in timeline ms, so cutting it keeps the last take. ' +
@@ -240,7 +246,8 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Never invent a transcript when transcription fails. ' +
     'The result warns when the transcript matches no transcript in the project. Caption words left in order after cuts still match.',
   correct_transcript:
-    'Fix a misheard name or term everywhere in the transcript as one undoable edit. When the user names a correction ("it is Grokbot, not Grok Bot"), call this once per wrong spelling instead of retyping captions. ' +
+    'Fix a misheard name or term everywhere in the transcript as one undoable edit. When the user names a correction ("it is Grokbot, not Grok Bot"), call this instead of retyping captions. ' +
+    'Pass find and replace for one spelling, or corrections with every find and replace pair to fix several spellings in one call. ' +
     'Replaces whole-word, case-insensitive matches of find with replace in every caption and in the transcript the server stored for apply_captions, so re-captioning after cuts keeps the fix. ' +
     'Word timings stay: a multi-word find merged into one word spans the timings of the words it replaces, and a multi-word replace splits the timing of what it replaces by character share. ' +
     'If nothing matches, call search_transcript with part of the phrase to see how it was transcribed, then correct that spelling. Undo removes the whole correction.',
@@ -249,8 +256,9 @@ const TOOL_DESCRIPTIONS: Record<McpAgentToolName, string> = {
     'Check the project for cross-entity problems parseProject cannot reject (overlapping clips, missing assets, ' +
     'out-of-range keyframes, broken links, empty tracks) and return each issue with a severity and code.',
   list_zooms:
-    'List every zoom region in the project in one call: element id, source slot for multicam, element-local atMs, timeline startMs and endMs, ' +
-    'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. startMs and endMs are the part the element plays; the zoom itself starts at timeline element start plus atMs, which is the timeline atMs edit_zooms takes. Read this before revising zooms.',
+    'List every zoom region in the project in one call: element id, source slot for multicam, atMs, startMs and endMs, ' +
+    'inMs, holdMs, outMs, focus, scale, easing, and motionBlur. Every time is timeline ms. atMs is where the zoom starts, the value edit_zooms takes, ' +
+    'so pass it back unchanged to keep a zoom in place. startMs and endMs are the part this element plays, so a zoom spread over a cut lists one row per piece with the same atMs. Read this before revising zooms.',
   edit_zooms:
     'Add, update, or remove any number of zoom regions as one undoable edit. Each edit is an addZoomRegion, updateZoomRegion, or removeZoomRegion command. ' +
     'If any edit is rejected, none apply. ' +

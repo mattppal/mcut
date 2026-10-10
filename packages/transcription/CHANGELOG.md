@@ -1,5 +1,22 @@
 # @mcut/transcription
 
+## 0.1.0-alpha.28
+
+### Minor Changes
+
+- [#232](https://github.com/mattppal/mcut/pull/232) [`bd1e045`](https://github.com/mattppal/mcut/commit/bd1e0453c18d65bb8f1e111c7a65c1bfc6a3671e) Thanks [@mattppal](https://github.com/mattppal)! - `search_transcript` takes `queries`, more phrases to find in the same call, and replies with one entry in `results` per phrase. Matching ignores case and punctuation and runs across caption boundaries, so a phrase like "printer. And" that spans two captions is found. Each match carries the eight words before and after it and `pauseBeforeMs` and `pauseAfterMs`, so one search shows where a clause ends. `searchProjectTranscript` in `@mcut/transcription` is the one implementation the headless server and the Studio bridge share.
+
+## 0.1.0-alpha.27
+
+### Minor Changes
+
+- [#223](https://github.com/mattppal/mcut/pull/223) [`7a7c2ac`](https://github.com/mattppal/mcut/commit/7a7c2ac72ee2f8c9f8be230b91ae3f9eb5fb2e25) Thanks [@mattppal](https://github.com/mattppal)! - Projects carry an optional `vocabulary` of names and terms, set with `updateProject { vocabulary }` and listed in `getProjectMediaContext` under `transcript.vocabulary`. `TranscribeOptions` takes `vocabulary`. Local Whisper passes it as a decoder prompt, so a name like "Grokbot" is spelled the way the list spells it, and AssemblyAI passes it as `keyterms_prompt`. `ensure_transcript` tells agents to set the vocabulary before transcribing when the user names people or products.
+
+### Patch Changes
+
+- Updated dependencies [[`7a7c2ac`](https://github.com/mattppal/mcut/commit/7a7c2ac72ee2f8c9f8be230b91ae3f9eb5fb2e25)]:
+  - @mcut/timeline@0.1.0-alpha.23
+
 ## 0.1.0-alpha.26
 
 ### Minor Changes

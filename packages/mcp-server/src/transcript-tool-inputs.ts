@@ -55,3 +55,29 @@ export const removeRangesDescription =
   'Use this to cut retakes and any list of spans instead of splitElement, trimElement, and rippleDelete. ' +
   'After it, call apply_captions on its own with elementId set to any remaining piece, replace true, and no transcript to rebuild captions from the stored transcript. ' +
   'Never put apply_captions in a transact, which rejects it. One find_retakes call after the cut is enough to confirm it.'
+
+const correctionFind = z
+  .string()
+  .trim()
+  .min(1, 'correct_transcript requires a non-empty find string.')
+  .describe('The words as transcribed, for example "Grok Bot". Matches whole words, ignoring case.')
+
+const correctionReplace = z
+  .string()
+  .trim()
+  .min(1, 'correct_transcript requires a non-empty replace string.')
+  .describe('The correct spelling, for example "Grokbot".')
+
+export const correctTranscriptInputSchema = z
+  .strictObject({
+    find: correctionFind.optional(),
+    replace: correctionReplace.optional(),
+    corrections: z
+      .array(z.strictObject({ find: correctionFind, replace: correctionReplace }))
+      .min(1)
+      .optional()
+      .describe('Several find and replace pairs applied in order as one undo step, for example every misspelling of one name.'),
+  })
+  .refine((input) => (input.corrections === undefined) === (input.find !== undefined && input.replace !== undefined), {
+    message: 'correct_transcript takes find and replace, or a corrections list, not both.',
+  })

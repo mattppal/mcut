@@ -1,5 +1,21 @@
 # @mcut/react
 
+## 0.1.0-alpha.39
+
+### Patch Changes
+
+- Updated dependencies [[`93ad890`](https://github.com/mattppal/mcut/commit/93ad89046e5b9d7073ada409790b2506e5f203cd)]:
+  - @mcut/media@0.1.0-alpha.38
+
+## 0.1.0-alpha.38
+
+### Patch Changes
+
+- Updated dependencies [[`7a7c2ac`](https://github.com/mattppal/mcut/commit/7a7c2ac72ee2f8c9f8be230b91ae3f9eb5fb2e25)]:
+  - @mcut/timeline@0.1.0-alpha.23
+  - @mcut/compositor@0.1.0-alpha.24
+  - @mcut/media@0.1.0-alpha.37
+
 ## 0.1.0-alpha.37
 
 ### Patch Changes

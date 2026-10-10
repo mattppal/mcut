@@ -1,5 +1,39 @@
 # @mcut/mcp-server
 
+## 0.1.0-alpha.46
+
+### Minor Changes
+
+- [#231](https://github.com/mattppal/mcut/pull/231) [`f24fe5a`](https://github.com/mattppal/mcut/commit/f24fe5a85bf48fe8989afa8c44cb4265a28f2bb3) Thanks [@mattppal](https://github.com/mattppal)! - `correct_transcript` takes `corrections`, a list of `find` and `replace` pairs, and applies them in order as one undo step, so every misspelling of a name is one call. The result names any pair that matched nothing. `transact` still rejects `correct_transcript`, because the correction also rewrites the stored transcript, and its error now points at `corrections`.
+
+## 0.1.0-alpha.45
+
+### Minor Changes
+
+- [#232](https://github.com/mattppal/mcut/pull/232) [`bd1e045`](https://github.com/mattppal/mcut/commit/bd1e0453c18d65bb8f1e111c7a65c1bfc6a3671e) Thanks [@mattppal](https://github.com/mattppal)! - `search_transcript` takes `queries`, more phrases to find in the same call, and replies with one entry in `results` per phrase. Matching ignores case and punctuation and runs across caption boundaries, so a phrase like "printer. And" that spans two captions is found. Each match carries the eight words before and after it and `pauseBeforeMs` and `pauseAfterMs`, so one search shows where a clause ends. `searchProjectTranscript` in `@mcut/transcription` is the one implementation the headless server and the Studio bridge share.
+
+### Patch Changes
+
+- Updated dependencies [[`bd1e045`](https://github.com/mattppal/mcut/commit/bd1e0453c18d65bb8f1e111c7a65c1bfc6a3671e)]:
+  - @mcut/transcription@0.1.0-alpha.28
+
+## 0.1.0-alpha.44
+
+### Patch Changes
+
+- [#229](https://github.com/mattppal/mcut/pull/229) [`29f1867`](https://github.com/mattppal/mcut/commit/29f1867993cd5871e96baa309a09115feeb407f8) Thanks [@mattppal](https://github.com/mattppal)! - `list_zooms` and the `edit_zooms` result report each zoom's `atMs` in timeline ms, the clock `edit_zooms` takes, instead of element-local ms. An agent that reads a zoom and writes its `atMs` back keeps it in place, and zooms on different pieces of a split multicam no longer show look-alike times that belong to different moments.
+
+## 0.1.0-alpha.43
+
+### Patch Changes
+
+- [#223](https://github.com/mattppal/mcut/pull/223) [`7a7c2ac`](https://github.com/mattppal/mcut/commit/7a7c2ac72ee2f8c9f8be230b91ae3f9eb5fb2e25) Thanks [@mattppal](https://github.com/mattppal)! - Projects carry an optional `vocabulary` of names and terms, set with `updateProject { vocabulary }` and listed in `getProjectMediaContext` under `transcript.vocabulary`. `TranscribeOptions` takes `vocabulary`. Local Whisper passes it as a decoder prompt, so a name like "Grokbot" is spelled the way the list spells it, and AssemblyAI passes it as `keyterms_prompt`. `ensure_transcript` tells agents to set the vocabulary before transcribing when the user names people or products.
+
+- Updated dependencies [[`7a7c2ac`](https://github.com/mattppal/mcut/commit/7a7c2ac72ee2f8c9f8be230b91ae3f9eb5fb2e25)]:
+  - @mcut/timeline@0.1.0-alpha.23
+  - @mcut/transcription@0.1.0-alpha.27
+  - @mcut/editor@0.1.0-alpha.24
+
 ## 0.1.0-alpha.42
 
 ### Minor Changes

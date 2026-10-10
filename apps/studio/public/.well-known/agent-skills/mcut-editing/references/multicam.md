@@ -39,8 +39,8 @@ Give every angle cut and zoom in timeline ms, the time of the playhead, transcri
 words, scene changes, and contact sheet tiles. The MCP tools convert it. The project
 summary lists cuts after `cuts at timeline` and zooms after `zooms at timeline`, in
 timeline seconds, so you can pass the cut times back as they are. A zoom spread over
-a cut lists each piece's part, so read a zoom's own start from `list_zooms` as the
-element's `startMs` plus `atMs`.
+a cut lists each piece's part. `list_zooms` and the `edit_zooms` result give each
+zoom's `atMs` in timeline ms too, so pass it back unchanged to keep a zoom in place.
 
 The element stores angle cuts on the **source clock**, the synced time every source
 shares, so each cut stays on the same moment of the recording through trims, splits,

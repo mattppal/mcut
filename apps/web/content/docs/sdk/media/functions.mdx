@@ -383,7 +383,7 @@ Returns how many milliseconds after recording `a` started recording `b` started,
 
 ### createLocalFaceDetector
 
-`createLocalFaceDetector(options)` returns a detector whose `detect(src, { sampleRateHz, signal })` reads a video in a module worker, 5 times a second by default, and resolves to one `FaceSample` per sample time. The first run downloads the YuNet model from `huggingface.co` into Cache Storage. Calls run one at a time, and an aborted `signal` rejects its call and stops the worker.
+`createLocalFaceDetector(options)` returns a detector whose `detect(src, { sampleRateHz, signal })` reads a video in a module worker, 5 times a second by default, and resolves to one `FaceSample` per sample time. The worker bundles the MIT-licensed [YuNet 2023mar model from OpenCV Zoo](https://huggingface.co/opencv/face_detection_yunet/blob/3cc26e7f1014a5ee5d74a42acee58bafc9d0a310/face_detection_yunet_2023mar.onnx), so no run downloads it. Calls run one at a time, and an aborted `signal` rejects its call and stops the worker.
 
 | Option | Meaning |
 | --- | --- |
